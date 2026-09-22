@@ -1,0 +1,26 @@
+<!DOCTYPE html>
+<html lang="es" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Agenda del consultorio</title>
+</head>
+<body>
+<h1>Agenda del consultorio</h1>
+
+<p th:if="${param.error}">Usuario o contrase&ntilde;a incorrectos.</p>
+<p th:if="${param.logout}">Sesi&oacute;n cerrada.</p>
+
+<form th:action="@{/login}" method="post">
+    <p>
+        <label for="username">Usuario</label>
+        <input type="text" id="username" name="username" autocomplete="username" required autofocus>
+    </p>
+    <p>
+        <label for="password">Contrase&ntilde;a</label>
+        <input type="password" id="password" name="password" autocomplete="current-password" required>
+    </p>
+    <button type="submit">Ingresar</button>
+</form>
+</body>
+</html>
