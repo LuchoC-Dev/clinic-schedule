@@ -1,44 +1,68 @@
-# java-app — Agenda de consultorio
+# schedule — Clinic appointment schedule
 
-Aplicación Spring Boot para la agenda interna de un consultorio médico pequeño.
-Se construye **por etapas**: implementá solo lo que la etapa actual necesita, sin
-adelantar funcionalidad futura ni sobreingeniería.
+A Spring Boot application for the internal appointment schedule of a small medical
+practice. It is built **in stages**: implement only what the current stage needs.
 
-## Documentos de referencia
+## Reference documents
 
-Leelos antes de proponer diseño o código:
+Read these before proposing design or code:
 
-- `docs/contexto.md` — qué hace la aplicación, quiénes la usan, reglas de negocio y
-  evolución prevista.
-- `docs/decisiones.md` — decisiones técnicas con su motivo (D-01 … D-12).
-- `docs/build.md` — plan por etapas y estado de avance.
+- `docs/context.md` — what the application does, who uses it, the business rules and the
+  planned evolution.
+- `docs/decisions.md` — technical decisions and their reasoning (D-01 … D-14).
+- `docs/build.md` — the staged plan and the current progress.
 
 ## Stack
 
-Maven · Java 21 · Spring Boot 3.5 · Spring Security · Spring Data JPA · Flyway ·
-H2 (modo PostgreSQL) · Thymeleaf.
+Maven · Java 21 · Spring Boot 3.5 · Spring Data JPA · Flyway · H2 (PostgreSQL mode).
 
-## Reglas de trabajo
+`JAVA_HOME` must point at JDK 21: this machine defaults to JDK 25. See `README.md`.
 
-- **Distinguí siempre v1 de futuro.** Si algo pertenece a una etapa posterior, decilo
-  y no lo implementes.
-- **Decisiones no definidas:** proponé la opción más simple y explicala antes de
-  tratarla como acordada. Si se acepta, agregala a `docs/decisiones.md`.
-- **Límites entre módulos:** `paciente/`, `profesional/`, `turno/`. Un módulo solo usa
-  el paquete `api/` de otro (interfaz + DTOs). Nunca importes entidades ni repositorios
-  de otro módulo. Cada módulo puede organizarse internamente como le convenga.
-- **El dominio de reservas trabaja con inicio y duración** y no conoce el significado de
-  la razón del turno. La duración la resuelve la capa de aplicación consultando a
-  `profesional`.
-- **Las vistas Thymeleaf son delgadas y descartables:** llaman a los application services,
-  nunca a los controladores REST, y no contienen lógica. La API REST es el contrato
-  principal porque más adelante habrá dos SPA.
-- **Nada específico del motor de base.** JPA estándar y migraciones Flyway en SQL portable,
-  para poder pasar a PostgreSQL cambiando solo el datasource.
-- **Tiempo:** zona horaria fija `America/Argentina/Buenos_Aires`. Usá el bean `Clock`
-  inyectado, nunca `LocalDateTime.now()` directo, para que los plazos sean testeables.
-- **Tests:** unitarios sobre las reglas del dominio y `@SpringBootTest` sobre los flujos
-  clave. No agregues tests por capa solo para subir cobertura.
-- **Commits:** usá la skill `git-commit` (en `.claude/skills/git-commit/`), formato
-  Conventional Commits. Commiteá solo cuando se pida.
-- **Al terminar una etapa:** actualizá `docs/build.md`.
+## Working rules
+
+- **No scaffolding (D-14).** Nothing is added before the stage that uses it — not code, not
+  dependencies, not configuration, not annotations. "It will be needed later" is not a
+  reason; it is what gets it removed. Stage 1 was already trimmed once for this.
+- **Always separate v1 from future work.** If something belongs to a later stage, say so
+  and do not implement it.
+- **Language (D-13):** everything in the repository is written in **English** — code,
+  comments, SQL, API messages, tests, documents and commit messages. The only exception is
+  the on-screen text the staff reads, which stays in **Spanish**. Conversation with the
+  user is in Spanish.
+- **Undecided technical questions:** propose the simplest option and explain it before
+  treating it as agreed. Once accepted, add it to `docs/decisions.md`.
+- **Module boundaries:** `patient/`, `practitioner/`, `appointment/`. A module only uses
+  another module's `api/` package (interface plus DTOs). Never import entities or
+  repositories from another module. Each module may organize its internals as it sees fit.
+- **The booking domain works with a start time and a duration** and knows nothing about
+  what the appointment reason means. The duration is resolved by the application layer,
+  which asks `practitioner`.
+- **Entity and domain services are separate, with a single way in (D-17).** The entity
+  guards its own invariants and has no unvalidated creation path. Rules that need context
+  the entity cannot have live in a domain service, which is the only way in: the entity's
+  mutating operations stay package-private. A domain service receives the context as a
+  collection and never reads it — fetching data and the transaction are the use case's job,
+  so the domain has no ports. Aggregates are immutable: operations return a new instance, so
+  a rejected rule leaves nothing half-changed.
+- **Naming (D-18).** Either the folder says what a file is, or the name must. Where kinds
+  share a folder, use the suffix of the kind: `Exception`, `Service`, `Policy`, `Port`,
+  `UseCase`, `Adapter`, `Row`, `Controller`, `Request`/`Response`. Entities and value
+  objects take no suffix — they are the vocabulary of the business. The full table is in
+  `docs/decisions.md`.
+- **Nothing engine-specific.** Standard JPA and Flyway migrations in portable SQL, so
+  moving to PostgreSQL only means changing the datasource. Watch out for reserved words:
+  `user` is reserved, which is why the user table will be `app_user`.
+- **Time (from stage 4 on):** the fixed time zone is `America/Argentina/Buenos_Aires`. Use
+  the injected `Clock` bean, never `LocalDateTime.now()`, so the deadlines stay testable.
+- **Tests:** unit tests on the domain rules and `@SpringBootTest` on the key flows. Do not
+  add per-layer tests just to raise coverage.
+- **No authentication until stage 8.** Endpoints that need to know the practitioner take
+  the `practitionerId` as a parameter. Do not introduce a stand-in for the current user.
+- **Commits:** use the `git-commit` skill (in `.claude/skills/git-commit/`), Conventional
+  Commits format. Commit only when asked.
+- **When a stage is finished:** update `docs/build.md`.
+
+## Domain glossary
+
+patient · practitioner · appointment (`BOOKED`/`CANCELLED`) · reason · duration ·
+weekly schedule · break · time off · check-in · reschedule · reception

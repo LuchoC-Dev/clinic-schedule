@@ -1,86 +1,124 @@
-# Progreso de construcción
+# Build progress
 
-Estado del plan por etapas. Cada etapa es entregable y verificable por sí sola.
-Se actualiza al completar cada etapa.
+Status of the staged plan. Every stage is deliverable and verifiable on its own, and this
+file is updated when a stage is finished.
 
-**Leyenda:** `[ ]` pendiente · `[~]` en curso · `[x]` hecho
+Nothing is added before the stage that uses it (D-14) — that applies to dependencies and
+configuration as much as to code.
 
----
-
-## v1 — Agenda interna
-
-### Etapa 1 — Esqueleto y seguridad `[x]`
-- [x] Proyecto Maven con Spring Boot 3.5.16 y Java 21 (web, data-jpa, security, validation, thymeleaf, flyway, h2) más Maven Wrapper
-- [x] Estructura de paquetes por módulo y `README.md`
-- [x] Configuración: H2 en modo PostgreSQL, zona horaria fija, `Clock` como bean
-- [x] Migraciones Flyway: `V1` esquema de usuario, `V2` semilla de usuarios
-- [x] Spring Security con roles `RECEPCION` y `PROFESIONAL`, login y `SesionActual` como api del módulo
-- [x] Contrato de errores homogéneo: 400 de validación, 401, 403, 404 y 409
-
-**Verificado con:** 8 tests en verde (`mvnw test`) y la aplicación levantada —
-`/login` responde 200, `/api/sesion` responde 401 sin credenciales y devuelve el rol y
-el `profesionalId` correctos para `recepcion` y para `arias`.
-
-**Notas de la etapa:**
-- `spring-boot-starter-parent` 3.5.16 es la última 3.5.x. La máquina tiene JDK 21 y 25;
-  el `PATH` apunta al 25, así que hay que fijar `JAVA_HOME` al 21 (ver `README.md`).
-- `flyway-database-h2` no existe como artefacto: H2 lo soporta `flyway-core` directamente.
-  Al pasar a PostgreSQL sí hay que agregar `flyway-database-postgresql`.
-- `usuario.profesional_id` queda sin clave foránea hasta la etapa 3, cuando exista la
-  tabla de profesionales. La semilla usa los ids 1 y 2, que esa etapa debe crear.
-- `ddl-auto: validate` convierte el arranque del contexto en una verificación de que el
-  esquema de Flyway y el mapeo JPA coinciden.
-
-### Etapa 2 — Módulo paciente
-- [ ] Entidad y migración: id interno, nombre completo, DNI opcional con único parcial
-- [ ] Alta de paciente y búsqueda por nombre o DNI
-- [ ] Endpoints REST y `api/` del módulo para que `turno` resuelva un paciente
-- [ ] Tests: DNI duplicado rechazado, varios pacientes sin DNI, nombres repetidos permitidos
-
-### Etapa 3 — Módulo profesional
-- [ ] Entidades y migraciones: profesional, horario semanal, pausas
-- [ ] Razones con duración fija por profesional
-- [ ] Configuración por recepción (endpoints) y consulta propia del profesional
-- [ ] `api/` del módulo: duración de una razón y comprobación de disponibilidad
-- [ ] Tests: duración por razón, horario fuera de disponibilidad, hora dentro de una pausa
-
-### Etapa 4 — Módulo turno: reservar, reprogramar, cancelar
-- [ ] Entidad y migración del turno con estado `RESERVADO`/`CANCELADO`
-- [ ] Dominio de reserva con inicio y duración, sin conocer la razón
-- [ ] Reglas: sin solapamiento por profesional, sin simultáneos por paciente, dentro de disponibilidad
-- [ ] Reservar, reprogramar y cancelar; los cancelados se conservan
-- [ ] Filtrado por rol en la consulta de agenda
-- [ ] Tests: solapamientos en los bordes, mismo paciente en dos profesionales a la misma hora, turno del mismo día
-
-### Etapa 5 — Llegada y cancelación automática
-- [ ] Confirmar llegada y suspender la cancelación automática
-- [ ] Tarea `@Scheduled` cada minuto: 30 minutos sin llegada, 24 horas si está suspendida
-- [ ] Tests con `Clock` fijo para los tres casos y para el turno ya atendido
-
-### Etapa 6 — Ausencias del profesional
-- [ ] Registrar ausencia por día o por intervalo horario
-- [ ] Cancelación en cascada de los turnos afectados **sin** llegada confirmada
-- [ ] Informe de los turnos con llegada confirmada que requieren intervención manual
-- [ ] Tests: ausencia parcial, ausencia de día completo, turno con llegada confirmada intacto
-
-### Etapa 7 — Vistas Thymeleaf mínimas
-- [ ] Agenda del día por profesional
-- [ ] Alta y reprogramación de turno con sugerencia de intervalos en la interfaz
-- [ ] Confirmar llegada desde la agenda
-- [ ] Vista del profesional restringida a sus propios turnos
+**Legend:** `[ ]` pending · `[~]` in progress · `[x]` done
 
 ---
 
-## Postergado explícitamente
+## v1 — Internal appointment schedule
 
-No son omisiones: están decididos y esperando su momento.
+### Stage 1 — A running application `[x]`
+- [x] Maven project on Spring Boot 3.5.16 and Java 21, plus the Maven Wrapper
+- [x] Dependencies limited to what runs today: web, data-jpa, flyway-core, h2, test
+- [x] H2 in PostgreSQL compatibility mode, with Flyway in charge of the schema and `ddl-auto: validate`
+- [x] `README.md` and the reference documents in `docs/`
 
-- **PostgreSQL** reemplazando a H2, con `docker-compose` (ver D-03).
-- **ArchUnit** verificando los límites entre módulos (ver D-05).
-- Administración de usuarios por interfaz (ver D-04).
+**Verified with:** `mvnw clean test` passing, and the application starting and serving on
+port 8080.
 
-## Fuera del alcance de la v1
+**Stage notes:**
+- `spring-boot-starter-parent` 3.5.16 is the latest 3.5.x. This machine has both JDK 21 and
+  JDK 25 and the `PATH` points at 25, so `JAVA_HOME` must be set to 21 (see `README.md`).
+- `flyway-database-h2` does not exist as an artifact: `flyway-core` supports H2 directly.
+  Moving to PostgreSQL does require `flyway-database-postgresql`.
+- There are no endpoints yet, so any URL answers 404. The first one arrives in stage 2.
+- Flyway logs `No migrations found` on startup. That is expected until stage 2 adds `V1`.
+- This stage first shipped with security, users, login, an error contract, a `Clock` bean,
+  `@EnableScheduling` and the thymeleaf and validation dependencies. All of it was removed
+  as unused scaffolding (D-14), and each piece now belongs to the stage that needs it.
 
-Ver `docs/contexto.md`, sección «Evolución prevista»: ficha de paciente, cola de llegada,
-historia clínica, asistencia con más estados, avisos, datos adicionales del paciente y
-reserva web.
+### In progress — `appointment` domain `[~]`
+
+The order of the stages below is **under review**: `appointment` is the only module with
+rules of its own, so its domain is being built first to check that the rules close before
+committing to a plan. Done so far, in
+`src/main/java/com/clinic/schedule/appointment/domain/`:
+
+- [x] `TimeSlot` — start plus duration, with the exclusive-end overlap rule
+- [x] `Appointment` — the aggregate: book, cancel, reschedule
+- [x] `AppointmentId` — UUID assigned on creation (D-19), so a retried request cannot book twice
+- [x] `PatientId` / `PractitionerId` — id wrappers, no cross-module relations
+- [x] `BookingPolicy` — no practitioner overlap, no patient overlap (package-private)
+- [x] `BookingService` — the only way in: creates and checks together (D-17)
+- [x] `BookingRuleViolation` and the two named subclasses
+- [x] 34 unit tests, no Spring, running in under half a second
+
+Not here yet, by design: ports (D-14 — they arrive with the use case), persistence, the
+REST endpoint, and the availability check (weekly schedule, breaks, time off), which
+belongs to `practitioner`.
+
+### Stage 2 — Patient module
+- [ ] Add the `validation` dependency and the uniform error contract, with the first endpoint
+- [ ] Entity and migration `V1`: internal id, full name, optional national ID with a partial unique index
+- [ ] Register a patient, and search by name or national ID
+- [ ] REST endpoints, and the module `api/` so `appointment` can resolve a patient
+- [ ] Tests: duplicate national ID rejected, several patients without one, repeated names allowed
+
+### Stage 3 — Practitioner module
+- [ ] Entities and migrations: practitioner, weekly schedule, breaks
+- [ ] Reasons with a fixed duration per practitioner
+- [ ] Configuration endpoints for reception
+- [ ] Module `api/`: duration of a reason, and an availability check
+- [ ] Tests: duration per reason, a time outside availability, a time inside a break
+
+### Stage 4 — Appointment module: book, reschedule, cancel
+- [ ] Add the `Clock` bean and the fixed time zone, the first code that reads the time
+- [ ] Entity and migration with the `BOOKED`/`CANCELLED` state
+- [ ] Booking domain working with a start time and a duration, unaware of the reason
+- [ ] Rules: no overlap per practitioner, none simultaneous per patient, inside availability
+- [ ] Book, reschedule and cancel; cancelled appointments are kept
+- [ ] Agenda query taking the `practitionerId` as a parameter — no authentication until stage 8
+- [ ] Tests: overlaps at the boundaries, the same patient with two practitioners at the same time, same-day appointment
+
+### Stage 5 — Check-in and automatic cancellation
+- [ ] Add `@EnableScheduling`
+- [ ] Confirm check-in, and suspend the automatic cancellation
+- [ ] `@Scheduled` task every minute: 30 minutes without check-in, 24 hours when suspended
+- [ ] Tests with a fixed `Clock` for the three cases and for an already attended appointment
+
+### Stage 6 — Practitioner time off
+- [ ] Record time off for a whole day or for a time range
+- [ ] Cascading cancellation of the affected appointments **without** a confirmed check-in
+- [ ] Report of the appointments with a confirmed check-in that need manual handling
+- [ ] Tests: partial time off, full-day time off, an appointment with a confirmed check-in left untouched
+
+### Stage 7 — Minimal Thymeleaf views
+- [ ] Add the `thymeleaf` dependency
+- [ ] Agenda of the day per practitioner
+- [ ] New appointment and rescheduling, with slots suggested by the interface
+- [ ] Confirm check-in from the agenda
+
+### Stage 8 — Security
+- [ ] Add the `security` dependency, with the `app_user` table and a seed migration
+- [ ] Login for the views, and stateless authentication for `/api/**`
+- [ ] `RECEPTION` and `PRACTITIONER` roles, with a `CurrentSession` api in the module
+- [ ] Foreign key from `app_user.practitioner_id` to the practitioner table
+- [ ] Reception queries any practitioner; a practitioner is restricted to their own agenda,
+      with the received parameter ignored
+- [ ] Tests: 401 without credentials, a practitioner cannot read another practitioner's agenda
+
+A working version of this stage already existed and was removed; see D-04 and D-14. The
+design is settled, so it is mostly a matter of bringing it back where it has something to
+protect.
+
+---
+
+## Explicitly postponed
+
+These are not oversights: they are decided and waiting for their moment.
+
+- **PostgreSQL** replacing H2, with `docker-compose` (see D-03).
+- **ArchUnit** enforcing the module boundaries (see D-05).
+- A user administration screen (see D-04).
+- A `.gitattributes` pinning line endings, once the repository is used from another machine
+  or from CI.
+
+## Out of scope for v1
+
+See `docs/context.md`, section "Planned evolution": patient file, arrival queue, clinical
+history, attendance with more states, reminders, extra patient data and web booking.

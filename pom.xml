@@ -11,16 +11,19 @@
         <relativePath/>
     </parent>
 
-    <groupId>com.consultorio</groupId>
-    <artifactId>agenda</artifactId>
+    <groupId>com.clinic</groupId>
+    <artifactId>schedule</artifactId>
     <version>0.1.0-SNAPSHOT</version>
-    <name>agenda</name>
-    <description>Agenda interna para un consultorio medico pequeno</description>
+    <name>schedule</name>
+    <description>Internal appointment schedule for a small medical practice</description>
 
     <properties>
         <java.version>21</java.version>
     </properties>
 
+    <!-- Only what the current stage uses (D-14). Every other dependency is added by the
+         stage that needs it: validation in stage 2, thymeleaf in stage 7, security in
+         stage 8. -->
     <dependencies>
         <dependency>
             <groupId>org.springframework.boot</groupId>
@@ -28,27 +31,15 @@
         </dependency>
         <dependency>
             <groupId>org.springframework.boot</groupId>
-            <artifactId>spring-boot-starter-security</artifactId>
-        </dependency>
-        <dependency>
-            <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-starter-data-jpa</artifactId>
-        </dependency>
-        <dependency>
-            <groupId>org.springframework.boot</groupId>
-            <artifactId>spring-boot-starter-validation</artifactId>
-        </dependency>
-        <dependency>
-            <groupId>org.springframework.boot</groupId>
-            <artifactId>spring-boot-starter-thymeleaf</artifactId>
         </dependency>
 
         <dependency>
             <groupId>org.flywaydb</groupId>
             <artifactId>flyway-core</artifactId>
         </dependency>
-        <!-- H2 lo trae flyway-core. Al pasar a PostgreSQL (D-03) hay que agregar
-             ademas org.flywaydb:flyway-database-postgresql. -->
+        <!-- H2 is supported by flyway-core itself. Moving to PostgreSQL (D-03) also
+             requires org.flywaydb:flyway-database-postgresql. -->
         <dependency>
             <groupId>com.h2database</groupId>
             <artifactId>h2</artifactId>
@@ -58,11 +49,6 @@
         <dependency>
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-starter-test</artifactId>
-            <scope>test</scope>
-        </dependency>
-        <dependency>
-            <groupId>org.springframework.security</groupId>
-            <artifactId>spring-security-test</artifactId>
             <scope>test</scope>
         </dependency>
     </dependencies>

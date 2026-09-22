@@ -1,34 +1,24 @@
 spring:
   application:
-    name: agenda
+    name: schedule
 
-  # H2 en modo de compatibilidad PostgreSQL (D-03). El cambio de motor es solo esta
-  # seccion mas la dependencia de Flyway del motor nuevo.
+  # H2 in PostgreSQL compatibility mode (D-03). Switching engines means changing this
+  # section plus the Flyway module of the new engine, nothing else.
   datasource:
-    url: jdbc:h2:mem:agenda;MODE=PostgreSQL;DATABASE_TO_LOWER=TRUE;CASE_INSENSITIVE_IDENTIFIERS=TRUE
+    url: jdbc:h2:mem:schedule;MODE=PostgreSQL;DATABASE_TO_LOWER=TRUE;CASE_INSENSITIVE_IDENTIFIERS=TRUE
     username: sa
     password:
 
   jpa:
     open-in-view: false
     hibernate:
-      # El esquema lo gobierna Flyway; Hibernate solo verifica que el mapeo coincida.
+      # Flyway owns the schema; Hibernate only checks that the mapping matches it.
       ddl-auto: validate
-    properties:
-      hibernate:
-        jdbc:
-          time_zone: America/Argentina/Buenos_Aires
 
   flyway:
     enabled: true
     locations: classpath:db/migration
 
-  thymeleaf:
-    cache: false
-
-app:
-  zona-horaria: America/Argentina/Buenos_Aires
-
 logging:
   level:
-    com.consultorio.agenda: DEBUG
+    com.clinic.schedule: DEBUG

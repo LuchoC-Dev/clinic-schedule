@@ -1,70 +1,55 @@
-# Agenda de consultorio
+# Clinic appointment schedule
 
-Agenda interna para un consultorio médico pequeño (3 o 4 profesionales). Recepción
-administra turnos, horarios y ausencias; cada profesional consulta únicamente sus
-propios turnos.
+An internal appointment schedule for a small medical practice (three or four
+practitioners). Reception manages appointments, working hours and time off; each
+practitioner reads only their own appointments.
 
-Se construye por etapas. El alcance funcional está en [`docs/contexto.md`](docs/contexto.md),
-las decisiones técnicas en [`docs/decisiones.md`](docs/decisiones.md) y el avance en
+The application is built in stages, adding nothing before the stage that uses it. The
+functional scope lives in [`docs/context.md`](docs/context.md), the technical decisions in
+[`docs/decisions.md`](docs/decisions.md) and the progress in
 [`docs/build.md`](docs/build.md).
 
-## Requisitos
+## Requirements
 
-- **JDK 21.** En esta máquina está en `C:\Program Files\Java\jdk-21`. El `java` del
-  `PATH` es el 25, así que hay que apuntar `JAVA_HOME` al 21 antes de compilar:
+- **JDK 21.** On this machine it is at `C:\Program Files\Java\jdk-21`. The `java` on the
+  `PATH` is 25, so `JAVA_HOME` has to point at 21 before building:
 
   ```powershell
   $env:JAVA_HOME = "C:\Program Files\Java\jdk-21"
   ```
 
-- Maven no hace falta instalarlo: el repositorio incluye el wrapper (`mvnw`).
+- Maven does not need to be installed: the repository ships the wrapper (`mvnw`).
 
-## Comandos
-
-```powershell
-.\mvnw test                # suite completa
-.\mvnw spring-boot:run     # levanta la app en http://localhost:8080
-```
-
-La base es H2 en memoria: se crea y se puebla con Flyway en cada arranque, y se pierde
-al detener la aplicación.
-
-## Usuarios de desarrollo
-
-Definidos en `V2__semilla_usuarios.sql`. Hay que reemplazarlos antes de cualquier
-despliegue real.
-
-| Usuario     | Contraseña       | Rol         | Profesional |
-|-------------|------------------|-------------|-------------|
-| `recepcion` | `recepcion123`   | RECEPCION   | —           |
-| `arias`     | `profesional123` | PROFESIONAL | 1           |
-| `benitez`   | `profesional123` | PROFESIONAL | 2           |
-
-## Estado actual
-
-Etapa 1 terminada: esqueleto, seguridad con dos roles, migraciones y contrato de errores.
+## Commands
 
 ```powershell
-curl.exe -u recepcion:recepcion123 http://localhost:8080/api/sesion
+.\mvnw test                # full test suite
+.\mvnw spring-boot:run     # runs the app on http://localhost:8080
 ```
 
-```json
-{"id":1,"usuario":"recepcion","rol":"RECEPCION","profesionalId":null}
+The database is in-memory H2, owned by Flyway and recreated on every start.
+
+## Current state
+
+**Stage 1 of 8 is done: the application starts.** That is all it does — there are no
+endpoints yet, so every URL answers 404, and Flyway logs `No migrations found` because the
+first migration arrives with the patient table in stage 2.
+
+```
+src/main/java/com/clinic/schedule/ScheduleApplication.java
+src/main/resources/application.yml
+src/test/java/com/clinic/schedule/ScheduleApplicationTests.java
 ```
 
-El formulario de login está en `http://localhost:8080/login`. Las pantallas de agenda
-llegan en la etapa 7.
+The plan from here: patients (2), practitioners with their reasons and working hours (3),
+appointments with the booking rules (4), check-in and automatic cancellation (5), time off
+(6), the agenda screens (7) and security with login and roles (8).
 
-## Estructura
+Each stage brings its own dependencies with it. Security, views, validation and the
+scheduler are deliberately absent until then, so the repository shows every piece arriving
+with the reason that justifies it (D-14).
 
-```
-src/main/java/com/consultorio/agenda/
-├── AgendaApplication.java
-├── config/            reloj y zona horaria de la aplicación
-├── compartido/        excepciones y contrato de errores de la API
-└── seguridad/         usuarios, roles y sesión actual
-    └── api/           lo único que ven los otros módulos
-```
+## Conventions
 
-Los módulos `paciente`, `profesional` y `turno` se agregan en las etapas 2, 3 y 4.
-Un módulo solo usa el paquete `api/` de otro: ver D-05 en `docs/decisiones.md`.
+The whole repository is written in English — code, SQL, comments, documents and commit
+messages. On-screen text for the staff of the practice stays in Spanish (D-13).
