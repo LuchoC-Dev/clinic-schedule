@@ -67,9 +67,23 @@ Persistence, in `appointment/persistence/`:
       `AppointmentConfiguration` so the domain keeps no reference to Spring (D-21)
 - [x] 8 tests against the real schema and 6 end-to-end flow tests. 64 in total
 
-Not here yet, by design: the REST endpoint, and the availability check (weekly schedule,
-breaks, time off), which belongs to `practitioner`. The duration still travels in the command
-until then (D-08).
+Endpoints, in `appointment/web/`, with the `validation` dependency now that something uses it:
+
+- [x] `POST /api/appointments` — books; 201 with `Location`
+- [x] `POST /api/appointments/{id}/reschedule`, `POST /api/appointments/{id}/cancel`
+- [x] `GET /api/appointments?practitionerId=…&date=…` — the day, in order, without cancelled ones
+- [x] `ViewDayAgendaUseCase`
+- [x] `BookAppointmentRequest`, `RescheduleAppointmentRequest`, `AppointmentResponse`
+- [x] `shared/web/ErrorResponse` and a module-scoped `AppointmentExceptionHandler`: 400 with
+      the offending fields, 404, 409 (D-23)
+- [x] 11 tests over the real stack. 75 in total
+
+**Verified with the application running:** booking answers 201, an overlap 409 naming the
+practitioner and the slot, a back-to-back appointment 201, a missing reason 400 naming the
+field, and the day agenda comes back in order.
+
+Not here yet, by design: the availability check (weekly schedule, breaks, time off), which
+belongs to `practitioner`. The duration still travels in the request until then (D-08).
 
 ### Stage 2 — Patient module
 - [ ] Add the `validation` dependency and the uniform error contract, with the first endpoint

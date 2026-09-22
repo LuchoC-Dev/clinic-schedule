@@ -22,8 +22,7 @@
     </properties>
 
     <!-- Only what the current stage uses (D-14). Every other dependency is added by the
-         stage that needs it: validation in stage 2, thymeleaf in stage 7, security in
-         stage 8. -->
+         stage that needs it: thymeleaf with the views, security with the login. -->
     <dependencies>
         <dependency>
             <groupId>org.springframework.boot</groupId>
@@ -32,6 +31,10 @@
         <dependency>
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-starter-data-jpa</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-validation</artifactId>
         </dependency>
 
         <dependency>

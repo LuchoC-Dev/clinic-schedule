@@ -471,3 +471,39 @@ single front desk, that is a risk worth naming rather than paying for now.
 `PatientId` and `PractitionerId` wrap a `UUID` like `AppointmentId` does (D-19), instead of a
 `Long`. The `appointment` table needed the final column type, and having the reference
 columns disagree with the tables they will point at would have meant migrating them later.
+
+---
+
+## D-23 — Business operations are POST on a sub-path; each module translates its own errors
+**Date:** 2026-09-22 · **Status:** accepted
+
+**Routes.** Cancelling is `POST /api/appointments/{id}/cancel` and rescheduling is
+`POST /api/appointments/{id}/reschedule`, rather than `DELETE` and `PATCH`. They are business
+operations with rules of their own, not edits to a field, and nothing is ever deleted — a
+cancelled appointment is kept as a record, because the patient file will show it.
+
+**Booking answers 201 even when the id was already known.** The outcome the client asked for
+is the same either way, and the body says which appointment it ended up with. Distinguishing
+"created" from "already there" would mean the use case reporting which of the two happened,
+for a difference no client acts on.
+
+**`id` in the request body is optional.** A client that wants a retry to be safe generates
+one and reuses it; one that does not care leaves it out and the server generates it (D-19).
+
+**Errors are translated per module.** `ErrorResponse` lives in `shared/web` because the shape
+of an error is a property of the API as a whole — one thing for a client to parse. The
+translation, however, is scoped to the module with
+`@RestControllerAdvice(assignableTypes = AppointmentController.class)`, so no shared class has
+to import this module's exceptions (D-05). A booking rule that says no is a 409: the request
+was well formed and the client can retry with another time.
+
+When a second module gets endpoints, what moves to a shared advice is the validation
+handling; the rules stay in their module.
+
+**Responses carry plain values, not domain types.** `AppointmentResponse` exposes `UUID`s and
+not the id wrappers, so the JSON does not grow a nested object per id and the contract does
+not move when the domain does. It also carries `endsAt`, which the domain derives, because
+every client would otherwise compute it.
+
+An absent note comes back as an explicit `null` instead of being left out, so a client knows
+the field exists.
