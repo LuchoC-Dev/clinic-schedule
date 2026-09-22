@@ -1,0 +1,62 @@
+package com.clinic.schedule.patient;
+
+import java.net.URI;
+import java.util.List;
+import java.util.UUID;
+
+import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.PutMapping;
+import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.RestController;
+
+import jakarta.validation.Valid;
+
+/**
+ * The patient endpoints: register, correct, look up.
+ *
+ * <p>Updating is a {@code PUT} and not a {@code POST} on a sub-path, unlike cancelling an
+ * appointment (D-23): correcting a misspelled name or adding the national ID that was missing
+ * is an edit to the record, not a business operation with rules of its own.
+ *
+ * <p>There is no delete. A patient with appointments cannot disappear without taking history
+ * with them, and nothing in v1 asks for it.
+ */
+@RestController
+@RequestMapping("/api/patients")
+class PatientController {
+
+    private final PatientService patients;
+
+    PatientController(PatientService patients) {
+        this.patients = patients;
+    }
+
+    @PostMapping
+    ResponseEntity<PatientResponse> register(@Valid @RequestBody PatientRequest request) {
+        Patient registered = patients.register(request.fullName(), request.nationalId());
+        return ResponseEntity
+                .created(URI.create("/api/patients/" + registered.getId()))
+                .body(PatientResponse.of(registered));
+    }
+
+    @PutMapping("/{id}")
+    PatientResponse update(@PathVariable UUID id, @Valid @RequestBody PatientRequest request) {
+        return PatientResponse.of(patients.update(id, request.fullName(), request.nationalId()));
+    }
+
+    @GetMapping("/{id}")
+    PatientResponse byId(@PathVariable UUID id) {
+        return PatientResponse.of(patients.byId(id));
+    }
+
+    /** Reception's search box: part of a name or the national ID. No query lists everyone. */
+    @GetMapping
+    List<PatientResponse> search(@RequestParam(required = false) String query) {
+        return patients.search(query).stream().map(PatientResponse::of).toList();
+    }
+}

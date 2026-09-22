@@ -85,14 +85,38 @@ field, and the day agenda comes back in order.
 Not here yet, by design: the availability check (weekly schedule, breaks, time off), which
 belongs to `practitioner`. The duration still travels in the request until then (D-08).
 
-### Stage 2 — Patient module
-- [ ] Add the `validation` dependency and the uniform error contract, with the first endpoint
-- [ ] Entity and migration `V1`: internal id, full name, optional national ID with a partial unique index
-- [ ] Register a patient, and search by name or national ID
-- [ ] REST endpoints, and the module `api/` so `appointment` can resolve a patient
-- [ ] Tests: duplicate national ID rejected, several patients without one, repeated names allowed
+### `patient` module `[x]`
 
-### Stage 3 — Practitioner module
+Layered, with JPA mapped straight onto the entity (D-25). A flat package, so everything is
+package-private and nothing outside the module can reach the service (D-24).
+
+- [x] `V2__patient.sql` — `uuid` id, full name, optional national ID
+- [x] `Patient` — the `@Entity`, guarding its own shape, with no setters
+- [x] `PatientRepository`, `PatientService`
+- [x] `POST /api/patients`, `PUT /api/patients/{id}`, `GET /api/patients/{id}`,
+      `GET /api/patients?query=…` (name or national ID, one search box)
+- [x] `PatientExceptionHandler` — 404, 409 for a repeated national ID, 400 for validation
+- [x] 13 tests over the real stack. 88 in total
+
+**Verified with the application running:** registering with and without a national ID, two
+patients with no national ID, two patients sharing a name, a repeated national ID answering
+409, and searching by name and by national ID.
+
+**Notes:**
+- A plain `unique` constraint on `national_id` gives the rule asked for, because both
+  PostgreSQL and H2 allow repeated nulls in a unique constraint. The partial index this plan
+  used to call for is not needed, which keeps the SQL portable.
+- A blank national ID is stored as absent, so `""` and `"   "` do not become a value that
+  collides with the next blank one.
+- No delete endpoint: a patient with appointments cannot disappear without taking history
+  with them, and nothing in v1 asks for it.
+- No `api/` package yet. It appears when `appointment` uses it, which is the next step
+  (D-14).
+
+### `practitioner` module — next
+Closes the debt in `appointment`: the duration stops travelling in the request (D-08), and
+availability starts being checked.
+
 - [ ] Entities and migrations: practitioner, weekly schedule, breaks
 - [ ] Reasons with a fixed duration per practitioner
 - [ ] Configuration endpoints for reception

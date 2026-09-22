@@ -507,3 +507,56 @@ every client would otherwise compute it.
 
 An absent note comes back as an explicit `null` instead of being left out, so a client knows
 the field exists.
+
+---
+
+## D-24 — Three boundaries, three mechanisms
+**Date:** 2026-09-22 · **Status:** accepted
+
+Business rules are reachable through one entrance and cannot be bypassed. What enforces that
+depends on which boundary is being crossed:
+
+| Boundary | Mechanism |
+|---|---|
+| Inside a module, towards the domain | package visibility, plus one concrete domain service as the way in |
+| Between modules | an interface in the module's `api/`, with its own DTOs |
+| Towards infrastructure | ports: `Reader` / `Writer` / `Repository`, or `Port` when it is not storage |
+
+**Inside a module the entrance is a concrete class, not an interface.** What makes the rules
+impossible to skip in `appointment` is that `Appointment.book` and `movedTo` are
+package-private — not that `BookingService` is an interface, which it is not. An interface
+with a single implementation would leave `BookingServiceImpl` just as public while adding a
+file to jump through; `Impl` as a suffix is the usual sign of an interface that exists because
+interfaces are expected. An interface earns its place when there is more than one real
+implementation, or when the consumer must not see the concrete type — which is exactly the
+case between modules.
+
+**A port is an outbound dependency**, what the module needs from the outside. It is not the
+entrance to the domain; using it as one inverts the idea.
+
+Consequence for the modules still to come: `AvailabilityPolicy` in `practitioner` will be a
+package-private concrete class reached only through the module's service, while what
+`appointment` sees is the interface in `practitioner/api/`.
+
+---
+
+## D-25 — Layered inside `patient` and `practitioner`, with the rules kept pure
+**Date:** 2026-09-22 · **Status:** accepted
+
+Only `appointment` separates the domain from persistence (D-16). The other two map JPA
+directly onto their classes, which is what D-05 allows and what keeps them short.
+
+- **`patient` is layered, plainly.** Full name, optional national ID, search. No invariant an
+  `@Entity` cannot hold, no rule needing context. A `Row` plus a translation, a port and a use
+  case per operation would be ceremony.
+- **`practitioner` is layered with the rules pulled out.** The practitioner, the reasons and
+  the weekly hours are CRUD. "Is this practitioner free between 10:15 and 10:45?" is not: it
+  crosses the day's hours, subtracts breaks and subtracts time off. That calculation lives in
+  plain classes with no JPA and no Spring — `TimeRange`, `WeeklyHours`, `AvailabilityPolicy` —
+  because the tests that matter there are boundary cases, and running them through HTTP or a
+  database is slow and opaque for what is arithmetic over hours.
+
+**Each module keeps everything package-private except its `api/`.** `patient` is therefore a
+flat package: with the controller and the service in the same package as the entity, the
+service need not be public, so nothing outside the module can reach it. The suffixes say what
+each file is (D-18).
