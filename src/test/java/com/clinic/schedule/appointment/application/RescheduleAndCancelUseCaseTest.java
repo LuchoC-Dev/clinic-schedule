@@ -20,9 +20,9 @@ import com.clinic.schedule.appointment.domain.TimeSlot;
 class RescheduleAndCancelUseCaseTest {
 
     private static final LocalDateTime TEN = LocalDateTime.of(2026, 3, 10, 10, 0);
-    private static final PatientId ANA = new PatientId(1L);
-    private static final PatientId LUIS = new PatientId(2L);
-    private static final PractitionerId ARIAS = new PractitionerId(7L);
+    private static final PatientId ANA = PatientId.newId();
+    private static final PatientId LUIS = PatientId.newId();
+    private static final PractitionerId ARIAS = PractitionerId.newId();
 
     private final InMemoryAppointmentRepository appointments = new InMemoryAppointmentRepository();
     private final RescheduleAppointmentUseCase reschedule =

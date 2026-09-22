@@ -11,8 +11,8 @@ import org.junit.jupiter.api.Test;
 class AppointmentTest {
 
     private static final AppointmentId ID = AppointmentId.newId();
-    private static final PatientId PATIENT = new PatientId(1L);
-    private static final PractitionerId PRACTITIONER = new PractitionerId(7L);
+    private static final PatientId PATIENT = PatientId.newId();
+    private static final PractitionerId PRACTITIONER = PractitionerId.newId();
     private static final TimeSlot TEN_THIRTY = TimeSlot.of(LocalDateTime.of(2026, 3, 10, 10, 0), 30);
 
     private Appointment booked() {

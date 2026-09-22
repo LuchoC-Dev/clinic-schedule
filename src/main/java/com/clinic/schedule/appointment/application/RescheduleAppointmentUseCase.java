@@ -2,6 +2,9 @@ package com.clinic.schedule.appointment.application;
 
 import java.time.LocalDateTime;
 
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+
 import com.clinic.schedule.appointment.domain.Appointment;
 import com.clinic.schedule.appointment.domain.AppointmentId;
 import com.clinic.schedule.appointment.domain.BookingService;
@@ -14,6 +17,7 @@ import com.clinic.schedule.appointment.domain.TimeSlot;
  * move is indistinguishable from asking for it again, and the second attempt simply finds
  * the appointment already where it should be.
  */
+@Service
 public class RescheduleAppointmentUseCase {
 
     private final AppointmentRepository appointments;
@@ -26,6 +30,7 @@ public class RescheduleAppointmentUseCase {
         this.agenda = new AgendaReader(appointments);
     }
 
+    @Transactional
     public Appointment handle(Command command) {
         Appointment appointment = appointments.findById(command.id())
                 .orElseThrow(() -> new AppointmentNotFoundException(command.id()));

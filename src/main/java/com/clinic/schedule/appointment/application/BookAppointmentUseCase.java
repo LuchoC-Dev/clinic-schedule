@@ -3,6 +3,9 @@ package com.clinic.schedule.appointment.application;
 import java.time.LocalDateTime;
 import java.util.Optional;
 
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+
 import com.clinic.schedule.appointment.domain.Appointment;
 import com.clinic.schedule.appointment.domain.AppointmentId;
 import com.clinic.schedule.appointment.domain.BookingService;
@@ -18,10 +21,11 @@ import com.clinic.schedule.appointment.domain.TimeSlot;
  * the existing appointment is returned instead of booking a second one. That is what the
  * caller-assigned id buys (D-19).
  *
- * <p>No Spring annotations yet: nothing implements {@link AppointmentRepository}, so there is
- * nothing to wire. The {@code @Service} and the transaction arrive with the persistence
- * adapter, in the same stage (D-20).
+ * <p>The whole thing runs in one transaction: reading the agenda and storing the appointment
+ * have to be a single step, or two receptionists booking at the same time could both find the
+ * slot free (D-21).
  */
+@Service
 public class BookAppointmentUseCase {
 
     private final AppointmentRepository appointments;
@@ -34,6 +38,7 @@ public class BookAppointmentUseCase {
         this.agenda = new AgendaReader(appointments);
     }
 
+    @Transactional
     public Appointment handle(Command command) {
         Optional<Appointment> alreadyBooked = appointments.findById(command.id());
         if (alreadyBooked.isPresent()) {

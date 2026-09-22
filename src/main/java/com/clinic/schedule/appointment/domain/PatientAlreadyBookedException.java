@@ -7,7 +7,7 @@ package com.clinic.schedule.appointment.domain;
 public class PatientAlreadyBookedException extends BookingRuleViolationException {
 
     public PatientAlreadyBookedException(PatientId patientId, TimeSlot slot) {
-        super("Patient %d already has an appointment overlapping %s - %s"
+        super("Patient %s already has an appointment overlapping %s - %s"
                 .formatted(patientId.value(), slot.startsAt(), slot.endsAt()));
     }
 }

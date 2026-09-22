@@ -1,5 +1,8 @@
 package com.clinic.schedule.appointment.application;
 
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+
 import com.clinic.schedule.appointment.domain.Appointment;
 import com.clinic.schedule.appointment.domain.AppointmentId;
 
@@ -13,6 +16,7 @@ import com.clinic.schedule.appointment.domain.AppointmentId;
  *
  * <p>It takes the id directly instead of a {@code Command}: a single value needs no wrapper.
  */
+@Service
 public class CancelAppointmentUseCase {
 
     private final AppointmentRepository appointments;
@@ -21,6 +25,7 @@ public class CancelAppointmentUseCase {
         this.appointments = appointments;
     }
 
+    @Transactional
     public Appointment handle(AppointmentId id) {
         Appointment appointment = appointments.findById(id)
                 .orElseThrow(() -> new AppointmentNotFoundException(id));

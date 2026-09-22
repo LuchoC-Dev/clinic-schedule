@@ -11,10 +11,10 @@ import org.junit.jupiter.api.Test;
 class BookingPolicyTest {
 
     private static final LocalDateTime TEN = LocalDateTime.of(2026, 3, 10, 10, 0);
-    private static final PatientId ANA = new PatientId(1L);
-    private static final PatientId LUIS = new PatientId(2L);
-    private static final PractitionerId ARIAS = new PractitionerId(7L);
-    private static final PractitionerId BENITEZ = new PractitionerId(8L);
+    private static final PatientId ANA = PatientId.newId();
+    private static final PatientId LUIS = PatientId.newId();
+    private static final PractitionerId ARIAS = PractitionerId.newId();
+    private static final PractitionerId BENITEZ = PractitionerId.newId();
 
     private final BookingPolicy policy = new BookingPolicy();
 

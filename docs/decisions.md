@@ -418,7 +418,7 @@ protection is gone, which was weighed and accepted when `restore` was left publi
 ---
 
 ## D-20 — Use cases are plain objects until there is an adapter
-**Date:** 2026-09-22 · **Status:** accepted
+**Date:** 2026-09-22 · **Status:** applied; the annotations arrived with the adapter
 
 The use cases carry no `@Service` and no `@Transactional`. Nothing implements
 `AppointmentPort` yet, so annotating them would either fail the context at startup or force
@@ -441,3 +441,33 @@ Two things settled while writing them:
 `CancelAppointmentUseCase` deliberately does not go through `BookingService` or read the
 agenda: cancelling frees a slot instead of taking one, so there is nothing to check against,
 and the aggregate refuses a second cancellation by itself.
+
+---
+
+## D-21 — One transaction per use case, opened by the use case
+**Date:** 2026-09-22 · **Status:** accepted
+
+`@Transactional` sits on the use case, not on the adapter. Reading the agenda, deciding and
+storing have to be one step: an adapter that opened a transaction per call would let the
+read commit before the write, and the decision would rest on data that is no longer current.
+
+The cost is that the application layer now imports `org.springframework.transaction`. That
+is accepted: the transaction boundary is a decision about a business operation, which is what
+this layer is for. The domain stays clean, and `BookingService` is declared as a bean in
+`AppointmentConfiguration` rather than annotated, so the domain keeps no reference to Spring.
+
+**A limit worth stating plainly.** The transaction does not make the overlap check
+concurrency-safe. Under the default isolation, two receptionists booking the same slot at the
+same time can both read a free agenda and both insert. Making it airtight needs either a
+PostgreSQL exclusion constraint over a time range — which H2 cannot express — or a pessimistic
+lock on the practitioner's day. So D-09's promise of a database-level overlap check is
+**postponed to the PostgreSQL move**, and until then the guarantee is: one receptionist at a
+time is safe, two racing on the same slot are not. With three or four practitioners and a
+single front desk, that is a risk worth naming rather than paying for now.
+
+## D-22 — Ids are uuid for every aggregate
+**Date:** 2026-09-22 · **Status:** accepted
+
+`PatientId` and `PractitionerId` wrap a `UUID` like `AppointmentId` does (D-19), instead of a
+`Long`. The `appointment` table needed the final column type, and having the reference
+columns disagree with the tables they will point at would have meant migrating them later.

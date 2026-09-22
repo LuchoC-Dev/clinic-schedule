@@ -57,10 +57,19 @@ Use cases, in `appointment/application/`:
 - [x] `AppointmentNotFoundException`; each `Command` is a record nested in its use case
 - [x] 15 tests against an in-memory port, still without Spring
 
-Not here yet, by design: persistence, the REST endpoint, the `@Service` annotations and the
-transaction — all of which arrive together with the adapter — and the availability check
-(weekly schedule, breaks, time off), which belongs to `practitioner`. The duration still
-travels in the command until then (D-08).
+Persistence, in `appointment/persistence/`:
+
+- [x] `V1__appointment.sql` — `uuid` ids, the slot as start plus duration, status check
+- [x] `AppointmentRow` — the `@Entity`, separate from the aggregate, and the translation
+- [x] `AppointmentRowRepository` — Spring Data, a detail of the package
+- [x] `AppointmentJpaAdapter` — implements the port
+- [x] `@Service` and `@Transactional` on the use cases, `BookingService` as a bean in
+      `AppointmentConfiguration` so the domain keeps no reference to Spring (D-21)
+- [x] 8 tests against the real schema and 6 end-to-end flow tests. 64 in total
+
+Not here yet, by design: the REST endpoint, and the availability check (weekly schedule,
+breaks, time off), which belongs to `practitioner`. The duration still travels in the command
+until then (D-08).
 
 ### Stage 2 — Patient module
 - [ ] Add the `validation` dependency and the uniform error contract, with the first endpoint
@@ -122,7 +131,9 @@ protect.
 
 These are not oversights: they are decided and waiting for their moment.
 
-- **PostgreSQL** replacing H2, with `docker-compose` (see D-03).
+- **PostgreSQL** replacing H2, with `docker-compose` (see D-03), which is also what makes
+  the overlap check safe under concurrency: an exclusion constraint over a time range, which
+  H2 cannot express (see D-21).
 - **ArchUnit** enforcing the module boundaries (see D-05).
 - A user administration screen (see D-04).
 - A `.gitattributes` pinning line endings, once the repository is used from another machine
