@@ -48,9 +48,19 @@ committing to a plan. Done so far, in
 - [x] `BookingRuleViolation` and the two named subclasses
 - [x] 34 unit tests, no Spring, running in under half a second
 
-Not here yet, by design: ports (D-14 — they arrive with the use case), persistence, the
-REST endpoint, and the availability check (weekly schedule, breaks, time off), which
-belongs to `practitioner`.
+Use cases, in `appointment/application/`:
+
+- [x] `AppointmentRepository` — the one external dependency: where appointments are kept
+- [x] `BookAppointmentUseCase` — idempotent: a known id returns the existing appointment
+- [x] `RescheduleAppointmentUseCase`, `CancelAppointmentUseCase`
+- [x] `AgendaReader` — gathers what could collide, shared by booking and rescheduling
+- [x] `AppointmentNotFoundException`; each `Command` is a record nested in its use case
+- [x] 15 tests against an in-memory port, still without Spring
+
+Not here yet, by design: persistence, the REST endpoint, the `@Service` annotations and the
+transaction — all of which arrive together with the adapter — and the availability check
+(weekly schedule, breaks, time off), which belongs to `practitioner`. The duration still
+travels in the command until then (D-08).
 
 ### Stage 2 — Patient module
 - [ ] Add the `validation` dependency and the uniform error contract, with the first endpoint

@@ -348,11 +348,15 @@ the suffix of its kind:
 | Exception | `Exception` | `PractitionerAlreadyBookedException` |
 | Domain service | `Service` | `BookingService` |
 | Rule set reached through a service | `Policy` | `BookingPolicy` |
-| Output port | `Port` | `AppointmentPort` |
+| Storage, reads only | `Reader` | `AgendaReader` |
+| Storage, writes only | `Writer` | `AppointmentWriter` |
+| Storage, both | `Repository` | `AppointmentRepository` |
+| Not storage | `Port` | `PractitionerSchedulePort` |
 | Use case | `UseCase` | `BookAppointmentUseCase` |
 | Persistence adapter | `Adapter` | `AppointmentJpaAdapter` |
 | JPA row of a separated domain | `Row` | `AppointmentRow` |
 | REST controller | `Controller` | `AppointmentController` |
+| Use case input | `Command`, nested in its use case | `BookAppointmentUseCase.Command` |
 | Request/response payload | `Request` / `Response` | `BookAppointmentRequest` |
 
 Entities and value objects carry no suffix on purpose: they are the vocabulary of the
@@ -362,6 +366,22 @@ Renamed when this was agreed: `Bookings` → `BookingService`, `BookingRuleViola
 `BookingRuleViolationException`, and the two collision exceptions likewise. `BookingPolicy`
 kept its own suffix, since `Policy` already reads as what it is and `BookingPolicyService`
 would only add noise.
+
+**Storage is named by what it does with the data, not by its architectural role.** `Port`
+states the role; the other three state the shape of the access, which is the useful
+information: `Reader` when it only reads, `Writer` when it only writes, `Repository` when it
+does both. `Port` is left for dependencies that are not storage at all, such as the
+practitioner's schedule or sending a notification.
+
+The suffix therefore says whether a dependency can modify anything, which is visible at the
+field declaration without opening the interface. `AppointmentRepository` both reads and
+writes, hence its name; the Spring Data interface that will back it is a different file with
+a different name, so the two do not collide.
+
+**A `Command` used by a single use case is declared inside it**, as a nested record. The
+one-to-one relationship is then expressed by the language instead of by a naming convention,
+and the folder holds fewer files. A use case whose input is a single value takes it directly:
+`CancelAppointmentUseCase.handle(AppointmentId)` needs no wrapper.
 
 ---
 
@@ -394,3 +414,30 @@ Columns will be `uuid`, which both H2 and PostgreSQL support natively (D-03).
 **Note on `restore`:** assigning ids on creation removes the side effect that `restore` used
 to have of being unusable for new appointments, since it required an id nobody had yet. That
 protection is gone, which was weighed and accepted when `restore` was left public (D-15).
+
+---
+
+## D-20 — Use cases are plain objects until there is an adapter
+**Date:** 2026-09-22 · **Status:** accepted
+
+The use cases carry no `@Service` and no `@Transactional`. Nothing implements
+`AppointmentPort` yet, so annotating them would either fail the context at startup or force
+a stub adapter into existence — scaffolding by another name (D-14). They are constructed by
+hand in their tests, and the annotations plus the transaction boundary arrive in the same
+stage as the persistence adapter.
+
+Two things settled while writing them:
+
+- **`AppointmentPort` reads per day**, not per exact range. A day holds a handful of
+  appointments, so fetching it whole and letting the domain do the precise overlap check
+  keeps the query trivial and portable: nothing has to compare against a stored end time.
+  The same daily reads are what the agenda view will need.
+- **Booking is idempotent, rescheduling is not.** An id that already exists means the
+  request already went through, so booking returns the existing appointment instead of
+  creating a second one. Rescheduling cannot work that way: asking twice for the same move
+  is indistinguishable from asking again, and the second attempt simply finds the
+  appointment already where it should be.
+
+`CancelAppointmentUseCase` deliberately does not go through `BookingService` or read the
+agenda: cancelling frees a slot instead of taking one, so there is nothing to check against,
+and the aggregate refuses a second cancellation by itself.

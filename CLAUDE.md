@@ -45,10 +45,12 @@ Maven · Java 21 · Spring Boot 3.5 · Spring Data JPA · Flyway · H2 (PostgreS
   so the domain has no ports. Aggregates are immutable: operations return a new instance, so
   a rejected rule leaves nothing half-changed.
 - **Naming (D-18).** Either the folder says what a file is, or the name must. Where kinds
-  share a folder, use the suffix of the kind: `Exception`, `Service`, `Policy`, `Port`,
-  `UseCase`, `Adapter`, `Row`, `Controller`, `Request`/`Response`. Entities and value
-  objects take no suffix — they are the vocabulary of the business. The full table is in
-  `docs/decisions.md`.
+  share a folder, use the suffix of the kind: `Exception`, `Service`, `Policy`,
+  `Reader`/`Writer`/`Repository` for storage depending on whether it reads, writes or both,
+  `Port` for a dependency that is not storage, `UseCase`, `Adapter`,
+  `Row`, `Controller`, `Request`/`Response`. Entities and value objects take no suffix —
+  they are the vocabulary of the business. A `Command` used by a single use case is a record
+  nested inside it. The full table is in `docs/decisions.md`.
 - **Nothing engine-specific.** Standard JPA and Flyway migrations in portable SQL, so
   moving to PostgreSQL only means changing the datasource. Watch out for reserved words:
   `user` is reserved, which is why the user table will be `app_user`.
