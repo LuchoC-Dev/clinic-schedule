@@ -30,10 +30,17 @@ class PatientExceptionHandler {
                 .body(ErrorResponse.of(404, "Not found", e.getMessage()));
     }
 
-    @ExceptionHandler(DuplicateNationalIdException.class)
-    ResponseEntity<ErrorResponse> duplicateNationalId(DuplicateNationalIdException e) {
+    @ExceptionHandler(DuplicateDocumentException.class)
+    ResponseEntity<ErrorResponse> duplicateDocument(DuplicateDocumentException e) {
         return ResponseEntity.status(HttpStatus.CONFLICT)
                 .body(ErrorResponse.of(409, "Conflict", e.getMessage()));
+    }
+
+    /** Half a document, or a number that does not fit its type: the request is malformed. */
+    @ExceptionHandler({IncompleteDocumentException.class, IllegalArgumentException.class})
+    ResponseEntity<ErrorResponse> malformedRequest(RuntimeException e) {
+        return ResponseEntity.badRequest()
+                .body(ErrorResponse.of(400, "Bad request", e.getMessage()));
     }
 
     @ExceptionHandler(MethodArgumentNotValidException.class)

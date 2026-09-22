@@ -20,7 +20,7 @@ import jakarta.validation.Valid;
  * The patient endpoints: register, correct, look up.
  *
  * <p>Updating is a {@code PUT} and not a {@code POST} on a sub-path, unlike cancelling an
- * appointment (D-23): correcting a misspelled name or adding the national ID that was missing
+ * appointment (D-23): correcting a misspelled name or adding the document that was missing
  * is an edit to the record, not a business operation with rules of its own.
  *
  * <p>There is no delete. A patient with appointments cannot disappear without taking history
@@ -38,7 +38,7 @@ class PatientController {
 
     @PostMapping
     ResponseEntity<PatientResponse> register(@Valid @RequestBody PatientRequest request) {
-        Patient registered = patients.register(request.fullName(), request.nationalId());
+        Patient registered = patients.register(request.fullName(), request.toDocument());
         return ResponseEntity
                 .created(URI.create("/api/patients/" + registered.getId()))
                 .body(PatientResponse.of(registered));
@@ -46,7 +46,7 @@ class PatientController {
 
     @PutMapping("/{id}")
     PatientResponse update(@PathVariable UUID id, @Valid @RequestBody PatientRequest request) {
-        return PatientResponse.of(patients.update(id, request.fullName(), request.nationalId()));
+        return PatientResponse.of(patients.update(id, request.fullName(), request.toDocument()));
     }
 
     @GetMapping("/{id}")
@@ -54,7 +54,7 @@ class PatientController {
         return PatientResponse.of(patients.byId(id));
     }
 
-    /** Reception's search box: part of a name or the national ID. No query lists everyone. */
+    /** Reception's search box: part of a name or the document number. No query lists everyone. */
     @GetMapping
     List<PatientResponse> search(@RequestParam(required = false) String query) {
         return patients.search(query).stream().map(PatientResponse::of).toList();

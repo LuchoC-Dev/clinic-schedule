@@ -90,24 +90,25 @@ belongs to `practitioner`. The duration still travels in the request until then 
 Layered, with JPA mapped straight onto the entity (D-25). A flat package, so everything is
 package-private and nothing outside the module can reach the service (D-24).
 
-- [x] `V2__patient.sql` — `uuid` id, full name, optional national ID
+- [x] `V2__patient.sql` — `uuid` id, full name, optional typed document
 - [x] `Patient` — the `@Entity`, guarding its own shape, with no setters
+- [x] `IdentityDocument` + `DocumentType` — the document as a value object (D-26)
 - [x] `PatientRepository`, `PatientService`
 - [x] `POST /api/patients`, `PUT /api/patients/{id}`, `GET /api/patients/{id}`,
       `GET /api/patients?query=…` (name or national ID, one search box)
-- [x] `PatientExceptionHandler` — 404, 409 for a repeated national ID, 400 for validation
-- [x] 13 tests over the real stack. 88 in total
+- [x] `PatientExceptionHandler` — 404, 409 for a repeated document, 400 for validation
+- [x] 10 unit tests on the document rules and 18 over the real stack. 103 in total
 
 **Verified with the application running:** registering with and without a national ID, two
 patients with no national ID, two patients sharing a name, a repeated national ID answering
 409, and searching by name and by national ID.
 
 **Notes:**
-- A plain `unique` constraint on `national_id` gives the rule asked for, because both
+- A plain `unique` constraint over the document pair gives the rule asked for, because both
   PostgreSQL and H2 allow repeated nulls in a unique constraint. The partial index this plan
   used to call for is not needed, which keeps the SQL portable.
-- A blank national ID is stored as absent, so `""` and `"   "` do not become a value that
-  collides with the next blank one.
+- The document number is normalized — separators removed, letters upper-cased — so two
+  spellings of the same document cannot both be stored.
 - No delete endpoint: a patient with appointments cannot disappear without taking history
   with them, and nothing in v1 asks for it.
 - No `api/` package yet. It appears when `appointment` uses it, which is the next step

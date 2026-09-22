@@ -560,3 +560,41 @@ directly onto their classes, which is what D-05 allows and what keeps them short
 flat package: with the controller and the service in the same package as the entity, the
 service need not be public, so nothing outside the module can reach it. The suffixes say what
 each file is (D-18).
+
+---
+
+## D-26 — A patient identifies with a typed document, not with a bare number
+**Date:** 2026-09-22 · **Status:** accepted
+
+`IdentityDocument` is a value object of two parts: a `DocumentType` — `DNI`, `LC`, `LE`,
+`CI`, `PASSPORT` — and the number. It replaces the plain `nationalId` string.
+
+**Why the type is not optional decoration.** DNI 30111222 and passport 30111222 are two
+different people. With a bare number, the unique constraint refuses the second patient, and a
+search by number mixes them up. The constraint now covers the pair.
+
+`LC` and `LE` are the older booklets, still the only document some elderly patients carry, and
+`PASSPORT` covers foreign patients. Keeping the Argentine names is deliberate: it is what
+reception reads off the document in their hand.
+
+**It normalizes what reception types.** Dots, spaces and dashes are removed and letters are
+upper-cased, so "30.111.222" and "30111222" are the same document. Without that the duplicate
+check would not see them — pinned down by a test.
+
+**Either both parts or neither.** A number without a type identifies nobody, so half a
+document is a 400 rather than something silently stored. Absent altogether stays the ordinary
+case of a patient with no document.
+
+**A DNI is only digits.** The only per-type rule so far, and the one that keeps obvious
+rubbish out. No length check: old documents have fewer digits and rejecting them would be
+wrong.
+
+This also prepares what the context already anticipates: web booking will need "a national ID
+or another form of identification", which a single `nationalId` column could not express.
+
+*Note:* `V2__patient.sql` was rewritten in place rather than followed by an `ALTER`. The
+database is in-memory H2 and nothing is deployed, so there is no migration to preserve; from
+the first real deployment onwards, migrations are append-only.
+
+The full name stays a single field. Splitting it into given and family names is a later
+decision and nothing in v1 needs the parts.

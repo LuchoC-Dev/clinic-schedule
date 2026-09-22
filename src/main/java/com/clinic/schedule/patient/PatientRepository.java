@@ -8,16 +8,17 @@ import org.springframework.data.jpa.repository.JpaRepository;
 
 interface PatientRepository extends JpaRepository<Patient, UUID> {
 
-    Optional<Patient> findByNationalId(String nationalId);
+    /** Matches the whole document: the type and the number together (see IdentityDocument). */
+    Optional<Patient> findByDocument(IdentityDocument document);
 
-    boolean existsByNationalId(String nationalId);
+    boolean existsByDocument(IdentityDocument document);
 
     /**
-     * One search box for reception: part of a name, or the national ID. Ordered by name so
-     * repeated names stay together and the list does not jump around between calls.
+     * One search box for reception: part of a name, or the document number. Ordered by name
+     * so repeated names stay together and the list does not jump around between calls.
      */
-    List<Patient> findByFullNameContainingIgnoreCaseOrNationalIdContainingOrderByFullNameAsc(
-            String namePart, String nationalIdPart);
+    List<Patient> findByFullNameContainingIgnoreCaseOrDocumentNumberContainingOrderByFullNameAsc(
+            String namePart, String documentNumberPart);
 
     List<Patient> findAllByOrderByFullNameAsc();
 }
