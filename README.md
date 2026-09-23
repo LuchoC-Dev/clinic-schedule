@@ -66,7 +66,7 @@ agenda, read-only. The screens are in Spanish, for the staff.
 | `POST` | `/api/appointments/{id}/cancel` | cancel it, keeping the record |
 | `POST` | `/api/appointments/{id}/check-in` | the patient arrived |
 | `POST` | `/api/appointments/{id}/suspend-auto-cancellation` | the patient warned they will be late |
-| `GET` | `/api/appointments?practitionerId=&date=` | a day's agenda — a practitioner always gets their own |
+| `GET` | `/api/appointments?practitionerId=&date=` | a day's agenda — a practitioner may only ask for their own |
 | `POST` | `/api/time-off` | a practitioner's absence, cancelling the appointments it hits |
 
 A booking without a check-in is cancelled automatically 30 minutes after its start, or 24 hours

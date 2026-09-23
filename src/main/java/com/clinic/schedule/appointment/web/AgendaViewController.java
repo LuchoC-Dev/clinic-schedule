@@ -13,6 +13,7 @@ import java.util.function.Function;
 import java.util.stream.Collectors;
 
 import org.springframework.format.annotation.DateTimeFormat;
+import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -20,9 +21,11 @@ import org.springframework.web.bind.annotation.ModelAttribute;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.server.ResponseStatusException;
 import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 import org.springframework.web.util.UriComponentsBuilder;
 
+import com.clinic.schedule.appointment.application.AgendaAccessDeniedException;
 import com.clinic.schedule.appointment.application.BookAppointmentUseCase;
 import com.clinic.schedule.appointment.application.CancelAppointmentUseCase;
 import com.clinic.schedule.appointment.application.CheckInUseCase;
@@ -113,7 +116,7 @@ class AgendaViewController {
      *
      * <p>A practitioner sees only their own, read-only: whose agenda it is comes back from the
      * use case, and the choice of practitioner and the buttons are hidden, since the routes
-     * behind them are closed to them anyway (D-34).
+     * behind them are closed to them anyway (D-34). Asking for someone else's answers 403 (D-39).
      */
     @GetMapping("/agenda")
     String agenda(@RequestParam(required = false) UUID practitionerId,
@@ -130,8 +133,13 @@ class AgendaViewController {
         LocalDate from = week ? day.with(DayOfWeek.MONDAY) : day;
         LocalDate to = week ? from.plusDays(6) : day;
 
-        ViewAgendaUseCase.Agenda read = agenda.handle(
-                Optional.ofNullable(practitionerId).map(PractitionerId::new), from, to);
+        ViewAgendaUseCase.Agenda read;
+        try {
+            read = agenda.handle(Optional.ofNullable(practitionerId).map(PractitionerId::new), from, to);
+        } catch (AgendaAccessDeniedException e) {
+            // Only reachable by editing the URL: a practitioner is offered no one else to pick (D-39).
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN, e.getMessage());
+        }
         PractitionerSummary shown = read.practitionerId()
                 .flatMap(whose -> everyone.stream()
                         .filter(practitioner -> practitioner.id().equals(whose.value()))

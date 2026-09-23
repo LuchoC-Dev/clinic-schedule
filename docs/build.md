@@ -272,13 +272,18 @@ press; the same DNI typed for someone else was refused in Spanish, keeping what 
       already gone; a reason lasts at most 8 hours
 - [x] Malformed bodies, wrong types and missing parameters answered in the API's error body
 - [x] `FixedClockConfiguration` for the tests, so fixed dates never turn into the past
-- [x] 36 more tests. 307 in total
+- [x] A practitioner asking for another agenda gets 403 instead of their own (D-39)
+- [x] Security tests for what had none: an inactive user, a practitioner user without a
+      practitioner, the routes closed to practitioners one by one, and logging out
+- [x] 45 more tests. 316 in total
 
 **Verified with the application running:** the same probe of wrong data that had got through —
 DNI 544, a 12-digit DNI, an LE with letters, a name of symbols, a booking in 2025 and in 2099, a
 check-in twelve days early, a 100 000-minute reason, time off in 2020 — was refused with a
 message naming the rule; the five screen inputs that answered 500 now come back as a message;
-malformed JSON, a malformed id and a missing parameter answer in the usual error body.
+malformed JSON, a malformed id and a missing parameter answer in the usual error body. Dra.
+Arias got 200 for her own agenda and 403 for Dr. Benítez's, both on the API and on the screen,
+and her agenda screen with no one asked for still opened on her own.
 
 ---
 

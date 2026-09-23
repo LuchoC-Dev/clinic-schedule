@@ -87,17 +87,32 @@ class ViewAgendaUseCaseTest {
     }
 
     @Test
-    void aPractitionerAlwaysGetsTheirOwnEvenAskingForEveryone() {
+    void aPractitionerAskingForNoOneGetsTheirOwn() {
         Appointment own = booked(arias, TUESDAY.atTime(10, 0));
         appointments.given(own, booked(benitez, TUESDAY.atTime(9, 0)));
 
-        var everyone = as(arias).handle(Optional.empty(), TUESDAY, TUESDAY.plusDays(6));
-        var someoneElse = as(arias).handle(Optional.of(benitez), TUESDAY, TUESDAY);
+        var agenda = as(arias).handle(Optional.empty(), TUESDAY, TUESDAY.plusDays(6));
 
-        assertThat(everyone.practitionerId()).contains(arias);
-        assertThat(everyone.appointments()).extracting(Appointment::id).containsExactly(own.id());
-        assertThat(someoneElse.practitionerId()).contains(arias);
-        assertThat(someoneElse.appointments()).extracting(Appointment::id).containsExactly(own.id());
+        assertThat(agenda.practitionerId()).contains(arias);
+        assertThat(agenda.appointments()).extracting(Appointment::id).containsExactly(own.id());
+    }
+
+    @Test
+    void aPractitionerAskingForThemselvesGetsTheirOwn() {
+        Appointment own = booked(arias, TUESDAY.atTime(10, 0));
+        appointments.given(own);
+
+        assertThat(as(arias).handle(Optional.of(arias), TUESDAY, TUESDAY).appointments())
+                .extracting(Appointment::id).containsExactly(own.id());
+    }
+
+    /** Refused, not answered with their own: they would be reading a different agenda than they asked for (D-39). */
+    @Test
+    void aPractitionerAskingForSomeoneElseIsRefused() {
+        appointments.given(booked(benitez, TUESDAY.atTime(9, 0)));
+
+        assertThatThrownBy(() -> as(arias).handle(Optional.of(benitez), TUESDAY, TUESDAY))
+                .isInstanceOf(AgendaAccessDeniedException.class);
     }
 
     @Test

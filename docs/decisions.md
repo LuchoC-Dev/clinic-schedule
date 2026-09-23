@@ -50,7 +50,8 @@ PostgreSQL from the start (postponed, not rejected — see `docs/build.md`).
 ---
 
 ## D-04 — Spring Security with the RECEPTION and PRACTITIONER roles
-**Date:** 2026-09-22 · **Status:** applied on 2026-09-23 (see D-34), without the foreign key (D-30)
+**Date:** 2026-09-22 · **Status:** applied on 2026-09-23 (see D-34), without the foreign key (D-30);
+"the received parameter is ignored" superseded by D-39
 
 "Each practitioner sees only their own appointments" is a real authorization rule, not a
 cosmetic one, so v1 implements it for real.
@@ -883,7 +884,7 @@ and they are available through the API; a screen can be added when it is asked f
 ---
 
 ## D-34 — Security
-**Date:** 2026-09-23 · **Status:** accepted
+**Date:** 2026-09-23 · **Status:** accepted; a practitioner asking for another agenda is refused since D-39
 
 Applies D-04, the design that was built in stage 1 and removed until there was something to
 protect.
@@ -1086,3 +1087,32 @@ application; the unit tests pass a fixed clock by hand, as they already did for 
 now on"); refusing time off that starts before now (an absence reported in the morning is real
 from midnight); validating on the screens separately (a second copy of each rule to keep in
 step); a login lockout (not needed for an internal application today).
+
+---
+
+## D-39 — A practitioner asking for another agenda is refused
+**Date:** 2026-09-23 · **Status:** accepted
+
+Supersedes the part of D-04 and D-34 that ignored the parameter: until now, a practitioner who
+asked for another practitioner's agenda was silently answered with their own.
+
+That protected the other agenda, but it answered a different question from the one asked. A
+client — the future single-page application, a script, a mistyped URL — gets a 200 and a list
+it takes for the agenda it asked for, and nothing says it is not. A refusal says so.
+
+- **Asking for another practitioner** is refused: `ViewAgendaUseCase` throws
+  `AgendaAccessDeniedException`, the API answers 403 with the usual error body, and the screen
+  answers 403. On the screen it takes editing the URL, since a practitioner is offered no one
+  else to pick.
+- **Asking for no one** still gives a practitioner their own agenda. That is what the agenda
+  screen asks when it opens; refusing it would refuse the practitioner's home page.
+- **Asking for themselves** is answered as before.
+
+The decision stays in the use case, through `AgendaAccessPort` (D-34): the route cannot tell,
+since reception and practitioners use the same one.
+
+*Rejected:* keeping the silent substitution (a wrong answer with a success status); refusing a
+practitioner who asks for no one (their home page would fail); a 404 hiding that the agenda
+exists (the practitioners of a practice know each other; there is nothing to hide, only to
+refuse).
+

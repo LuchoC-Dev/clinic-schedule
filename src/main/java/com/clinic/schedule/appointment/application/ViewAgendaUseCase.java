@@ -20,9 +20,9 @@ import com.clinic.schedule.appointment.domain.PractitionerId;
  * which {@link ViewPatientAppointmentsUseCase} answers.
  *
  * <p>Who may read whose agenda is decided here, not in the controller (D-04): reception reads
- * the practitioner it asks for, or everyone when it asks for no one; a practitioner always gets
- * their own, whatever they asked for. The answer says whose agenda it is, so the caller never
- * has to guess.
+ * the practitioner it asks for, or everyone when it asks for no one. A practitioner reads their
+ * own: asking for no one gives them theirs, and asking for someone else is refused (D-39). The
+ * answer says whose agenda it is, so the caller never has to guess.
  */
 @Service
 public class ViewAgendaUseCase {
@@ -39,13 +39,18 @@ public class ViewAgendaUseCase {
      * @param requested the practitioner asked for, or empty for every practitioner
      * @param from the first day, included
      * @param to the last day, included
+     * @throws AgendaAccessDeniedException when a practitioner asks for another one's agenda
      */
     @Transactional(readOnly = true)
     public Agenda handle(Optional<PractitionerId> requested, LocalDate from, LocalDate to) {
         if (to.isBefore(from)) {
             throw new IllegalArgumentException("the agenda cannot end before it starts: " + from + " to " + to);
         }
-        Optional<PractitionerId> whose = access.restrictedTo().or(() -> requested);
+        Optional<PractitionerId> restrictedTo = access.restrictedTo();
+        if (restrictedTo.isPresent() && requested.isPresent() && !requested.equals(restrictedTo)) {
+            throw new AgendaAccessDeniedException(restrictedTo.get(), requested.get());
+        }
+        Optional<PractitionerId> whose = restrictedTo.or(() -> requested);
         List<Appointment> found = whose
                 .map(practitionerId -> appointments.findBookedForPractitionerBetween(practitionerId, from, to))
                 .orElseGet(() -> appointments.findBookedBetween(from, to));
