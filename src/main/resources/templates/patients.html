@@ -1,0 +1,46 @@
+<!DOCTYPE html>
+<html lang="es" xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{fragments :: head('Pacientes')}"></head>
+<body>
+<header th:replace="~{fragments :: header}"></header>
+<main>
+    <h1>Pacientes</h1>
+    <div th:replace="~{fragments :: messages}"></div>
+
+    <form class="bar" method="get" th:action="@{/patients}">
+        <label>Buscar
+            <input type="text" name="query" th:value="${query}" placeholder="nombre o documento">
+        </label>
+        <button type="submit">Buscar</button>
+    </form>
+
+    <p th:if="${patients.isEmpty()}" class="muted">No hay pacientes que coincidan.</p>
+    <table th:unless="${patients.isEmpty()}">
+        <thead><tr><th>Nombre</th><th>Documento</th></tr></thead>
+        <tbody>
+        <tr th:each="p : ${patients}">
+            <td th:text="${p.fullName}">Ana Pérez</td>
+            <td th:text="${p.document} ?: '—'">DNI 30111222</td>
+        </tr>
+        </tbody>
+    </table>
+
+    <h2>Registrar paciente</h2>
+    <form class="card bar" method="post" th:action="@{/patients}">
+        <label>Nombre completo
+            <input type="text" name="fullName" required maxlength="150">
+        </label>
+        <label>Documento
+            <select name="documentType">
+                <option value="">— sin documento —</option>
+                <option th:each="t : ${documentTypes}" th:value="${t}" th:text="${t}"></option>
+            </select>
+        </label>
+        <label>Número
+            <input type="text" name="documentNumber" maxlength="20">
+        </label>
+        <button type="submit" class="primary">Registrar</button>
+    </form>
+</main>
+</body>
+</html>

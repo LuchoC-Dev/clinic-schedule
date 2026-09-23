@@ -1,6 +1,7 @@
 package com.clinic.schedule.practitioner.api;
 
 import java.time.LocalDateTime;
+import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 
@@ -12,6 +13,9 @@ import java.util.UUID;
  * module sees this one's entities (D-05).
  */
 public interface PractitionerReader {
+
+    /** Every practitioner with their reasons, by name. What the screens offer to choose from. */
+    List<PractitionerSummary> findAll();
 
     /**
      * The reason with that id, among that practitioner's reasons. Empty when either the

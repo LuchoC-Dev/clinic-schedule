@@ -16,7 +16,7 @@ adoption still low).
 ---
 
 ## D-02 — REST API as the main contract, minimal throwaway Thymeleaf views
-**Date:** 2026-09-22 · **Status:** accepted
+**Date:** 2026-09-22 · **Status:** applied on 2026-09-23 (see D-33)
 
 The future user interface will be two separate single-page applications, so the stable
 contract is the REST API. The v1 Thymeleaf views exist only to see the application
@@ -845,3 +845,37 @@ is part of it; with only one it is a 400. An absence of several days is recorded
 *Rejected:* the cascade in the practitioner module (reverses the dependency); a domain event
 (splits one operation, loses the answer); cancelling appointments whose patient arrived (the
 context asks for manual handling).
+
+---
+
+## D-33 — The screens
+**Date:** 2026-09-23 · **Status:** accepted
+
+Applies D-02. Four screens for reception, in Spanish (D-13): the agenda of a practitioner's day,
+booking, moving an appointment, and patients. On the agenda, the day's operations are buttons:
+"Llegó" (check-in), "Avisó demora" (late-arrival notice), "Mover", "Cancelar".
+
+**Thin and throwaway, as D-02 required.** `AgendaViewController` calls the same use cases as the
+REST controllers and never the REST controllers themselves; `PatientViewController` sits in the
+patient package so the service can stay package-private. No rule lives in a screen. Deleting
+`templates/` and the two view controllers removes the screens and nothing else. No JavaScript:
+plain forms, and every action answers with a redirect back (post/redirect/get), so reloading the
+page never repeats an operation.
+
+**Screens ask other modules for names directly.** An agenda of UUIDs is useless to reception.
+The use cases do not need names — only the screen does — so the view controller reads them from
+`PatientReader` and `PractitionerReader` instead of widening the application's ports with
+display data. Both api interfaces grew for this: `findAll`/`search` returning summaries.
+
+**Refusals are translated on the screen.** The API answers in English; `ScreenMessages` turns the
+known refusals into Spanish for reception. An exception that is not an expected refusal is not
+hidden behind a message: it fails as it should.
+
+**Suggested times, not a grid.** `SuggestSlotsUseCase` offers every quarter of an hour where the
+practitioner works and a slot of the right length is free. Booking still accepts any start time,
+through an "…u otra hora" field, as the context asks. When moving an appointment, its own slot
+does not count as taken, so moving it by a quarter of an hour is offered. The suggestions look at
+the practitioner's agenda only; the patient may not be chosen yet, and booking checks them anyway.
+
+**The time-off and practitioner configuration have no screen.** Reception configures them rarely,
+and they are available through the API; a screen can be added when it is asked for.

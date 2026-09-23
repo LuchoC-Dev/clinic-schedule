@@ -1,0 +1,52 @@
+<!DOCTYPE html>
+<html lang="es" xmlns:th="http://www.thymeleaf.org">
+<!--
+  Shared pieces of the screens. The screens are thin and throwaway (D-02): plain HTML, a few
+  lines of CSS, no JavaScript. On-screen text is in Spanish, for the staff (D-13).
+-->
+<head th:fragment="head(title)">
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title th:text="${title} + ' — Consultorio'">Consultorio</title>
+    <style>
+        :root { --ink: #1f2933; --muted: #616e7c; --line: #d9e2ec; --accent: #2f6f8f; --ok: #276749; --bad: #9b2c2c; }
+        * { box-sizing: border-box; }
+        body { margin: 0; font: 15px/1.45 system-ui, sans-serif; color: var(--ink); background: #f7f9fb; }
+        header { background: #fff; border-bottom: 1px solid var(--line); padding: .6rem 1.2rem; display: flex; gap: 1.2rem; align-items: center; }
+        header strong { margin-right: auto; }
+        header a { color: var(--accent); text-decoration: none; }
+        main { max-width: 64rem; margin: 1.2rem auto; padding: 0 1rem; }
+        h1 { font-size: 1.3rem; margin: 0 0 1rem; }
+        h2 { font-size: 1.05rem; margin: 1.5rem 0 .6rem; }
+        .ok, .error { padding: .55rem .8rem; border-radius: 6px; margin: 0 0 1rem; }
+        .ok { background: #e6f4ea; color: var(--ok); }
+        .error { background: #fdecea; color: var(--bad); }
+        form.inline { display: inline; }
+        .bar { display: flex; flex-wrap: wrap; gap: .6rem; align-items: end; margin-bottom: 1rem; }
+        label { display: flex; flex-direction: column; font-size: .85rem; color: var(--muted); gap: .2rem; }
+        input, select, textarea, button { font: inherit; padding: .35rem .5rem; border: 1px solid var(--line); border-radius: 5px; background: #fff; }
+        button { cursor: pointer; }
+        button.primary { background: var(--accent); color: #fff; border-color: var(--accent); }
+        button.danger { color: var(--bad); }
+        table { width: 100%; border-collapse: collapse; background: #fff; border: 1px solid var(--line); }
+        th, td { text-align: left; padding: .5rem .6rem; border-bottom: 1px solid var(--line); vertical-align: top; }
+        th { font-size: .8rem; color: var(--muted); font-weight: 600; }
+        td.actions { white-space: nowrap; }
+        .muted { color: var(--muted); }
+        .card { background: #fff; border: 1px solid var(--line); border-radius: 8px; padding: 1rem; margin-bottom: 1rem; }
+        .choices { display: flex; flex-wrap: wrap; gap: .4rem; }
+        .choices label { flex-direction: row; align-items: center; gap: .3rem; border: 1px solid var(--line); border-radius: 5px; padding: .25rem .5rem; background: #fff; color: var(--ink); }
+    </style>
+</head>
+<body>
+<header th:fragment="header">
+    <strong>Consultorio</strong>
+    <a th:href="@{/agenda}">Agenda</a>
+    <a th:href="@{/patients}">Pacientes</a>
+</header>
+<div th:fragment="messages">
+    <p class="ok" th:if="${message}" th:text="${message}"></p>
+    <p class="error" th:if="${error}" th:text="${error}"></p>
+</div>
+</body>
+</html>

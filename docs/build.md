@@ -194,11 +194,19 @@ and one whose patient had warned they would be late.
 appointment, reported the 11:00 one whose patient had arrived, left 09:30 and 15:00 alone; a
 booking at 12:30 answered 409 and one at 13:00 was accepted.
 
-### Stage 7 — Minimal Thymeleaf views
-- [ ] Add the `thymeleaf` dependency
-- [ ] Agenda of the day per practitioner
-- [ ] New appointment and rescheduling, with slots suggested by the interface
-- [ ] Confirm check-in from the agenda
+### Minimal Thymeleaf views `[x]`
+- [x] `thymeleaf` dependency
+- [x] Agenda of the day per practitioner, with check-in, late-arrival notice, move and cancel
+- [x] Booking and moving, with times suggested every 15 minutes and any other time accepted
+- [x] Patients: search and register
+- [x] `SuggestSlotsUseCase`, `FindAppointmentUseCase`; names read through the modules' api
+- [x] Refusals shown in Spanish (`ScreenMessages`); post/redirect/get everywhere (D-33)
+- [x] 5 unit tests on the suggestions and 13 over the screens. 229 in total
+
+**Verified with the application running:** every screen rendered empty and with data; a
+patient registered and an appointment booked from the screens; the agenda showed the patient's
+name and document; for a Tuesday with a lunch break the booking screen offered exactly the 30
+free quarters, 12:30 included and 12:45 — which would cross the break — left out.
 
 ### Stage 8 — Security
 - [ ] Add the `security` dependency, with the `app_user` table and a seed migration

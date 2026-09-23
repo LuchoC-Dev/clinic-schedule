@@ -1,0 +1,42 @@
+<!DOCTYPE html>
+<html lang="es" xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{fragments :: head('Mover turno')}"></head>
+<body>
+<header th:replace="~{fragments :: header}"></header>
+<main>
+    <h1>Mover turno</h1>
+    <div th:replace="~{fragments :: messages}"></div>
+
+    <div class="card">
+        <strong th:text="${row.patient}">Ana Pérez</strong> — <span th:text="${row.reason}">consulta</span><br>
+        <span class="muted" th:text="'Ahora: ' + ${currentDate} + ' de ' + ${row.startsAt} + ' a ' + ${row.endsAt}"></span>
+    </div>
+
+    <form class="card bar" method="get" th:action="@{/agenda/appointments/{id}/reschedule(id=${row.id})}">
+        <label>Nuevo día
+            <input type="date" name="date" th:value="${date}">
+        </label>
+        <button type="submit">Ver horarios</button>
+    </form>
+
+    <form class="card" method="post" th:action="@{/agenda/appointments/{id}/reschedule(id=${row.id})}">
+        <input type="hidden" name="practitionerId" th:value="${practitionerId}">
+        <input type="hidden" name="date" th:value="${date}">
+        <h2 th:text="'Horarios libres el ' + ${date}">Horarios libres</h2>
+        <p th:if="${suggestions.isEmpty()}" class="muted">No hay horarios libres ese día.</p>
+        <div class="choices">
+            <label th:each="t : ${suggestions}">
+                <input type="radio" name="time" th:value="${t}"><span th:text="${t}"></span>
+            </label>
+        </div>
+        <p>
+            <label>…u otra hora
+                <input type="time" name="otherTime">
+            </label>
+        </p>
+        <p><button type="submit" class="primary">Mover</button>
+            <a th:href="@{/agenda(practitionerId=${practitionerId}, date=${currentDate})}">Volver</a></p>
+    </form>
+</main>
+</body>
+</html>

@@ -9,6 +9,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import com.clinic.schedule.practitioner.api.PractitionerReader;
+import com.clinic.schedule.practitioner.api.PractitionerSummary;
 import com.clinic.schedule.practitioner.api.ReasonDetails;
 import com.clinic.schedule.practitioner.api.TimeOffWriter;
 
@@ -77,6 +78,20 @@ class PractitionerService implements PractitionerReader, TimeOffWriter {
     @Transactional(readOnly = true)
     List<Practitioner> all() {
         return practitioners.findAllByOrderByFullNameAsc();
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public List<PractitionerSummary> findAll() {
+        return practitioners.findAllByOrderByFullNameAsc().stream()
+                .map(practitioner -> new PractitionerSummary(
+                        practitioner.getId(),
+                        practitioner.getFullName(),
+                        practitioner.getReasons().stream()
+                                .map(reason -> new ReasonDetails(reason.getId(), reason.getName(),
+                                        reason.getDurationMinutes()))
+                                .toList()))
+                .toList();
     }
 
     @Override

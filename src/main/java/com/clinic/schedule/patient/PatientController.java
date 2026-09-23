@@ -57,6 +57,6 @@ class PatientController {
     /** Reception's search box: part of a name or the document number. No query lists everyone. */
     @GetMapping
     List<PatientResponse> search(@RequestParam(required = false) String query) {
-        return patients.search(query).stream().map(PatientResponse::of).toList();
+        return patients.searchPatients(query).stream().map(PatientResponse::of).toList();
     }
 }

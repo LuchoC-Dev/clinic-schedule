@@ -1,5 +1,6 @@
 package com.clinic.schedule.patient;
 
+import java.util.Collection;
 import java.util.List;
 import java.util.Objects;
 import java.util.UUID;
@@ -8,6 +9,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import com.clinic.schedule.patient.api.PatientReader;
+import com.clinic.schedule.patient.api.PatientSummary;
 
 /**
  * Registering and finding patients, and answering other modules through
@@ -59,7 +61,7 @@ class PatientService implements PatientReader {
      * thousands.
      */
     @Transactional(readOnly = true)
-    List<Patient> search(String query) {
+    List<Patient> searchPatients(String query) {
         if (query == null || query.isBlank()) {
             return patients.findAllByOrderByFullNameAsc();
         }
@@ -71,6 +73,28 @@ class PatientService implements PatientReader {
     @Transactional(readOnly = true)
     public boolean exists(UUID patientId) {
         return patients.existsById(patientId);
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public List<PatientSummary> search(String query) {
+        return summaries(searchPatients(query));
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public List<PatientSummary> findAll(Collection<UUID> patientIds) {
+        return summaries(patients.findAllById(patientIds));
+    }
+
+    private static List<PatientSummary> summaries(List<Patient> found) {
+        return found.stream()
+                .map(patient -> new PatientSummary(patient.getId(), patient.getFullName(), label(patient.getDocument())))
+                .toList();
+    }
+
+    private static String label(IdentityDocument document) {
+        return document == null ? null : document.type() + " " + document.number();
     }
 
     private void requireDocumentIsFree(IdentityDocument document) {
