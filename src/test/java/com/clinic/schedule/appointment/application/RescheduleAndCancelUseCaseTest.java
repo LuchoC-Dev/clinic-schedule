@@ -3,6 +3,8 @@ package com.clinic.schedule.appointment.application;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
+import java.time.ZoneId;
+import java.time.Clock;
 import java.time.LocalDateTime;
 
 import org.junit.jupiter.api.Test;
@@ -26,8 +28,14 @@ class RescheduleAndCancelUseCaseTest {
 
     private final InMemoryAppointmentRepository appointments = new InMemoryAppointmentRepository();
     private final FakePractitionerSchedule practitioners = new FakePractitionerSchedule();
+
+    /** The practice's clock, stopped at the start of the day these tests book on. */
+    private static final Clock CLOCK = Clock.fixed(
+            LocalDateTime.of(2026, 3, 10, 0, 0).atZone(ZoneId.of("America/Argentina/Buenos_Aires")).toInstant(),
+            ZoneId.of("America/Argentina/Buenos_Aires"));
+
     private final RescheduleAppointmentUseCase reschedule =
-            new RescheduleAppointmentUseCase(appointments, practitioners, new BookingService());
+            new RescheduleAppointmentUseCase(appointments, practitioners, new BookingService(), CLOCK);
     private final CancelAppointmentUseCase cancel = new CancelAppointmentUseCase(appointments);
 
     private Appointment stored(PatientId patient, int atMinute, int minutes) {

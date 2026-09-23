@@ -564,7 +564,7 @@ each file is (D-18).
 ---
 
 ## D-26 — A patient identifies with a typed document, not with a bare number
-**Date:** 2026-09-22 · **Status:** accepted
+**Date:** 2026-09-22 · **Status:** accepted; the number rules tightened by D-38
 
 `IdentityDocument` is a value object of two parts: a `DocumentType` — `DNI`, `LC`, `LE`,
 `CI`, `PASSPORT` — and the number. It replaces the plain `nationalId` string.
@@ -1029,3 +1029,60 @@ meant cannot be told.
 
 *Rejected:* redirecting to the patients screen and back (two screens for one task, the problem
 reported); reusing the patient an existing document belongs to (a typo books someone else).
+
+---
+
+## D-38 — Refusing wrong data where it is typed, and nothing more
+**Date:** 2026-09-23 · **Status:** accepted
+
+Asked for after reception registered a patient with "DNI 544". Every entrance was then probed
+with wrong data, and what got through is refused now. Each rule lives in the entity or the
+domain (D-17), so the API, the screens and `PatientWriter` all go through it; the screens
+translate the refusal into Spanish.
+
+**What answered 500.** The API validated lengths with Bean Validation, but the screens and
+`PatientWriter` do not go through it, so a name over 150 characters, a document number over 20
+or a note over 500 reached the database and failed there. `Patient`, `IdentityDocument` and
+`Appointment` now check the length of their own columns.
+
+**Documents and names.** A DNI has 7 or 8 digits; the older LE and LC booklets, 6 to 8
+digits; a CI or a passport, letters and digits only, since their formats depend on the issuing
+country. Each `DocumentType` carries its own format. A full name needs at least one letter;
+nothing stricter, since names carry accents, apostrophes and hyphens. This reverses D-26's "no
+length check": the elderly patients with short numbers carry LE or LC, which still accept 6
+digits.
+
+**Time.**
+
+- An appointment is booked or moved **from now on**, and no more than a year ahead. An earlier
+  start was booked and then cancelled by the job within the minute; a later one is almost
+  certainly a mistyped year. `BookingPolicy.checkWhen` decides it, with "now" handed in like
+  the agenda (D-17), and the suggested times leave out what has already passed.
+- A check-in and a late-arrival notice happen **on the day of the appointment**, decided by the
+  appointment itself. Checking in on another day is the wrong line of the agenda.
+- Time off is refused **for a day already gone**, but today is accepted whole: an absence
+  reported at nine can start at midnight, or run from eight to noon.
+- A reason lasts at most **8 hours**.
+
+**The API answers everything in its own error body.** A body that is not JSON, a value of the
+wrong type, an unknown document type, a malformed id or a missing parameter used to get
+Spring's default body — or, for a malformed id, a message quoting Java internals. The shared
+handler now answers them with the usual `{timestamp, status, error, message, fields?}`, naming
+what is wrong and nothing of the code behind it. It answers REST controllers only and goes
+first, because a module's advice would otherwise take a malformed id for one of its own
+refusals through its cause.
+
+**Authentication and authorization need nothing new.** D-34 already covers what v1 requires:
+login, BCrypt, inactive users kept out, basic authentication on the API, sessions with CSRF on
+the screens, routes closed by role and the practitioner's agenda restricted in the use case.
+Lockout after failed logins or user administration would serve later needs, not this one.
+
+**The tests got a clock of their own.** With the real clock, a test booking a fixed date starts
+failing the day that date passes. `FixedClockConfiguration`, in the test sources, stops the
+practice's clock at the start of Tuesday 10 March 2026 for every test that starts the
+application; the unit tests pass a fixed clock by hand, as they already did for the deadlines.
+
+*Rejected:* a tolerance of 30 minutes into the past for walk-ins (the practice asked for "from
+now on"); refusing time off that starts before now (an absence reported in the morning is real
+from midnight); validating on the screens separately (a second copy of each rule to keep in
+step); a login lockout (not needed for an internal application today).

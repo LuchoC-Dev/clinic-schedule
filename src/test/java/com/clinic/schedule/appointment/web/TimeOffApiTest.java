@@ -1,5 +1,6 @@
 package com.clinic.schedule.appointment.web;
 
+import static org.hamcrest.Matchers.containsString;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
@@ -168,5 +169,17 @@ class TimeOffApiTest {
                                 {"practitionerId": "%s", "date": "%s", "startsAt": "13:00", "endsAt": "11:00"}
                                 """.formatted(arias.id(), DAY)))
                 .andExpect(status().isBadRequest());
+    }
+
+    @Test
+    void anAbsenceOnADayAlreadyGoneAnswers400() throws Exception {
+        CreatedPractitioner arias = practitioners.workingEveryDay();
+
+        mockMvc.perform(post("/api/time-off").contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {"practitionerId": "%s", "date": "2026-03-09"}
+                                """.formatted(arias.id())))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.message").value(containsString("day already gone")));
     }
 }

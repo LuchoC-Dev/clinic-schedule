@@ -30,6 +30,9 @@ public class Appointment {
     /** The same, once reception was warned the patient would be late (D-06). */
     static final Duration LATE_ARRIVAL_GRACE_PERIOD = Duration.ofHours(24);
 
+    /** As long as the column that stores it (D-38). */
+    static final int MAX_NOTE_LENGTH = 500;
+
     private final AppointmentId id;
     private final PatientId patientId;
     private final PractitionerId practitionerId;
@@ -63,7 +66,7 @@ public class Appointment {
      */
     static Appointment book(AppointmentId id, PatientId patientId, PractitionerId practitionerId, TimeSlot slot,
             String reason, String note) {
-        requireInvariants(id, patientId, practitionerId, slot, reason);
+        requireInvariants(id, patientId, practitionerId, slot, reason, note);
         return new Appointment(id, patientId, practitionerId, slot, reason.strip(), note, AppointmentStatus.BOOKED,
                 null, false);
     }
@@ -85,7 +88,7 @@ public class Appointment {
     public static Appointment restore(AppointmentId id, PatientId patientId, PractitionerId practitionerId,
             TimeSlot slot, String reason, String note, AppointmentStatus status, LocalDateTime checkedInAt,
             boolean autoCancellationSuspended) {
-        requireInvariants(id, patientId, practitionerId, slot, reason);
+        requireInvariants(id, patientId, practitionerId, slot, reason, note);
         if (status == null) {
             throw new IllegalArgumentException("A stored appointment needs a status");
         }
@@ -94,12 +97,15 @@ public class Appointment {
     }
 
     private static void requireInvariants(AppointmentId id, PatientId patientId, PractitionerId practitionerId,
-            TimeSlot slot, String reason) {
+            TimeSlot slot, String reason, String note) {
         if (id == null || patientId == null || practitionerId == null || slot == null) {
             throw new IllegalArgumentException("An appointment needs an id, a patient, a practitioner and a slot");
         }
         if (reason == null || reason.isBlank()) {
             throw new IllegalArgumentException("An appointment needs a reason");
+        }
+        if (note != null && note.length() > MAX_NOTE_LENGTH) {
+            throw new IllegalArgumentException("A note is at most " + MAX_NOTE_LENGTH + " characters");
         }
     }
 
@@ -139,6 +145,9 @@ public class Appointment {
     /**
      * The same appointment, with the patient's arrival confirmed by reception. From then on it
      * is never cancelled automatically.
+     *
+     * <p>Only on the day of the appointment: an arrival on another day is a mistake, most likely
+     * the wrong line of the agenda (D-38).
      */
     public Appointment checkedIn(LocalDateTime at) {
         requireBooked("checked in");
@@ -146,6 +155,7 @@ public class Appointment {
         if (at == null) {
             throw new IllegalArgumentException("A check-in needs the time it happened");
         }
+        requireTheDayOfTheAppointment(at, "checked in");
         return new Appointment(id, patientId, practitionerId, slot, reason, note, status, at,
                 autoCancellationSuspended);
     }
@@ -155,11 +165,13 @@ public class Appointment {
      * minutes, it waits 24 hours before being cancelled automatically (D-06).
      *
      * <p>Rejected once the patient arrived, since there is nothing left to wait for, and
-     * rejected a second time like any other repeated operation.
+     * rejected a second time like any other repeated operation. Only on the day of the
+     * appointment, like the check-in it stands in for (D-38).
      */
-    public Appointment withAutoCancellationSuspended() {
+    public Appointment withAutoCancellationSuspended(LocalDateTime now) {
         requireBooked("given more time");
         requireNotCheckedIn("given more time");
+        requireTheDayOfTheAppointment(now, "given more time");
         if (autoCancellationSuspended) {
             throw new BookingRuleViolationException("The automatic cancellation of this appointment is already suspended");
         }
@@ -180,6 +192,12 @@ public class Appointment {
         }
         Duration wait = autoCancellationSuspended ? LATE_ARRIVAL_GRACE_PERIOD : GRACE_PERIOD;
         return !now.isBefore(slot.startsAt().plus(wait));
+    }
+
+    private void requireTheDayOfTheAppointment(LocalDateTime now, String action) {
+        if (!now.toLocalDate().equals(slot.startsAt().toLocalDate())) {
+            throw new NotTheAppointmentDayException(action, slot.startsAt().toLocalDate());
+        }
     }
 
     private void requireBooked(String action) {

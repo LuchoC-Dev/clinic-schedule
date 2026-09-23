@@ -62,7 +62,7 @@ class DayOfTheAppointmentUseCasesTest {
         Appointment appointment = stored(TEN);
         appointments.given(appointment);
 
-        new SuspendAutoCancellationUseCase(appointments).handle(appointment.id());
+        new SuspendAutoCancellationUseCase(appointments, at(TEN.minusHours(1))).handle(appointment.id());
 
         assertThat(appointments.findById(appointment.id()).orElseThrow().isAutoCancellationSuspended()).isTrue();
     }
@@ -84,7 +84,7 @@ class DayOfTheAppointmentUseCasesTest {
 
     @Test
     void theSweepLeavesALateArrivalAloneUntilTheNextDay() {
-        Appointment warned = stored(TEN).withAutoCancellationSuspended();
+        Appointment warned = stored(TEN).withAutoCancellationSuspended(TEN);
         appointments.given(warned);
 
         assertThat(sweepAt(TEN.plusHours(3)).handle()).isEmpty();

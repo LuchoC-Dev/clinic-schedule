@@ -1,5 +1,6 @@
 package com.clinic.schedule.appointment.application;
 
+import java.time.Clock;
 import java.time.LocalDateTime;
 
 import org.springframework.stereotype.Service;
@@ -28,13 +29,15 @@ public class RescheduleAppointmentUseCase {
     private final PractitionerSchedulePort practitioners;
     private final BookingService bookingService;
     private final AgendaReader agenda;
+    private final Clock clock;
 
     public RescheduleAppointmentUseCase(AppointmentRepository appointments, PractitionerSchedulePort practitioners,
-            BookingService bookingService) {
+            BookingService bookingService, Clock clock) {
         this.appointments = appointments;
         this.practitioners = practitioners;
         this.bookingService = bookingService;
         this.agenda = new AgendaReader(appointments);
+        this.clock = clock;
     }
 
     @Transactional
@@ -47,7 +50,7 @@ public class RescheduleAppointmentUseCase {
             throw new OutsideWorkingHoursException(appointment.practitionerId(), newSlot);
         }
 
-        Appointment moved = bookingService.reschedule(appointment, newSlot,
+        Appointment moved = bookingService.reschedule(appointment, newSlot, LocalDateTime.now(clock),
                 agenda.around(newSlot, appointment.practitionerId(), appointment.patientId()));
 
         appointments.save(moved);

@@ -1,5 +1,6 @@
 package com.clinic.schedule.appointment.application;
 
+import java.time.Clock;
 import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.List;
@@ -33,14 +34,26 @@ public class RecordTimeOffUseCase {
 
     private final AppointmentRepository appointments;
     private final PractitionerSchedulePort practitioners;
+    private final Clock clock;
 
-    public RecordTimeOffUseCase(AppointmentRepository appointments, PractitionerSchedulePort practitioners) {
+    public RecordTimeOffUseCase(AppointmentRepository appointments, PractitionerSchedulePort practitioners,
+            Clock clock) {
         this.appointments = appointments;
         this.practitioners = practitioners;
+        this.clock = clock;
     }
 
+    /**
+     * @throws IllegalArgumentException when the absence is on a day already gone: there is
+     *         nothing left to cancel, so recording it can only be a mistyped date (D-38). Today
+     *         is accepted whole, so an absence reported in the morning can start at midnight.
+     */
     @Transactional
     public Result handle(Command command) {
+        if (command.span().startsAt().toLocalDate().isBefore(LocalDate.now(clock))) {
+            throw new IllegalArgumentException("Time off cannot be recorded for a day already gone: "
+                    + command.span().startsAt().toLocalDate());
+        }
         if (!practitioners.recordTimeOff(command.practitionerId(), command.span())) {
             throw new UnknownPractitionerException(command.practitionerId());
         }

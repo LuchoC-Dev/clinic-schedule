@@ -319,7 +319,7 @@ class AgendaViewTest {
                         .param("newPatientDocumentType", "DNI")
                         .param("newPatientDocumentNumber", "12AB")
                         .param("time", "12:00"))
-                .andExpect(flash().attribute("error", containsString("un DNI lleva solo números")));
+                .andExpect(flash().attribute("error", containsString("el DNI, 7 u 8 dígitos")));
     }
 
     @Test
@@ -458,5 +458,67 @@ class AgendaViewTest {
 
         mockMvc.perform(get("/agenda").param("practitionerId", arias.id().toString()).param("date", DAY))
                 .andExpect(content().string(containsString("15:00 – 15:30")));
+    }
+
+    // --- protections (D-38) -------------------------------------------------------------
+
+    @Test
+    void aNoteTooLongComesBackAsAMessageInsteadOfFailing() throws Exception {
+        CreatedPractitioner arias = practitioners.workingEveryDay();
+
+        mockMvc.perform(post("/agenda/new").with(csrf())
+                        .param("practitionerId", arias.id().toString())
+                        .param("date", DAY)
+                        .param("reasonId", arias.consulta().toString())
+                        .param("patientId", patients.newPatient().toString())
+                        .param("time", "13:00")
+                        .param("note", "x".repeat(600)))
+                .andExpect(redirectedUrlPattern("/agenda/new?*"))
+                .andExpect(flash().attribute("error", "Los datos ingresados no son válidos."));
+    }
+
+    @Test
+    void bookingATimeAlreadyGoneSaysSo() throws Exception {
+        CreatedPractitioner arias = practitioners.workingEveryDay();
+
+        mockMvc.perform(post("/agenda/new").with(csrf())
+                        .param("practitionerId", arias.id().toString())
+                        .param("date", "2026-03-09")
+                        .param("reasonId", arias.consulta().toString())
+                        .param("patientId", patients.newPatient().toString())
+                        .param("time", "10:00"))
+                .andExpect(flash().attribute("error", "Ese horario ya pasó."));
+    }
+
+    @Test
+    void bookingMoreThanAYearAheadAsksToCheckTheYear() throws Exception {
+        CreatedPractitioner arias = practitioners.workingEveryDay();
+
+        mockMvc.perform(post("/agenda/new").with(csrf())
+                        .param("practitionerId", arias.id().toString())
+                        .param("date", "2027-03-12")
+                        .param("reasonId", arias.consulta().toString())
+                        .param("patientId", patients.newPatient().toString())
+                        .param("time", "10:00"))
+                .andExpect(flash().attribute("error",
+                        "No se reservan turnos con más de un año de anticipación: revisá el año."));
+    }
+
+    @Test
+    void aLateArrivalNoticeOnAnotherDaySaysItIsOnlyForTheDay() throws Exception {
+        CreatedPractitioner arias = practitioners.workingEveryDay();
+        String id = bookThroughTheApi(arias, patients.newPatient(), "2026-03-12", "10:00:00");
+
+        mockMvc.perform(post("/agenda/appointments/" + id + "/late-notice").with(csrf())
+                        .param("practitionerId", arias.id().toString()).param("date", "2026-03-12"))
+                .andExpect(flash().attribute("error", "Eso solo se puede hacer el día del turno."));
+    }
+
+    /** The API's error body is for the API: a screen asked for with a malformed id does not get it. */
+    @Test
+    void aMalformedIdOnAScreenIsNotAnsweredWithTheApisErrorBody() throws Exception {
+        mockMvc.perform(get("/agenda").param("practitionerId", "not-an-id"))
+                .andExpect(status().isBadRequest())
+                .andExpect(content().string(not(containsString("has an invalid value"))));
     }
 }

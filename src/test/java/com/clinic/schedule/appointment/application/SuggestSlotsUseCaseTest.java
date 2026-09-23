@@ -3,6 +3,9 @@ package com.clinic.schedule.appointment.application;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
+import java.time.ZoneId;
+import java.time.LocalDateTime;
+import java.time.Clock;
 import java.time.LocalDate;
 import java.time.LocalTime;
 import java.util.List;
@@ -24,7 +27,13 @@ class SuggestSlotsUseCaseTest {
 
     private final InMemoryAppointmentRepository appointments = new InMemoryAppointmentRepository();
     private final FakePractitionerSchedule practitioners = new FakePractitionerSchedule();
-    private final SuggestSlotsUseCase suggest = new SuggestSlotsUseCase(appointments, practitioners);
+
+    /** The practice's clock, stopped at the start of the day these tests book on. */
+    private static final Clock CLOCK = Clock.fixed(
+            LocalDateTime.of(2026, 3, 10, 0, 0).atZone(ZoneId.of("America/Argentina/Buenos_Aires")).toInstant(),
+            ZoneId.of("America/Argentina/Buenos_Aires"));
+
+    private final SuggestSlotsUseCase suggest = new SuggestSlotsUseCase(appointments, practitioners, CLOCK);
 
     private final UUID consulta = practitioners.givenReason(ARIAS, "consulta", 30);
 
@@ -75,5 +84,15 @@ class SuggestSlotsUseCaseTest {
 
         assertThat(suggest.forMoving(moving, DAY))
                 .isEqualTo(times("09:00", "09:15", "09:30", "09:45", "10:00"));
+    }
+
+    @Test
+    void aTimeAlreadyGoneIsNotOffered() {
+        Clock atTwentyToTen = Clock.fixed(
+                DAY.atTime(9, 40).atZone(ZoneId.of("America/Argentina/Buenos_Aires")).toInstant(),
+                ZoneId.of("America/Argentina/Buenos_Aires"));
+
+        assertThat(new SuggestSlotsUseCase(appointments, practitioners, atTwentyToTen).forReason(ARIAS, consulta, DAY))
+                .first().isEqualTo(LocalTime.of(9, 45));
     }
 }

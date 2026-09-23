@@ -3,6 +3,8 @@ package com.clinic.schedule.appointment.application;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
+import java.time.ZoneId;
+import java.time.Clock;
 import java.time.LocalDateTime;
 import java.util.UUID;
 
@@ -28,8 +30,14 @@ class BookAppointmentUseCaseTest {
     private final InMemoryAppointmentRepository appointments = new InMemoryAppointmentRepository();
     private final FakePatientRegistry patients = new FakePatientRegistry();
     private final FakePractitionerSchedule practitioners = new FakePractitionerSchedule();
+
+    /** The practice's clock, stopped at the start of the day these tests book on. */
+    private static final Clock CLOCK = Clock.fixed(
+            LocalDateTime.of(2026, 3, 10, 0, 0).atZone(ZoneId.of("America/Argentina/Buenos_Aires")).toInstant(),
+            ZoneId.of("America/Argentina/Buenos_Aires"));
+
     private final BookAppointmentUseCase useCase =
-            new BookAppointmentUseCase(appointments, patients, practitioners, new BookingService());
+            new BookAppointmentUseCase(appointments, patients, practitioners, new BookingService(), CLOCK);
 
     {
         patients.register(ANA);

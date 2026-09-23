@@ -49,7 +49,7 @@ class PatientViewController {
         } catch (IncompleteDocumentException e) {
             flash.addFlashAttribute("error", "El documento necesita tipo y número, o ninguno de los dos.");
         } catch (IllegalArgumentException e) {
-            flash.addFlashAttribute("error", "Revisá los datos: el nombre es obligatorio y un DNI lleva solo números.");
+            flash.addFlashAttribute("error", "Revisá los datos: el nombre lleva letras y hasta 150 caracteres; el DNI, 7 u 8 dígitos; LE y LC, de 6 a 8 dígitos; CI y pasaporte, solo letras y números.");
         }
         return "redirect:/patients";
     }

@@ -57,12 +57,27 @@ class Patient {
         this.document = document;
     }
 
+    /**
+     * A name is required, fits its column, and has at least one letter: "!!!" or "123" is a
+     * slip of the keyboard, not somebody's name (D-38). Nothing stricter — names carry
+     * accents, apostrophes and hyphens.
+     */
     private static String requireName(String fullName) {
         if (fullName == null || fullName.isBlank()) {
             throw new IllegalArgumentException("A patient needs a full name");
         }
-        return fullName.strip();
+        String name = fullName.strip();
+        if (name.length() > MAX_NAME_LENGTH) {
+            throw new IllegalArgumentException("A full name is at most " + MAX_NAME_LENGTH + " characters");
+        }
+        if (name.codePoints().noneMatch(Character::isLetter)) {
+            throw new IllegalArgumentException("A full name needs at least one letter");
+        }
+        return name;
     }
+
+    /** As long as the column that stores it. */
+    static final int MAX_NAME_LENGTH = 150;
 
     UUID getId() {
         return id;

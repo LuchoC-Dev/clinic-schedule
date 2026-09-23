@@ -21,6 +21,9 @@ class Reason {
 
     private static final int MAX_NAME_LENGTH = 60;
 
+    /** Nothing booked lasts longer than a working day; a larger number is a mistyped one (D-38). */
+    private static final int MAX_DURATION_MINUTES = 8 * 60;
+
     @Id
     private UUID id;
 
@@ -68,6 +71,9 @@ class Reason {
     private static int requireDuration(int durationMinutes) {
         if (durationMinutes <= 0) {
             throw new IllegalArgumentException("A reason needs a positive duration");
+        }
+        if (durationMinutes > MAX_DURATION_MINUTES) {
+            throw new IllegalArgumentException("A reason lasts at most " + MAX_DURATION_MINUTES + " minutes");
         }
         return durationMinutes;
     }

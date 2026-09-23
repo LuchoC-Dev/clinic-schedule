@@ -180,7 +180,7 @@ class PatientApiTest {
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(body(uniqueName("Dni Raro"), DocumentType.DNI, "3011122A")))
                 .andExpect(status().isBadRequest())
-                .andExpect(jsonPath("$.message").value("A DNI is only digits"));
+                .andExpect(jsonPath("$.message").value("A DNI number has 7 or 8 digits"));
     }
 
     @Test
@@ -285,5 +285,46 @@ class PatientApiTest {
         mockMvc.perform(get("/api/patients/" + id))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.document").value(nullValue()));
+    }
+
+    // --- protections (D-38) -------------------------------------------------------------
+
+    @Test
+    void aNameWithoutLettersAnswers400() throws Exception {
+        mockMvc.perform(post("/api/patients")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(body("!!!???", null, null)))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.message").value("A full name needs at least one letter"));
+    }
+
+    @Test
+    void aShortDniAnswers400() throws Exception {
+        mockMvc.perform(post("/api/patients")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(body(uniqueName("Dni Corto"), DocumentType.DNI, "544")))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.message").value("A DNI number has 7 or 8 digits"));
+    }
+
+    @Test
+    void anUnknownDocumentTypeNamesTheFieldInTheUsualBody() throws Exception {
+        mockMvc.perform(post("/api/patients")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {"fullName": "Tipo Inventado", "documentType": "CEDULA", "documentNumber": "123"}
+                                """))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.status").value(400))
+                .andExpect(jsonPath("$.fields.documentType").value("has a value of the wrong type"));
+    }
+
+    @Test
+    void aBodyThatIsNotJsonAnswers400InTheUsualBody() throws Exception {
+        mockMvc.perform(post("/api/patients")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"fullName\":"))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.message").value("The request body is not valid JSON"));
     }
 }

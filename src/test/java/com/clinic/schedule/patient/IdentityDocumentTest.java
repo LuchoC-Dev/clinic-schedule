@@ -82,4 +82,34 @@ class IdentityDocumentTest {
         assertThat(IdentityDocument.ofNullable(DocumentType.LC, "1234567"))
                 .isEqualTo(new IdentityDocument(DocumentType.LC, "1234567"));
     }
+
+    // --- what each type of number looks like (D-38) ------------------------------------
+
+    @Test
+    void aDniHasSevenOrEightDigits() {
+        assertThat(new IdentityDocument(DocumentType.DNI, "1.234.567").number()).isEqualTo("1234567");
+        assertThatIllegalArgumentException().isThrownBy(() -> new IdentityDocument(DocumentType.DNI, "544"))
+                .withMessage("A DNI number has 7 or 8 digits");
+        assertThatIllegalArgumentException().isThrownBy(() -> new IdentityDocument(DocumentType.DNI, "123456789"));
+    }
+
+    @Test
+    void theOlderBookletsHaveSixToEightDigits() {
+        assertThat(new IdentityDocument(DocumentType.LE, "123456").number()).isEqualTo("123456");
+        assertThatIllegalArgumentException().isThrownBy(() -> new IdentityDocument(DocumentType.LE, "AB12"));
+        assertThatIllegalArgumentException().isThrownBy(() -> new IdentityDocument(DocumentType.LC, "12345"));
+    }
+
+    @Test
+    void aPassportOrACiIsLettersAndDigitsOnly() {
+        assertThat(new IdentityDocument(DocumentType.CI, "uy-1234567").number()).isEqualTo("UY1234567");
+        assertThatIllegalArgumentException().isThrownBy(() -> new IdentityDocument(DocumentType.PASSPORT, "AB#123"));
+    }
+
+    @Test
+    void aNumberFitsItsColumn() {
+        assertThatIllegalArgumentException()
+                .isThrownBy(() -> new IdentityDocument(DocumentType.PASSPORT, "A".repeat(21)))
+                .withMessageContaining("at most 20");
+    }
 }

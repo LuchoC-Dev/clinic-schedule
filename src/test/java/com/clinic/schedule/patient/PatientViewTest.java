@@ -70,4 +70,28 @@ class PatientViewTest {
         mockMvc.perform(post("/patients").with(csrf()).param("fullName", unique("Medio")).param("documentNumber", "123"))
                 .andExpect(flash().attribute("error", containsString("tipo y número")));
     }
+
+    // --- protections (D-38) -------------------------------------------------------------
+
+    @Test
+    void aTooLongNameComesBackAsAMessageInsteadOfFailing() throws Exception {
+        mockMvc.perform(post("/patients").with(csrf()).param("fullName", "x".repeat(600)))
+                .andExpect(redirectedUrl("/patients"))
+                .andExpect(flash().attribute("error", startsWith("Revisá los datos")));
+    }
+
+    @Test
+    void aTooLongDocumentNumberComesBackAsAMessageInsteadOfFailing() throws Exception {
+        mockMvc.perform(post("/patients").with(csrf()).param("fullName", unique("Pasaporte Largo"))
+                        .param("documentType", "PASSPORT").param("documentNumber", "A".repeat(40)))
+                .andExpect(redirectedUrl("/patients"))
+                .andExpect(flash().attribute("error", startsWith("Revisá los datos")));
+    }
+
+    @Test
+    void aShortDniComesBackAsAMessage() throws Exception {
+        mockMvc.perform(post("/patients").with(csrf()).param("fullName", unique("Dni Corto"))
+                        .param("documentType", "DNI").param("documentNumber", "544"))
+                .andExpect(flash().attribute("error", containsString("el DNI, 7 u 8 dígitos")));
+    }
 }

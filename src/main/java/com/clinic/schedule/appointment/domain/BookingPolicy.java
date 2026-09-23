@@ -1,9 +1,17 @@
 package com.clinic.schedule.appointment.domain;
 
+import java.time.LocalDateTime;
+import java.time.Period;
 import java.util.Collection;
 
 /**
- * The two collision rules of the agenda:
+ * When an appointment may be booked, and the two collision rules of the agenda.
+ *
+ * <p>An appointment starts from now on, and no more than a year ahead: an earlier start is a
+ * mistake the automatic cancellation would undo within the minute, and a later one is almost
+ * certainly a mistyped year (D-38).
+ *
+ * <p>The collision rules:
  *
  * <ul>
  *   <li>a practitioner cannot have two overlapping appointments;</li>
@@ -23,6 +31,22 @@ import java.util.Collection;
  * not checked here: it belongs to the practitioner module, which does not exist yet.
  */
 final class BookingPolicy {
+
+    /** The furthest ahead an appointment may start. */
+    static final Period BOOKING_HORIZON = Period.ofYears(1);
+
+    /**
+     * @throws SlotInThePastException    when the slot starts before {@code now}
+     * @throws SlotTooFarAheadException  when it starts more than {@link #BOOKING_HORIZON} ahead
+     */
+    void checkWhen(TimeSlot slot, LocalDateTime now) {
+        if (slot.startsAt().isBefore(now)) {
+            throw new SlotInThePastException(slot);
+        }
+        if (slot.startsAt().isAfter(now.plus(BOOKING_HORIZON))) {
+            throw new SlotTooFarAheadException(slot);
+        }
+    }
 
     /**
      * @param candidate the appointment being booked or rescheduled

@@ -6,8 +6,11 @@ import com.clinic.schedule.appointment.application.UnknownPatientException;
 import com.clinic.schedule.appointment.application.UnknownPractitionerException;
 import com.clinic.schedule.appointment.application.UnknownReasonException;
 import com.clinic.schedule.appointment.domain.BookingRuleViolationException;
+import com.clinic.schedule.appointment.domain.NotTheAppointmentDayException;
 import com.clinic.schedule.appointment.domain.PatientAlreadyBookedException;
 import com.clinic.schedule.appointment.domain.PractitionerAlreadyBookedException;
+import com.clinic.schedule.appointment.domain.SlotInThePastException;
+import com.clinic.schedule.appointment.domain.SlotTooFarAheadException;
 import com.clinic.schedule.patient.api.PatientRegistrationRefusedException;
 
 /**
@@ -37,6 +40,15 @@ final class ScreenMessages {
         if (e instanceof PatientAlreadyBookedException) {
             return "El paciente ya tiene otro turno en ese horario.";
         }
+        if (e instanceof SlotInThePastException) {
+            return "Ese horario ya pasó.";
+        }
+        if (e instanceof SlotTooFarAheadException) {
+            return "No se reservan turnos con más de un año de anticipación: revisá el año.";
+        }
+        if (e instanceof NotTheAppointmentDayException) {
+            return "Eso solo se puede hacer el día del turno.";
+        }
         if (e instanceof OutsideWorkingHoursException) {
             return "El profesional no atiende en ese horario.";
         }
@@ -63,7 +75,7 @@ final class ScreenMessages {
         return switch (e.reason()) {
             case DUPLICATE_DOCUMENT -> "Ese documento ya pertenece a otro paciente: buscalo arriba y elegilo.";
             case INCOMPLETE_DOCUMENT -> "El documento del paciente nuevo necesita tipo y número, o ninguno de los dos.";
-            case INVALID_DATA -> "Revisá el paciente nuevo: el nombre es obligatorio y un DNI lleva solo números.";
+            case INVALID_DATA -> "Revisá el paciente nuevo: el nombre lleva letras y hasta 150 caracteres; el DNI, 7 u 8 dígitos; LE y LC, de 6 a 8 dígitos; CI y pasaporte, solo letras y números.";
         };
     }
 }

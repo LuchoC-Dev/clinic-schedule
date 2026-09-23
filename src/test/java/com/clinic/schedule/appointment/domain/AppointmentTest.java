@@ -135,4 +135,14 @@ class AppointmentTest {
         assertThat(AppointmentId.of("018f1d2c-0000-7000-8000-000000000001").value())
                 .hasToString("018f1d2c-0000-7000-8000-000000000001");
     }
+
+    @Test
+    void aNoteFitsItsColumn() {
+        TimeSlot slot = TimeSlot.of(LocalDateTime.of(2026, 3, 10, 10, 0), 30);
+
+        assertThatIllegalArgumentException().isThrownBy(() -> Appointment.restore(AppointmentId.newId(),
+                        PatientId.newId(), PractitionerId.newId(), slot, "consulta", "x".repeat(501),
+                        AppointmentStatus.BOOKED, null, false))
+                .withMessageContaining("at most 500");
+    }
 }

@@ -262,6 +262,24 @@ practitioner; Dr. Benítez's booking screen opened with a reason chosen and 24 f
 searching DNI 30111222 chose Ana Pérez; a new patient with a DNI was registered and booked in one
 press; the same DNI typed for someone else was refused in Spanish, keeping what had been typed.
 
+### After v1: protections `[x]`
+- [x] Lengths checked by `Patient`, `IdentityDocument` and `Appointment`: no screen answers 500
+      for a long name, document number or note (D-38)
+- [x] Document formats per type: DNI 7 or 8 digits, LE/LC 6 to 8, CI/passport letters and
+      digits; a full name needs a letter
+- [x] Booking and moving from now on and up to a year ahead; suggestions leave out times gone
+- [x] Check-in and late-arrival notice only on the appointment's day; no time off for a day
+      already gone; a reason lasts at most 8 hours
+- [x] Malformed bodies, wrong types and missing parameters answered in the API's error body
+- [x] `FixedClockConfiguration` for the tests, so fixed dates never turn into the past
+- [x] 36 more tests. 307 in total
+
+**Verified with the application running:** the same probe of wrong data that had got through —
+DNI 544, a 12-digit DNI, an LE with letters, a name of symbols, a booking in 2025 and in 2099, a
+check-in twelve days early, a 100 000-minute reason, time off in 2020 — was refused with a
+message naming the rule; the five screen inputs that answered 500 now come back as a message;
+malformed JSON, a malformed id and a missing parameter answer in the usual error body.
+
 ---
 
 ## Explicitly postponed

@@ -3,6 +3,8 @@ package com.clinic.schedule.appointment.application;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
+import java.time.ZoneId;
+import java.time.Clock;
 import java.time.Duration;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
@@ -25,7 +27,13 @@ class RecordTimeOffUseCaseTest {
 
     private final InMemoryAppointmentRepository appointments = new InMemoryAppointmentRepository();
     private final FakePractitionerSchedule practitioners = new FakePractitionerSchedule();
-    private final RecordTimeOffUseCase recordTimeOff = new RecordTimeOffUseCase(appointments, practitioners);
+
+    /** The practice's clock, stopped at the start of the day these tests book on. */
+    private static final Clock CLOCK = Clock.fixed(
+            LocalDateTime.of(2026, 3, 10, 0, 0).atZone(ZoneId.of("America/Argentina/Buenos_Aires")).toInstant(),
+            ZoneId.of("America/Argentina/Buenos_Aires"));
+
+    private final RecordTimeOffUseCase recordTimeOff = new RecordTimeOffUseCase(appointments, practitioners, CLOCK);
 
     private static Appointment booked(PractitionerId practitioner, LocalDateTime startsAt) {
         return Appointment.restore(AppointmentId.newId(), PatientId.newId(), practitioner,
@@ -119,5 +127,30 @@ class RecordTimeOffUseCaseTest {
                 .isInstanceOf(UnknownPractitionerException.class);
 
         assertThat(statusOf(appointment)).isEqualTo(AppointmentStatus.BOOKED);
+    }
+
+    // --- not for a day already gone (D-38) ----------------------------------------------
+
+    @Test
+    void anAbsenceOnADayAlreadyGoneIsRefused() {
+        TimeSlot yesterday = new TimeSlot(DAY.minusDays(1).atStartOfDay(), Duration.ofDays(1));
+
+        assertThatThrownBy(() -> recordTimeOff.handle(new RecordTimeOffUseCase.Command(ARIAS, yesterday)))
+                .isInstanceOf(IllegalArgumentException.class)
+                .hasMessageContaining("day already gone");
+    }
+
+    @Test
+    void todayIsAcceptedWholeEvenThoughItsMorningHasPassed() {
+        Clock atNoon = Clock.fixed(DAY.atTime(12, 0).atZone(ZoneId.of("America/Argentina/Buenos_Aires")).toInstant(),
+                ZoneId.of("America/Argentina/Buenos_Aires"));
+        Appointment afternoon = booked(ARIAS, DAY.atTime(15, 0));
+        appointments.given(afternoon);
+
+        RecordTimeOffUseCase.Result result = new RecordTimeOffUseCase(appointments, practitioners, atNoon)
+                .handle(new RecordTimeOffUseCase.Command(ARIAS, wholeDay()));
+
+        assertThat(result.cancelled()).extracting(Appointment::id).containsExactly(afternoon.id());
+        assertThat(statusOf(afternoon)).isEqualTo(AppointmentStatus.CANCELLED);
     }
 }

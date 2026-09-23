@@ -1,5 +1,6 @@
 package com.clinic.schedule.appointment.application;
 
+import java.time.Clock;
 import java.time.LocalDateTime;
 import java.util.Optional;
 import java.util.UUID;
@@ -43,14 +44,16 @@ public class BookAppointmentUseCase {
     private final PractitionerSchedulePort practitioners;
     private final BookingService bookingService;
     private final AgendaReader agenda;
+    private final Clock clock;
 
     public BookAppointmentUseCase(AppointmentRepository appointments, PatientRegistryPort patients,
-            PractitionerSchedulePort practitioners, BookingService bookingService) {
+            PractitionerSchedulePort practitioners, BookingService bookingService, Clock clock) {
         this.appointments = appointments;
         this.patients = patients;
         this.practitioners = practitioners;
         this.bookingService = bookingService;
         this.agenda = new AgendaReader(appointments);
+        this.clock = clock;
     }
 
     @Transactional
@@ -78,6 +81,7 @@ public class BookAppointmentUseCase {
                 slot,
                 reason.name(),
                 command.note(),
+                LocalDateTime.now(clock),
                 agenda.around(slot, command.practitionerId(), command.patientId()));
 
         appointments.save(booked);

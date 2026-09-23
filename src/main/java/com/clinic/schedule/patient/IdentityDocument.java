@@ -38,10 +38,16 @@ record IdentityDocument(
         if (number.isEmpty()) {
             throw new IllegalArgumentException("A document needs a number");
         }
-        if (type.isNumeric() && !number.chars().allMatch(Character::isDigit)) {
-            throw new IllegalArgumentException("A " + type + " is only digits");
+        if (number.length() > MAX_NUMBER_LENGTH) {
+            throw new IllegalArgumentException("A document number is at most " + MAX_NUMBER_LENGTH + " characters");
+        }
+        if (!type.accepts(number)) {
+            throw new IllegalArgumentException("A " + type + " number has " + type.description());
         }
     }
+
+    /** As long as the column that stores it (D-38). */
+    static final int MAX_NUMBER_LENGTH = 20;
 
     /**
      * Builds a document, or nothing when neither part was given. Reception leaving both

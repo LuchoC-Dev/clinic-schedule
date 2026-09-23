@@ -1,5 +1,6 @@
 package com.clinic.schedule.appointment.application;
 
+import java.time.Clock;
 import java.time.Duration;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
@@ -35,10 +36,13 @@ public class SuggestSlotsUseCase {
 
     private final AppointmentRepository appointments;
     private final PractitionerSchedulePort practitioners;
+    private final Clock clock;
 
-    public SuggestSlotsUseCase(AppointmentRepository appointments, PractitionerSchedulePort practitioners) {
+    public SuggestSlotsUseCase(AppointmentRepository appointments, PractitionerSchedulePort practitioners,
+            Clock clock) {
         this.appointments = appointments;
         this.practitioners = practitioners;
+        this.clock = clock;
     }
 
     /** For a new appointment: the length follows from the reason, as when booking. */
@@ -63,10 +67,13 @@ public class SuggestSlotsUseCase {
                 .filter(appointment -> !appointment.id().equals(ignoring))
                 .toList();
 
+        // A time already gone cannot be booked (D-38), so it is not offered either.
+        LocalDateTime now = LocalDateTime.now(clock);
         List<LocalTime> free = new ArrayList<>();
         for (LocalDateTime start = date.atStartOfDay(); start.toLocalDate().equals(date); start = start.plus(STEP)) {
             TimeSlot slot = new TimeSlot(start, length);
-            if (practitioners.worksDuring(practitionerId, slot)
+            if (!start.isBefore(now)
+                    && practitioners.worksDuring(practitionerId, slot)
                     && agenda.stream().noneMatch(appointment -> appointment.slot().overlaps(slot))) {
                 free.add(start.toLocalTime());
             }

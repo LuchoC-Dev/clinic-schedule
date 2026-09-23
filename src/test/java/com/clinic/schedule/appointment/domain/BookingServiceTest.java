@@ -16,6 +16,7 @@ import org.junit.jupiter.api.Test;
 class BookingServiceTest {
 
     private static final LocalDateTime TEN = LocalDateTime.of(2026, 3, 10, 10, 0);
+    private static final LocalDateTime NOW = TEN.minusHours(2);
     private static final PatientId ANA = PatientId.newId();
     private static final PatientId LUIS = PatientId.newId();
     private static final PractitionerId ARIAS = PractitionerId.newId();
@@ -32,7 +33,7 @@ class BookingServiceTest {
         AppointmentId id = AppointmentId.newId();
 
         Appointment booked = bookingService.book(id, ANA, ARIAS, TimeSlot.of(TEN, 30), "consulta",
-                "trae estudios", List.of());
+                "trae estudios", NOW, List.of());
 
         assertThat(booked.isBooked()).isTrue();
         assertThat(booked.id()).isEqualTo(id);
@@ -46,7 +47,7 @@ class BookingServiceTest {
         List<Appointment> agenda = List.of(stored(LUIS, 15, 30));
 
         assertThatThrownBy(() -> bookingService.book(AppointmentId.newId(), ANA, ARIAS, TimeSlot.of(TEN, 30),
-                "consulta", null, agenda))
+                "consulta", null, NOW, agenda))
                 .isInstanceOf(PractitionerAlreadyBookedException.class);
     }
 
@@ -56,8 +57,8 @@ class BookingServiceTest {
         // attempt is recognizable as the same appointment instead of becoming a new one.
         AppointmentId id = AppointmentId.newId();
 
-        Appointment first = bookingService.book(id, ANA, ARIAS, TimeSlot.of(TEN, 30), "consulta", null, List.of());
-        Appointment retry = bookingService.book(id, ANA, ARIAS, TimeSlot.of(TEN, 30), "consulta", null, List.of());
+        Appointment first = bookingService.book(id, ANA, ARIAS, TimeSlot.of(TEN, 30), "consulta", null, NOW, List.of());
+        Appointment retry = bookingService.book(id, ANA, ARIAS, TimeSlot.of(TEN, 30), "consulta", null, NOW, List.of());
 
         assertThat(retry.isSameAs(first)).isTrue();
     }
@@ -67,7 +68,7 @@ class BookingServiceTest {
         Appointment existing = stored(ANA, 0, 30);
         TimeSlot newSlot = TimeSlot.of(TEN.plusHours(3), 30);
 
-        Appointment moved = bookingService.reschedule(existing, newSlot, List.of(existing));
+        Appointment moved = bookingService.reschedule(existing, newSlot, NOW, List.of(existing));
 
         assertThat(moved.slot()).isEqualTo(newSlot);
         assertThat(moved.id()).isEqualTo(existing.id());
@@ -79,7 +80,7 @@ class BookingServiceTest {
         Appointment other = stored(LUIS, 120, 30);
         TimeSlot takenSlot = TimeSlot.of(TEN.plusMinutes(120), 30);
 
-        assertThatThrownBy(() -> bookingService.reschedule(existing, takenSlot, List.of(existing, other)))
+        assertThatThrownBy(() -> bookingService.reschedule(existing, takenSlot, NOW, List.of(existing, other)))
                 .isInstanceOf(PractitionerAlreadyBookedException.class);
 
         assertThat(existing.slot()).isEqualTo(TimeSlot.of(TEN, 30));
@@ -89,7 +90,44 @@ class BookingServiceTest {
     void aCancelledAppointmentCannotBeRescheduled() {
         Appointment cancelled = stored(ANA, 0, 30).cancelled();
 
-        assertThatThrownBy(() -> bookingService.reschedule(cancelled, TimeSlot.of(TEN.plusHours(3), 30), List.of()))
+        assertThatThrownBy(() -> bookingService.reschedule(cancelled, TimeSlot.of(TEN.plusHours(3), 30), NOW,
+                List.of()))
                 .isInstanceOf(BookingRuleViolationException.class);
+    }
+
+    // --- when an appointment may start (D-38) -------------------------------------------
+
+    @Test
+    void anAppointmentMayStartRightNow() {
+        Appointment booked = bookingService.book(AppointmentId.newId(), ANA, ARIAS, TimeSlot.of(NOW, 30), "consulta",
+                null, NOW, List.of());
+
+        assertThat(booked.slot().startsAt()).isEqualTo(NOW);
+    }
+
+    @Test
+    void aSlotAlreadyStartedIsRefused() {
+        assertThatThrownBy(() -> bookingService.book(AppointmentId.newId(), ANA, ARIAS,
+                TimeSlot.of(NOW.minusMinutes(1), 30), "consulta", null, NOW, List.of()))
+                .isInstanceOf(SlotInThePastException.class);
+    }
+
+    @Test
+    void aYearAheadIsTheLimit() {
+        bookingService.book(AppointmentId.newId(), ANA, ARIAS, TimeSlot.of(NOW.plusYears(1), 30), "consulta",
+                null, NOW, List.of());
+
+        assertThatThrownBy(() -> bookingService.book(AppointmentId.newId(), ANA, ARIAS,
+                TimeSlot.of(NOW.plusYears(1).plusMinutes(1), 30), "consulta", null, NOW, List.of()))
+                .isInstanceOf(SlotTooFarAheadException.class);
+    }
+
+    @Test
+    void anAppointmentCannotBeMovedToThePast() {
+        Appointment existing = stored(ANA, 0, 30);
+
+        assertThatThrownBy(() -> bookingService.reschedule(existing, TimeSlot.of(NOW.minusHours(1), 30), NOW,
+                List.of(existing)))
+                .isInstanceOf(SlotInThePastException.class);
     }
 }

@@ -36,8 +36,11 @@ class SecurityTest {
     private static final String BENITEZ_CONSULTA = "b2222222-0000-0000-0000-000000000001";
     private static final String ANA = "c3333333-0000-0000-0000-000000000001";
     private static final String JUAN = "c3333333-0000-0000-0000-000000000002";
-    /** A Monday no other test books on: Arias works the morning, Benítez the afternoon. */
-    private static final String DAY = "2030-01-07";
+    /**
+     * A Monday no other test books on, within a year of the tests' clock: Arias works the
+     * morning, Benítez the afternoon.
+     */
+    private static final String DAY = "2026-03-16";
 
     @Autowired
     private MockMvc mockMvc;

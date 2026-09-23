@@ -244,4 +244,17 @@ class PractitionerApiTest {
                 .andExpect(status().isNotFound())
                 .andExpect(jsonPath("$.status").value(404));
     }
+
+    @Test
+    void aReasonLongerThanAWorkingDayAnswers400() throws Exception {
+        String id = registerPractitioner();
+
+        mockMvc.perform(post("/api/practitioners/" + id + "/reasons")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {"name": "eterna", "durationMinutes": 481}
+                                """))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.message").value("A reason lasts at most 480 minutes"));
+    }
 }

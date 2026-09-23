@@ -128,7 +128,7 @@ class AppointmentJpaAdapterTest {
     @Test
     void storesTheCheckInAndTheLateArrivalNotice() {
         Appointment arrived = appointment(ana, arias, TEN, 30, null)
-                .withAutoCancellationSuspended()
+                .withAutoCancellationSuspended(TEN)
                 .checkedIn(TEN.plusMinutes(40));
 
         appointments.save(arrived);

@@ -1,5 +1,6 @@
 package com.clinic.schedule.appointment.domain;
 
+import java.time.LocalDateTime;
 import java.util.Collection;
 
 /**
@@ -22,12 +23,15 @@ public final class BookingService {
     /**
      * @param id     assigned by the caller, so a retried request reuses it instead of booking
      *               twice; {@link AppointmentId#newId()} when there is nothing to reuse
+     * @param now    the practice's current time: nothing is booked before it
      * @param agenda appointments that could collide with the requested slot
      * @return the appointment, ready to be stored
+     * @throws SlotInThePastException or {@link SlotTooFarAheadException} when the slot is out of reach
      * @throws PractitionerAlreadyBookedException or {@link PatientAlreadyBookedException} when the slot is taken
      */
     public Appointment book(AppointmentId id, PatientId patientId, PractitionerId practitionerId, TimeSlot slot,
-            String reason, String note, Collection<Appointment> agenda) {
+            String reason, String note, LocalDateTime now, Collection<Appointment> agenda) {
+        policy.checkWhen(slot, now);
         Appointment candidate = Appointment.book(id, patientId, practitionerId, slot, reason, note);
         policy.check(candidate, agenda);
         return candidate;
@@ -42,8 +46,10 @@ public final class BookingService {
      *
      * @return the appointment on its new slot, which is what has to be stored
      */
-    public Appointment reschedule(Appointment appointment, TimeSlot newSlot, Collection<Appointment> agenda) {
+    public Appointment reschedule(Appointment appointment, TimeSlot newSlot, LocalDateTime now,
+            Collection<Appointment> agenda) {
         Appointment moved = appointment.movedTo(newSlot);
+        policy.checkWhen(newSlot, now);
         policy.check(moved, agenda);
         return moved;
     }

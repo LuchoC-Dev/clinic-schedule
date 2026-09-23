@@ -1,5 +1,6 @@
 package com.clinic.schedule.appointment.web;
 
+import static org.hamcrest.Matchers.containsString;
 import static org.hamcrest.Matchers.nullValue;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
@@ -333,5 +334,91 @@ class AppointmentApiTest {
                         .param("date", DAY))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.length()").value(0));
+    }
+
+    // --- protections (D-38) -------------------------------------------------------------
+
+    @Test
+    void bookingATimeAlreadyGoneAnswers409() throws Exception {
+        CreatedPractitioner arias = fixture.workingEveryDay();
+
+        mockMvc.perform(post("/api/appointments")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(bookingBody(arias.id(), arias.consulta(), "2026-03-09T10:00:00")))
+                .andExpect(status().isConflict())
+                .andExpect(jsonPath("$.message").value(containsString("in the past")));
+    }
+
+    @Test
+    void bookingMoreThanAYearAheadAnswers409() throws Exception {
+        CreatedPractitioner arias = fixture.workingEveryDay();
+
+        mockMvc.perform(post("/api/appointments")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(bookingBody(arias.id(), arias.consulta(), "2027-03-11T10:00:00")))
+                .andExpect(status().isConflict())
+                .andExpect(jsonPath("$.message").value(containsString("more than a year ahead")));
+    }
+
+    @Test
+    void aNoteLongerThanItsColumnAnswers400() throws Exception {
+        CreatedPractitioner arias = fixture.workingEveryDay();
+
+        mockMvc.perform(post("/api/appointments")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {"patientId": "%s", "practitionerId": "%s", "reasonId": "%s", "startsAt": "%s",
+                                 "note": "%s"}
+                                """.formatted(patients.newPatient(), arias.id(), arias.consulta(), TEN, "x".repeat(501))))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.fields.note").exists());
+    }
+
+    @Test
+    void checkingInOnAnotherDayAnswers409() throws Exception {
+        CreatedPractitioner arias = fixture.workingEveryDay();
+        String id = bookSuccessfully(arias, "2026-03-12T10:00:00").get("id").asText();
+
+        mockMvc.perform(post("/api/appointments/" + id + "/check-in"))
+                .andExpect(status().isConflict())
+                .andExpect(jsonPath("$.message").value(containsString("on its own day")));
+    }
+
+    @Test
+    void aMalformedIdAnswers400WithoutTheInnerWorkings() throws Exception {
+        mockMvc.perform(post("/api/appointments/not-an-id/cancel"))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.message").value("Parameter 'id' has an invalid value"));
+    }
+
+    @Test
+    void aMissingParameterAnswers400InTheUsualBody() throws Exception {
+        mockMvc.perform(get("/api/appointments").param("date", DAY))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.message").value("Parameter 'practitionerId' is required"));
+    }
+
+    @Test
+    void reschedulingToATimeAlreadyGoneAnswers409() throws Exception {
+        CreatedPractitioner arias = fixture.workingEveryDay();
+        String id = bookSuccessfully(arias, TEN).get("id").asText();
+
+        mockMvc.perform(post("/api/appointments/" + id + "/reschedule")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {"startsAt": "2026-03-09T10:00:00"}
+                                """))
+                .andExpect(status().isConflict())
+                .andExpect(jsonPath("$.message").value(containsString("in the past")));
+    }
+
+    @Test
+    void aLateArrivalNoticeOnAnotherDayAnswers409() throws Exception {
+        CreatedPractitioner arias = fixture.workingEveryDay();
+        String id = bookSuccessfully(arias, "2026-03-12T10:00:00").get("id").asText();
+
+        mockMvc.perform(post("/api/appointments/" + id + "/suspend-auto-cancellation"))
+                .andExpect(status().isConflict())
+                .andExpect(jsonPath("$.message").value(containsString("on its own day")));
     }
 }

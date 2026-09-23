@@ -72,7 +72,7 @@ class AppointmentDayTest {
 
     @Test
     void suspendingTheAutomaticCancellationIsRecorded() {
-        Appointment suspended = booked.withAutoCancellationSuspended();
+        Appointment suspended = booked.withAutoCancellationSuspended(TEN);
 
         assertThat(suspended.isAutoCancellationSuspended()).isTrue();
         assertThat(booked.isAutoCancellationSuspended()).isFalse();
@@ -80,9 +80,9 @@ class AppointmentDayTest {
 
     @Test
     void itCannotBeSuspendedTwice() {
-        Appointment suspended = booked.withAutoCancellationSuspended();
+        Appointment suspended = booked.withAutoCancellationSuspended(TEN);
 
-        assertThatThrownBy(suspended::withAutoCancellationSuspended)
+        assertThatThrownBy(() -> suspended.withAutoCancellationSuspended(TEN))
                 .isInstanceOf(BookingRuleViolationException.class);
     }
 
@@ -90,13 +90,13 @@ class AppointmentDayTest {
     void itCannotBeSuspendedOnceThePatientArrived() {
         Appointment checkedIn = booked.checkedIn(TEN);
 
-        assertThatThrownBy(checkedIn::withAutoCancellationSuspended)
+        assertThatThrownBy(() -> checkedIn.withAutoCancellationSuspended(TEN))
                 .isInstanceOf(BookingRuleViolationException.class);
     }
 
     @Test
     void aPatientWhoWarnedTheyWouldBeLateCanStillCheckIn() {
-        Appointment arrived = booked.withAutoCancellationSuspended().checkedIn(TEN.plusHours(1));
+        Appointment arrived = booked.withAutoCancellationSuspended(TEN).checkedIn(TEN.plusHours(1));
 
         assertThat(arrived.isCheckedIn()).isTrue();
     }
@@ -104,7 +104,7 @@ class AppointmentDayTest {
     @Test
     void movingTheAppointmentDropsTheLateArrivalNotice() {
         // The notice was about the old time.
-        Appointment moved = booked.withAutoCancellationSuspended().movedTo(TimeSlot.of(TEN.plusDays(1), 30));
+        Appointment moved = booked.withAutoCancellationSuspended(TEN).movedTo(TimeSlot.of(TEN.plusDays(1), 30));
 
         assertThat(moved.isAutoCancellationSuspended()).isFalse();
     }
@@ -125,7 +125,7 @@ class AppointmentDayTest {
 
     @Test
     void afterALateArrivalNoticeItIsDueTwentyFourHoursAfterTheStart() {
-        Appointment suspended = booked.withAutoCancellationSuspended();
+        Appointment suspended = booked.withAutoCancellationSuspended(TEN);
 
         assertThat(suspended.isDueForAutoCancellation(TEN.plusMinutes(30))).isFalse();
         assertThat(suspended.isDueForAutoCancellation(TEN.plusHours(24).minusMinutes(1))).isFalse();
@@ -142,5 +142,23 @@ class AppointmentDayTest {
     @Test
     void aCancelledAppointmentIsNeverDue() {
         assertThat(booked.cancelled().isDueForAutoCancellation(TEN.plusDays(1))).isFalse();
+    }
+
+    // --- only on the day of the appointment (D-38) --------------------------------------
+
+    @Test
+    void aPatientCannotCheckInOnAnotherDay() {
+        assertThatThrownBy(() -> booked.checkedIn(TEN.minusDays(1)))
+                .isInstanceOf(NotTheAppointmentDayException.class);
+        assertThatThrownBy(() -> booked.checkedIn(TEN.plusDays(1)))
+                .isInstanceOf(NotTheAppointmentDayException.class);
+    }
+
+    @Test
+    void aLateArrivalIsOnlyNoticedOnTheDay() {
+        assertThatThrownBy(() -> booked.withAutoCancellationSuspended(TEN.minusDays(1)))
+                .isInstanceOf(NotTheAppointmentDayException.class);
+        assertThat(booked.withAutoCancellationSuspended(TEN.toLocalDate().atStartOfDay())
+                .isAutoCancellationSuspended()).isTrue();
     }
 }
