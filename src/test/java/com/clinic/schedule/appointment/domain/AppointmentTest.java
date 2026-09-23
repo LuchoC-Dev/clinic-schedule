@@ -107,21 +107,21 @@ class AppointmentTest {
     void aRestoredAppointmentIsCheckedLikeANewOne() {
         // The aggregate does not trust the persistence adapter either.
         assertThatIllegalArgumentException().isThrownBy(() -> Appointment.restore(
-                ID, null, PRACTITIONER, TEN_THIRTY, "consulta", null, AppointmentStatus.BOOKED));
+                ID, null, PRACTITIONER, TEN_THIRTY, "consulta", null, AppointmentStatus.BOOKED, null, false));
         assertThatIllegalArgumentException().isThrownBy(() -> Appointment.restore(
-                ID, PATIENT, PRACTITIONER, TEN_THIRTY, "  ", null, AppointmentStatus.BOOKED));
+                ID, PATIENT, PRACTITIONER, TEN_THIRTY, "  ", null, AppointmentStatus.BOOKED, null, false));
         assertThatIllegalArgumentException().isThrownBy(() -> Appointment.restore(
-                null, PATIENT, PRACTITIONER, TEN_THIRTY, "consulta", null, AppointmentStatus.BOOKED));
+                null, PATIENT, PRACTITIONER, TEN_THIRTY, "consulta", null, AppointmentStatus.BOOKED, null, false));
         assertThatIllegalArgumentException().isThrownBy(() -> Appointment.restore(
-                ID, PATIENT, PRACTITIONER, TEN_THIRTY, "consulta", null, null));
+                ID, PATIENT, PRACTITIONER, TEN_THIRTY, "consulta", null, null, null, false));
     }
 
     @Test
     void appointmentsAreTheSameOnlyWhenTheirIdMatches() {
         Appointment stored = Appointment.restore(ID, PATIENT, PRACTITIONER, TEN_THIRTY, "consulta", null,
-                AppointmentStatus.BOOKED);
+                AppointmentStatus.BOOKED, null, false);
         Appointment other = Appointment.restore(AppointmentId.newId(), PATIENT, PRACTITIONER, TEN_THIRTY,
-                "consulta", null, AppointmentStatus.BOOKED);
+                "consulta", null, AppointmentStatus.BOOKED, null, false);
 
         // Identity exists from creation, so this is always answerable.
         assertThat(stored.isSameAs(booked())).isTrue();

@@ -56,6 +56,18 @@ class InMemoryAppointmentRepository implements AppointmentRepository {
     }
 
     @Override
+    public List<Appointment> findBookedWithoutCheckInStartingBy(java.time.LocalDateTime instant) {
+        List<Appointment> found = new ArrayList<>();
+        for (Appointment appointment : stored.values()) {
+            if (appointment.isBooked() && !appointment.isCheckedIn()
+                    && !appointment.slot().startsAt().isAfter(instant)) {
+                found.add(appointment);
+            }
+        }
+        return found;
+    }
+
+    @Override
     public void save(Appointment appointment) {
         stored.put(appointment.id(), appointment);
         saves++;

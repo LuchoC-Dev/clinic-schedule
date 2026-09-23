@@ -94,7 +94,7 @@ classic layers at the root (they fall apart once the patient file and the queue 
 ---
 
 ## D-06 — Automatic cancellation via `@Scheduled`, with the state persisted
-**Date:** 2026-09-22 · **Status:** accepted
+**Date:** 2026-09-22 · **Status:** applied on 2026-09-23 (see D-31)
 
 A scheduled task sweeps overdue appointments every minute and cancels them, leaving the
 real state in the database. The two deadlines are told apart by two fields of the
@@ -756,3 +756,49 @@ D-15 for `restore`.
 
 *Rejected:* cross-module foreign keys (couple the modules' schemas); checking the patient in
 the domain (the domain does not know patients, only their id).
+
+---
+
+## D-31 — Check-in and automatic cancellation
+**Date:** 2026-09-23 · **Status:** accepted
+
+Applies D-06 and D-07. The appointment gains `checkedInAt` and `autoCancellationSuspended`,
+added by `V4` with `ALTER TABLE` rather than by rewriting `V1`.
+
+**The rules live in the appointment**, since they depend on nothing else:
+
+- `checkedIn(at)` records the arrival; a second check-in, or one on a cancelled appointment,
+  is refused.
+- `withAutoCancellationSuspended()` records that the patient warned they would be late. It is
+  refused once they arrived — there is nothing left to wait for — and a second time, like any
+  repeated operation.
+- `isDueForAutoCancellation(now)`: not checked in, still booked, and at least 30 minutes past
+  the start, or 24 hours when suspended.
+
+**Three consequences that were not spelled out before, decided here:**
+
+- *An appointment whose patient arrived cannot be rescheduled.* The arrival belongs to that
+  time, not to another.
+- *Moving an appointment drops the late-arrival notice.* It was about the old time.
+- *An appointment whose patient arrived can still be cancelled by hand.* That is the manual
+  handling the context asks for when a practitioner turns out to be absent.
+
+**The check-in time is the practice's clock**, not something the caller sends, so it cannot be
+backdated. The `Clock` bean arrives now, with the first code that reads the time (D-10, D-14),
+in `shared/TimeConfiguration`.
+
+**The sweep narrows, the appointment decides.** The query reads booked appointments without a
+check-in that started at least 30 minutes ago — the shortest wait there is — and each one
+answers whether it is due. A suspended appointment inside its 24 hours is read and left alone;
+a handful of rows a minute is worth keeping the rule in a single place instead of repeating it
+in SQL.
+
+**The job is a trigger and nothing else.** `OverdueAppointmentsJob` runs the use case every
+minute. `@EnableScheduling` sits in `AppointmentConfiguration`, the module that needs it. The
+job can be switched off with `app.scheduling.enabled=false`, and the tests do: they book on
+fixed past dates, which the real clock would find overdue and cancel mid-test. The rule is
+tested instead through the use case, with a fixed clock.
+
+Endpoints: `POST /api/appointments/{id}/check-in` and
+`POST /api/appointments/{id}/suspend-auto-cancellation`. Refusals are 409, like every booking
+rule.

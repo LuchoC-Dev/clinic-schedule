@@ -32,7 +32,7 @@ class RescheduleAndCancelUseCaseTest {
 
     private Appointment stored(PatientId patient, int atMinute, int minutes) {
         return Appointment.restore(AppointmentId.newId(), patient, ARIAS,
-                TimeSlot.of(TEN.plusMinutes(atMinute), minutes), "consulta", null, AppointmentStatus.BOOKED);
+                TimeSlot.of(TEN.plusMinutes(atMinute), minutes), "consulta", null, AppointmentStatus.BOOKED, null, false);
     }
 
     private RescheduleAppointmentUseCase.Command moveTo(Appointment appointment, LocalDateTime startsAt) {

@@ -239,6 +239,66 @@ class AppointmentApiTest {
     }
 
     @Test
+    void checkingInRecordsTheArrival() throws Exception {
+        JsonNode booked = bookSuccessfully(fixture.workingEveryDay(), TEN);
+
+        mockMvc.perform(post("/api/appointments/" + booked.get("id").asText() + "/check-in"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.checkedInAt").exists())
+                .andExpect(jsonPath("$.status").value("BOOKED"));
+    }
+
+    @Test
+    void checkingInTwiceAnswers409() throws Exception {
+        JsonNode booked = bookSuccessfully(fixture.workingEveryDay(), TEN);
+        String url = "/api/appointments/" + booked.get("id").asText() + "/check-in";
+
+        mockMvc.perform(post(url)).andExpect(status().isOk());
+        mockMvc.perform(post(url)).andExpect(status().isConflict());
+    }
+
+    @Test
+    void aNewAppointmentHasNoCheckInAndNoNotice() throws Exception {
+        JsonNode booked = bookSuccessfully(fixture.workingEveryDay(), TEN);
+
+        org.assertj.core.api.Assertions.assertThat(booked.get("checkedInAt").isNull()).isTrue();
+        org.assertj.core.api.Assertions.assertThat(booked.get("autoCancellationSuspended").asBoolean()).isFalse();
+    }
+
+    @Test
+    void suspendingTheAutomaticCancellationIsRecorded() throws Exception {
+        JsonNode booked = bookSuccessfully(fixture.workingEveryDay(), TEN);
+
+        mockMvc.perform(post("/api/appointments/" + booked.get("id").asText() + "/suspend-auto-cancellation"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.autoCancellationSuspended").value(true));
+    }
+
+    @Test
+    void suspendingAfterTheCheckInAnswers409() throws Exception {
+        JsonNode booked = bookSuccessfully(fixture.workingEveryDay(), TEN);
+        String id = booked.get("id").asText();
+        mockMvc.perform(post("/api/appointments/" + id + "/check-in")).andExpect(status().isOk());
+
+        mockMvc.perform(post("/api/appointments/" + id + "/suspend-auto-cancellation"))
+                .andExpect(status().isConflict());
+    }
+
+    @Test
+    void reschedulingAfterTheCheckInAnswers409() throws Exception {
+        JsonNode booked = bookSuccessfully(fixture.workingEveryDay(), TEN);
+        String id = booked.get("id").asText();
+        mockMvc.perform(post("/api/appointments/" + id + "/check-in")).andExpect(status().isOk());
+
+        mockMvc.perform(post("/api/appointments/" + id + "/reschedule")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {"startsAt": "2026-03-10T16:00:00"}
+                                """))
+                .andExpect(status().isConflict());
+    }
+
+    @Test
     void anUnknownAppointmentAnswers404() throws Exception {
         mockMvc.perform(post("/api/appointments/" + UUID.randomUUID() + "/cancel"))
                 .andExpect(status().isNotFound())

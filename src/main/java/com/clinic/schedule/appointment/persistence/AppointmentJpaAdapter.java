@@ -41,6 +41,12 @@ class AppointmentJpaAdapter implements AppointmentRepository {
                 patientId.value(), AppointmentStatus.BOOKED, startOf(date), startOf(date.plusDays(1))));
     }
 
+    @Override
+    public List<Appointment> findBookedWithoutCheckInStartingBy(LocalDateTime instant) {
+        return toAppointments(rows.findByStatusAndCheckedInAtIsNullAndStartsAtLessThanEqual(
+                AppointmentStatus.BOOKED, instant));
+    }
+
     /**
      * Writes the appointment as it is now. Since the aggregate is immutable and carries its
      * own id, storing a new one and storing the new state of an existing one are the same

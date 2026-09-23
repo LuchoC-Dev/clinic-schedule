@@ -1,26 +1,34 @@
 package com.clinic.schedule.appointment.domain;
 
+import java.time.Duration;
+import java.time.LocalDateTime;
+
 /**
  * An appointment in the agenda: a patient, a practitioner, the slot it takes up, the reason
- * it was requested and an optional note.
+ * it was requested and an optional note — plus what happens on the day: whether the patient
+ * checked in, and whether reception was warned they would be late.
  *
  * <p>Plain domain object, with no persistence or framework annotations: the adapter that
  * stores it is the one that knows about JPA.
  *
- * <p>It is immutable. Cancelling or moving it returns a new appointment instead of changing
- * this one, so a rule that says no cannot leave a half-modified object behind, and every
- * field can stay final.
+ * <p>It is immutable. Every operation returns a new appointment instead of changing this one,
+ * so a rule that says no cannot leave a half-modified object behind, and every field can stay
+ * final.
  *
- * <p>What this class decides on its own is what depends on itself alone: that it has a
- * patient, a practitioner, a slot and a reason, and that nothing happens to it once it is
- * cancelled. Whether a slot collides with somebody else's appointment needs the rest of the
- * agenda, so it is decided by {@link BookingService}.
+ * <p>What this class decides on its own is what depends on itself alone: its shape, what can
+ * happen to it in each state, and when it is overdue. Whether a slot collides with somebody
+ * else's appointment needs the rest of the agenda, so it is decided by {@link BookingService}.
  *
- * <p>The reason is carried as text. It belongs to the practitioner module, which owns the
- * list of reasons and their durations; whether this should become a reference is revisited
- * when that module exists.
+ * <p>The reason is carried as text: a snapshot of what was booked, together with the
+ * duration, so renaming a reason later does not rewrite history (D-29).
  */
 public class Appointment {
+
+    /** Without a check-in, an appointment is cancelled this long after it should have started. */
+    static final Duration GRACE_PERIOD = Duration.ofMinutes(30);
+
+    /** The same, once reception was warned the patient would be late (D-06). */
+    static final Duration LATE_ARRIVAL_GRACE_PERIOD = Duration.ofHours(24);
 
     private final AppointmentId id;
     private final PatientId patientId;
@@ -29,9 +37,12 @@ public class Appointment {
     private final String reason;
     private final String note;
     private final AppointmentStatus status;
+    private final LocalDateTime checkedInAt;
+    private final boolean autoCancellationSuspended;
 
     private Appointment(AppointmentId id, PatientId patientId, PractitionerId practitionerId, TimeSlot slot,
-            String reason, String note, AppointmentStatus status) {
+            String reason, String note, AppointmentStatus status, LocalDateTime checkedInAt,
+            boolean autoCancellationSuspended) {
         this.id = id;
         this.patientId = patientId;
         this.practitionerId = practitionerId;
@@ -39,6 +50,8 @@ public class Appointment {
         this.reason = reason;
         this.note = note;
         this.status = status;
+        this.checkedInAt = checkedInAt;
+        this.autoCancellationSuspended = autoCancellationSuspended;
     }
 
     /**
@@ -51,13 +64,13 @@ public class Appointment {
     static Appointment book(AppointmentId id, PatientId patientId, PractitionerId practitionerId, TimeSlot slot,
             String reason, String note) {
         requireInvariants(id, patientId, practitionerId, slot, reason);
-        return new Appointment(id, patientId, practitionerId, slot, reason.strip(), note, AppointmentStatus.BOOKED);
+        return new Appointment(id, patientId, practitionerId, slot, reason.strip(), note, AppointmentStatus.BOOKED,
+                null, false);
     }
 
     /**
      * An appointment read back from storage, which is what the persistence adapter uses. It
-     * differs from {@link #book} in one thing only: the state comes from the row instead of
-     * being {@code BOOKED}.
+     * differs from {@link #book} in that the state comes from the row instead of being new.
      *
      * <p>It checks the same invariants, so there is no way to obtain an invalid appointment:
      * the aggregate does not trust the caller to have been careful. That is safe because the
@@ -70,12 +83,14 @@ public class Appointment {
      * deliberate, the same way writing raw SQL would be; see D-15.
      */
     public static Appointment restore(AppointmentId id, PatientId patientId, PractitionerId practitionerId,
-            TimeSlot slot, String reason, String note, AppointmentStatus status) {
+            TimeSlot slot, String reason, String note, AppointmentStatus status, LocalDateTime checkedInAt,
+            boolean autoCancellationSuspended) {
         requireInvariants(id, patientId, practitionerId, slot, reason);
         if (status == null) {
             throw new IllegalArgumentException("A stored appointment needs a status");
         }
-        return new Appointment(id, patientId, practitionerId, slot, reason.strip(), note, status);
+        return new Appointment(id, patientId, practitionerId, slot, reason.strip(), note, status, checkedInAt,
+                autoCancellationSuspended);
     }
 
     private static void requireInvariants(AppointmentId id, PatientId patientId, PractitionerId practitionerId,
@@ -93,25 +108,78 @@ public class Appointment {
      * patient file will show it.
      *
      * <p>Cancelling twice is rejected instead of ignored: it means whoever asked was looking
-     * at a stale agenda.
+     * at a stale agenda. An appointment whose patient already arrived can still be cancelled:
+     * that is the manual handling the context asks for when a practitioner is absent.
      */
     public Appointment cancelled() {
         requireBooked("cancelled");
-        return new Appointment(id, patientId, practitionerId, slot, reason, note, AppointmentStatus.CANCELLED);
+        return new Appointment(id, patientId, practitionerId, slot, reason, note, AppointmentStatus.CANCELLED,
+                checkedInAt, autoCancellationSuspended);
     }
 
     /**
      * The same appointment on another slot. Version 1 keeps no history of the previous date.
+     *
+     * <p>A notice that the patient would be late was about the old time, so it does not carry
+     * over. An appointment whose patient already arrived cannot be moved: the arrival belongs
+     * to this time, not to another.
      *
      * <p>Restricted to the domain package like {@link #book}, because the new slot has to be
      * checked against the agenda: the way in is {@link BookingService#reschedule}.
      */
     Appointment movedTo(TimeSlot newSlot) {
         requireBooked("rescheduled");
+        requireNotCheckedIn("rescheduled");
         if (newSlot == null) {
             throw new IllegalArgumentException("An appointment needs a slot");
         }
-        return new Appointment(id, patientId, practitionerId, newSlot, reason, note, status);
+        return new Appointment(id, patientId, practitionerId, newSlot, reason, note, status, null, false);
+    }
+
+    /**
+     * The same appointment, with the patient's arrival confirmed by reception. From then on it
+     * is never cancelled automatically.
+     */
+    public Appointment checkedIn(LocalDateTime at) {
+        requireBooked("checked in");
+        requireNotCheckedIn("checked in");
+        if (at == null) {
+            throw new IllegalArgumentException("A check-in needs the time it happened");
+        }
+        return new Appointment(id, patientId, practitionerId, slot, reason, note, status, at,
+                autoCancellationSuspended);
+    }
+
+    /**
+     * The same appointment, after the patient warned they would be late: instead of 30
+     * minutes, it waits 24 hours before being cancelled automatically (D-06).
+     *
+     * <p>Rejected once the patient arrived, since there is nothing left to wait for, and
+     * rejected a second time like any other repeated operation.
+     */
+    public Appointment withAutoCancellationSuspended() {
+        requireBooked("given more time");
+        requireNotCheckedIn("given more time");
+        if (autoCancellationSuspended) {
+            throw new BookingRuleViolationException("The automatic cancellation of this appointment is already suspended");
+        }
+        return new Appointment(id, patientId, practitionerId, slot, reason, note, status, checkedInAt, true);
+    }
+
+    /**
+     * Whether the patient never arrived and the wait is over: 30 minutes after the start, or
+     * 24 hours after it when reception was warned. Never true once the patient checked in, nor
+     * for an appointment that is no longer booked.
+     *
+     * <p>The rule is provisional: when attendance is recorded, a no-show will be recorded
+     * instead of cancelling (see the context).
+     */
+    public boolean isDueForAutoCancellation(LocalDateTime now) {
+        if (!isBooked() || isCheckedIn()) {
+            return false;
+        }
+        Duration wait = autoCancellationSuspended ? LATE_ARRIVAL_GRACE_PERIOD : GRACE_PERIOD;
+        return !now.isBefore(slot.startsAt().plus(wait));
     }
 
     private void requireBooked(String action) {
@@ -120,8 +188,18 @@ public class Appointment {
         }
     }
 
+    private void requireNotCheckedIn(String action) {
+        if (isCheckedIn()) {
+            throw new BookingRuleViolationException("An appointment whose patient already arrived cannot be " + action);
+        }
+    }
+
     public boolean isBooked() {
         return status == AppointmentStatus.BOOKED;
+    }
+
+    public boolean isCheckedIn() {
+        return checkedInAt != null;
     }
 
     /** True when both are the same appointment. Identity exists from creation, so this is
@@ -156,5 +234,14 @@ public class Appointment {
 
     public AppointmentStatus status() {
         return status;
+    }
+
+    /** When reception confirmed the arrival, or null if the patient has not arrived. */
+    public LocalDateTime checkedInAt() {
+        return checkedInAt;
+    }
+
+    public boolean isAutoCancellationSuspended() {
+        return autoCancellationSuspended;
     }
 }

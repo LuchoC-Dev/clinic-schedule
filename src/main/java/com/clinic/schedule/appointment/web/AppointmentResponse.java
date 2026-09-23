@@ -23,7 +23,9 @@ record AppointmentResponse(
         int durationMinutes,
         String reason,
         String note,
-        AppointmentStatus status) {
+        AppointmentStatus status,
+        LocalDateTime checkedInAt,
+        boolean autoCancellationSuspended) {
 
     static AppointmentResponse of(Appointment appointment) {
         return new AppointmentResponse(
@@ -35,6 +37,8 @@ record AppointmentResponse(
                 (int) appointment.slot().duration().toMinutes(),
                 appointment.reason(),
                 appointment.note(),
-                appointment.status());
+                appointment.status(),
+                appointment.checkedInAt(),
+                appointment.isAutoCancellationSuspended());
     }
 }

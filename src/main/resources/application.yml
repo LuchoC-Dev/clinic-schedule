@@ -19,6 +19,13 @@ spring:
     enabled: true
     locations: classpath:db/migration
 
+app:
+  # The practice's fixed time zone (D-10).
+  time-zone: America/Argentina/Buenos_Aires
+  # The job that cancels overdue appointments every minute (D-06). The tests turn it off.
+  scheduling:
+    enabled: true
+
 logging:
   level:
     com.clinic.schedule: DEBUG

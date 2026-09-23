@@ -25,7 +25,7 @@ class BookingPolicyTest {
 
     private Appointment stored(PatientId patient, PractitionerId practitioner, int atMinute, int minutes) {
         return Appointment.restore(AppointmentId.newId(), patient, practitioner,
-                TimeSlot.of(TEN.plusMinutes(atMinute), minutes), "consulta", null, AppointmentStatus.BOOKED);
+                TimeSlot.of(TEN.plusMinutes(atMinute), minutes), "consulta", null, AppointmentStatus.BOOKED, null, false);
     }
 
     @Test

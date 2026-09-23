@@ -1,6 +1,7 @@
 package com.clinic.schedule.appointment.application;
 
 import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;
 
@@ -10,8 +11,7 @@ import com.clinic.schedule.appointment.domain.PatientId;
 import com.clinic.schedule.appointment.domain.PractitionerId;
 
 /**
- * Where appointments are kept. The only external dependency this module has for now; the
- * practitioner's reasons and availability will be a second one.
+ * Where appointments are kept.
  *
  * <p>The reads are per day rather than per exact range on purpose: a day holds a handful of
  * appointments, so fetching it whole and letting the domain do the precise overlap check
@@ -27,6 +27,13 @@ public interface AppointmentRepository {
 
     /** Booked appointments of that patient on that day, with any practitioner. */
     List<Appointment> findBookedForPatientOn(PatientId patientId, LocalDate date);
+
+    /**
+     * Booked appointments whose patient has not checked in and that started at or before
+     * {@code instant}: the candidates for automatic cancellation. Which of them are actually
+     * due is the appointment's decision, not the query's (D-31).
+     */
+    List<Appointment> findBookedWithoutCheckInStartingBy(LocalDateTime instant);
 
     /** Stores a new appointment or the new state of an existing one. */
     void save(Appointment appointment);

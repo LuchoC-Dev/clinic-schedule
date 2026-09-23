@@ -54,6 +54,12 @@ class AppointmentRow {
     @Column(nullable = false)
     private AppointmentStatus status;
 
+    @Column(name = "checked_in_at")
+    private LocalDateTime checkedInAt;
+
+    @Column(name = "auto_cancellation_suspended", nullable = false)
+    private boolean autoCancellationSuspended;
+
     protected AppointmentRow() {
         // required by JPA
     }
@@ -68,6 +74,8 @@ class AppointmentRow {
         row.reason = appointment.reason();
         row.note = appointment.note();
         row.status = appointment.status();
+        row.checkedInAt = appointment.checkedInAt();
+        row.autoCancellationSuspended = appointment.isAutoCancellationSuspended();
         return row;
     }
 
@@ -79,6 +87,8 @@ class AppointmentRow {
                 TimeSlot.of(startsAt, durationMinutes),
                 reason,
                 note,
-                status);
+                status,
+                checkedInAt,
+                autoCancellationSuspended);
     }
 }

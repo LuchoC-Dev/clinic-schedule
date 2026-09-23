@@ -166,20 +166,19 @@ Connection with `appointment`, which closes D-08 (D-29):
 from the reason, a slot across the lunch break answering 409 with the span it asked for, the
 last slot before the break accepted, and a day the practitioner does not work answering 409.
 
-### Stage 4 — Appointment module: book, reschedule, cancel
-- [ ] Add the `Clock` bean and the fixed time zone, the first code that reads the time
-- [ ] Entity and migration with the `BOOKED`/`CANCELLED` state
-- [ ] Booking domain working with a start time and a duration, unaware of the reason
-- [ ] Rules: no overlap per practitioner, none simultaneous per patient, inside availability
-- [ ] Book, reschedule and cancel; cancelled appointments are kept
-- [ ] Agenda query taking the `practitionerId` as a parameter — no authentication until stage 8
-- [ ] Tests: overlaps at the boundaries, the same patient with two practitioners at the same time, same-day appointment
+### Check-in and automatic cancellation `[x]`
+- [x] `V4__appointment_check_in.sql` — `checked_in_at` and `auto_cancellation_suspended`, by `ALTER`
+- [x] The rules in `Appointment`: check-in, late-arrival notice, when it is overdue (D-31)
+- [x] `CheckInUseCase`, `SuspendAutoCancellationUseCase`, `CancelOverdueAppointmentsUseCase`
+- [x] `OverdueAppointmentsJob` every minute, `@EnableScheduling` in the module's configuration,
+      off in the tests with `app.scheduling.enabled=false`
+- [x] `Clock` bean in `shared/TimeConfiguration`, with the fixed time zone
+- [x] `POST /api/appointments/{id}/check-in`, `POST /api/appointments/{id}/suspend-auto-cancellation`
+- [x] Tests with a fixed clock for every deadline and for an already attended appointment. 192 in total
 
-### Stage 5 — Check-in and automatic cancellation
-- [ ] Add `@EnableScheduling`
-- [ ] Confirm check-in, and suspend the automatic cancellation
-- [ ] `@Scheduled` task every minute: 30 minutes without check-in, 24 hours when suspended
-- [ ] Tests with a fixed `Clock` for the three cases and for an already attended appointment
+**Verified with the application running:** the real job cancelled an appointment that had
+started 40 minutes earlier without a check-in, and left alone one whose patient had checked in
+and one whose patient had warned they would be late.
 
 ### Stage 6 — Practitioner time off
 - [ ] Record time off for a whole day or for a time range

@@ -42,7 +42,7 @@ class AppointmentJpaAdapterTest {
     private Appointment appointment(PatientId patient, PractitionerId practitioner, LocalDateTime startsAt,
             int minutes, String note) {
         return Appointment.restore(AppointmentId.newId(), patient, practitioner,
-                TimeSlot.of(startsAt, minutes), "consulta", note, AppointmentStatus.BOOKED);
+                TimeSlot.of(startsAt, minutes), "consulta", note, AppointmentStatus.BOOKED, null, false);
     }
 
     /** Sends everything to the database and empties the context, so reads are real queries. */
@@ -123,6 +123,38 @@ class AppointmentJpaAdapterTest {
 
         assertThat(appointments.findBookedForPractitionerOn(arias, DAY)).isEmpty();
         assertThat(appointments.findBookedForPatientOn(ana, DAY)).isEmpty();
+    }
+
+    @Test
+    void storesTheCheckInAndTheLateArrivalNotice() {
+        Appointment arrived = appointment(ana, arias, TEN, 30, null)
+                .withAutoCancellationSuspended()
+                .checkedIn(TEN.plusMinutes(40));
+
+        appointments.save(arrived);
+        flush();
+
+        Appointment found = appointments.findById(arrived.id()).orElseThrow();
+        assertThat(found.checkedInAt()).isEqualTo(TEN.plusMinutes(40));
+        assertThat(found.isAutoCancellationSuspended()).isTrue();
+    }
+
+    @Test
+    void readsTheCandidatesForAutomaticCancellation() {
+        Appointment startedEarlier = appointment(ana, arias, TEN.minusHours(1), 30, null);
+        Appointment startsExactlyThen = appointment(PatientId.newId(), arias, TEN, 30, null);
+        Appointment startsLater = appointment(PatientId.newId(), arias, TEN.plusMinutes(1), 30, null);
+        Appointment arrived = appointment(PatientId.newId(), arias, TEN.minusHours(2), 30, null)
+                .checkedIn(TEN.minusHours(2));
+        Appointment cancelled = appointment(PatientId.newId(), arias, TEN.minusHours(3), 30, null).cancelled();
+        for (Appointment appointment : new Appointment[] {startedEarlier, startsExactlyThen, startsLater, arrived, cancelled}) {
+            appointments.save(appointment);
+        }
+        flush();
+
+        assertThat(appointments.findBookedWithoutCheckInStartingBy(TEN))
+                .extracting(Appointment::id)
+                .containsExactlyInAnyOrder(startedEarlier.id(), startsExactlyThen.id());
     }
 
     @Test

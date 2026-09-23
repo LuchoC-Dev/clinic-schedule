@@ -17,6 +17,8 @@ import org.springframework.web.bind.annotation.RestController;
 
 import com.clinic.schedule.appointment.application.BookAppointmentUseCase;
 import com.clinic.schedule.appointment.application.CancelAppointmentUseCase;
+import com.clinic.schedule.appointment.application.CheckInUseCase;
+import com.clinic.schedule.appointment.application.SuspendAutoCancellationUseCase;
 import com.clinic.schedule.appointment.application.RescheduleAppointmentUseCase;
 import com.clinic.schedule.appointment.application.ViewDayAgendaUseCase;
 import com.clinic.schedule.appointment.domain.Appointment;
@@ -40,13 +42,18 @@ class AppointmentController {
     private final BookAppointmentUseCase book;
     private final RescheduleAppointmentUseCase reschedule;
     private final CancelAppointmentUseCase cancel;
+    private final CheckInUseCase checkIn;
+    private final SuspendAutoCancellationUseCase suspendAutoCancellation;
     private final ViewDayAgendaUseCase dayAgenda;
 
     AppointmentController(BookAppointmentUseCase book, RescheduleAppointmentUseCase reschedule,
-            CancelAppointmentUseCase cancel, ViewDayAgendaUseCase dayAgenda) {
+            CancelAppointmentUseCase cancel, CheckInUseCase checkIn,
+            SuspendAutoCancellationUseCase suspendAutoCancellation, ViewDayAgendaUseCase dayAgenda) {
         this.book = book;
         this.reschedule = reschedule;
         this.cancel = cancel;
+        this.checkIn = checkIn;
+        this.suspendAutoCancellation = suspendAutoCancellation;
         this.dayAgenda = dayAgenda;
     }
 
@@ -72,6 +79,18 @@ class AppointmentController {
     @PostMapping("/{id}/cancel")
     AppointmentResponse cancel(@PathVariable UUID id) {
         return AppointmentResponse.of(cancel.handle(new AppointmentId(id)));
+    }
+
+    /** The patient arrived. The time is the practice's clock, not something the client sends. */
+    @PostMapping("/{id}/check-in")
+    AppointmentResponse checkIn(@PathVariable UUID id) {
+        return AppointmentResponse.of(checkIn.handle(new AppointmentId(id)));
+    }
+
+    /** The patient warned they will be late: wait 24 hours instead of 30 minutes. */
+    @PostMapping("/{id}/suspend-auto-cancellation")
+    AppointmentResponse suspendAutoCancellation(@PathVariable UUID id) {
+        return AppointmentResponse.of(suspendAutoCancellation.handle(new AppointmentId(id)));
     }
 
     /** A practitioner's day, in order, without the cancelled ones. */

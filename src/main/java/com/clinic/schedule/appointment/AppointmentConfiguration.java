@@ -2,14 +2,19 @@ package com.clinic.schedule.appointment;
 
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.scheduling.annotation.EnableScheduling;
 
 import com.clinic.schedule.appointment.domain.BookingService;
 
 /**
  * Wiring for the module. The domain service is declared here instead of being annotated,
  * so the domain keeps no reference to Spring (D-16).
+ *
+ * <p>Scheduling is enabled here because this module is the one that needs it, for the
+ * automatic cancellation (D-06).
  */
 @Configuration
+@EnableScheduling
 class AppointmentConfiguration {
 
     @Bean
