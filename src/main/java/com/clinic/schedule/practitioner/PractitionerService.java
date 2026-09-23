@@ -1,21 +1,30 @@
 package com.clinic.schedule.practitioner;
 
+import java.time.LocalDateTime;
 import java.util.List;
+import java.util.Optional;
 import java.util.UUID;
 
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import com.clinic.schedule.practitioner.api.PractitionerReader;
+import com.clinic.schedule.practitioner.api.ReasonDetails;
+
 /**
- * What reception configures for each practitioner. Package-private, like the rest of the
- * module except what other modules will consume (D-24).
+ * What reception configures for each practitioner, and what other modules may read about
+ * them.
+ *
+ * <p>The class is package-private, so other modules reach it only as a
+ * {@link PractitionerReader}: the two methods of that interface are public because the
+ * interface requires it, and everything else stays inside the module (D-24).
  *
  * <p>Thin on purpose: the rules that need only the practitioner's own data live in
  * {@link Practitioner}, and this class loads, delegates and saves. Each method declares its
  * own transaction and every write saves explicitly (D-27).
  */
 @Service
-class PractitionerService {
+class PractitionerService implements PractitionerReader {
 
     private final PractitionerRepository practitioners;
 
@@ -66,6 +75,22 @@ class PractitionerService {
     @Transactional(readOnly = true)
     List<Practitioner> all() {
         return practitioners.findAllByOrderByFullNameAsc();
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public Optional<ReasonDetails> findReason(UUID practitionerId, UUID reasonId) {
+        return practitioners.findById(practitionerId)
+                .flatMap(practitioner -> practitioner.findReason(reasonId))
+                .map(reason -> new ReasonDetails(reason.getId(), reason.getName(), reason.getDurationMinutes()));
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public boolean worksDuring(UUID practitionerId, LocalDateTime startsAt, LocalDateTime endsAt) {
+        return practitioners.findById(practitionerId)
+                .map(practitioner -> practitioner.worksDuring(startsAt, endsAt))
+                .orElse(false);
     }
 
     private Practitioner load(UUID id) {

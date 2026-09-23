@@ -120,7 +120,7 @@ attendance feature will replace them.
 ---
 
 ## D-08 — `appointment` reads duration and availability from the `api/` of `practitioner`
-**Date:** 2026-09-22 · **Status:** accepted
+**Date:** 2026-09-22 · **Status:** applied on 2026-09-23 (see D-29); time off still pending
 
 The application layer of `appointment` asks the `practitioner` module two things:
 
@@ -671,3 +671,52 @@ there anyway.
 kept on purpose until a third one confirmed every module wants the same shape. It now lives in
 one global `ValidationExceptionHandler`, which imports nothing from any module, so sharing it
 couples nothing (D-23). The module advices keep only their own exceptions.
+
+---
+
+## D-29 — How `appointment` asks `practitioner`
+**Date:** 2026-09-23 · **Status:** accepted
+
+The connection follows D-24 at both ends:
+
+- **`practitioner` exposes an interface in its `api/`:** `PractitionerReader`, with
+  `findReason` and `worksDuring`, answering with its own `ReasonDetails`. `PractitionerService`
+  implements it; the class stays package-private, so the two interface methods are the only
+  public way into the module.
+- **`appointment` asks through its own port:** `PractitionerSchedulePort`, declared in the
+  application layer in this module's terms — `PractitionerId`, `TimeSlot`. The use cases depend
+  on that port, not on the other module's api. An adapter in `appointment/external/` translates
+  between the two, and it is the only class in `appointment` that imports anything from
+  `practitioner` — only from `api/`, verified with a grep.
+
+The port is a `Port` and not a `Reader` because it is another module, not storage (D-18).
+`external/` holds the adapters towards other modules, as `persistence/` holds the one towards
+the database.
+
+**What changed in booking:**
+
+- **The duration is no longer sent; it follows from the reason.** The request carries a
+  `reasonId`, the use case asks for that reason's duration with this practitioner, and builds
+  the slot from it. The domain still only sees a start and a duration.
+- **A slot must fit inside one stretch of the practitioner's week**, or it is refused with a
+  409, like an overlap: the request was fine, the time is not available. A slot that starts in
+  the morning and ends in the lunch break does not fit, even though its start is working time.
+- **A reason of another practitioner is unknown here**, and so is a reason that does not exist.
+  Both are a 400: the request names something that cannot be booked.
+- **Rescheduling moves the start only and keeps the booked duration.** An appointment records
+  what was booked, and changing a reason's duration does not move the agenda (D-28). The new
+  start is checked against the week and the agenda alike.
+
+`OutsideWorkingHoursException` is raised by the use case, not the domain, because the domain
+does not know the week; it extends `BookingRuleViolationException` so it is answered like any
+other booking rule.
+
+**The open question in D-15 is settled: the appointment keeps the reason as text.** It is a
+snapshot of what was booked, together with the duration. Renaming a reason later does not
+rewrite past appointments, which is what the patient file should show.
+
+**Tests of `appointment` now book with real practitioners.** The use-case tests use an
+in-memory `FakePractitionerSchedule`, where a practitioner works at any time unless a test
+narrows it. The integration tests create practitioners through the practitioner module's
+public endpoints with a `PractitionerFixture`, staying out of its internals the same way the
+code does.

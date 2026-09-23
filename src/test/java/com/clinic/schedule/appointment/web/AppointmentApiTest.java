@@ -9,6 +9,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 
 import java.util.UUID;
 
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
@@ -17,20 +18,25 @@ import org.springframework.http.MediaType;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.MvcResult;
 
+import com.clinic.schedule.appointment.PractitionerFixture;
+import com.clinic.schedule.appointment.PractitionerFixture.CreatedPractitioner;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
 /**
- * The API over the real stack: Spring, the database and the schema.
+ * The API over the real stack: Spring, the database, the schema, and the practitioner
+ * module answering for reasons and hours.
  *
- * <p>Each test invents its own patient and practitioner, so tests cannot collide with each
- * other over a slot and nothing has to be cleaned up in between.
+ * <p>Each test creates its own practitioner and invents its own patients, so tests cannot
+ * collide over a slot and nothing has to be cleaned up in between.
  */
 @SpringBootTest
 @AutoConfigureMockMvc
 class AppointmentApiTest {
 
-    private static final String TEN = "2026-03-10T10:00:00";
+    /** A Tuesday. */
+    private static final String DAY = "2026-03-10";
+    private static final String TEN = DAY + "T10:00:00";
 
     @Autowired
     private MockMvc mockMvc;
@@ -38,18 +44,23 @@ class AppointmentApiTest {
     @Autowired
     private ObjectMapper json;
 
-    private String bookingBody(UUID patientId, UUID practitionerId, String startsAt, int minutes) {
-        return """
-                {"patientId": "%s", "practitionerId": "%s", "startsAt": "%s",
-                 "durationMinutes": %d, "reason": "consulta"}
-                """.formatted(patientId, practitionerId, startsAt, minutes);
+    private PractitionerFixture fixture;
+
+    @BeforeEach
+    void setUp() {
+        fixture = new PractitionerFixture(mockMvc, json);
     }
 
-    private JsonNode bookSuccessfully(UUID patientId, UUID practitionerId, String startsAt, int minutes)
-            throws Exception {
+    private String bookingBody(UUID practitionerId, UUID reasonId, String startsAt) {
+        return """
+                {"patientId": "%s", "practitionerId": "%s", "reasonId": "%s", "startsAt": "%s"}
+                """.formatted(UUID.randomUUID(), practitionerId, reasonId, startsAt);
+    }
+
+    private JsonNode bookSuccessfully(CreatedPractitioner practitioner, String startsAt) throws Exception {
         MvcResult result = mockMvc.perform(post("/api/appointments")
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content(bookingBody(patientId, practitionerId, startsAt, minutes)))
+                        .content(bookingBody(practitioner.id(), practitioner.consulta(), startsAt)))
                 .andExpect(status().isCreated())
                 .andReturn();
         return json.readTree(result.getResponse().getContentAsString());
@@ -57,19 +68,17 @@ class AppointmentApiTest {
 
     @Test
     void bookingAnswers201WithTheAppointmentAndItsLocation() throws Exception {
-        UUID patientId = UUID.randomUUID();
-        UUID practitionerId = UUID.randomUUID();
+        CreatedPractitioner arias = fixture.workingEveryDay();
 
         mockMvc.perform(post("/api/appointments")
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content(bookingBody(patientId, practitionerId, TEN, 30)))
+                        .content(bookingBody(arias.id(), arias.consulta(), TEN)))
                 .andExpect(status().isCreated())
                 .andExpect(header().exists("Location"))
                 .andExpect(jsonPath("$.id").exists())
-                .andExpect(jsonPath("$.patientId").value(patientId.toString()))
-                .andExpect(jsonPath("$.practitionerId").value(practitionerId.toString()))
+                .andExpect(jsonPath("$.practitionerId").value(arias.id().toString()))
                 .andExpect(jsonPath("$.startsAt").value(TEN))
-                .andExpect(jsonPath("$.endsAt").value("2026-03-10T10:30:00"))
+                .andExpect(jsonPath("$.endsAt").value(DAY + "T10:30:00"))
                 .andExpect(jsonPath("$.durationMinutes").value(30))
                 .andExpect(jsonPath("$.reason").value("consulta"))
                 .andExpect(jsonPath("$.status").value("BOOKED"))
@@ -80,49 +89,81 @@ class AppointmentApiTest {
     }
 
     @Test
-    void anOverlapAnswers409() throws Exception {
-        UUID practitionerId = UUID.randomUUID();
-        bookSuccessfully(UUID.randomUUID(), practitionerId, TEN, 30);
+    void theDurationFollowsTheReason() throws Exception {
+        CreatedPractitioner arias = fixture.workingEveryDay();
 
         mockMvc.perform(post("/api/appointments")
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content(bookingBody(UUID.randomUUID(), practitionerId, "2026-03-10T10:15:00", 30)))
+                        .content(bookingBody(arias.id(), arias.ecografia(), TEN)))
+                .andExpect(status().isCreated())
+                .andExpect(jsonPath("$.durationMinutes").value(45))
+                .andExpect(jsonPath("$.endsAt").value(DAY + "T10:45:00"))
+                .andExpect(jsonPath("$.reason").value("ecografia"));
+    }
+
+    @Test
+    void anOverlapAnswers409() throws Exception {
+        CreatedPractitioner arias = fixture.workingEveryDay();
+        bookSuccessfully(arias, TEN);
+
+        mockMvc.perform(post("/api/appointments")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(bookingBody(arias.id(), arias.consulta(), DAY + "T10:15:00")))
                 .andExpect(status().isConflict())
                 .andExpect(jsonPath("$.status").value(409))
-                .andExpect(jsonPath("$.error").value("Conflict"))
-                .andExpect(jsonPath("$.message").exists());
+                .andExpect(jsonPath("$.error").value("Conflict"));
     }
 
     @Test
-    void aMissingFieldAnswers400AndNamesIt() throws Exception {
-        String withoutPatient = """
-                {"practitionerId": "%s", "startsAt": "%s", "durationMinutes": 30, "reason": "consulta"}
-                """.formatted(UUID.randomUUID(), TEN);
+    void aSlotAcrossTheLunchBreakAnswers409() throws Exception {
+        CreatedPractitioner arias = fixture.workingTuesdaysWithALunchBreak();
 
         mockMvc.perform(post("/api/appointments")
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content(withoutPatient))
-                .andExpect(status().isBadRequest())
-                .andExpect(jsonPath("$.status").value(400))
-                .andExpect(jsonPath("$.fields.patientId").value("the patient is required"));
+                        .content(bookingBody(arias.id(), arias.consulta(), DAY + "T12:45:00")))
+                .andExpect(status().isConflict())
+                .andExpect(jsonPath("$.message").value(org.hamcrest.Matchers.containsString("does not work")));
     }
 
     @Test
-    void aZeroDurationAnswers400() throws Exception {
+    void theLastSlotBeforeTheBreakIsAccepted() throws Exception {
+        CreatedPractitioner arias = fixture.workingTuesdaysWithALunchBreak();
+
+        bookSuccessfully(arias, DAY + "T12:30:00");
+    }
+
+    @Test
+    void aReasonThePractitionerDoesNotHaveAnswers400() throws Exception {
+        CreatedPractitioner arias = fixture.workingEveryDay();
+        CreatedPractitioner benitez = fixture.workingEveryDay();
+
         mockMvc.perform(post("/api/appointments")
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content(bookingBody(UUID.randomUUID(), UUID.randomUUID(), TEN, 0)))
+                        .content(bookingBody(arias.id(), benitez.consulta(), TEN)))
                 .andExpect(status().isBadRequest())
-                .andExpect(jsonPath("$.fields.durationMinutes").exists());
+                .andExpect(jsonPath("$.status").value(400));
+    }
+
+    @Test
+    void aMissingReasonAnswers400AndNamesIt() throws Exception {
+        String withoutReason = """
+                {"patientId": "%s", "practitionerId": "%s", "startsAt": "%s"}
+                """.formatted(UUID.randomUUID(), UUID.randomUUID(), TEN);
+
+        mockMvc.perform(post("/api/appointments")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(withoutReason))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.fields.reasonId").value("the reason is required"));
     }
 
     @Test
     void sendingTheSameIdTwiceBooksOnce() throws Exception {
+        CreatedPractitioner arias = fixture.workingEveryDay();
         UUID id = UUID.randomUUID();
         String body = """
-                {"id": "%s", "patientId": "%s", "practitionerId": "%s", "startsAt": "%s",
-                 "durationMinutes": 30, "reason": "consulta"}
-                """.formatted(id, UUID.randomUUID(), UUID.randomUUID(), TEN);
+                {"id": "%s", "patientId": "%s", "practitionerId": "%s", "reasonId": "%s", "startsAt": "%s"}
+                """.formatted(id, UUID.randomUUID(), arias.id(), arias.consulta(), TEN);
 
         mockMvc.perform(post("/api/appointments").contentType(MediaType.APPLICATION_JSON).content(body))
                 .andExpect(status().isCreated())
@@ -133,23 +174,35 @@ class AppointmentApiTest {
     }
 
     @Test
-    void reschedulingMovesTheAppointment() throws Exception {
-        JsonNode booked = bookSuccessfully(UUID.randomUUID(), UUID.randomUUID(), TEN, 30);
+    void reschedulingMovesTheAppointmentAndKeepsItsDuration() throws Exception {
+        JsonNode booked = bookSuccessfully(fixture.workingEveryDay(), TEN);
 
         mockMvc.perform(post("/api/appointments/" + booked.get("id").asText() + "/reschedule")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("""
-                                {"startsAt": "2026-03-10T16:00:00", "durationMinutes": 45}
+                                {"startsAt": "2026-03-10T16:00:00"}
                                 """))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.startsAt").value("2026-03-10T16:00:00"))
-                .andExpect(jsonPath("$.durationMinutes").value(45))
+                .andExpect(jsonPath("$.durationMinutes").value(30))
                 .andExpect(jsonPath("$.status").value("BOOKED"));
     }
 
     @Test
+    void reschedulingOutsideTheWorkingHoursAnswers409() throws Exception {
+        JsonNode booked = bookSuccessfully(fixture.workingTuesdaysWithALunchBreak(), TEN);
+
+        mockMvc.perform(post("/api/appointments/" + booked.get("id").asText() + "/reschedule")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {"startsAt": "2026-03-10T19:00:00"}
+                                """))
+                .andExpect(status().isConflict());
+    }
+
+    @Test
     void cancellingKeepsTheAppointmentAsCancelled() throws Exception {
-        JsonNode booked = bookSuccessfully(UUID.randomUUID(), UUID.randomUUID(), TEN, 30);
+        JsonNode booked = bookSuccessfully(fixture.workingEveryDay(), TEN);
 
         mockMvc.perform(post("/api/appointments/" + booked.get("id").asText() + "/cancel"))
                 .andExpect(status().isOk())
@@ -158,7 +211,7 @@ class AppointmentApiTest {
 
     @Test
     void cancellingTwiceAnswers409() throws Exception {
-        JsonNode booked = bookSuccessfully(UUID.randomUUID(), UUID.randomUUID(), TEN, 30);
+        JsonNode booked = bookSuccessfully(fixture.workingEveryDay(), TEN);
         String cancelUrl = "/api/appointments/" + booked.get("id").asText() + "/cancel";
 
         mockMvc.perform(post(cancelUrl)).andExpect(status().isOk());
@@ -175,27 +228,27 @@ class AppointmentApiTest {
 
     @Test
     void theDayAgendaComesBackInOrderAndWithoutCancelledOnes() throws Exception {
-        UUID practitionerId = UUID.randomUUID();
-        bookSuccessfully(UUID.randomUUID(), practitionerId, "2026-03-10T15:00:00", 30);
-        bookSuccessfully(UUID.randomUUID(), practitionerId, "2026-03-10T09:00:00", 30);
-        JsonNode toCancel = bookSuccessfully(UUID.randomUUID(), practitionerId, "2026-03-10T12:00:00", 30);
+        CreatedPractitioner arias = fixture.workingEveryDay();
+        bookSuccessfully(arias, DAY + "T15:00:00");
+        bookSuccessfully(arias, DAY + "T09:00:00");
+        JsonNode toCancel = bookSuccessfully(arias, DAY + "T12:00:00");
         mockMvc.perform(post("/api/appointments/" + toCancel.get("id").asText() + "/cancel"))
                 .andExpect(status().isOk());
 
         mockMvc.perform(get("/api/appointments")
-                        .param("practitionerId", practitionerId.toString())
-                        .param("date", "2026-03-10"))
+                        .param("practitionerId", arias.id().toString())
+                        .param("date", DAY))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.length()").value(2))
-                .andExpect(jsonPath("$[0].startsAt").value("2026-03-10T09:00:00"))
-                .andExpect(jsonPath("$[1].startsAt").value("2026-03-10T15:00:00"));
+                .andExpect(jsonPath("$[0].startsAt").value(DAY + "T09:00:00"))
+                .andExpect(jsonPath("$[1].startsAt").value(DAY + "T15:00:00"));
     }
 
     @Test
     void theDayAgendaOfAPractitionerWithNothingBookedIsEmpty() throws Exception {
         mockMvc.perform(get("/api/appointments")
                         .param("practitionerId", UUID.randomUUID().toString())
-                        .param("date", "2026-03-10"))
+                        .param("date", DAY))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.length()").value(0));
     }

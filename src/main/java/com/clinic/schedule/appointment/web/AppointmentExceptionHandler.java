@@ -6,6 +6,7 @@ import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 
 import com.clinic.schedule.appointment.application.AppointmentNotFoundException;
+import com.clinic.schedule.appointment.application.UnknownReasonException;
 import com.clinic.schedule.appointment.domain.BookingRuleViolationException;
 import com.clinic.schedule.shared.web.ErrorResponse;
 
@@ -27,6 +28,14 @@ class AppointmentExceptionHandler {
                 .body(ErrorResponse.of(404, "Not found", e.getMessage()));
     }
 
+    /** The request names a reason this practitioner does not have. */
+    @ExceptionHandler(UnknownReasonException.class)
+    ResponseEntity<ErrorResponse> unknownReason(UnknownReasonException e) {
+        return ResponseEntity.badRequest()
+                .body(ErrorResponse.of(400, "Bad request", e.getMessage()));
+    }
+
+    /** Overlaps and working hours alike: the request was fine, the slot is not available. */
     @ExceptionHandler(BookingRuleViolationException.class)
     ResponseEntity<ErrorResponse> bookingRule(BookingRuleViolationException e) {
         return ResponseEntity.status(HttpStatus.CONFLICT)

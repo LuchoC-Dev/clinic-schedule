@@ -82,8 +82,8 @@ Endpoints, in `appointment/web/`, with the `validation` dependency now that some
 practitioner and the slot, a back-to-back appointment 201, a missing reason 400 naming the
 field, and the day agenda comes back in order.
 
-Not here yet, by design: the availability check (weekly schedule, breaks, time off), which
-belongs to `practitioner`. The duration still travels in the request until then (D-08).
+The availability check and the duration now come from `practitioner` (D-29). Time off is
+still to come, in its own stage.
 
 ### `patient` module `[x]`
 
@@ -114,7 +114,7 @@ patients with no national ID, two patients sharing a name, a repeated national I
 - No `api/` package yet. It appears when `appointment` uses it, which is the next step
   (D-14).
 
-### `practitioner` module `[~]`
+### `practitioner` module `[x]`
 
 Layered, with the week's rules in plain classes (D-25, D-28). A flat package, everything
 package-private.
@@ -136,12 +136,22 @@ Configuration, done:
 answering 409, a week with a lunch break stored, stretches that meet answering 400 with an
 explanation and leaving the previous week in place, and the detail read back in order.
 
-Next — the connection with `appointment`, which closes D-08:
+Connection with `appointment`, which closes D-08 (D-29):
 
-- [ ] `practitioner/api/`: the duration of a reason, and whether a slot fits the week
-- [ ] `appointment` resolves the duration from the reason instead of receiving it
-- [ ] Booking outside the practitioner's hours is refused
-- [ ] Tests of `appointment` updated to book with real practitioners and reasons
+- [x] `practitioner/api/PractitionerReader` — the duration of a reason, and whether a span
+      fits the week; `WeeklySchedule.covers` answers the second
+- [x] `appointment` asks through its own `PractitionerSchedulePort`, answered by an adapter in
+      `appointment/external/`, the only place importing from `practitioner`, and only `api/`
+- [x] The duration follows from the reason; it is no longer sent
+- [x] A slot outside the practitioner's hours, or across a break, answers 409; a reason the
+      practitioner does not have answers 400
+- [x] Rescheduling moves the start and keeps the booked duration
+- [x] Tests of `appointment` book with real practitioners, created through the practitioner
+      endpoints. 158 in total
+
+**Verified with the application running:** an ecografía booked with its 45 minutes resolved
+from the reason, a slot across the lunch break answering 409 with the span it asked for, the
+last slot before the break accepted, and a day the practitioner does not work answering 409.
 
 ### Stage 4 — Appointment module: book, reschedule, cancel
 - [ ] Add the `Clock` bean and the fixed time zone, the first code that reads the time

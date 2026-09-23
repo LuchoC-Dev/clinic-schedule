@@ -1,9 +1,11 @@
 package com.clinic.schedule.practitioner;
 
+import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Optional;
 import java.util.Set;
 import java.util.UUID;
 
@@ -83,10 +85,7 @@ class Practitioner {
      * they were booked with, so the agenda does not move under reception's feet.
      */
     Reason changeReason(UUID reasonId, String name, int durationMinutes) {
-        Reason reason = reasons.stream()
-                .filter(candidate -> candidate.getId().equals(reasonId))
-                .findFirst()
-                .orElseThrow(() -> new ReasonNotFoundException(id, reasonId));
+        Reason reason = findReason(reasonId).orElseThrow(() -> new ReasonNotFoundException(id, reasonId));
         requireNameIsFree(name, reason);
         reason.change(name, durationMinutes);
         return reason;
@@ -102,6 +101,15 @@ class Practitioner {
         WeeklySchedule schedule = new WeeklySchedule(hours);
         workingHours.clear();
         workingHours.addAll(schedule.hours());
+    }
+
+    Optional<Reason> findReason(UUID reasonId) {
+        return reasons.stream().filter(reason -> reason.getId().equals(reasonId)).findFirst();
+    }
+
+    /** Whether the whole span falls inside one stretch of the usual week. */
+    boolean worksDuring(LocalDateTime startsAt, LocalDateTime endsAt) {
+        return new WeeklySchedule(getWorkingHours()).covers(startsAt, endsAt);
     }
 
     private void requireNameIsFree(String name, Reason except) {

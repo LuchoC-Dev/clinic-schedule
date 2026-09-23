@@ -46,6 +46,14 @@ record WorkingHours(
      * Meeting counts too: 09:00-13:00 and 13:00-18:00 describe a day with no break, which is
      * one stretch, 09:00-18:00.
      */
+    /**
+     * True when the span from {@code from} to {@code to} on this stretch's day fits inside it.
+     * Both ends may coincide with the stretch's: 17:30-18:00 fits in 09:00-18:00.
+     */
+    boolean contains(LocalTime from, LocalTime to) {
+        return !from.isBefore(startsAt) && !to.isAfter(endsAt);
+    }
+
     boolean overlapsOrTouches(WorkingHours other) {
         return day == other.day
                 && !startsAt.isAfter(other.endsAt)
