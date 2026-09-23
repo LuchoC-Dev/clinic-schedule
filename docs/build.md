@@ -114,15 +114,34 @@ patients with no national ID, two patients sharing a name, a repeated national I
 - No `api/` package yet. It appears when `appointment` uses it, which is the next step
   (D-14).
 
-### `practitioner` module — next
-Closes the debt in `appointment`: the duration stops travelling in the request (D-08), and
-availability starts being checked.
+### `practitioner` module `[~]`
 
-- [ ] Entities and migrations: practitioner, weekly schedule, breaks
-- [ ] Reasons with a fixed duration per practitioner
-- [ ] Configuration endpoints for reception
-- [ ] Module `api/`: duration of a reason, and an availability check
-- [ ] Tests: duration per reason, a time outside availability, a time inside a break
+Layered, with the week's rules in plain classes (D-25, D-28). A flat package, everything
+package-private.
+
+Configuration, done:
+
+- [x] `V3__practitioner.sql` — practitioner, reason, working_hours
+- [x] `Practitioner` — the `@Entity`; guards unique reason names and a coherent week
+- [x] `Reason` — its own id, a fixed duration for this practitioner
+- [x] `WorkingHours` + `WeeklySchedule` — a stretch of a weekday, and a week whose stretches
+      neither overlap nor meet; a break is the gap between two
+- [x] `POST/GET /api/practitioners`, `GET/PUT /api/practitioners/{id}`,
+      `POST /api/practitioners/{id}/reasons`, `PUT /api/practitioners/{id}/reasons/{reasonId}`,
+      `PUT /api/practitioners/{id}/weekly-schedule`
+- [x] Validation handling moved to a single `shared/web/ValidationExceptionHandler`
+- [x] 20 unit tests on the rules and 13 over the real stack. 136 in total
+
+**Verified with the application running:** two reasons added, a repeated one in another case
+answering 409, a week with a lunch break stored, stretches that meet answering 400 with an
+explanation and leaving the previous week in place, and the detail read back in order.
+
+Next — the connection with `appointment`, which closes D-08:
+
+- [ ] `practitioner/api/`: the duration of a reason, and whether a slot fits the week
+- [ ] `appointment` resolves the duration from the reason instead of receiving it
+- [ ] Booking outside the practitioner's hours is refused
+- [ ] Tests of `appointment` updated to book with real practitioners and reasons
 
 ### Stage 4 — Appointment module: book, reschedule, cancel
 - [ ] Add the `Clock` bean and the fixed time zone, the first code that reads the time

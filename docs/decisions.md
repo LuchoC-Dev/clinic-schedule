@@ -625,3 +625,49 @@ modifies nothing.
 This came out of `PatientService`, which had `@Transactional` on the class, `readOnly`
 overrides on the reads, and an `update` that relied on dirty checking. `appointment` already
 followed both rules.
+
+---
+
+## D-28 — How the practitioner module models reasons and the week
+**Date:** 2026-09-23 · **Status:** accepted
+
+**A break is the gap between two stretches of the same day.** Monday 09:00-13:00 plus
+14:00-18:00 is a working day with a lunch break. There is no separate table or concept for
+breaks: one concept instead of two, and "is this slot inside the week" reduces to "does it fit
+inside one stretch". A consequence is that stretches which meet (09:00-13:00 and 13:00-18:00)
+are rejected rather than accepted: they describe a day with no break, which has to be written
+as one stretch, or the gap that means "break" would be ambiguous.
+
+**Reasons have their own id and are added or changed one at a time.** A reason can be renamed
+without losing its identity. The week, instead, is replaced whole, because it is edited as a
+table. There is no delete for a practitioner or a reason: nothing in v1 asks for it and both
+are referenced by past appointments.
+
+**Changing a reason's duration does not move booked appointments.** They keep the duration
+they were booked with; the agenda does not change under reception's feet.
+
+**"Consulta" is not enforced.** The context describes each practitioner as having
+"consulta" plus two or three more, but as a description of the practice, not as a rule the
+system should police. Reception adds whichever reasons apply.
+
+**Both collections of the practitioner are fetched eagerly.** They are tiny and every use of a
+practitioner needs them, so lazy loading would only add the risk of reading them after the
+transaction closed (`open-in-view` is off). The working hours are a `Set`, because Hibernate
+cannot eagerly fetch two `List`s at once, and a duplicate stretch is rejected before it gets
+there anyway.
+
+**Refinements to D-25:**
+
+- *Value objects may carry mapping annotations.* `WorkingHours`, like `IdentityDocument`, is an
+  `@Embeddable` record. The annotations let JPA store it inside its entity; nothing in it needs
+  JPA to be built or tested. What D-25 meant by "no JPA" is exactly that, and it holds.
+- *`TimeRange` was not needed.* `WorkingHours` is already the range, with its day.
+- *`WeeklySchedule` only validates the week for now.* Answering whether a slot falls inside it
+  arrives with the code that asks — the booking check in `appointment` — and
+  `AvailabilityPolicy` arrives with time off, when there is more than one thing to combine
+  (D-14).
+
+**The validation handler moved to `shared/web`.** The first two modules had identical copies,
+kept on purpose until a third one confirmed every module wants the same shape. It now lives in
+one global `ValidationExceptionHandler`, which imports nothing from any module, so sharing it
+couples nothing (D-23). The module advices keep only their own exceptions.
