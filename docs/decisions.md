@@ -50,7 +50,7 @@ PostgreSQL from the start (postponed, not rejected — see `docs/build.md`).
 ---
 
 ## D-04 — Spring Security with the RECEPTION and PRACTITIONER roles
-**Date:** 2026-09-22 · **Status:** postponed to stage 8 (see D-14)
+**Date:** 2026-09-22 · **Status:** applied on 2026-09-23 (see D-34), without the foreign key (D-30)
 
 "Each practitioner sees only their own appointments" is a real authorization rule, not a
 cosmetic one, so v1 implements it for real.
@@ -879,3 +879,47 @@ the practitioner's agenda only; the patient may not be chosen yet, and booking c
 
 **The time-off and practitioner configuration have no screen.** Reception configures them rarely,
 and they are available through the API; a screen can be added when it is asked for.
+
+---
+
+## D-34 — Security
+**Date:** 2026-09-23 · **Status:** accepted
+
+Applies D-04, the design that was built in stage 1 and removed until there was something to
+protect.
+
+**Two filter chains, one per kind of client.** `/api/**` takes basic authentication on every
+request, with no session and no CSRF — the contract of the future single-page applications. The
+screens take a login form, a session, and CSRF protection on every form; Thymeleaf adds the
+token to each form by itself. 401 and 403 on the API carry the usual error body (D-23), and the
+401 omits `WWW-Authenticate` so browsers do not pop up their own dialog.
+
+**What a role may reach is decided by route; whose agenda is decided by the use case.** A
+practitioner may only `GET /api/appointments` and the agenda screen; reception may do
+everything. Which practitioner's agenda comes back is not a route question — both roles use the
+same route — so `ViewDayAgendaUseCase` asks, through `AgendaAccessPort`, whom the user may see:
+reception gets the practitioner it asked for, a practitioner always gets their own and the
+parameter is ignored, exactly as D-04 said. The use case now answers whose agenda it is, so the
+screen shows the right name even when a practitioner asked for someone else's.
+
+On the screen a practitioner sees only their name to choose and no buttons. Hiding them is a
+courtesy: the routes behind them are closed anyway, and a test posts to them directly to prove
+it.
+
+**`security` is a module like the others**, flat and package-private, exposing
+`CurrentUserReader` in its `api/`. It answers one question — the practitioner the user stands
+for, if any — and fails closed: a user with the practitioner role whose practitioner cannot be
+told is refused, never treated as reception.
+
+**No foreign key from `app_user.practitioner_id`**, which D-04 had planned: the practitioner
+table belongs to another module, and D-30 keeps foreign keys inside a module.
+
+**Users come from development data in a Flyway location of its own.** `db/seed` holds users,
+two practitioners with their reasons and weeks, and two patients, so the application is usable
+right after starting it. It is kept out of `db/migration` because the schema belongs to every
+environment and this data only to development: a real deployment drops `classpath:db/seed`
+from `spring.flyway.locations` and creates its users another way. No user administration screen
+in v1 (D-04).
+
+The tests authenticate as reception with `@WithMockUser`, and use the seeded users where the
+difference between roles is what is being tested.

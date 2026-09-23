@@ -9,12 +9,13 @@ Read these before proposing design or code:
 
 - `docs/context.md` — what the application does, who uses it, the business rules and the
   planned evolution.
-- `docs/decisions.md` — technical decisions and their reasoning (D-01 … D-27).
+- `docs/decisions.md` — technical decisions and their reasoning (D-01 … D-34).
 - `docs/build.md` — the staged plan and the current progress.
 
 ## Stack
 
-Maven · Java 21 · Spring Boot 3.5 · Spring Data JPA · Flyway · H2 (PostgreSQL mode).
+Maven · Java 21 · Spring Boot 3.5 · Spring Security · Spring Data JPA · Flyway ·
+H2 (PostgreSQL mode) · Thymeleaf.
 
 `JAVA_HOME` must point at JDK 21: this machine defaults to JDK 25. See `README.md`.
 
@@ -31,7 +32,7 @@ Maven · Java 21 · Spring Boot 3.5 · Spring Data JPA · Flyway · H2 (PostgreS
   user is in Spanish.
 - **Undecided technical questions:** propose the simplest option and explain it before
   treating it as agreed. Once accepted, add it to `docs/decisions.md`.
-- **Module boundaries:** `patient/`, `practitioner/`, `appointment/`. A module only uses
+- **Module boundaries:** `patient/`, `practitioner/`, `appointment/`, `security/`. A module only uses
   another module's `api/` package (interface plus DTOs). Never import entities or
   repositories from another module. Each module may organize its internals as it sees fit.
 - **The booking domain works with a start time and a duration** and knows nothing about
@@ -61,8 +62,10 @@ Maven · Java 21 · Spring Boot 3.5 · Spring Data JPA · Flyway · H2 (PostgreS
   the injected `Clock` bean, never `LocalDateTime.now()`, so the deadlines stay testable.
 - **Tests:** unit tests on the domain rules and `@SpringBootTest` on the key flows. Do not
   add per-layer tests just to raise coverage.
-- **No authentication until stage 8.** Endpoints that need to know the practitioner take
-  the `practitionerId` as a parameter. Do not introduce a stand-in for the current user.
+- **Security (D-34).** What a role may reach is decided by route in `SecurityConfiguration`;
+  whose data a user may see is decided in the use case, through a port answered by
+  `security/api/CurrentUserReader`. Development users live in `db/seed`, never in
+  `db/migration`.
 - **Commits:** use the `git-commit` skill (in `.claude/skills/git-commit/`), Conventional
   Commits format. Commit only when asked.
 - **When a stage is finished:** update `docs/build.md`.

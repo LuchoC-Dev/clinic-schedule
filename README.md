@@ -1,55 +1,100 @@
 # Clinic appointment schedule
 
-An internal appointment schedule for a small medical practice (three or four
-practitioners). Reception manages appointments, working hours and time off; each
-practitioner reads only their own appointments.
+An internal appointment schedule for a small medical practice — three or four practitioners
+and one reception desk. Reception books, moves and cancels appointments, checks patients in,
+and records the practitioners' working hours and time off. Each practitioner reads only their
+own agenda.
 
-The application is built in stages, adding nothing before the stage that uses it. The
-functional scope lives in [`docs/context.md`](docs/context.md), the technical decisions in
-[`docs/decisions.md`](docs/decisions.md) and the progress in
-[`docs/build.md`](docs/build.md).
+It was built in stages, adding nothing before the stage that used it. The functional scope is
+in [`docs/context.md`](docs/context.md), every technical decision and its reasoning in
+[`docs/decisions.md`](docs/decisions.md), and the progress in [`docs/build.md`](docs/build.md).
+**Version 1 is complete.**
 
-## Requirements
+## Running it
 
-- **JDK 21.** On this machine it is at `C:\Program Files\Java\jdk-21`. The `java` on the
-  `PATH` is 25, so `JAVA_HOME` has to point at 21 before building:
+- **JDK 21.** On this machine it is at `C:\Program Files\Java\jdk-21`, while the `java` on the
+  `PATH` is 25, so point `JAVA_HOME` at 21 first:
 
   ```powershell
   $env:JAVA_HOME = "C:\Program Files\Java\jdk-21"
   ```
 
-- Maven does not need to be installed: the repository ships the wrapper (`mvnw`).
-
-## Commands
+- Maven does not need to be installed: the repository ships the wrapper.
 
 ```powershell
-.\mvnw test                # full test suite
-.\mvnw spring-boot:run     # runs the app on http://localhost:8080
+.\mvnw test                # the whole suite
+.\mvnw spring-boot:run     # the application, on http://localhost:8080
 ```
 
-The database is in-memory H2, owned by Flyway and recreated on every start.
+The database is in-memory H2 in PostgreSQL mode, created by Flyway on every start and lost when
+the application stops. It starts with development data: two practitioners with their reasons
+and weeks, two patients, and these users.
 
-## Current state
+| User        | Password       | Role                                       |
+|-------------|----------------|--------------------------------------------|
+| `recepcion` | `recepcion123` | Reception: everything                      |
+| `arias`     | `arias123`     | Practitioner: reads only Dra. Arias's agenda |
+| `benitez`   | `benitez123`   | Practitioner: reads only Dr. Benítez's agenda |
 
-**Stage 1 of 8 is done: the application starts.** That is all it does — there are no
-endpoints yet, so every URL answers 404, and Flyway logs `No migrations found` because the
-first migration arrives with the patient table in stage 2.
+They live in `src/main/resources/db/seed`, a Flyway location of its own that a real deployment
+removes (D-34).
+
+## Using it
+
+**Screens** — open http://localhost:8080 and log in. Reception gets the agenda of the day with
+the day's operations as buttons (*Llegó*, *Avisó demora*, *Mover*, *Cancelar*), a booking
+screen that suggests the free times, and a patients screen. A practitioner gets their own
+agenda, read-only. The screens are in Spanish, for the staff.
+
+**API** — basic authentication on every request. Errors share one body:
+`{timestamp, status, error, message, fields?}`.
+
+| Method | Route | What it does |
+|---|---|---|
+| `POST` | `/api/patients` | register a patient, with an optional typed document |
+| `PUT` | `/api/patients/{id}` | correct a name, add or remove the document |
+| `GET` | `/api/patients/{id}`, `/api/patients?query=` | find patients by name or document |
+| `POST` | `/api/practitioners` | register a practitioner |
+| `PUT` | `/api/practitioners/{id}` | rename |
+| `GET` | `/api/practitioners`, `/api/practitioners/{id}` | with reasons, week and time off |
+| `POST` | `/api/practitioners/{id}/reasons` | add a reason with its duration |
+| `PUT` | `/api/practitioners/{id}/reasons/{reasonId}` | rename it or change its duration |
+| `PUT` | `/api/practitioners/{id}/weekly-schedule` | replace the week; a break is a gap between stretches |
+| `POST` | `/api/appointments` | book; the duration follows from the reason |
+| `POST` | `/api/appointments/{id}/reschedule` | move it, keeping its duration |
+| `POST` | `/api/appointments/{id}/cancel` | cancel it, keeping the record |
+| `POST` | `/api/appointments/{id}/check-in` | the patient arrived |
+| `POST` | `/api/appointments/{id}/suspend-auto-cancellation` | the patient warned they will be late |
+| `GET` | `/api/appointments?practitionerId=&date=` | a day's agenda — a practitioner always gets their own |
+| `POST` | `/api/time-off` | a practitioner's absence, cancelling the appointments it hits |
+
+A booking without a check-in is cancelled automatically 30 minutes after its start, or 24 hours
+after it when the patient warned they would be late.
+
+## How it is built
 
 ```
-src/main/java/com/clinic/schedule/ScheduleApplication.java
-src/main/resources/application.yml
-src/test/java/com/clinic/schedule/ScheduleApplicationTests.java
+src/main/java/com/clinic/schedule/
+├── appointment/          hexagonal: the only module with rules of its own
+│   ├── domain/           plain Java — TimeSlot, Appointment, BookingService…
+│   ├── application/      use cases and the ports they need
+│   ├── persistence/      the JPA adapter
+│   ├── external/         adapters towards the other modules' api
+│   ├── scheduling/       the job that cancels overdue appointments
+│   └── web/              REST controllers and the agenda screens
+├── patient/              layered, flat, package-private — api/ is its only public door
+├── practitioner/         layered, with the week's rules in plain classes — and its api/
+├── security/             users, login, roles — and its api/
+└── shared/               the clock and the error body
 ```
 
-The plan from here: patients (2), practitioners with their reasons and working hours (3),
-appointments with the booking rules (4), check-in and automatic cancellation (5), time off
-(6), the agenda screens (7) and security with login and roles (8).
+A module reaches another only through its `api/` package; everything else is package-private
+(D-05, D-24). The domain of `appointment` has no framework annotations and is tested without
+Spring. The whole repository is in English; on-screen text is in Spanish (D-13).
 
-Each stage brings its own dependencies with it. Security, views, validation and the
-scheduler are deliberately absent until then, so the repository shows every piece arriving
-with the reason that justifies it (D-14).
+## Deliberately postponed
 
-## Conventions
-
-The whole repository is written in English — code, SQL, comments, documents and commit
-messages. On-screen text for the staff of the practice stays in Spanish (D-13).
+PostgreSQL with `docker-compose`, which also makes the overlap check safe when two
+receptionists book the same slot at once (D-21); ArchUnit to enforce the module boundaries;
+and a screen for practitioners' configuration and time off, which today is API-only. The
+planned evolution after v1 — patient file, arrival queue, web booking — is in the context.

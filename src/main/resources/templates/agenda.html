@@ -22,7 +22,7 @@
             <input type="date" name="date" th:value="${date}">
         </label>
         <button type="submit">Ver</button>
-        <a th:if="${practitioner != null}"
+        <a th:if="${practitioner != null and !readOnly}"
            th:href="@{/agenda/new(practitionerId=${practitioner.id}, date=${date})}">
             <button type="button" class="primary">Nuevo turno</button>
         </a>
@@ -32,7 +32,7 @@
 
     <table th:unless="${rows.isEmpty()}">
         <thead>
-        <tr><th>Horario</th><th>Paciente</th><th>Razón</th><th>Estado</th><th></th></tr>
+        <tr><th>Horario</th><th>Paciente</th><th>Razón</th><th>Estado</th><th th:unless="${readOnly}"></th></tr>
         </thead>
         <tbody>
         <tr th:each="row : ${rows}">
@@ -43,7 +43,7 @@
             </td>
             <td th:text="${row.reason}">consulta</td>
             <td th:text="${row.state}">Reservado</td>
-            <td class="actions">
+            <td class="actions" th:unless="${readOnly}">
                 <form class="inline" method="post" th:unless="${row.checkedIn}"
                       th:action="@{/agenda/appointments/{id}/check-in(id=${row.id})}">
                     <input type="hidden" name="practitionerId" th:value="${practitioner.id}">

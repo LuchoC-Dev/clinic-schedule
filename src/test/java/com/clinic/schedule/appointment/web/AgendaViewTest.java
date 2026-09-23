@@ -1,5 +1,6 @@
 package com.clinic.schedule.appointment.web;
 
+import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.csrf;
 import static org.hamcrest.Matchers.containsString;
 import static org.hamcrest.Matchers.not;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
@@ -17,6 +18,7 @@ import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.security.test.context.support.WithMockUser;
 import org.springframework.http.MediaType;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.MvcResult;
@@ -32,6 +34,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
  */
 @SpringBootTest
 @AutoConfigureMockMvc
+@WithMockUser(roles = "RECEPTION")
 class AgendaViewTest {
 
     /** A Tuesday. */
@@ -97,7 +100,7 @@ class AgendaViewTest {
         CreatedPractitioner arias = practitioners.workingEveryDay();
         String id = bookThroughTheApi(arias, patients.newPatient(), "10:00:00");
 
-        mockMvc.perform(post("/agenda/appointments/" + id + "/check-in")
+        mockMvc.perform(post("/agenda/appointments/" + id + "/check-in").with(csrf())
                         .param("practitionerId", arias.id().toString()).param("date", DAY))
                 .andExpect(redirectedUrlPattern("/agenda?*"))
                 .andExpect(flash().attribute("message", "Llegada confirmada."));
@@ -110,10 +113,10 @@ class AgendaViewTest {
     void aRefusalComesBackAsAMessageInSpanish() throws Exception {
         CreatedPractitioner arias = practitioners.workingEveryDay();
         String id = bookThroughTheApi(arias, patients.newPatient(), "10:00:00");
-        mockMvc.perform(post("/agenda/appointments/" + id + "/cancel")
+        mockMvc.perform(post("/agenda/appointments/" + id + "/cancel").with(csrf())
                 .param("practitionerId", arias.id().toString()).param("date", DAY));
 
-        mockMvc.perform(post("/agenda/appointments/" + id + "/cancel")
+        mockMvc.perform(post("/agenda/appointments/" + id + "/cancel").with(csrf())
                         .param("practitionerId", arias.id().toString()).param("date", DAY))
                 .andExpect(flash().attribute("error", containsString("ya fue cancelado")));
     }
@@ -138,7 +141,7 @@ class AgendaViewTest {
         CreatedPractitioner arias = practitioners.workingEveryDay();
         UUID patient = patients.newPatient();
 
-        mockMvc.perform(post("/agenda/new")
+        mockMvc.perform(post("/agenda/new").with(csrf())
                         .param("practitionerId", arias.id().toString())
                         .param("date", DAY)
                         .param("reasonId", arias.consulta().toString())
@@ -156,7 +159,7 @@ class AgendaViewTest {
         CreatedPractitioner arias = practitioners.workingEveryDay();
         bookThroughTheApi(arias, patients.newPatient(), "11:00:00");
 
-        mockMvc.perform(post("/agenda/new")
+        mockMvc.perform(post("/agenda/new").with(csrf())
                         .param("practitionerId", arias.id().toString())
                         .param("date", DAY)
                         .param("reasonId", arias.consulta().toString())
@@ -170,7 +173,7 @@ class AgendaViewTest {
     void bookingWithoutChoosingAPatientAsksForIt() throws Exception {
         CreatedPractitioner arias = practitioners.workingEveryDay();
 
-        mockMvc.perform(post("/agenda/new")
+        mockMvc.perform(post("/agenda/new").with(csrf())
                         .param("practitionerId", arias.id().toString())
                         .param("date", DAY)
                         .param("reasonId", arias.consulta().toString())
@@ -187,7 +190,7 @@ class AgendaViewTest {
                 .andExpect(status().isOk())
                 .andExpect(content().string(containsString("value=\"10:15\"")));
 
-        mockMvc.perform(post("/agenda/appointments/" + id + "/reschedule")
+        mockMvc.perform(post("/agenda/appointments/" + id + "/reschedule").with(csrf())
                         .param("practitionerId", arias.id().toString())
                         .param("date", DAY)
                         .param("time", "15:00"))

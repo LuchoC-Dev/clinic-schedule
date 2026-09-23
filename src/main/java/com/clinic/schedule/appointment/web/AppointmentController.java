@@ -93,11 +93,14 @@ class AppointmentController {
         return AppointmentResponse.of(suspendAutoCancellation.handle(new AppointmentId(id)));
     }
 
-    /** A practitioner's day, in order, without the cancelled ones. */
+    /**
+     * A practitioner's day, in order, without the cancelled ones. A practitioner always gets
+     * their own, whatever {@code practitionerId} says (D-04).
+     */
     @GetMapping
     List<AppointmentResponse> dayAgenda(@RequestParam UUID practitionerId,
             @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate date) {
-        return dayAgenda.handle(new PractitionerId(practitionerId), date).stream()
+        return dayAgenda.handle(new PractitionerId(practitionerId), date).appointments().stream()
                 .map(AppointmentResponse::of)
                 .toList();
     }

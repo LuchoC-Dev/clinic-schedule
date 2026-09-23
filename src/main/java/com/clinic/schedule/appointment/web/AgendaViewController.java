@@ -36,6 +36,7 @@ import com.clinic.schedule.patient.api.PatientReader;
 import com.clinic.schedule.patient.api.PatientSummary;
 import com.clinic.schedule.practitioner.api.PractitionerReader;
 import com.clinic.schedule.practitioner.api.PractitionerSummary;
+import com.clinic.schedule.security.api.CurrentUserReader;
 
 /**
  * Reception's screens over the agenda: the day of a practitioner, booking, moving, and what
@@ -45,7 +46,8 @@ import com.clinic.schedule.practitioner.api.PractitionerSummary;
  * call, never the REST controllers themselves, and holds no rule. When the single-page
  * applications arrive, this class and its templates are deleted and nothing else changes.
  *
- * <p>It reads names from the patient and practitioner modules through their {@code api/}.
+ * <p>It reads names from the patient and practitioner modules, and who is looking from the
+ * security module, through their {@code api/}.
  * The use cases do not need names, only the screens do, so the screen asks directly instead of
  * widening the application's ports (D-33).
  *
@@ -65,12 +67,14 @@ class AgendaViewController {
     private final SuggestSlotsUseCase suggestSlots;
     private final PractitionerReader practitioners;
     private final PatientReader patients;
+    private final CurrentUserReader currentUser;
     private final Clock clock;
 
     AgendaViewController(ViewDayAgendaUseCase dayAgenda, FindAppointmentUseCase findAppointment,
             BookAppointmentUseCase book, RescheduleAppointmentUseCase reschedule, CancelAppointmentUseCase cancel,
             CheckInUseCase checkIn, SuspendAutoCancellationUseCase suspendAutoCancellation,
-            SuggestSlotsUseCase suggestSlots, PractitionerReader practitioners, PatientReader patients, Clock clock) {
+            SuggestSlotsUseCase suggestSlots, PractitionerReader practitioners, PatientReader patients,
+            CurrentUserReader currentUser, Clock clock) {
         this.dayAgenda = dayAgenda;
         this.findAppointment = findAppointment;
         this.book = book;
@@ -81,6 +85,7 @@ class AgendaViewController {
         this.suggestSlots = suggestSlots;
         this.practitioners = practitioners;
         this.patients = patients;
+        this.currentUser = currentUser;
         this.clock = clock;
     }
 
@@ -91,25 +96,41 @@ class AgendaViewController {
 
     // --- the day ------------------------------------------------------------------------
 
+    /**
+     * The agenda of a day. A practitioner sees only their own, read-only: whose agenda it is
+     * comes back from the use case, and the choice of practitioner and the buttons are hidden,
+     * since the routes behind them are closed to them anyway (D-34).
+     */
     @GetMapping("/agenda")
     String agenda(@RequestParam(required = false) UUID practitionerId,
             @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate date,
             Model model) {
-        List<PractitionerSummary> all = practitioners.findAll();
+        Optional<UUID> restrictedTo = currentUser.practitionerId();
+        List<PractitionerSummary> all = practitioners.findAll().stream()
+                .filter(practitioner -> restrictedTo.map(practitioner.id()::equals).orElse(true))
+                .toList();
         LocalDate day = date != null ? date : LocalDate.now(clock);
-        Optional<PractitionerSummary> selected = practitionerId != null
-                ? all.stream().filter(practitioner -> practitioner.id().equals(practitionerId)).findFirst()
-                : all.stream().findFirst();
+        UUID requested = practitionerId != null ? practitionerId
+                : all.stream().findFirst().map(PractitionerSummary::id).orElse(null);
+
+        List<AgendaRow> rows = List.of();
+        PractitionerSummary shown = null;
+        if (requested != null) {
+            ViewDayAgendaUseCase.DayAgenda agenda = dayAgenda.handle(new PractitionerId(requested), day);
+            UUID whose = agenda.practitionerId().value();
+            shown = all.stream().filter(practitioner -> practitioner.id().equals(whose)).findFirst().orElse(null);
+            rows = rowsOf(agenda.appointments());
+        }
 
         model.addAttribute("practitioners", all);
         model.addAttribute("date", day);
-        model.addAttribute("practitioner", selected.orElse(null));
-        model.addAttribute("rows", selected.map(practitioner -> rowsOf(practitioner.id(), day)).orElse(List.of()));
+        model.addAttribute("practitioner", shown);
+        model.addAttribute("rows", rows);
+        model.addAttribute("readOnly", restrictedTo.isPresent());
         return "agenda";
     }
 
-    private List<AgendaRow> rowsOf(UUID practitionerId, LocalDate day) {
-        List<Appointment> appointments = dayAgenda.handle(new PractitionerId(practitionerId), day);
+    private List<AgendaRow> rowsOf(List<Appointment> appointments) {
         Map<UUID, PatientSummary> names = patients.findAll(
                         appointments.stream().map(appointment -> appointment.patientId().value()).toList())
                 .stream()

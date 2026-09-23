@@ -32,11 +32,10 @@ port 8080.
   `@EnableScheduling` and the thymeleaf and validation dependencies. All of it was removed
   as unused scaffolding (D-14), and each piece now belongs to the stage that needs it.
 
-### In progress — `appointment` domain `[~]`
+### `appointment` module `[x]`
 
-The order of the stages below is **under review**: `appointment` is the only module with
-rules of its own, so its domain is being built first to check that the rules close before
-committing to a plan. Done so far, in
+Built first, ahead of the order planned at the start: it is the only module with rules of its
+own, so its domain was built first to check that the rules close. The domain, in
 `src/main/java/com/clinic/schedule/appointment/domain/`:
 
 - [x] `TimeSlot` — start plus duration, with the exclusive-end overlap rule
@@ -208,18 +207,24 @@ patient registered and an appointment booked from the screens; the agenda showed
 name and document; for a Tuesday with a lunch break the booking screen offered exactly the 30
 free quarters, 12:30 included and 12:45 — which would cross the break — left out.
 
-### Stage 8 — Security
-- [ ] Add the `security` dependency, with the `app_user` table and a seed migration
-- [ ] Login for the views, and stateless authentication for `/api/**`
-- [ ] `RECEPTION` and `PRACTITIONER` roles, with a `CurrentSession` api in the module
-- [ ] Foreign key from `app_user.practitioner_id` to the practitioner table
-- [ ] Reception queries any practitioner; a practitioner is restricted to their own agenda,
-      with the received parameter ignored
-- [ ] Tests: 401 without credentials, a practitioner cannot read another practitioner's agenda
+### Security `[x]`
+- [x] `security` dependency; `V6__app_user.sql`, without a foreign key to the practitioner (D-30)
+- [x] Login form for the screens, basic authentication for `/api/**`; CSRF on the screens' forms
+- [x] `RECEPTION` and `PRACTITIONER`; `security/api/CurrentUserReader`, failing closed
+- [x] `ViewDayAgendaUseCase` restricts a practitioner to their own agenda through
+      `AgendaAccessPort`, ignoring the parameter (D-04)
+- [x] A practitioner's agenda screen shows only them and no actions; their routes are closed anyway
+- [x] Development data in `db/seed`, a Flyway location a real deployment drops (D-34)
+- [x] 15 tests with the seeded users. 244 in total
 
-A working version of this stage already existed and was removed; see D-04 and D-14. The
-design is settled, so it is mostly a matter of bringing it back where it has something to
-protect.
+**Verified with the application running:** an anonymous visit sent to the login form; a wrong
+password sent back with an error; reception logged in and saw both practitioners with their
+actions; Dra. Arias logged in, asked for Dr. Benítez's agenda and got her own with no actions,
+and got 403 on the patients screen and on the patients API.
+
+---
+
+**v1 is complete.** Everything in the context's scope for the first version is built.
 
 ---
 

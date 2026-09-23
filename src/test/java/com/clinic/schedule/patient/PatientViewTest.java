@@ -1,5 +1,6 @@
 package com.clinic.schedule.patient;
 
+import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.csrf;
 import static org.hamcrest.Matchers.containsString;
 import static org.hamcrest.Matchers.startsWith;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
@@ -15,11 +16,13 @@ import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.security.test.context.support.WithMockUser;
 import org.springframework.test.web.servlet.MockMvc;
 
 /** Reception's patient screen over the real stack. */
 @SpringBootTest
 @AutoConfigureMockMvc
+@WithMockUser(roles = "RECEPTION")
 class PatientViewTest {
 
     @Autowired
@@ -33,7 +36,7 @@ class PatientViewTest {
     void registeringFromTheScreenShowsThePatient() throws Exception {
         String name = unique("Pantalla");
 
-        mockMvc.perform(post("/patients")
+        mockMvc.perform(post("/patients").with(csrf())
                         .param("fullName", name)
                         .param("documentType", "DNI")
                         .param("documentNumber", "40.111.222"))
@@ -47,16 +50,16 @@ class PatientViewTest {
 
     @Test
     void aPatientWithoutADocumentIsRegistered() throws Exception {
-        mockMvc.perform(post("/patients").param("fullName", unique("Sin Documento")).param("documentType", ""))
+        mockMvc.perform(post("/patients").with(csrf()).param("fullName", unique("Sin Documento")).param("documentType", ""))
                 .andExpect(flash().attribute("message", startsWith("Paciente registrado")));
     }
 
     @Test
     void aRepeatedDocumentComesBackAsAMessage() throws Exception {
-        mockMvc.perform(post("/patients").param("fullName", unique("Primero"))
+        mockMvc.perform(post("/patients").with(csrf()).param("fullName", unique("Primero"))
                 .param("documentType", "DNI").param("documentNumber", "40222333"));
 
-        mockMvc.perform(post("/patients").param("fullName", unique("Segundo"))
+        mockMvc.perform(post("/patients").with(csrf()).param("fullName", unique("Segundo"))
                         .param("documentType", "DNI").param("documentNumber", "40222333"))
                 .andExpect(redirectedUrl("/patients"))
                 .andExpect(flash().attribute("error", "Ese documento ya pertenece a otro paciente."));
@@ -64,7 +67,7 @@ class PatientViewTest {
 
     @Test
     void halfADocumentComesBackAsAMessage() throws Exception {
-        mockMvc.perform(post("/patients").param("fullName", unique("Medio")).param("documentNumber", "123"))
+        mockMvc.perform(post("/patients").with(csrf()).param("fullName", unique("Medio")).param("documentNumber", "123"))
                 .andExpect(flash().attribute("error", containsString("tipo y número")));
     }
 }
