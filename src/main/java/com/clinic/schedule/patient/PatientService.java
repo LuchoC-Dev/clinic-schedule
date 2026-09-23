@@ -14,9 +14,11 @@ import org.springframework.transaction.annotation.Transactional;
  * <p>The document is checked here before saving so the answer is a clear 409 instead of a
  * constraint violation, but the constraint in the database is the one that actually
  * guarantees it (D-09). Under a race the insert fails, which is the correct outcome.
+ *
+ * <p>Each method declares its own transaction and every write calls {@code save()}, even
+ * where Hibernate would write the change by itself (D-27).
  */
 @Service
-@Transactional
 class PatientService {
 
     private final PatientRepository patients;
@@ -25,11 +27,13 @@ class PatientService {
         this.patients = patients;
     }
 
+    @Transactional
     Patient register(String fullName, IdentityDocument document) {
         requireDocumentIsFree(document);
         return patients.save(Patient.register(fullName, document));
     }
 
+    @Transactional
     Patient update(UUID id, String fullName, IdentityDocument document) {
         Patient patient = patients.findById(id).orElseThrow(() -> new PatientNotFoundException(id));
 
@@ -38,7 +42,7 @@ class PatientService {
             requireDocumentIsFree(document);
             patient.setDocument(document);
         }
-        return patient;
+        return patients.save(patient);
     }
 
     @Transactional(readOnly = true)

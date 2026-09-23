@@ -9,7 +9,7 @@ Read these before proposing design or code:
 
 - `docs/context.md` — what the application does, who uses it, the business rules and the
   planned evolution.
-- `docs/decisions.md` — technical decisions and their reasoning (D-01 … D-14).
+- `docs/decisions.md` — technical decisions and their reasoning (D-01 … D-27).
 - `docs/build.md` — the staged plan and the current progress.
 
 ## Stack
@@ -51,6 +51,9 @@ Maven · Java 21 · Spring Boot 3.5 · Spring Data JPA · Flyway · H2 (PostgreS
   `Row`, `Controller`, `Request`/`Response`. Entities and value objects take no suffix —
   they are the vocabulary of the business. A `Command` used by a single use case is a record
   nested inside it. The full table is in `docs/decisions.md`.
+- **Transactions (D-27).** `@Transactional` on each method, never on the class:
+  `@Transactional` for writes, `@Transactional(readOnly = true)` for reads. Every write calls
+  `save()` explicitly, even when Hibernate's dirty checking would persist the change anyway.
 - **Nothing engine-specific.** Standard JPA and Flyway migrations in portable SQL, so
   moving to PostgreSQL only means changing the datasource. Watch out for reserved words:
   `user` is reserved, which is why the user table will be `app_user`.

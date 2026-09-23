@@ -598,3 +598,30 @@ the first real deployment onwards, migrations are append-only.
 
 The full name stays a single field. Splitting it into given and family names is a later
 decision and nothing in v1 needs the parts.
+
+---
+
+## D-27 — Transactions per method, and every write saves explicitly
+**Date:** 2026-09-23 · **Status:** accepted
+
+Two rules for every service and use case:
+
+- **`@Transactional` goes on each method, never on the class.** Writes carry
+  `@Transactional`, reads carry `@Transactional(readOnly = true)`. A class-level annotation
+  overridden by some methods reads as inconsistent — methods that write show nothing, methods
+  that read show something — and understanding it requires knowing the inheritance rule. With
+  one annotation per method, each method says what it does on its own.
+- **Every write calls `save()`, even when Hibernate would persist the change by itself.** In a
+  transaction, Hibernate writes any modified entity on commit (dirty checking), so a method that
+  loads an entity and changes it works without `save()`. That is the implicit saving D-16 named
+  as a risk: whoever reads the method sees no write and may think the change is lost, or add a
+  "missing" call that changes nothing. The explicit call costs nothing and makes the write
+  visible.
+
+`readOnly = true` is not decoration: Hibernate skips checking loaded entities for changes on
+commit, which on a search returning many rows is work avoided, and it states that the method
+modifies nothing.
+
+This came out of `PatientService`, which had `@Transactional` on the class, `readOnly`
+overrides on the reads, and an `update` that relied on dirty checking. `appointment` already
+followed both rules.
