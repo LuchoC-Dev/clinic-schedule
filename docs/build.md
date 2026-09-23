@@ -180,11 +180,19 @@ last slot before the break accepted, and a day the practitioner does not work an
 started 40 minutes earlier without a check-in, and left alone one whose patient had checked in
 and one whose patient had warned they would be late.
 
-### Stage 6 — Practitioner time off
-- [ ] Record time off for a whole day or for a time range
-- [ ] Cascading cancellation of the affected appointments **without** a confirmed check-in
-- [ ] Report of the appointments with a confirmed check-in that need manual handling
-- [ ] Tests: partial time off, full-day time off, an appointment with a confirmed check-in left untouched
+### Practitioner time off `[x]`
+- [x] `V5__practitioner_time_off.sql`, `TimeOff` and `AvailabilityPolicy` in `practitioner` (D-32)
+- [x] `practitioner/api/TimeOffWriter`, called from `appointment` through its port
+- [x] `RecordTimeOffUseCase`: cancels what the absence touches **without** a check-in, reports
+      the rest as needing manual handling, in one transaction
+- [x] `POST /api/time-off` — a whole day, or part of one
+- [x] Booking during an absence is refused
+- [x] Tests: partial and whole-day absences, boundaries, an arrived patient left untouched,
+      another practitioner and the next day left alone. 211 in total
+
+**Verified with the application running:** an absence from 10:30 to 13:00 cancelled the 12:00
+appointment, reported the 11:00 one whose patient had arrived, left 09:30 and 15:00 alone; a
+booking at 12:30 answered 409 and one at 13:00 was accepted.
 
 ### Stage 7 — Minimal Thymeleaf views
 - [ ] Add the `thymeleaf` dependency

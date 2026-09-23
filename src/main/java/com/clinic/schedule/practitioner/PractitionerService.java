@@ -10,21 +10,23 @@ import org.springframework.transaction.annotation.Transactional;
 
 import com.clinic.schedule.practitioner.api.PractitionerReader;
 import com.clinic.schedule.practitioner.api.ReasonDetails;
+import com.clinic.schedule.practitioner.api.TimeOffWriter;
 
 /**
  * What reception configures for each practitioner, and what other modules may read about
  * them.
  *
  * <p>The class is package-private, so other modules reach it only as a
- * {@link PractitionerReader}: the two methods of that interface are public because the
- * interface requires it, and everything else stays inside the module (D-24).
+ * {@link PractitionerReader} or a {@link TimeOffWriter}: the methods of those interfaces are
+ * public because the interfaces require it, and everything else stays inside the module
+ * (D-24).
  *
  * <p>Thin on purpose: the rules that need only the practitioner's own data live in
  * {@link Practitioner}, and this class loads, delegates and saves. Each method declares its
  * own transaction and every write saves explicitly (D-27).
  */
 @Service
-class PractitionerService implements PractitionerReader {
+class PractitionerService implements PractitionerReader, TimeOffWriter {
 
     private final PractitionerRepository practitioners;
 
@@ -91,6 +93,19 @@ class PractitionerService implements PractitionerReader {
         return practitioners.findById(practitionerId)
                 .map(practitioner -> practitioner.worksDuring(startsAt, endsAt))
                 .orElse(false);
+    }
+
+    @Override
+    @Transactional
+    public boolean recordTimeOff(UUID practitionerId, LocalDateTime startsAt, LocalDateTime endsAt) {
+        Optional<Practitioner> found = practitioners.findById(practitionerId);
+        if (found.isEmpty()) {
+            return false;
+        }
+        Practitioner practitioner = found.get();
+        practitioner.recordTimeOff(new TimeOff(startsAt, endsAt));
+        practitioners.save(practitioner);
+        return true;
     }
 
     private Practitioner load(UUID id) {

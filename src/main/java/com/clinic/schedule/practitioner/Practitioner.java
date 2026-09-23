@@ -23,7 +23,7 @@ import jakarta.persistence.Table;
 
 /**
  * A practitioner with what reception configures for them: the reasons an appointment can be
- * requested for, and the usual week of work.
+ * requested for, the usual week of work, and the time off that interrupts it.
  *
  * <p>JPA maps it directly (D-25). It guards what only needs its own data: two reasons of the
  * same practitioner cannot share a name, and a week cannot have overlapping stretches. Those
@@ -53,6 +53,11 @@ class Practitioner {
     @ElementCollection(fetch = FetchType.EAGER)
     @CollectionTable(name = "working_hours", joinColumns = @JoinColumn(name = "practitioner_id"))
     private Set<WorkingHours> workingHours = new HashSet<>();
+
+    /** Also a {@code Set}, for the same reason as the working hours. */
+    @ElementCollection(fetch = FetchType.EAGER)
+    @CollectionTable(name = "time_off", joinColumns = @JoinColumn(name = "practitioner_id"))
+    private Set<TimeOff> timeOff = new HashSet<>();
 
     protected Practitioner() {
         // required by JPA
@@ -107,9 +112,18 @@ class Practitioner {
         return reasons.stream().filter(reason -> reason.getId().equals(reasonId)).findFirst();
     }
 
-    /** Whether the whole span falls inside one stretch of the usual week. */
+    /**
+     * Records an absence. Overlapping absences are accepted: recording the same afternoon
+     * twice, or a morning inside a whole day already off, leaves the practitioner just as
+     * absent, so there is nothing to refuse.
+     */
+    void recordTimeOff(TimeOff absence) {
+        timeOff.add(absence);
+    }
+
+    /** Whether the whole span falls inside one stretch of the usual week and outside any time off. */
     boolean worksDuring(LocalDateTime startsAt, LocalDateTime endsAt) {
-        return new WeeklySchedule(getWorkingHours()).covers(startsAt, endsAt);
+        return new AvailabilityPolicy(new WeeklySchedule(getWorkingHours()), timeOff).isAvailable(startsAt, endsAt);
     }
 
     private void requireNameIsFree(String name, Reason except) {
@@ -137,6 +151,11 @@ class Practitioner {
 
     List<Reason> getReasons() {
         return List.copyOf(reasons);
+    }
+
+    /** In the order they happen. */
+    List<TimeOff> getTimeOff() {
+        return timeOff.stream().sorted(Comparator.comparing(TimeOff::startsAt)).toList();
     }
 
     /** In the order a week is read: by day, then by start time. */

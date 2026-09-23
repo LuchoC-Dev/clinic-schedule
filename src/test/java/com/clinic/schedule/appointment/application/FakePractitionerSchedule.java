@@ -44,6 +44,27 @@ class FakePractitionerSchedule implements PractitionerSchedulePort {
         return Optional.ofNullable(reasons.getOrDefault(practitionerId, Map.of()).get(reasonId));
     }
 
+    private final java.util.Set<PractitionerId> unknown = new java.util.HashSet<>();
+    private final List<TimeSlot> recordedTimeOff = new ArrayList<>();
+
+    /** From now on the practitioner does not exist, so recording their time off fails. */
+    void givenUnknown(PractitionerId practitionerId) {
+        unknown.add(practitionerId);
+    }
+
+    List<TimeSlot> recordedTimeOff() {
+        return recordedTimeOff;
+    }
+
+    @Override
+    public boolean recordTimeOff(PractitionerId practitionerId, TimeSlot span) {
+        if (unknown.contains(practitionerId)) {
+            return false;
+        }
+        recordedTimeOff.add(span);
+        return true;
+    }
+
     @Override
     public boolean worksDuring(PractitionerId practitionerId, TimeSlot slot) {
         List<Window> allowed = windows.get(practitionerId);

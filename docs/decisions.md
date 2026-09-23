@@ -120,7 +120,7 @@ attendance feature will replace them.
 ---
 
 ## D-08 — `appointment` reads duration and availability from the `api/` of `practitioner`
-**Date:** 2026-09-22 · **Status:** applied on 2026-09-23 (see D-29); time off still pending
+**Date:** 2026-09-22 · **Status:** applied on 2026-09-23 (see D-29, D-32)
 
 The application layer of `appointment` asks the `practitioner` module two things:
 
@@ -802,3 +802,46 @@ tested instead through the use case, with a fixed clock.
 Endpoints: `POST /api/appointments/{id}/check-in` and
 `POST /api/appointments/{id}/suspend-auto-cancellation`. Refusals are 409, like every booking
 rule.
+
+---
+
+## D-32 — Time off, and what it does to the agenda
+**Date:** 2026-09-23 · **Status:** accepted
+
+**Time off belongs to the practitioner.** `TimeOff` is a value object stored inside the
+practitioner (`V5`), a whole day or part of one, with an exclusive end like every other stretch.
+`AvailabilityPolicy` arrives with it, as D-28 anticipated: the week minus the time off. With two
+things to combine it earns its place; with one it would have been scaffolding. Overlapping
+absences are accepted, since recording the same afternoon twice leaves the practitioner just as
+absent.
+
+**The cascade belongs to the appointment module**, which is the only one that knows
+appointments. `RecordTimeOffUseCase`:
+
+- records the absence through the practitioner module's api — a new `TimeOffWriter`, apart
+  from `PractitionerReader` because it writes (D-18);
+- cancels every appointment the absence touches whose patient has not arrived;
+- leaves the ones whose patient already arrived as they are, and reports them as needing manual
+  handling, because a person is waiting and reception has to decide.
+
+All of it runs in one transaction: the absence and its consequences are stored together or not
+at all. Later bookings during the absence are refused by the availability check with a 409, like
+any time outside the practitioner's hours.
+
+**Why the practitioner module does not trigger the cascade itself.** It would have to know about
+appointments, reversing the dependency D-05 set (`appointment` depends on `practitioner`, not the
+other way round). A domain event would keep the direction but split one operation across a
+listener, and the response could no longer say what was cancelled. The use case in `appointment`
+keeps it one operation with one answer.
+
+**The route is `POST /api/time-off`**, served by the appointment module, and not
+`/api/practitioners/{id}/time-off`: a route under another module's resource would hide who
+answers it. The response carries the absence, the appointments cancelled and the ones needing
+manual handling.
+
+**A day or a time range**, as the context asks: without times it is the whole day; with both it
+is part of it; with only one it is a 400. An absence of several days is recorded a day at a time.
+
+*Rejected:* the cascade in the practitioner module (reverses the dependency); a domain event
+(splits one operation, loses the answer); cancelling appointments whose patient arrived (the
+context asks for manual handling).

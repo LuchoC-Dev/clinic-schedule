@@ -7,12 +7,13 @@ import org.springframework.web.bind.annotation.RestControllerAdvice;
 
 import com.clinic.schedule.appointment.application.AppointmentNotFoundException;
 import com.clinic.schedule.appointment.application.UnknownPatientException;
+import com.clinic.schedule.appointment.application.UnknownPractitionerException;
 import com.clinic.schedule.appointment.application.UnknownReasonException;
 import com.clinic.schedule.appointment.domain.BookingRuleViolationException;
 import com.clinic.schedule.shared.web.ErrorResponse;
 
 /**
- * Turns this module's exceptions into HTTP answers. Scoped to the appointment controller
+ * Turns this module's exceptions into HTTP answers. Scoped to this module's controllers
  * rather than global, so the module keeps its own translation and no shared class has to
  * import its exceptions (D-05).
  *
@@ -20,7 +21,7 @@ import com.clinic.schedule.shared.web.ErrorResponse;
  * retry with another time. Validation errors are handled once for every module, in
  * {@code shared/web}.
  */
-@RestControllerAdvice(assignableTypes = AppointmentController.class)
+@RestControllerAdvice(assignableTypes = {AppointmentController.class, TimeOffController.class})
 class AppointmentExceptionHandler {
 
     @ExceptionHandler(AppointmentNotFoundException.class)
@@ -29,14 +30,19 @@ class AppointmentExceptionHandler {
                 .body(ErrorResponse.of(404, "Not found", e.getMessage()));
     }
 
-    /** The request names a patient who is not registered, or a reason the practitioner lacks. */
-    @ExceptionHandler({UnknownPatientException.class, UnknownReasonException.class})
-    ResponseEntity<ErrorResponse> unknownReference(RuntimeException e) {
+    /**
+     * The request names someone or something that cannot be used: a patient who is not
+     * registered, a practitioner who does not exist, a reason the practitioner lacks. Or it
+     * describes a span that makes no sense, such as time off ending before it starts.
+     */
+    @ExceptionHandler({UnknownPatientException.class, UnknownPractitionerException.class,
+            UnknownReasonException.class, IllegalArgumentException.class})
+    ResponseEntity<ErrorResponse> badRequest(RuntimeException e) {
         return ResponseEntity.badRequest()
                 .body(ErrorResponse.of(400, "Bad request", e.getMessage()));
     }
 
-    /** Overlaps and working hours alike: the request was fine, the slot is not available. */
+    /** Overlaps, working hours and time off alike: the request was fine, the slot is not available. */
     @ExceptionHandler(BookingRuleViolationException.class)
     ResponseEntity<ErrorResponse> bookingRule(BookingRuleViolationException e) {
         return ResponseEntity.status(HttpStatus.CONFLICT)
