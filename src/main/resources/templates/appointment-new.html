@@ -7,64 +7,85 @@
     <h1 th:text="'Nuevo turno con ' + ${practitioner.fullName}">Nuevo turno</h1>
     <div th:replace="~{fragments :: messages}"></div>
 
-    <!-- Step 1: day, reason and patient search. Refreshing with GET brings suggestions and matches. -->
-    <form class="card bar" method="get" th:action="@{/agenda/new}">
+    <!--
+      A single form, so nothing chosen is lost. "Actualizar" comes first: it is the button Enter
+      presses, and it only brings the screen back with the suggestions and the patients found.
+      "Reservar" books. Changing the day or the reason presses "Actualizar" by itself (D-36).
+    -->
+    <form method="post" th:action="@{/agenda/new}">
         <input type="hidden" name="practitionerId" th:value="${practitioner.id}">
-        <label>Día
-            <input type="date" name="date" th:value="${date}">
-        </label>
-        <label>Razón
-            <select name="reasonId">
-                <option value="">— elegir —</option>
-                <option th:each="r : ${practitioner.reasons}" th:value="${r.id}"
-                        th:text="${r.name} + ' (' + ${r.durationMinutes} + ' min)'"
-                        th:selected="${r.id == reasonId}"></option>
-            </select>
-        </label>
-        <label>Buscar paciente
-            <input type="text" name="patientQuery" th:value="${patientQuery}" placeholder="nombre o documento">
-        </label>
-        <button type="submit">Actualizar</button>
-        <a th:href="@{/patients}">Registrar paciente nuevo</a>
-    </form>
 
-    <p th:if="${reasonId == null}" class="muted">Elegí la razón para ver los horarios libres.</p>
-
-    <!-- Step 2: choose the patient and the time, and book. -->
-    <form class="card" method="post" th:action="@{/agenda/new}" th:if="${reasonId != null}">
-        <input type="hidden" name="practitionerId" th:value="${practitioner.id}">
-        <input type="hidden" name="date" th:value="${date}">
-        <input type="hidden" name="reasonId" th:value="${reasonId}">
-
-        <h2>Paciente</h2>
-        <p th:if="${patientQuery == null}" class="muted">Buscá al paciente arriba.</p>
-        <p th:if="${patientQuery != null and patients.isEmpty()}" class="muted">No hay pacientes que coincidan.</p>
-        <div class="choices">
-            <label th:each="p : ${patients}">
-                <input type="radio" name="patientId" th:value="${p.id}">
-                <span th:text="${p.document == null} ? ${p.fullName} : ${p.fullName} + ' — ' + ${p.document}"></span>
+        <div class="card bar">
+            <label>Día
+                <input type="date" name="date" th:value="${form.date}" data-refresh>
             </label>
+            <label>Razón
+                <select name="reasonId" data-refresh>
+                    <option th:each="r : ${practitioner.reasons}" th:value="${r.id}"
+                            th:text="${r.name} + ' (' + ${r.durationMinutes} + ' min)'"
+                            th:selected="${r.id == reasonId}"></option>
+                </select>
+            </label>
+            <label>Buscar paciente
+                <input type="text" name="patientQuery" th:value="${form.patientQuery}" placeholder="nombre o documento, y Enter">
+            </label>
+            <button type="submit" name="action" value="refresh" id="refresh">Actualizar</button>
         </div>
 
-        <h2>Horario</h2>
-        <p th:if="${suggestions.isEmpty()}" class="muted">No quedan horarios libres ese día para esta razón.</p>
-        <div class="choices">
-            <label th:each="t : ${suggestions}">
-                <input type="radio" name="time" th:value="${t}"><span th:text="${t}"></span>
-            </label>
-        </div>
-        <p>
-            <label>…u otra hora
-                <input type="time" name="otherTime">
-            </label>
-        </p>
+        <div class="card">
+            <h2>Paciente</h2>
+            <p th:if="${patients.isEmpty()}" class="muted">Buscá al paciente arriba, o cargalo abajo si es nuevo.</p>
+            <div class="choices">
+                <label th:each="p : ${patients}">
+                    <input type="radio" name="patientId" th:value="${p.id}" th:checked="${p.id == chosenPatient}">
+                    <span th:text="${p.document == null} ? ${p.fullName} : ${p.fullName} + ' — ' + ${p.document}"></span>
+                </label>
+            </div>
+            <p class="muted">…o paciente nuevo, que se registra al reservar:</p>
+            <div class="bar">
+                <label>Nombre completo
+                    <input type="text" name="newPatientName" maxlength="150" th:value="${form.newPatientName}">
+                </label>
+                <label>Documento
+                    <select name="newPatientDocumentType">
+                        <option value="">— sin documento —</option>
+                        <option th:each="t : ${documentTypes}" th:value="${t}" th:text="${t}"
+                                th:selected="${t == form.newPatientDocumentType}"></option>
+                    </select>
+                </label>
+                <label>Número
+                    <input type="text" name="newPatientDocumentNumber" maxlength="20"
+                           th:value="${form.newPatientDocumentNumber}">
+                </label>
+            </div>
 
-        <label>Nota (opcional)
-            <textarea name="note" rows="2" maxlength="500"></textarea>
-        </label>
-        <p><button type="submit" class="primary">Reservar</button>
-            <a th:href="@{/agenda(practitionerId=${practitioner.id}, date=${date})}">Volver</a></p>
+            <h2>Horario</h2>
+            <p th:if="${practitioner.reasons.isEmpty()}" class="muted">Este profesional todavía no tiene razones cargadas.</p>
+            <p th:if="${reasonId != null and suggestions.isEmpty()}" class="muted">No quedan horarios libres ese día para esta razón.</p>
+            <div class="choices">
+                <label th:each="t : ${suggestions}">
+                    <input type="radio" name="time" th:value="${t}" th:checked="${t == form.time}"><span th:text="${t}"></span>
+                </label>
+            </div>
+            <p>
+                <label>…u otra hora
+                    <input type="time" name="otherTime" th:value="${form.otherTime}">
+                </label>
+            </p>
+
+            <label>Nota (opcional)
+                <textarea name="note" rows="2" maxlength="500" th:text="${form.note}"></textarea>
+            </label>
+            <p><button type="submit" name="action" value="book" class="primary">Reservar</button>
+                <a th:href="@{/agenda(practitionerId=${practitioner.id}, date=${form.date})}">Volver</a></p>
+        </div>
     </form>
 </main>
+<script>
+    // The day and the reason decide the free times, so changing either refreshes the screen at
+    // once. Without JavaScript the "Actualizar" button does the same (D-36).
+    document.querySelectorAll('[data-refresh]').forEach(field =>
+        field.addEventListener('change', () => field.form.requestSubmit(document.getElementById('refresh'))));
+</script>
 </body>
 </html>

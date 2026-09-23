@@ -17,4 +17,7 @@ public interface PatientReader {
 
     /** The patients with those ids; unknown ids are left out. For showing names next to appointments. */
     List<PatientSummary> findAll(Collection<UUID> patientIds);
+
+    /** The kinds of document a patient may identify with, such as "DNI", for a screen to offer. */
+    List<String> documentTypes();
 }

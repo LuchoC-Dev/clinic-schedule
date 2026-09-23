@@ -42,6 +42,24 @@ class AppointmentJpaAdapter implements AppointmentRepository {
     }
 
     @Override
+    public List<Appointment> findBookedForPractitionerBetween(PractitionerId practitionerId, LocalDate from,
+            LocalDate to) {
+        return toAppointments(rows.findByPractitionerIdAndStatusAndStartsAtGreaterThanEqualAndStartsAtLessThan(
+                practitionerId.value(), AppointmentStatus.BOOKED, startOf(from), startOf(to.plusDays(1))));
+    }
+
+    @Override
+    public List<Appointment> findBookedBetween(LocalDate from, LocalDate to) {
+        return toAppointments(rows.findByStatusAndStartsAtGreaterThanEqualAndStartsAtLessThan(
+                AppointmentStatus.BOOKED, startOf(from), startOf(to.plusDays(1))));
+    }
+
+    @Override
+    public List<Appointment> findAllForPatient(PatientId patientId) {
+        return toAppointments(rows.findByPatientId(patientId.value()));
+    }
+
+    @Override
     public List<Appointment> findBookedWithoutCheckInStartingBy(LocalDateTime instant) {
         return toAppointments(rows.findByStatusAndCheckedInAtIsNullAndStartsAtLessThanEqual(
                 AppointmentStatus.BOOKED, instant));

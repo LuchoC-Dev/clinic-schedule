@@ -226,6 +226,42 @@ and got 403 on the patients screen and on the patients API.
 
 **v1 is complete.** Everything in the context's scope for the first version is built.
 
+### After v1: agenda views and the booking screen `[x]`
+- [x] Booking screen as a single form: refreshing keeps patient, time and note; a single match
+      is chosen; a refusal names what is missing (D-35)
+- [x] `ViewAgendaUseCase` replaces `ViewDayAgendaUseCase`: one practitioner or everyone, over a
+      span of days, with the access rule of D-04 unchanged
+- [x] `ViewPatientAppointmentsUseCase`: a patient's appointments, cancelled ones included
+- [x] Range reads in `AppointmentRepository` and its JPA adapter
+- [x] Agenda screen: everyone's day with a practitioner column, a week Monday to Sunday,
+      previous/today/next; actions return to the view they came from
+- [x] Patient appointments screen at `/agenda/patients/{id}`, reception only, linked from the
+      patients screen and the agenda
+- [x] 7 unit tests on the use cases, 3 on the adapter, 11 over the screens and security. 265 in total
+
+**Verified with the application running:** the case reception reported — a time chosen, a
+name typed and "Reservar" pressed — came back with "Elegí un paciente." and both the time and
+the only matching patient already chosen, and booked on the second press; everyone's Friday
+showed Dra. Arias's and Dr. Benítez's appointments with their names; Dra. Arias's week showed
+Monday to Sunday; cancelling from everyone's week returned to it; Juan Gómez's appointments
+listed the cancelled one; logged in as Dra. Arias, everyone's week showed only her own, and a
+patient's appointments answered 403.
+
+Follow-up after reception tried it:
+
+- [x] Everyone's agenda offers a "Nuevo turno" button per practitioner; the first version had
+      none there, and booking looked impossible
+- [x] Booking screen refreshes by itself when the day or the reason changes, and opens with the
+      first reason chosen (D-36)
+- [x] A new patient can be typed on the booking screen and is registered when booking, through
+      `patient/api/PatientWriter` (D-37)
+- [x] 6 more tests over the booking screen. 271 in total
+
+**Verified with the application running:** everyone's Friday offered a button for each
+practitioner; Dr. Benítez's booking screen opened with a reason chosen and 24 free times;
+searching DNI 30111222 chose Ana Pérez; a new patient with a DNI was registered and booked in one
+press; the same DNI typed for someone else was refused in Spanish, keeping what had been typed.
+
 ---
 
 ## Explicitly postponed
@@ -239,6 +275,8 @@ These are not oversights: they are decided and waiting for their moment.
 - A user administration screen (see D-04).
 - A `.gitattributes` pinning line endings, once the repository is used from another machine
   or from CI.
+- Registering a new patient and booking them in **one transaction** from the booking screen;
+  today they are two, and a refused booking leaves the patient registered (see D-37).
 
 ## Out of scope for v1
 

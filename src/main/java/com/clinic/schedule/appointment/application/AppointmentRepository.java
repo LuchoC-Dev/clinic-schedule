@@ -15,8 +15,8 @@ import com.clinic.schedule.appointment.domain.PractitionerId;
  *
  * <p>The reads are per day rather than per exact range on purpose: a day holds a handful of
  * appointments, so fetching it whole and letting the domain do the precise overlap check
- * keeps the query trivial and portable — no stored end time to compare against. The daily
- * reads are also what the agenda view of a day will need.
+ * keeps the query trivial and portable — no stored end time to compare against. The agenda
+ * views read whole days too, a span of them, for the same reason.
  */
 public interface AppointmentRepository {
 
@@ -27,6 +27,15 @@ public interface AppointmentRepository {
 
     /** Booked appointments of that patient on that day, with any practitioner. */
     List<Appointment> findBookedForPatientOn(PatientId patientId, LocalDate date);
+
+    /** Booked appointments of that practitioner from {@code from} to {@code to}, both days included. */
+    List<Appointment> findBookedForPractitionerBetween(PractitionerId practitionerId, LocalDate from, LocalDate to);
+
+    /** Booked appointments of every practitioner from {@code from} to {@code to}, both days included. */
+    List<Appointment> findBookedBetween(LocalDate from, LocalDate to);
+
+    /** Every appointment of that patient, cancelled ones included: their history. */
+    List<Appointment> findAllForPatient(PatientId patientId);
 
     /**
      * Booked appointments whose patient has not checked in and that started at or before

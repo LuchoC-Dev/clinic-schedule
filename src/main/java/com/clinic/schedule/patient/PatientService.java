@@ -2,6 +2,7 @@ package com.clinic.schedule.patient;
 
 import java.util.Collection;
 import java.util.List;
+import java.util.Arrays;
 import java.util.Objects;
 import java.util.UUID;
 
@@ -9,12 +10,16 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import com.clinic.schedule.patient.api.PatientReader;
+import com.clinic.schedule.patient.api.PatientRegistrationRefusedException;
+import com.clinic.schedule.patient.api.PatientRegistrationRefusedException.Reason;
 import com.clinic.schedule.patient.api.PatientSummary;
+import com.clinic.schedule.patient.api.PatientWriter;
 
 /**
  * Registering and finding patients, and answering other modules through
- * {@link PatientReader}. The class is package-private, so other modules reach it only as that
- * interface, whose method is public because the interface requires it (D-24).
+ * {@link PatientReader} and {@link PatientWriter}. The class is package-private, so other modules
+ * reach it only as those interfaces, whose methods are public because the interfaces require it
+ * (D-24).
  *
  * <p>The document is checked here before saving so the answer is a clear 409 instead of a
  * constraint violation, but the constraint in the database is the one that actually
@@ -24,7 +29,7 @@ import com.clinic.schedule.patient.api.PatientSummary;
  * where Hibernate would write the change by itself (D-27).
  */
 @Service
-class PatientService implements PatientReader {
+class PatientService implements PatientReader, PatientWriter {
 
     private final PatientRepository patients;
 
@@ -36,6 +41,26 @@ class PatientService implements PatientReader {
     Patient register(String fullName, IdentityDocument document) {
         requireDocumentIsFree(document);
         return patients.save(Patient.register(fullName, document));
+    }
+
+    /**
+     * Registration as other modules ask for it, in plain values. This module's own refusals are
+     * translated into the one the api declares, so the caller need not know them.
+     */
+    @Override
+    @Transactional
+    public UUID register(String fullName, String documentType, String documentNumber) {
+        try {
+            DocumentType type = documentType == null || documentType.isBlank()
+                    ? null : DocumentType.valueOf(documentType);
+            return register(fullName, IdentityDocument.ofNullable(type, documentNumber)).getId();
+        } catch (DuplicateDocumentException e) {
+            throw new PatientRegistrationRefusedException(Reason.DUPLICATE_DOCUMENT, e.getMessage());
+        } catch (IncompleteDocumentException e) {
+            throw new PatientRegistrationRefusedException(Reason.INCOMPLETE_DOCUMENT, e.getMessage());
+        } catch (IllegalArgumentException e) {
+            throw new PatientRegistrationRefusedException(Reason.INVALID_DATA, e.getMessage());
+        }
     }
 
     @Transactional
@@ -85,6 +110,11 @@ class PatientService implements PatientReader {
     @Transactional(readOnly = true)
     public List<PatientSummary> findAll(Collection<UUID> patientIds) {
         return summaries(patients.findAllById(patientIds));
+    }
+
+    @Override
+    public List<String> documentTypes() {
+        return Arrays.stream(DocumentType.values()).map(DocumentType::name).toList();
     }
 
     private static List<PatientSummary> summaries(List<Patient> found) {

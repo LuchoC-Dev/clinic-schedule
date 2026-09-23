@@ -8,6 +8,7 @@ import com.clinic.schedule.appointment.application.UnknownReasonException;
 import com.clinic.schedule.appointment.domain.BookingRuleViolationException;
 import com.clinic.schedule.appointment.domain.PatientAlreadyBookedException;
 import com.clinic.schedule.appointment.domain.PractitionerAlreadyBookedException;
+import com.clinic.schedule.patient.api.PatientRegistrationRefusedException;
 
 /**
  * What the screens tell reception when an operation is refused. The API answers in English,
@@ -55,5 +56,14 @@ final class ScreenMessages {
             return "Esa razón no corresponde al profesional.";
         }
         return "Los datos ingresados no son válidos.";
+    }
+
+    /** A new patient typed on the booking screen could not be registered (D-37). */
+    static String of(PatientRegistrationRefusedException e) {
+        return switch (e.reason()) {
+            case DUPLICATE_DOCUMENT -> "Ese documento ya pertenece a otro paciente: buscalo arriba y elegilo.";
+            case INCOMPLETE_DOCUMENT -> "El documento del paciente nuevo necesita tipo y número, o ninguno de los dos.";
+            case INVALID_DATA -> "Revisá el paciente nuevo: el nombre es obligatorio y un DNI lleva solo números.";
+        };
     }
 }

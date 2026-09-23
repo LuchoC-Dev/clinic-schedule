@@ -16,7 +16,7 @@ import com.clinic.schedule.appointment.domain.PractitionerId;
  * The port backed by a map, so the use cases can be tested without a database or Spring.
  *
  * <p>It behaves like the real adapter in the two ways that matter to these tests: reads
- * return only booked appointments, and {@code save} replaces by id — which is what makes
+ * return only booked appointments, except a patient's history, and {@code save} replaces by id — which is what makes
  * cancelling and rescheduling visible on the next read.
  */
 class InMemoryAppointmentRepository implements AppointmentRepository {
@@ -53,6 +53,33 @@ class InMemoryAppointmentRepository implements AppointmentRepository {
             }
         }
         return found;
+    }
+
+    @Override
+    public List<Appointment> findBookedForPractitionerBetween(PractitionerId practitionerId, LocalDate from,
+            LocalDate to) {
+        return findBookedBetween(from, to).stream()
+                .filter(appointment -> appointment.practitionerId().equals(practitionerId))
+                .toList();
+    }
+
+    @Override
+    public List<Appointment> findBookedBetween(LocalDate from, LocalDate to) {
+        List<Appointment> found = new ArrayList<>();
+        for (Appointment appointment : stored.values()) {
+            LocalDate day = appointment.slot().startsAt().toLocalDate();
+            if (appointment.isBooked() && !day.isBefore(from) && !day.isAfter(to)) {
+                found.add(appointment);
+            }
+        }
+        return found;
+    }
+
+    @Override
+    public List<Appointment> findAllForPatient(PatientId patientId) {
+        return stored.values().stream()
+                .filter(appointment -> appointment.patientId().equals(patientId))
+                .toList();
     }
 
     @Override

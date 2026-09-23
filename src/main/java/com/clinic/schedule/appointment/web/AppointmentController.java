@@ -3,6 +3,7 @@ package com.clinic.schedule.appointment.web;
 import java.net.URI;
 import java.time.LocalDate;
 import java.util.List;
+import java.util.Optional;
 import java.util.UUID;
 
 import org.springframework.format.annotation.DateTimeFormat;
@@ -20,7 +21,7 @@ import com.clinic.schedule.appointment.application.CancelAppointmentUseCase;
 import com.clinic.schedule.appointment.application.CheckInUseCase;
 import com.clinic.schedule.appointment.application.SuspendAutoCancellationUseCase;
 import com.clinic.schedule.appointment.application.RescheduleAppointmentUseCase;
-import com.clinic.schedule.appointment.application.ViewDayAgendaUseCase;
+import com.clinic.schedule.appointment.application.ViewAgendaUseCase;
 import com.clinic.schedule.appointment.domain.Appointment;
 import com.clinic.schedule.appointment.domain.AppointmentId;
 import com.clinic.schedule.appointment.domain.PractitionerId;
@@ -44,17 +45,17 @@ class AppointmentController {
     private final CancelAppointmentUseCase cancel;
     private final CheckInUseCase checkIn;
     private final SuspendAutoCancellationUseCase suspendAutoCancellation;
-    private final ViewDayAgendaUseCase dayAgenda;
+    private final ViewAgendaUseCase agenda;
 
     AppointmentController(BookAppointmentUseCase book, RescheduleAppointmentUseCase reschedule,
             CancelAppointmentUseCase cancel, CheckInUseCase checkIn,
-            SuspendAutoCancellationUseCase suspendAutoCancellation, ViewDayAgendaUseCase dayAgenda) {
+            SuspendAutoCancellationUseCase suspendAutoCancellation, ViewAgendaUseCase agenda) {
         this.book = book;
         this.reschedule = reschedule;
         this.cancel = cancel;
         this.checkIn = checkIn;
         this.suspendAutoCancellation = suspendAutoCancellation;
-        this.dayAgenda = dayAgenda;
+        this.agenda = agenda;
     }
 
     /**
@@ -100,7 +101,7 @@ class AppointmentController {
     @GetMapping
     List<AppointmentResponse> dayAgenda(@RequestParam UUID practitionerId,
             @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate date) {
-        return dayAgenda.handle(new PractitionerId(practitionerId), date).appointments().stream()
+        return agenda.handle(Optional.of(new PractitionerId(practitionerId)), date, date).appointments().stream()
                 .map(AppointmentResponse::of)
                 .toList();
     }

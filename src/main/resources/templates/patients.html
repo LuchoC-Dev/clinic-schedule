@@ -16,11 +16,12 @@
 
     <p th:if="${patients.isEmpty()}" class="muted">No hay pacientes que coincidan.</p>
     <table th:unless="${patients.isEmpty()}">
-        <thead><tr><th>Nombre</th><th>Documento</th></tr></thead>
+        <thead><tr><th>Nombre</th><th>Documento</th><th></th></tr></thead>
         <tbody>
         <tr th:each="p : ${patients}">
             <td th:text="${p.fullName}">Ana Pérez</td>
             <td th:text="${p.document} ?: '—'">DNI 30111222</td>
+            <td><a th:href="@{/agenda/patients/{id}(id=${p.id})}">Ver turnos</a></td>
         </tr>
         </tbody>
     </table>

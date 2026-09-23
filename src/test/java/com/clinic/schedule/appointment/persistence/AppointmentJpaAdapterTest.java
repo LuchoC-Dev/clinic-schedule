@@ -166,4 +166,50 @@ class AppointmentJpaAdapterTest {
         assertThat(appointments.findBookedForPractitionerOn(arias, DAY)).hasSize(1);
         assertThat(appointments.findBookedForPractitionerOn(arias, DAY.plusDays(1))).hasSize(1);
     }
+
+    @Test
+    void aSpanOfDaysIncludesTheWholeOfItsLastDay() {
+        LocalDate sunday = DAY.plusDays(5);
+        Appointment first = appointment(ana, arias, DAY.atStartOfDay(), 30, null);
+        Appointment last = appointment(ana, arias, sunday.atTime(23, 30), 30, null);
+        appointments.save(first);
+        appointments.save(last);
+        appointments.save(appointment(ana, arias, DAY.minusDays(1).atTime(23, 30), 30, null));
+        appointments.save(appointment(ana, arias, sunday.plusDays(1).atStartOfDay(), 30, null));
+        appointments.save(appointment(ana, PractitionerId.newId(), TEN, 30, null));
+        flush();
+
+        assertThat(appointments.findBookedForPractitionerBetween(arias, DAY, sunday))
+                .extracting(Appointment::id)
+                .containsExactlyInAnyOrder(first.id(), last.id());
+    }
+
+    @Test
+    void readsEveryPractitionersBookedDaysWithoutCancelledOnes() {
+        Appointment ariasAtTen = appointment(ana, arias, TEN, 30, null);
+        Appointment someoneElseAtTen = appointment(PatientId.newId(), PractitionerId.newId(), TEN, 30, null);
+        appointments.save(ariasAtTen);
+        appointments.save(someoneElseAtTen);
+        appointments.save(appointment(PatientId.newId(), arias, TEN.plusHours(1), 30, null).cancelled());
+        appointments.save(appointment(ana, arias, TEN.plusDays(1), 30, null));
+        flush();
+
+        assertThat(appointments.findBookedBetween(DAY, DAY))
+                .extracting(Appointment::id)
+                .containsExactlyInAnyOrder(ariasAtTen.id(), someoneElseAtTen.id());
+    }
+
+    @Test
+    void readsEveryAppointmentOfThePatientCancelledOnesIncluded() {
+        Appointment booked = appointment(ana, arias, TEN, 30, null);
+        Appointment cancelled = appointment(ana, PractitionerId.newId(), TEN.minusMonths(2), 30, null).cancelled();
+        appointments.save(booked);
+        appointments.save(cancelled);
+        appointments.save(appointment(PatientId.newId(), arias, TEN.plusHours(1), 30, null));
+        flush();
+
+        assertThat(appointments.findAllForPatient(ana))
+                .extracting(Appointment::id)
+                .containsExactlyInAnyOrder(booked.id(), cancelled.id());
+    }
 }

@@ -4,7 +4,7 @@
 <body>
 <header th:replace="~{fragments :: header}"></header>
 <main>
-    <h1>Agenda del día</h1>
+    <h1>Agenda</h1>
     <div th:replace="~{fragments :: messages}"></div>
 
     <p th:if="${practitioners.isEmpty()}" class="muted">
@@ -14,12 +14,19 @@
     <form class="bar" method="get" th:action="@{/agenda}" th:unless="${practitioners.isEmpty()}">
         <label>Profesional
             <select name="practitionerId">
+                <option value="" th:unless="${readOnly}" th:selected="${everyone}">Todos</option>
                 <option th:each="p : ${practitioners}" th:value="${p.id}" th:text="${p.fullName}"
                         th:selected="${practitioner != null and p.id == practitioner.id}"></option>
             </select>
         </label>
         <label>Día
             <input type="date" name="date" th:value="${date}">
+        </label>
+        <label>Vista
+            <select name="view">
+                <option value="day" th:selected="${view == 'day'}">Día</option>
+                <option value="week" th:selected="${view == 'week'}">Semana</option>
+            </select>
         </label>
         <button type="submit">Ver</button>
         <a th:if="${practitioner != null and !readOnly}"
@@ -28,47 +35,77 @@
         </a>
     </form>
 
-    <p th:if="${practitioner != null and rows.isEmpty()}" class="muted">No hay turnos reservados para este día.</p>
+    <!-- Moving through days or weeks keeps the practitioner and the view. -->
+    <p class="bar" th:with="whose=${practitioner?.id}">
+        <a th:href="@{/agenda(practitionerId=${whose}, date=${previous}, view=${view})}"
+           th:text="${view == 'week'} ? '‹ Semana anterior' : '‹ Día anterior'">‹ Anterior</a>
+        <a th:href="@{/agenda(practitionerId=${whose}, date=${today}, view=${view})}">Hoy</a>
+        <a th:href="@{/agenda(practitionerId=${whose}, date=${next}, view=${view})}"
+           th:text="${view == 'week'} ? 'Semana siguiente ›' : 'Día siguiente ›'">Siguiente ›</a>
+    </p>
 
-    <table th:unless="${rows.isEmpty()}">
-        <thead>
-        <tr><th>Horario</th><th>Paciente</th><th>Razón</th><th>Estado</th><th th:unless="${readOnly}"></th></tr>
-        </thead>
-        <tbody>
-        <tr th:each="row : ${rows}">
-            <td th:text="${row.startsAt} + ' – ' + ${row.endsAt}">10:00 – 10:30</td>
-            <td>
-                <span th:text="${row.patient}">Ana Pérez</span>
-                <div class="muted" th:if="${row.note}" th:text="${row.note}"></div>
-            </td>
-            <td th:text="${row.reason}">consulta</td>
-            <td th:text="${row.state}">Reservado</td>
-            <td class="actions" th:unless="${readOnly}">
-                <form class="inline" method="post" th:unless="${row.checkedIn}"
-                      th:action="@{/agenda/appointments/{id}/check-in(id=${row.id})}">
-                    <input type="hidden" name="practitionerId" th:value="${practitioner.id}">
-                    <input type="hidden" name="date" th:value="${date}">
-                    <button type="submit" class="primary">Llegó</button>
-                </form>
-                <form class="inline" method="post" th:unless="${row.checkedIn or row.lateNotice}"
-                      th:action="@{/agenda/appointments/{id}/late-notice(id=${row.id})}">
-                    <input type="hidden" name="practitionerId" th:value="${practitioner.id}">
-                    <input type="hidden" name="date" th:value="${date}">
-                    <button type="submit">Avisó demora</button>
-                </form>
-                <a th:unless="${row.checkedIn}" th:href="@{/agenda/appointments/{id}/reschedule(id=${row.id})}">
-                    <button type="button">Mover</button>
-                </a>
-                <form class="inline" method="post"
-                      th:action="@{/agenda/appointments/{id}/cancel(id=${row.id})}">
-                    <input type="hidden" name="practitionerId" th:value="${practitioner.id}">
-                    <input type="hidden" name="date" th:value="${date}">
-                    <button type="submit" class="danger">Cancelar</button>
-                </form>
-            </td>
-        </tr>
-        </tbody>
-    </table>
+    <!-- Everyone's agenda has no single practitioner to book with, so it offers one button each. -->
+    <p class="bar" th:if="${everyone and !readOnly}">
+        <a th:each="p : ${practitioners}" th:href="@{/agenda/new(practitionerId=${p.id}, date=${date})}">
+            <button type="button" class="primary" th:text="'Nuevo turno con ' + ${p.fullName}">Nuevo turno</button>
+        </a>
+    </p>
+
+    <section th:each="day : ${days}">
+        <h2 th:text="${day.label}">martes 10/03</h2>
+        <p th:if="${day.rows.isEmpty()}" class="muted">No hay turnos reservados.</p>
+
+        <table th:unless="${day.rows.isEmpty()}">
+            <thead>
+            <tr>
+                <th>Horario</th>
+                <th th:if="${everyone}">Profesional</th>
+                <th>Paciente</th><th>Razón</th><th>Estado</th>
+                <th th:unless="${readOnly}"></th>
+            </tr>
+            </thead>
+            <tbody>
+            <tr th:each="row : ${day.rows}">
+                <td th:text="${row.startsAt} + ' – ' + ${row.endsAt}">10:00 – 10:30</td>
+                <td th:if="${everyone}" th:text="${row.practitioner}">Dra. Laura Arias</td>
+                <td>
+                    <span th:if="${readOnly}" th:text="${row.patient}">Ana Pérez</span>
+                    <a th:unless="${readOnly}" th:href="@{/agenda/patients/{id}(id=${row.patientId})}"
+                       th:text="${row.patient}">Ana Pérez</a>
+                    <div class="muted" th:if="${row.note}" th:text="${row.note}"></div>
+                </td>
+                <td th:text="${row.reason}">consulta</td>
+                <td th:text="${row.state}">Reservado</td>
+                <td class="actions" th:unless="${readOnly}">
+                    <form class="inline" method="post" th:unless="${row.checkedIn}"
+                          th:action="@{/agenda/appointments/{id}/check-in(id=${row.id})}">
+                        <input type="hidden" name="practitionerId" th:value="${practitioner?.id}">
+                        <input type="hidden" name="date" th:value="${date}">
+                        <input type="hidden" name="view" th:value="${view}">
+                        <button type="submit" class="primary">Llegó</button>
+                    </form>
+                    <form class="inline" method="post" th:unless="${row.checkedIn or row.lateNotice}"
+                          th:action="@{/agenda/appointments/{id}/late-notice(id=${row.id})}">
+                        <input type="hidden" name="practitionerId" th:value="${practitioner?.id}">
+                        <input type="hidden" name="date" th:value="${date}">
+                        <input type="hidden" name="view" th:value="${view}">
+                        <button type="submit">Avisó demora</button>
+                    </form>
+                    <a th:unless="${row.checkedIn}" th:href="@{/agenda/appointments/{id}/reschedule(id=${row.id})}">
+                        <button type="button">Mover</button>
+                    </a>
+                    <form class="inline" method="post"
+                          th:action="@{/agenda/appointments/{id}/cancel(id=${row.id})}">
+                        <input type="hidden" name="practitionerId" th:value="${practitioner?.id}">
+                        <input type="hidden" name="date" th:value="${date}">
+                        <input type="hidden" name="view" th:value="${view}">
+                        <button type="submit" class="danger">Cancelar</button>
+                    </form>
+                </td>
+            </tr>
+            </tbody>
+        </table>
+    </section>
 </main>
 </body>
 </html>

@@ -150,6 +150,25 @@ class SecurityTest {
 
     @Test
     @WithUserDetails("arias")
+    void aPractitionerAskingForEveryonesWeekGetsTheirOwn() throws Exception {
+        book(JUAN, BENITEZ, BENITEZ_CONSULTA, "16:00:00");
+
+        mockMvc.perform(get("/agenda").param("date", DAY).param("view", "week"))
+                .andExpect(status().isOk())
+                .andExpect(content().string(containsString("Dra. Laura Arias")))
+                .andExpect(content().string(not(containsString("Dr. Martín Benítez"))))
+                .andExpect(content().string(not(containsString(">Todos<"))))
+                .andExpect(content().string(not(containsString("Juan Gómez"))));
+    }
+
+    @Test
+    @WithUserDetails("arias")
+    void aPractitionerMayNotReadAPatientsAppointments() throws Exception {
+        mockMvc.perform(get("/agenda/patients/" + ANA)).andExpect(status().isForbidden());
+    }
+
+    @Test
+    @WithUserDetails("arias")
     void aPractitionerMayNotOpenThePatientsScreen() throws Exception {
         mockMvc.perform(get("/patients")).andExpect(status().isForbidden());
     }

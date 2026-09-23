@@ -849,7 +849,7 @@ context asks for manual handling).
 ---
 
 ## D-33 — The screens
-**Date:** 2026-09-23 · **Status:** accepted
+**Date:** 2026-09-23 · **Status:** accepted; "no JavaScript" relaxed by D-36
 
 Applies D-02. Four screens for reception, in Spanish (D-13): the agenda of a practitioner's day,
 booking, moving an appointment, and patients. On the agenda, the day's operations are buttons:
@@ -923,3 +923,109 @@ in v1 (D-04).
 
 The tests authenticate as reception with `@WithMockUser`, and use the seeded users where the
 difference between roles is what is being tested.
+
+---
+
+## D-35 — More ways to read the agenda, and a booking screen that keeps what was chosen
+**Date:** 2026-09-23 · **Status:** accepted
+
+Asked for after v1, once reception used the screens.
+
+**The booking screen lost what was chosen.** The patient search and the booking were two
+separate forms. Searching a patient after choosing a time lost the time, and typing a name and
+pressing "Reservar" sent no patient, so booking always answered "Elegí un paciente y un
+horario", however the screen had been filled in. It is now **one form with two buttons**:
+"Actualizar" posts everything and is redirected back to the screen with it all still chosen;
+"Reservar" books. The refresh goes through a POST and a redirect rather than a GET button so
+the CSRF token never ends up in a URL. A search with a single match chooses that patient, and a
+refusal names what is missing ("Elegí un paciente.") instead of listing everything.
+
+**Four views instead of one.**
+
+- *Moving through days*: previous, today and next, keeping the practitioner and the view.
+- *Everyone's day*: without a practitioner, the agenda shows every practitioner's
+  appointments with a column saying whose each one is. It is now what the agenda opens on,
+  so it offers a "Nuevo turno" button per practitioner — the first version showed none there,
+  and booking looked impossible.
+- *A practitioner's week*, Monday to Sunday, a day at a time, empty days included.
+- *A patient's appointments*, cancelled ones included, the most recent first, linked from the
+  patients screen and from each patient on the agenda.
+
+**One use case for the agenda, over a span.** `ViewDayAgendaUseCase` became
+`ViewAgendaUseCase`, which takes an optional practitioner and a first and last day. A day is a
+span of one; everyone's is no practitioner. One use case keeps the access rule of D-04 in a
+single place: a practitioner still gets their own agenda, whether they ask for someone else's
+or for everyone's. The storage port gained two range reads; the daily reads that booking uses
+are untouched.
+
+**A patient's appointments are a use case of their own**, `ViewPatientAppointmentsUseCase`,
+since they cross practitioners and include what was cancelled. Only reception reaches them,
+decided by route (D-34): there is no "whose" question, because reception reads every patient.
+The screen lives in the appointment module, which owns the data; the patients screen only
+links to it. **This is not the patient file** of the planned evolution: it is the list of
+appointments, which the file will contain along with much more.
+
+**The REST API is unchanged.** `GET /api/appointments` still takes one practitioner and one
+day. Nothing that consumes the API needs a span or everyone's agenda yet (D-14); widening the
+endpoint is a small change when the single-page application asks for it.
+
+*Rejected:* a separate use case per view (the access rule repeated in three places); the
+agenda of everyone as a loop over practitioners in the controller (a query per practitioner,
+and a rule in a screen); a `formmethod="get"` refresh button (puts the CSRF token in the URL).
+
+---
+
+## D-36 — A few lines of JavaScript on the booking screen
+**Date:** 2026-09-23 · **Status:** accepted
+
+Relaxes the "no JavaScript" of D-33, for the booking screen only.
+
+Without JavaScript the server learns about a new day or a new reason only when the form is
+sent, so reception chose a reason and saw no times until pressing "Actualizar" — or
+"Reservar", which then complained. Reception reported it as a bug, and from their chair it is
+one.
+
+- Changing the **day** or the **reason** presses "Actualizar" by itself: a `change` listener
+  over the fields marked `data-refresh`, five lines inline, no library.
+- The **patient search** refreshes on Enter, which the form already did, and not on leaving the
+  field: a blur that refreshed would race a click on "Reservar".
+- The **first reason comes chosen**, so the free times show as the screen opens. Reasons are
+  listed alphabetically, so it is the first by name, not necessarily "consulta".
+- Without JavaScript everything still works through the button.
+
+*Rejected:* searching while typing (a fetch per keystroke and a new route returning patients,
+more than the problem asks for); no JavaScript at all (the reported problem stays).
+
+---
+
+## D-37 — Booking a new patient from the booking screen
+**Date:** 2026-09-23 · **Status:** accepted
+
+A walk-in who has never been to the practice had to be registered on the patients screen first,
+then searched on the booking screen. The booking screen now takes a new patient's name and
+optional document, and "Reservar" registers them and books.
+
+**Two operations, two transactions, for now.** The screen calls `PatientWriter.register`, a new
+interface in `patient/api` (kept apart from `PatientReader` because it writes, like
+`TimeOffWriter`), and then the booking use case. If the booking is refused — the time was
+taken — the patient stays registered and the screen comes back with them chosen, so trying
+another time does not register them twice. Registering and booking in one transaction, where
+a refused booking leaves no patient behind, is **postponed**: it needs a use case in
+`appointment` with a port towards `PatientWriter`, and the two-step version is enough to use
+the screen today.
+
+**Refusals cross the module boundary as the api's own exception.**
+`PatientRegistrationRefusedException` carries a reason — duplicate document, incomplete
+document, invalid data — so the screen can say what to fix without importing the patient
+module's exceptions (D-24). `PatientReader.documentTypes()` lets the screen offer the kinds of
+document without the enum leaving its package.
+
+**A document that already exists is refused, not reused.** Reception is told the document
+belongs to someone else and to pick them in the search. Silently booking that patient would be
+wrong whenever the name typed does not match.
+
+**A patient picked in the search and a new one typed in at once are refused**: which one was
+meant cannot be told.
+
+*Rejected:* redirecting to the patients screen and back (two screens for one task, the problem
+reported); reusing the patient an existing document belongs to (a typo books someone else).

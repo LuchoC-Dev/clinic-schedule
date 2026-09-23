@@ -41,9 +41,10 @@ removes (D-34).
 
 ## Using it
 
-**Screens** — open http://localhost:8080 and log in. Reception gets the agenda of the day with
-the day's operations as buttons (*Llegó*, *Avisó demora*, *Mover*, *Cancelar*), a booking
-screen that suggests the free times, and a patients screen. A practitioner gets their own
+**Screens** — open http://localhost:8080 and log in. Reception gets the agenda — a day or a
+week, of one practitioner or everyone — with the day's operations as buttons (*Llegó*,
+*Avisó demora*, *Mover*, *Cancelar*), a booking screen that suggests the free times, a patients
+screen, and each patient's appointments, cancelled ones included. A practitioner gets their own
 agenda, read-only. The screens are in Spanish, for the staff.
 
 **API** — basic authentication on every request. Errors share one body:
