@@ -1116,3 +1116,22 @@ practitioner who asks for no one (their home page would fail); a 404 hiding that
 exists (the practitioners of a practice know each other; there is nothing to hide, only to
 refuse).
 
+---
+
+## D-40 — Line endings fixed by the repository
+**Date:** 2026-09-23 · **Status:** accepted
+
+A `.gitattributes` makes every text file LF, in the repository and in the working tree, except
+the Windows scripts (`*.cmd`, `*.bat`), which `cmd.exe` expects with CRLF.
+
+The repository already stored LF, but what a checkout wrote depended on each machine's
+`core.autocrlf`: on this one, `true`, so files rewritten by git came out CRLF while files written
+by the tools stayed LF, and every commit warned that "LF will be replaced by CRLF". Settings
+travel with the repository now, so another machine or a CI runner sees the same files.
+
+It was postponed until the repository was used elsewhere; the warning on every commit was reason
+enough to do it now.
+
+*Rejected:* CRLF in the working tree on Windows (`eol` left to the platform — the mixed state this
+replaces); changing `core.autocrlf` on this machine (fixes one machine, not the repository).
+

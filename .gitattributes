@@ -1,0 +1,8 @@
+# Line endings are fixed by the repository, not left to each machine's git settings (D-40).
+
+# Every text file is LF, in the repository and in the working tree...
+* text=auto eol=lf
+
+# ...except the Windows scripts, which cmd.exe expects with CRLF.
+*.cmd text eol=crlf
+*.bat text eol=crlf

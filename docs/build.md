@@ -285,6 +285,12 @@ malformed JSON, a malformed id and a missing parameter answer in the usual error
 Arias got 200 for her own agenda and 403 for Dr. Benítez's, both on the API and on the screen,
 and her agenda screen with no one asked for still opened on her own.
 
+### After v1: line endings `[x]`
+- [x] `.gitattributes`: LF for every text file, CRLF for the Windows scripts (D-40)
+
+**Verified with:** `git ls-files --eol` showing LF in the index and the working tree for every
+file but `mvnw.cmd`, and a commit without the "LF will be replaced by CRLF" warnings.
+
 ---
 
 ## Explicitly postponed
@@ -296,8 +302,6 @@ These are not oversights: they are decided and waiting for their moment.
   H2 cannot express (see D-21).
 - **ArchUnit** enforcing the module boundaries (see D-05).
 - A user administration screen (see D-04).
-- A `.gitattributes` pinning line endings, once the repository is used from another machine
-  or from CI.
 - Registering a new patient and booking them in **one transaction** from the booking screen;
   today they are two, and a refused booking leaves the patient registered (see D-37).
 
