@@ -18,6 +18,7 @@ import com.clinic.schedule.appointment.application.BookAppointmentUseCase;
 import com.clinic.schedule.appointment.application.CancelAppointmentUseCase;
 import com.clinic.schedule.appointment.application.OutsideWorkingHoursException;
 import com.clinic.schedule.appointment.application.RescheduleAppointmentUseCase;
+import com.clinic.schedule.appointment.application.UnknownPatientException;
 import com.clinic.schedule.appointment.domain.Appointment;
 import com.clinic.schedule.appointment.domain.AppointmentId;
 import com.clinic.schedule.appointment.domain.AppointmentStatus;
@@ -57,14 +58,18 @@ class AppointmentFlowTest {
     private ObjectMapper json;
 
     private PractitionerFixture fixture;
+    private PatientFixture patients;
 
     @BeforeEach
     void setUp() {
         fixture = new PractitionerFixture(mockMvc, json);
+        patients = new PatientFixture(mockMvc, json);
     }
 
-    private BookAppointmentUseCase.Command consulta(CreatedPractitioner practitioner, LocalDateTime startsAt) {
-        return new BookAppointmentUseCase.Command(AppointmentId.newId(), PatientId.newId(),
+    /** A consulta for a newly registered patient, so no two bookings share a patient. */
+    private BookAppointmentUseCase.Command consulta(CreatedPractitioner practitioner, LocalDateTime startsAt)
+            throws Exception {
+        return new BookAppointmentUseCase.Command(AppointmentId.newId(), new PatientId(patients.newPatient()),
                 new PractitionerId(practitioner.id()), practitioner.consulta(), startsAt, null);
     }
 
@@ -72,8 +77,8 @@ class AppointmentFlowTest {
     void booksWithTheDurationConfiguredForTheReason() throws Exception {
         CreatedPractitioner arias = fixture.workingEveryDay();
 
-        Appointment booked = book.handle(new BookAppointmentUseCase.Command(AppointmentId.newId(), PatientId.newId(),
-                new PractitionerId(arias.id()), arias.ecografia(), TEN, null));
+        Appointment booked = book.handle(new BookAppointmentUseCase.Command(AppointmentId.newId(),
+                new PatientId(patients.newPatient()), new PractitionerId(arias.id()), arias.ecografia(), TEN, null));
 
         assertThat(booked.slot()).isEqualTo(TimeSlot.of(TEN, 45));
         assertThat(booked.reason()).isEqualTo("ecografia");
@@ -83,25 +88,38 @@ class AppointmentFlowTest {
     void refusesToBookOverAnAppointmentAlreadyInTheDatabase() throws Exception {
         CreatedPractitioner arias = fixture.workingEveryDay();
         book.handle(consulta(arias, TEN));
+        BookAppointmentUseCase.Command overlapping = consulta(arias, TEN.plusMinutes(15));
 
-        assertThatThrownBy(() -> book.handle(consulta(arias, TEN.plusMinutes(15))))
+        assertThatThrownBy(() -> book.handle(overlapping))
                 .isInstanceOf(PractitionerAlreadyBookedException.class);
+    }
+
+    @Test
+    void refusesToBookAPatientWhoIsNotRegistered() throws Exception {
+        CreatedPractitioner arias = fixture.workingEveryDay();
+        BookAppointmentUseCase.Command forAStranger = new BookAppointmentUseCase.Command(AppointmentId.newId(),
+                PatientId.newId(), new PractitionerId(arias.id()), arias.consulta(), TEN, null);
+
+        assertThatThrownBy(() -> book.handle(forAStranger))
+                .isInstanceOf(UnknownPatientException.class);
     }
 
     @Test
     void refusesToBookDuringTheLunchBreak() throws Exception {
         CreatedPractitioner arias = fixture.workingTuesdaysWithALunchBreak();
-
         // 12:45-13:15 starts in the morning stretch and ends in the break.
-        assertThatThrownBy(() -> book.handle(consulta(arias, TEN.withHour(12).withMinute(45))))
+        BookAppointmentUseCase.Command acrossTheBreak = consulta(arias, TEN.withHour(12).withMinute(45));
+
+        assertThatThrownBy(() -> book.handle(acrossTheBreak))
                 .isInstanceOf(OutsideWorkingHoursException.class);
     }
 
     @Test
     void refusesToBookOnADayThePractitionerDoesNotWork() throws Exception {
         CreatedPractitioner arias = fixture.workingTuesdaysWithALunchBreak();
+        BookAppointmentUseCase.Command onWednesday = consulta(arias, TEN.plusDays(1));
 
-        assertThatThrownBy(() -> book.handle(consulta(arias, TEN.plusDays(1))))
+        assertThatThrownBy(() -> book.handle(onWednesday))
                 .isInstanceOf(OutsideWorkingHoursException.class);
     }
 

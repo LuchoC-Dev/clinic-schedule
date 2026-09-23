@@ -19,14 +19,15 @@ import com.clinic.schedule.appointment.domain.TimeSlot;
  * Books an appointment:
  *
  * <ol>
+ *   <li>check that the patient is registered;</li>
  *   <li>look up how long the reason takes with this practitioner;</li>
  *   <li>check that the practitioner works for the whole slot;</li>
  *   <li>read what could collide, and let the domain decide;</li>
  *   <li>store the result.</li>
  * </ol>
  *
- * <p>The first two are the practitioner module's answers (D-08); the domain only ever sees
- * a start and a duration, and never learns what the reason means.
+ * <p>The first three are other modules' answers (D-08, D-29); the domain only ever sees a
+ * start and a duration, and never learns what the reason means.
  *
  * <p>Retrying is safe. An id that already exists means this request already went through,
  * so the existing appointment is returned instead of booking a second one (D-19).
@@ -38,13 +39,15 @@ import com.clinic.schedule.appointment.domain.TimeSlot;
 public class BookAppointmentUseCase {
 
     private final AppointmentRepository appointments;
+    private final PatientRegistryPort patients;
     private final PractitionerSchedulePort practitioners;
     private final BookingService bookingService;
     private final AgendaReader agenda;
 
-    public BookAppointmentUseCase(AppointmentRepository appointments, PractitionerSchedulePort practitioners,
-            BookingService bookingService) {
+    public BookAppointmentUseCase(AppointmentRepository appointments, PatientRegistryPort patients,
+            PractitionerSchedulePort practitioners, BookingService bookingService) {
         this.appointments = appointments;
+        this.patients = patients;
         this.practitioners = practitioners;
         this.bookingService = bookingService;
         this.agenda = new AgendaReader(appointments);
@@ -55,6 +58,10 @@ public class BookAppointmentUseCase {
         Optional<Appointment> alreadyBooked = appointments.findById(command.id());
         if (alreadyBooked.isPresent()) {
             return alreadyBooked.get();
+        }
+
+        if (!patients.exists(command.patientId())) {
+            throw new UnknownPatientException(command.patientId());
         }
 
         BookableReason reason = practitioners.findReason(command.practitionerId(), command.reasonId())

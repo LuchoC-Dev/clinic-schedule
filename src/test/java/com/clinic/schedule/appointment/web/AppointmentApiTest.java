@@ -18,6 +18,7 @@ import org.springframework.http.MediaType;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.MvcResult;
 
+import com.clinic.schedule.appointment.PatientFixture;
 import com.clinic.schedule.appointment.PractitionerFixture;
 import com.clinic.schedule.appointment.PractitionerFixture.CreatedPractitioner;
 import com.fasterxml.jackson.databind.JsonNode;
@@ -45,16 +46,23 @@ class AppointmentApiTest {
     private ObjectMapper json;
 
     private PractitionerFixture fixture;
+    private PatientFixture patients;
 
     @BeforeEach
     void setUp() {
         fixture = new PractitionerFixture(mockMvc, json);
+        patients = new PatientFixture(mockMvc, json);
     }
 
-    private String bookingBody(UUID practitionerId, UUID reasonId, String startsAt) {
+    /** A booking for a newly registered patient, so no two bookings share a patient. */
+    private String bookingBody(UUID practitionerId, UUID reasonId, String startsAt) throws Exception {
+        return bookingBody(patients.newPatient(), practitionerId, reasonId, startsAt);
+    }
+
+    private String bookingBody(UUID patientId, UUID practitionerId, UUID reasonId, String startsAt) {
         return """
                 {"patientId": "%s", "practitionerId": "%s", "reasonId": "%s", "startsAt": "%s"}
-                """.formatted(UUID.randomUUID(), practitionerId, reasonId, startsAt);
+                """.formatted(patientId, practitionerId, reasonId, startsAt);
     }
 
     private JsonNode bookSuccessfully(CreatedPractitioner practitioner, String startsAt) throws Exception {
@@ -133,6 +141,18 @@ class AppointmentApiTest {
     }
 
     @Test
+    void anUnregisteredPatientAnswers400() throws Exception {
+        CreatedPractitioner arias = fixture.workingEveryDay();
+
+        mockMvc.perform(post("/api/appointments")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(bookingBody(UUID.randomUUID(), arias.id(), arias.consulta(), TEN)))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.message").value(
+                        org.hamcrest.Matchers.containsString("no registered patient")));
+    }
+
+    @Test
     void aReasonThePractitionerDoesNotHaveAnswers400() throws Exception {
         CreatedPractitioner arias = fixture.workingEveryDay();
         CreatedPractitioner benitez = fixture.workingEveryDay();
@@ -163,7 +183,7 @@ class AppointmentApiTest {
         UUID id = UUID.randomUUID();
         String body = """
                 {"id": "%s", "patientId": "%s", "practitionerId": "%s", "reasonId": "%s", "startsAt": "%s"}
-                """.formatted(id, UUID.randomUUID(), arias.id(), arias.consulta(), TEN);
+                """.formatted(id, patients.newPatient(), arias.id(), arias.consulta(), TEN);
 
         mockMvc.perform(post("/api/appointments").contentType(MediaType.APPLICATION_JSON).content(body))
                 .andExpect(status().isCreated())

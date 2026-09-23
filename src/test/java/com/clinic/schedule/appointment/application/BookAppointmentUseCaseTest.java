@@ -26,9 +26,15 @@ class BookAppointmentUseCaseTest {
     private static final PractitionerId BENITEZ = PractitionerId.newId();
 
     private final InMemoryAppointmentRepository appointments = new InMemoryAppointmentRepository();
+    private final FakePatientRegistry patients = new FakePatientRegistry();
     private final FakePractitionerSchedule practitioners = new FakePractitionerSchedule();
     private final BookAppointmentUseCase useCase =
-            new BookAppointmentUseCase(appointments, practitioners, new BookingService());
+            new BookAppointmentUseCase(appointments, patients, practitioners, new BookingService());
+
+    {
+        patients.register(ANA);
+        patients.register(LUIS);
+    }
 
     private final UUID ariasConsulta = practitioners.givenReason(ARIAS, "consulta", 30);
     private final UUID benitezConsulta = practitioners.givenReason(BENITEZ, "consulta", 30);
@@ -60,6 +66,16 @@ class BookAppointmentUseCaseTest {
 
         assertThat(booked.slot()).isEqualTo(TimeSlot.of(TEN, 45));
         assertThat(booked.reason()).isEqualTo("ecografia");
+    }
+
+    @Test
+    void anUnregisteredPatientIsRejectedAndNothingIsStored() {
+        PatientId stranger = PatientId.newId();
+
+        assertThatThrownBy(() -> useCase.handle(withArias(stranger, 0)))
+                .isInstanceOf(UnknownPatientException.class);
+
+        assertThat(appointments.storedCount()).isZero();
     }
 
     @Test

@@ -6,6 +6,7 @@ import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 
 import com.clinic.schedule.appointment.application.AppointmentNotFoundException;
+import com.clinic.schedule.appointment.application.UnknownPatientException;
 import com.clinic.schedule.appointment.application.UnknownReasonException;
 import com.clinic.schedule.appointment.domain.BookingRuleViolationException;
 import com.clinic.schedule.shared.web.ErrorResponse;
@@ -28,9 +29,9 @@ class AppointmentExceptionHandler {
                 .body(ErrorResponse.of(404, "Not found", e.getMessage()));
     }
 
-    /** The request names a reason this practitioner does not have. */
-    @ExceptionHandler(UnknownReasonException.class)
-    ResponseEntity<ErrorResponse> unknownReason(UnknownReasonException e) {
+    /** The request names a patient who is not registered, or a reason the practitioner lacks. */
+    @ExceptionHandler({UnknownPatientException.class, UnknownReasonException.class})
+    ResponseEntity<ErrorResponse> unknownReference(RuntimeException e) {
         return ResponseEntity.badRequest()
                 .body(ErrorResponse.of(400, "Bad request", e.getMessage()));
     }

@@ -111,8 +111,21 @@ patients with no national ID, two patients sharing a name, a repeated national I
   spellings of the same document cannot both be stored.
 - No delete endpoint: a patient with appointments cannot disappear without taking history
   with them, and nothing in v1 asks for it.
-- No `api/` package yet. It appears when `appointment` uses it, which is the next step
-  (D-14).
+
+Connection with `appointment` (D-30):
+
+- [x] `patient/api/PatientReader.exists`, implemented by the package-private service
+- [x] `appointment` asks through `PatientRegistryPort`, answered by an adapter in
+      `appointment/external/`
+- [x] Booking an unregistered patient answers 400
+- [x] Appointment tests book with patients registered through the patient endpoints.
+      161 in total
+
+**Verified with the application running:** a made-up patient id answering 400 and a
+registered patient booked with 201.
+
+No foreign key from `appointment` to `patient`: each module owns its tables, and the reference
+is checked through the api (D-30).
 
 ### `practitioner` module `[x]`
 

@@ -7,9 +7,12 @@ import java.util.UUID;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import com.clinic.schedule.patient.api.PatientReader;
+
 /**
- * Registering and finding patients. Package-private: nothing outside the module reaches it,
- * which is what keeps the module's surface down to its {@code api/} (D-24).
+ * Registering and finding patients, and answering other modules through
+ * {@link PatientReader}. The class is package-private, so other modules reach it only as that
+ * interface, whose method is public because the interface requires it (D-24).
  *
  * <p>The document is checked here before saving so the answer is a clear 409 instead of a
  * constraint violation, but the constraint in the database is the one that actually
@@ -19,7 +22,7 @@ import org.springframework.transaction.annotation.Transactional;
  * where Hibernate would write the change by itself (D-27).
  */
 @Service
-class PatientService {
+class PatientService implements PatientReader {
 
     private final PatientRepository patients;
 
@@ -62,6 +65,12 @@ class PatientService {
         }
         String term = query.strip();
         return patients.findByFullNameContainingIgnoreCaseOrDocumentNumberContainingOrderByFullNameAsc(term, term);
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public boolean exists(UUID patientId) {
+        return patients.existsById(patientId);
     }
 
     private void requireDocumentIsFree(IdentityDocument document) {

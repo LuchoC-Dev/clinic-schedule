@@ -1,8 +1,9 @@
 -- Appointments. Ids are uuid because they are assigned when the appointment is created and
 -- not by the database (D-19); both H2 and PostgreSQL support the type natively.
 --
--- patient_id and practitioner_id have no foreign key yet: those modules do not exist. The
--- keys are added by the migrations that create their tables.
+-- patient_id and practitioner_id have no foreign key, on purpose: they point at tables owned
+-- by other modules. Each module owns its tables, and the reference is checked through the
+-- other module's api when booking (D-30).
 --
 -- The slot is stored as a start plus a duration in minutes, mirroring the domain. There is
 -- no stored end time, which is why overlap is decided in the domain over a day's worth of

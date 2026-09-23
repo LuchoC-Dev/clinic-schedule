@@ -720,3 +720,39 @@ in-memory `FakePractitionerSchedule`, where a practitioner works at any time unl
 narrows it. The integration tests create practitioners through the practitioner module's
 public endpoints with a `PractitionerFixture`, staying out of its internals the same way the
 code does.
+
+---
+
+## D-30 — Booking checks the patient; no foreign keys across modules
+**Date:** 2026-09-23 · **Status:** accepted
+
+**The patient is checked when booking.** `patient` exposes `PatientReader.exists` in its
+`api/`, and `appointment` asks through its own `PatientRegistryPort`, answered by an adapter in
+`appointment/external/` — the same shape as the practitioner connection (D-29). An
+unregistered patient is a 400: the request names someone who cannot be booked, and reception
+registers them first. It is checked first, before the reason and the hours, because it is the
+most basic thing that can be wrong.
+
+`PatientReader` offers only `exists`. When the patient file needs names and documents, that is
+where they are added (D-14).
+
+Rescheduling and cancelling do not check the patient again: the appointment already exists,
+and it could only have been booked for a registered patient.
+
+**No foreign keys from `appointment` to `patient` or `practitioner`.** The comment in
+`V1__appointment.sql` said they would be added once those tables existed; that is withdrawn.
+
+- Each module owns its tables. A foreign key across modules couples their schemas the way D-05
+  forbids coupling their code: `patient` could no longer change or move its table without
+  touching `appointment`'s.
+- The reference is already checked through the other module's api, inside the booking
+  transaction.
+- Nothing deletes a patient or a practitioner (see D-26 and D-28), so an existing reference
+  cannot become dangling later.
+
+The accepted risk is that the database itself does not guarantee the reference; a row written
+by hand, bypassing the application, could point nowhere. That is the same trade as the one in
+D-15 for `restore`.
+
+*Rejected:* cross-module foreign keys (couple the modules' schemas); checking the patient in
+the domain (the domain does not know patients, only their id).
