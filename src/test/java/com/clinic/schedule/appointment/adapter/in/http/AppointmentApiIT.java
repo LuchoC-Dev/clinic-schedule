@@ -36,7 +36,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 @SpringBootTest
 @AutoConfigureMockMvc
 @WithMockUser(roles = "RECEPTION")
-class AppointmentApiTest {
+class AppointmentApiIT {
 
     /** A Tuesday. */
     private static final String DAY = "2026-03-10";

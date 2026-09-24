@@ -28,7 +28,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 @SpringBootTest
 @AutoConfigureMockMvc
 @WithMockUser(roles = "RECEPTION")
-class PractitionerApiTest {
+class PractitionerApiIT {
 
     @Autowired
     private MockMvc mockMvc;

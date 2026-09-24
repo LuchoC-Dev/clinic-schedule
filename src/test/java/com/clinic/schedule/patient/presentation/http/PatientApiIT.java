@@ -35,7 +35,7 @@ import com.clinic.schedule.patient.entity.DocumentType;
 @SpringBootTest
 @AutoConfigureMockMvc
 @WithMockUser(roles = "RECEPTION")
-class PatientApiTest {
+class PatientApiIT {
 
     private static final AtomicInteger NUMBERS = new AtomicInteger(30_000_000);
 

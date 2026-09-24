@@ -23,7 +23,7 @@ import org.springframework.test.web.servlet.MockMvc;
 @SpringBootTest
 @AutoConfigureMockMvc
 @WithMockUser(roles = "RECEPTION")
-class PatientViewTest {
+class PatientViewIT {
 
     @Autowired
     private MockMvc mockMvc;

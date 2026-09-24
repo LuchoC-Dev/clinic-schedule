@@ -15,7 +15,7 @@ Read these before proposing design or code:
 ## Stack
 
 Maven · Java 21 · Spring Boot 3.5 · Spring Security · Spring Data JPA · Flyway ·
-H2 (PostgreSQL mode) · Thymeleaf.
+PostgreSQL 18 (docker-compose) · Thymeleaf. The integration tests run on H2 in PostgreSQL mode.
 
 `JAVA_HOME` must point at JDK 21: this machine defaults to JDK 25. See `README.md`.
 
@@ -57,13 +57,16 @@ H2 (PostgreSQL mode) · Thymeleaf.
 - **Transactions (D-27).** `@Transactional` on each method, never on the class:
   `@Transactional` for writes, `@Transactional(readOnly = true)` for reads. Every write calls
   `save()` explicitly, even when Hibernate's dirty checking would persist the change anyway.
-- **Nothing engine-specific.** Standard JPA and Flyway migrations in portable SQL, so
-  moving to PostgreSQL only means changing the datasource. Watch out for reserved words:
-  `user` is reserved, which is why the user table will be `app_user`.
+- **Nothing engine-specific, except where it has to be.** Standard JPA and Flyway migrations in
+  portable SQL in `db/migration`, which run on PostgreSQL and on the tests' H2 alike. What only
+  PostgreSQL can express goes in `db/vendor/postgresql` (D-44). Watch out for reserved words:
+  `user` is reserved, which is why the user table is `app_user`.
 - **Time (from stage 4 on):** the fixed time zone is `America/Argentina/Buenos_Aires`. Use
   the injected `Clock` bean, never `LocalDateTime.now()`, so the deadlines stay testable.
-- **Tests:** unit tests on the domain rules and `@SpringBootTest` on the key flows. Do not
-  add per-layer tests just to raise coverage.
+- **Tests (D-11, D-44):** unit tests (`*Test`, `mvnw test`) on the domain rules, with no Spring
+  and no database; integration tests (`*IT`, `mvnw verify`) on the key flows, on H2; and
+  `*PostgresIT` only for what PostgreSQL alone can answer, skipped without Docker. Do not add
+  per-layer tests just to raise coverage.
 - **Security (D-34).** What a role may reach is decided by route in `SecurityConfiguration`;
   whose data a user may see is decided in the use case, through a port answered by
   `security/api/CurrentUserReader`. Development users live in `db/seed`, never in

@@ -36,7 +36,7 @@ import org.springframework.test.web.servlet.MockMvc;
  */
 @SpringBootTest
 @AutoConfigureMockMvc
-class SecurityTest {
+class SecurityIT {
 
     private static final String ARIAS = "11111111-1111-1111-1111-111111111111";
     private static final String BENITEZ = "22222222-2222-2222-2222-222222222222";

@@ -20,15 +20,19 @@ in [`docs/context.md`](docs/context.md), every technical decision and its reason
   ```
 
 - Maven does not need to be installed: the repository ships the wrapper.
+- **Docker**, for the database.
 
 ```powershell
-.\mvnw test                # the whole suite
-.\mvnw spring-boot:run     # the application, on http://localhost:8080
+docker compose up -d        # PostgreSQL 18, with its data kept in a volume
+.\mvnw spring-boot:run      # the application, on http://localhost:8080
+.\mvnw test                 # unit tests: nothing needed, no database
+.\mvnw verify               # unit and integration tests: H2 in memory, no Docker needed;
+                            # the PostgreSQL tests run too when Docker is up, and are skipped otherwise
 ```
 
-The database is in-memory H2 in PostgreSQL mode, created by Flyway on every start and lost when
-the application stops. It starts with development data: two practitioners with their reasons
-and weeks, two patients, and these users.
+Flyway creates the schema on the first start, and the data stays between restarts;
+`docker compose down -v` wipes it. It starts with development data: two practitioners with their
+reasons and weeks, two patients, and these users.
 
 | User        | Password       | Role                                       |
 |-------------|----------------|--------------------------------------------|
@@ -106,6 +110,6 @@ repository is in English; on-screen text is in Spanish (D-13).
 
 ## Deliberately postponed
 
-PostgreSQL with `docker-compose`, which also makes the overlap check safe when two
-receptionists book the same slot at once (D-21); and a screen for practitioners' configuration and time off, which today is API-only. The
-planned evolution after v1 — patient file, arrival queue, web booking — is in the context.
+A screen for practitioners' configuration and time off, which today is API-only; time off over
+several days; user administration. The planned evolution after v1 — patient file, arrival queue,
+web booking — is in the context.

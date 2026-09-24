@@ -315,15 +315,29 @@ violation of it was planted: another module importing `PatientService`, a contro
 repository, a controller renaming a patient, and `security` holding the user entity. Logging in
 with the seeded users, by form and by basic authentication, goes through the user module.
 
+### After v1: PostgreSQL `[x]`
+- [x] PostgreSQL 18 with `docker-compose.yml`; the driver and `flyway-database-postgresql`; H2
+      kept for the integration tests only (D-44)
+- [x] `db/vendor/postgresql/V7`: exclusion constraints, no overlap per practitioner or per patient
+- [x] The persistence adapter flushes on save and answers a constraint refusal as the usual 409
+- [x] Unit tests (`*Test`, Surefire, `mvnw test`) apart from integration tests (`*IT`, Failsafe,
+      `mvnw verify`); ten integration tests renamed
+- [x] `AppointmentOverlapPostgresIT` with Testcontainers, skipped without Docker. 170 unit and
+      160 integration tests, 330 in total
+
+**Verified with:** `mvnw test` running the 170 unit tests with no database; `mvnw verify` running
+the 160 integration tests on H2 and the four PostgreSQL ones on a container. With the application
+on the docker-compose PostgreSQL: the eight migrations applied, both constraints present; a
+booking answered 201 and an overlap 409; ten simultaneous bookings of one slot left exactly one
+appointment, the other nine answered 409 and none 500; after a restart the data was still there
+and Flyway had nothing to migrate.
+
 ---
 
 ## Explicitly postponed
 
 These are not oversights: they are decided and waiting for their moment.
 
-- **PostgreSQL** replacing H2, with `docker-compose` (see D-03), which is also what makes
-  the overlap check safe under concurrency: an exclusion constraint over a time range, which
-  H2 cannot express (see D-21).
 - A user administration screen (see D-04); it has a module to land in since D-43.
 - A screen to configure practitioners — reasons and weekly hours — and to record time off;
   today both are done through the API (see D-33).

@@ -1,0 +1,16 @@
+# The application's database for development (D-44): `docker compose up -d`, then run the app.
+# The data lives in the named volume and survives restarts; `docker compose down -v` wipes it.
+services:
+  postgres:
+    image: postgres:18-alpine
+    environment:
+      POSTGRES_DB: schedule
+      POSTGRES_USER: schedule
+      POSTGRES_PASSWORD: schedule
+    ports:
+      - "5432:5432"
+    volumes:
+      - schedule-data:/var/lib/postgresql
+
+volumes:
+  schedule-data:

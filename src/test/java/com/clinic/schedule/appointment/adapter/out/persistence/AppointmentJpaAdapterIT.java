@@ -25,7 +25,7 @@ import com.clinic.schedule.appointment.domain.TimeSlot;
  */
 @DataJpaTest
 @Import(AppointmentJpaAdapter.class)
-class AppointmentJpaAdapterTest {
+class AppointmentJpaAdapterIT {
 
     private static final LocalDate DAY = LocalDate.of(2026, 3, 10);
     private static final LocalDateTime TEN = DAY.atTime(10, 0);

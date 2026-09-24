@@ -39,7 +39,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 @SpringBootTest
 @AutoConfigureMockMvc
 @WithMockUser(roles = "RECEPTION")
-class AppointmentFlowTest {
+class AppointmentFlowIT {
 
     /** A Tuesday. */
     private static final LocalDateTime TEN = LocalDateTime.of(2026, 3, 10, 10, 0);

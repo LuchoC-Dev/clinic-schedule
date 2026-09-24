@@ -2,12 +2,12 @@ spring:
   application:
     name: schedule
 
-  # H2 in PostgreSQL compatibility mode (D-03). Switching engines means changing this
-  # section plus the Flyway module of the new engine, nothing else.
+  # PostgreSQL, as started by docker-compose.yml (D-44). The integration tests replace it
+  # with H2 in PostgreSQL mode, in src/test/resources/application.properties.
   datasource:
-    url: jdbc:h2:mem:schedule;MODE=PostgreSQL;DATABASE_TO_LOWER=TRUE;CASE_INSENSITIVE_IDENTIFIERS=TRUE
-    username: sa
-    password:
+    url: jdbc:postgresql://localhost:5432/schedule
+    username: schedule
+    password: schedule
 
   jpa:
     open-in-view: false
@@ -17,9 +17,11 @@ spring:
 
   flyway:
     enabled: true
-    # db/migration is the schema, for every environment. db/seed is development data - users,
-    # practitioners, patients - and a real deployment removes it from this list (D-34).
-    locations: classpath:db/migration,classpath:db/seed
+    # db/migration is the schema, for every environment. db/vendor/{vendor} is what only one
+    # engine can express, such as PostgreSQL's exclusion constraints; Spring Boot puts the
+    # engine's name in {vendor} (D-44). db/seed is development data - users, practitioners,
+    # patients - and a real deployment removes it from this list (D-34).
+    locations: classpath:db/migration,classpath:db/vendor/{vendor},classpath:db/seed
 
 app:
   # The practice's fixed time zone (D-10).

@@ -33,7 +33,7 @@ in v1 (too much work, outside the focus).
 ---
 
 ## D-03 — H2 in PostgreSQL mode, with no coupling to the engine
-**Date:** 2026-09-22 · **Status:** accepted
+**Date:** 2026-09-22 · **Status:** applied on 2026-09-24: the application runs on PostgreSQL, H2 stays for the integration tests (D-44)
 
 We start on H2 so no infrastructure is required, but without tying ourselves to it:
 
@@ -169,7 +169,7 @@ time, which is stage 4 (D-14).
 ---
 
 ## D-11 — Tests: unit tests for the domain plus key integration flows
-**Date:** 2026-09-22 · **Status:** accepted
+**Date:** 2026-09-22 · **Status:** accepted; unit and integration tests run apart since D-44
 
 - Unit tests on the rules: overlap, duration lookup, cancellation deadlines.
 - `@SpringBootTest` on the key flows: book, reschedule, cancel, confirm check-in, record
@@ -458,7 +458,7 @@ and the aggregate refuses a second cancellation by itself.
 ---
 
 ## D-21 — One transaction per use case, opened by the use case
-**Date:** 2026-09-22 · **Status:** accepted
+**Date:** 2026-09-22 · **Status:** accepted; the concurrency limit it names is closed by D-44
 
 `@Transactional` sits on the use case, not on the adapter. Reading the agenda, deciding and
 storing have to be one step: an adapter that opened a transaction per call would let the
@@ -1290,4 +1290,49 @@ features that are coming a module to land in.
 
 *Rejected:* naming the rest `gateway` (the word usually means an API gateway, or an adapter to an
 external system; `security` says what it is); separating authentication from authorization.
+
+---
+
+## D-44 — PostgreSQL for the application, H2 for the integration tests, and the tests split
+**Date:** 2026-09-24 · **Status:** accepted
+
+Carries out what D-03 prepared and closes the limit D-21 named.
+
+**The application runs on PostgreSQL 18**, started by `docker-compose.yml` with a volume, so the
+data outlives a restart. The datasource in `application.yml` matches it. No production
+configuration yet: there is no deployment to configure (D-14).
+
+**The database refuses overlapping appointments itself.** Two receptionists booking the same slot
+at the same time could both find it free, since each read the agenda before the other wrote.
+`V7` adds two exclusion constraints over `[start, start + duration)` of booked appointments: one
+per practitioner, one per patient. The persistence adapter flushes on save, so a refusal
+surfaces inside it, and answers it as `PractitionerAlreadyBookedException` or
+`PatientAlreadyBookedException` — the client gets the same 409 whichever check caught it. The
+constraint's name is read from the driver's message, because Hibernate does not extract it for
+exclusion constraints. `btree_gist`, which lets the index compare uuids beside the range, ships
+with PostgreSQL; creating it takes a role allowed to create extensions.
+
+**What only one engine can express lives in `db/vendor/{vendor}`.** Spring Boot fills in the
+engine's name, so `V7` runs on PostgreSQL and not on H2. Everything else stays in portable SQL
+in `db/migration`, and D-03's rule holds for it.
+
+**Three kinds of test, run apart.** Tests that need nothing installed should not wait on anything
+that is:
+
+| Kind | Name | Runs on | Needs |
+|---|---|---|---|
+| Unit: domain, use cases with fakes, pure rules, architecture | `*Test` | `mvnw test` (Surefire) | nothing |
+| Integration: `@SpringBootTest`, `@DataJpaTest` | `*IT` | `mvnw verify` (Failsafe) | nothing — H2 in PostgreSQL mode |
+| PostgreSQL: what only PostgreSQL can answer | `*PostgresIT` | `mvnw verify` | Docker; skipped without it |
+
+The integration tests keep H2, as asked, so they run anywhere. The one thing H2 cannot answer is
+the exclusion constraint, so `AppointmentOverlapPostgresIT` checks it against a throwaway
+PostgreSQL started by Testcontainers. It stores overlapping appointments through the adapter,
+past the application's check — exactly what a race amounts to — which is deterministic where
+racing two threads would not be. It also runs every migration on a real PostgreSQL.
+
+*Rejected:* PostgreSQL for every integration test through Testcontainers (every test run would
+need Docker); leaving the constraint untested because H2 cannot run it (a rule in the database
+with nothing checking it); a pessimistic lock on the practitioner's day instead of the
+constraint (it serialises every booking of the day and still leaves the patient's rule open).
 
