@@ -136,7 +136,7 @@ its DTOs.
 ---
 
 ## D-09 — Integrity rules in the database as well
-**Date:** 2026-09-22 · **Status:** accepted
+**Date:** 2026-09-22 · **Status:** accepted; both points revised, see the note below
 
 On top of the validation in the service:
 
@@ -144,6 +144,16 @@ On top of the validation in the service:
 - An overlap check inside the booking transaction.
 
 With three or four practitioners, an elaborate locking scheme is not justified.
+
+**Revised.** Neither point was built as written:
+
+- *The partial unique index was not needed.* A plain unique constraint over the document's type
+  and number gives the same rule, because both H2 and PostgreSQL allow repeated nulls in a
+  unique constraint, and it keeps the SQL portable (D-03). The constraint covers the pair rather
+  than the number alone since the document became typed (D-26).
+- *The overlap check in the database is postponed to the move to PostgreSQL.* Checking inside
+  the booking transaction does not stop two concurrent bookings of the same slot; that takes an
+  exclusion constraint over a time range, which H2 cannot express (D-21).
 
 ---
 
@@ -186,7 +196,9 @@ variables, comments, table and column names, API error messages, test names, com
 messages and these documents.
 
 The exception is the text the staff of the practice reads on screen, which stays in
-**Spanish** — they work in Spanish. Today that is only `templates/login.html`.
+**Spanish** — they work in Spanish: the screens in `templates/`, and the refusals the screens
+show, translated from the English the API answers with (`ScreenMessages` and the patient
+screen, D-33).
 
 The API returns messages in English; translating them for the user belongs to the
 interface, which is where the future single-page applications will handle it.

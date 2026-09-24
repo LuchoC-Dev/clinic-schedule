@@ -324,7 +324,10 @@ These are not oversights: they are decided and waiting for their moment.
 - **PostgreSQL** replacing H2, with `docker-compose` (see D-03), which is also what makes
   the overlap check safe under concurrency: an exclusion constraint over a time range, which
   H2 cannot express (see D-21).
-- A user administration screen (see D-04).
+- A user administration screen (see D-04); it has a module to land in since D-43.
+- A screen to configure practitioners — reasons and weekly hours — and to record time off;
+  today both are done through the API (see D-33).
+- Time off over several days in one request; today it is recorded a day at a time (see D-32).
 - Registering a new patient and booking them in **one transaction** from the booking screen;
   today they are two, and a refused booking leaves the patient registered (see D-37).
 
