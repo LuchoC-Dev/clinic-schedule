@@ -366,6 +366,51 @@ listed "del vie 25/09/2026 al lun 28/09/2026"; a day already gone refused in Spa
 
 ---
 
+## v2 — The clinical record
+
+Scope in `docs/context.md`, section "Scope of v2". Delivered in parts; each one is usable on its
+own.
+
+### Part 1 — Consultations and the clinical record `[x]`
+- [x] `docs/context.md`: the v2 scope; two stale v1 passages fixed (the typed document, time off
+      of several days)
+- [x] `consultation` module, hexagonal (D-47): `Consultation` with free-text notes and typed
+      items (check, prescription, study order), immutable once sent; `V8__consultation.sql`
+- [x] `AttendancePort` answered through `appointment`'s first `api/`, `AppointmentReader`,
+      implemented by a driving adapter in `adapter/in/external` (D-48)
+- [x] `ClinicalRecordAccessPolicy`: a consultation within the access period, or a visit today;
+      the period in `app.clinical-record.access-period` (D-49)
+- [x] 403 for whatever one may not see, recorded as a rule for the whole application (D-50)
+- [x] `POST /api/consultations`, `GET /api/clinical-records/{patientId}`; the routes are the
+      practitioners' only (D-51)
+- [x] Screens: the record, and the consultation view with the form beside it; rows of items
+      without JavaScript, "Más renglones" for three more; the practitioner's agenda links today's
+      patients to their record and offers "Empezar consulta" once they arrived
+- [x] 16 unit and 20 integration tests. 194 unit and 204 integration tests, 398 in total
+
+**Verified with:** each access rule failing its tests when broken on purpose (everyone may read,
+recording before the arrival, any practitioner's appointment counting); `mvnw verify` with the
+PostgreSQL tests running V8 on a container.
+
+**Verified in a browser** against the application on a throwaway PostgreSQL: Dra. Arias's agenda
+linked both of today's patients to their record and offered "Empezar consulta" only for the one
+who had arrived; "Más renglones" brought the form back with eight rows and the notes kept; a row
+with only a kind was refused in Spanish, keeping it; the consultation with a check, a prescription
+and a study order was recorded and shown in the record; the patient not yet arrived opened the
+record but not the form. Dr. Benítez and reception got 403 on both screens and on the API.
+
+**Stage notes:**
+- The first run of the unit tests caught `List.of().contains(null)` throwing instead of answering:
+  the domain checks for missing items with a stream.
+- The browser caught "Más renglones" adding nothing when few rows were filled; it now adds three
+  to the rows on screen, and the integration test counts them.
+
+### Part 2 — Addenda `[ ]`
+### Part 3 — Checks whose result arrives later `[ ]`
+### Part 4 — Attachments `[ ]`
+
+---
+
 ## Explicitly postponed
 
 These are not oversights: they are decided and waiting for their moment.
@@ -376,5 +421,5 @@ These are not oversights: they are decided and waiting for their moment.
 
 ## Out of scope for v1
 
-See `docs/context.md`, section "Planned evolution": patient file, arrival queue, clinical
-history, attendance with more states, reminders, extra patient data and web booking.
+See `docs/context.md`, section "Planned evolution": arrival queue, attendance with more states,
+reminders, extra patient data and web booking. The clinical record is v2, above.

@@ -9,7 +9,7 @@ Read these before proposing design or code:
 
 - `docs/context.md` — what the application does, who uses it, the business rules and the
   planned evolution.
-- `docs/decisions.md` — technical decisions and their reasoning (D-01 … D-34).
+- `docs/decisions.md` — technical decisions and their reasoning (D-01 … D-51).
 - `docs/build.md` — the staged plan and the current progress.
 
 ## Stack
@@ -32,10 +32,15 @@ PostgreSQL 18 (docker-compose) · Thymeleaf. The integration tests run on H2 in 
   user is in Spanish.
 - **Undecided technical questions:** propose the simplest option and explain it before
   treating it as agreed. Once accepted, add it to `docs/decisions.md`.
-- **Module boundaries:** `patient/`, `practitioner/`, `appointment/`, `security/`, `user/`. A
-  module only uses another module's `api/` package (interface plus DTOs); `ArchitectureTest`
-  checks it. Never import entities or repositories from another module. Each module is laid out
-  by its own architecture: `appointment` as its hexagon (D-41), the others by layer (D-42).
+- **Module boundaries:** `patient/`, `practitioner/`, `appointment/`, `consultation/`,
+  `security/`, `user/`. A module only uses another module's `api/` package (interface plus
+  DTOs); `ArchitectureTest` checks it. Never import entities or repositories from another
+  module. Each module is laid out by its own architecture: `appointment` and `consultation` as
+  hexagons (D-41, D-47), the others by layer (D-42).
+- **An appointment is only a booking.** What happens once the patient is at the practice —
+  arrival, consultation, what comes after — belongs to other modules, and a consultation does
+  not depend on an appointment (D-48). The check-in stays on the appointment only until the
+  arrival queue.
 - **The booking domain works with a start time and a duration** and knows nothing about
   what the appointment reason means. The duration is resolved by the application layer,
   which asks `practitioner`.
@@ -69,7 +74,8 @@ PostgreSQL 18 (docker-compose) · Thymeleaf. The integration tests run on H2 in 
   per-layer tests just to raise coverage.
 - **Security (D-34).** What a role may reach is decided by route in `SecurityConfiguration`;
   whose data a user may see is decided in the use case, through a port answered by
-  `security/api/CurrentUserReader`. Development users live in `db/seed`, never in
+  `security/api/CurrentUserReader`. Asking for what one may not see is a 403, never an
+  empty answer (D-50). Clinical content is written and read by practitioners only (D-51). Development users live in `db/seed`, never in
   `db/migration`.
 - **Commits:** use the `git-commit` skill (in `.claude/skills/git-commit/`), Conventional
   Commits format. Commit only when asked.
@@ -79,3 +85,4 @@ PostgreSQL 18 (docker-compose) · Thymeleaf. The integration tests run on H2 in 
 
 patient · practitioner · appointment (`BOOKED`/`CANCELLED`) · reason · duration ·
 weekly schedule · break · time off · check-in · reschedule · reception
+· consultation · item (check, prescription, study order) · clinical record · access period

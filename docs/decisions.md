@@ -773,7 +773,7 @@ the domain (the domain does not know patients, only their id).
 ---
 
 ## D-31 — Check-in and automatic cancellation
-**Date:** 2026-09-23 · **Status:** accepted
+**Date:** 2026-09-23 · **Status:** accepted; the check-in stays on the appointment only until the arrival queue (D-48)
 
 Applies D-06 and D-07. The appointment gains `checkedInAt` and `autoCancellationSuspended`,
 added by `V4` with `ALTER TABLE` rather than by rewriting `V1`.
@@ -1104,7 +1104,7 @@ step); a login lockout (not needed for an internal application today).
 ---
 
 ## D-39 — A practitioner asking for another agenda is refused
-**Date:** 2026-09-23 · **Status:** accepted
+**Date:** 2026-09-23 · **Status:** accepted; made a general rule by D-50
 
 Supersedes the part of D-04 and D-34 that ignored the parameter: until now, a practitioner who
 asked for another practitioner's agenda was silently answered with their own.
@@ -1408,4 +1408,140 @@ Bean Validation.
 appointments, reversing D-05's direction); spans across days with times; deleting or editing an
 absence (not in the API either, and the appointments it cancelled would not come back by
 themselves — rules of their own, for when it is asked for).
+
+---
+
+## D-47 — Consultations are a module of their own, hexagonal
+**Date:** 2026-09-24 · **Status:** accepted
+
+v2 starts with the clinical record (see the context): what a practitioner did in each
+consultation, which the other practitioners of the practice read. It is not the appointment:
+an appointment is only a booking, and once the arrival queue exists a consultation will not
+always come from one. So it gets a module, `consultation`, which knows nothing of appointments
+beyond one question (D-48).
+
+**Hexagonal, like `appointment`,** because it has rules of its own to protect: what is sent is
+never changed, and who may read which patient is decided by a rule with a period and today's
+visits in it (D-15, D-16). The layout is D-41's: `domain/`, `application/usecase`, `port`,
+`exception`, and `adapter/in/http`, `in/screen`, `out/persistence`, `out/external`.
+
+**`Consultation` is created by one factory that checks itself, and nothing changes it.** It
+holds free text about what was consulted (`notes`, required, up to 10 000 characters) and up to
+50 items, each with a kind — `CHECK`, `PRESCRIPTION`, `STUDY_ORDER` — and a free-text
+`description` of up to 2 000. A list of typed items rather than a fixed text field per kind:
+giving one kind a structure later touches that kind alone, and a consultation with three
+prescriptions needs no extra columns. There is no mutating operation, so nothing has to stay
+package-private: the addenda of the next part will add to a consultation without changing it.
+The storage adapter reads back through the same factory, so no invalid consultation can be
+obtained, as with `Appointment.restore`.
+
+**No domain service.** "The practitioner is seeing this patient today" decides *who may*, not
+what a valid consultation is, so it is an access rule applied by the use case, like the agenda's
+(D-39), through the policy of D-49.
+
+**The time of recording is the practice's clock**, never something the caller sends, so a
+consultation cannot be backdated, like the check-in (D-31). It also makes "sent on the day the
+patient is seen" hold by construction: it can only be sent while the patient has arrived today.
+
+**`V8__consultation.sql`**, portable: `consultation` and `consultation_item`. The item table has
+a foreign key to its consultation, which is the same module; there is none towards the patient
+or the practitioner (D-30).
+
+*Rejected:* one text field per kind (columns to migrate the day any kind is structured);
+consultations inside the appointment module (an appointment is only a booking); the layered
+layout (the rules are worth a pure domain).
+
+---
+
+## D-48 — "Is the practitioner seeing this patient today?" is a port of `consultation`
+**Date:** 2026-09-24 · **Status:** accepted
+
+The check-in has lived on the appointment since v1 (D-31), though the arrival is not the
+booking's business. It stays there until the arrival queue, which brings a second way of
+arriving and will take the arrival over. Until then `consultation` asks through a port of its
+own, `AttendancePort.visitToday(practitioner, patient, day)`, which answers `NONE`, `EXPECTED` —
+a booked appointment that day — or `ARRIVED` — one with a check-in. When the queue arrives, only
+the adapter behind the port changes.
+
+**`appointment` gets its first `api/`:** `AppointmentReader.findBookedForPatientOn(patient, day)`
+and the DTO `AppointmentSummary` (id, patient, practitioner, start, whether checked in). It
+answers facts, not meanings: what they mean for a consultation is for `consultation` to decide.
+`consultation` depends on `appointment/api`; `appointment` never depends on `consultation`.
+
+**A hexagonal module's `api/` is implemented by a driving adapter,** `adapter/in/external/`, the
+mirror of `adapter/out/external/`: called by another module instead of by HTTP, it calls a use
+case (`FindPatientDayUseCase`) like any other driving adapter. The name is provisional and may
+change when a second one appears.
+
+*Rejected:* `consultation` keeping the appointment's id or reading its state (it would be tied to
+appointments, which the queue will not have); moving the check-in out of `appointment` now (a
+redesign of D-31 and D-32, with a dependency cycle to solve, before the queue that justifies it).
+
+---
+
+## D-49 — Who reads a clinical record, and the access period
+**Date:** 2026-09-24 · **Status:** accepted
+
+A practitioner may read the whole clinical record of a patient — every practitioner's
+consultations — when they recorded a consultation of that patient within the access period, or
+when they have a booked appointment with the patient today, even before the patient arrives. A
+future appointment grants nothing before its day. Recording a consultation needs more: the
+patient has arrived.
+
+**The rule is `ClinicalRecordAccessPolicy`, in the domain,** a plain class tested without
+Spring. It is given the last consultation this practitioner recorded of this patient, today's
+visit and today's date. With a last consultation on 10/03/2026 and a period of a year, the
+record is open until 10/03/2027 included.
+
+**The period is configuration, not code:** `app.clinical-record.access-period`, an ISO-8601
+`java.time.Period` (`P1Y`), so a calendar year whatever the leap years. It is parsed in
+`ConsultationConfiguration`, which builds the policy, as `app.time-zone` is read for the clock.
+
+**Who asks comes from `security/api/CurrentUserReader`**, through `CurrentPractitionerPort`. A
+user who is not a practitioner is refused: reception cannot reach these routes anyway (D-51), and
+the use case fails closed rather than trusting that.
+
+**An unknown patient is a 403 too, not a 404,** so the record never tells someone who may not
+read it whether a patient exists. A retried consultation id that belongs to another
+practitioner's consultation is refused the same way.
+
+*Rejected:* the period hard-coded (it is expected to change); counting from the last appointment
+rather than the last consultation (a consultation is the only proof the patient was seen);
+reception reading the record.
+
+---
+
+## D-50 — Asking for what one may not see is a 403, across the application
+**Date:** 2026-09-24 · **Status:** accepted
+
+The general form of D-39. Whatever a user may not see — a route closed to their role, another
+practitioner's agenda, a clinical record they have no access to — is refused with a 403 and the
+usual error body, or the error page on the screens. It is never answered as if it were empty,
+nor with something else in its place: a wrong answer with a success status is worse than a
+refusal.
+
+---
+
+## D-51 — Consultation routes, API and screens
+**Date:** 2026-09-24 · **Status:** accepted
+
+**By route, the consultation module belongs to the practitioners:** `/api/consultations/**`,
+`/api/clinical-records/**`, `/consultations/**` and `/clinical-records/**` take the
+`PRACTITIONER` role. They are the first routes reception cannot reach.
+
+**API.** `POST /api/consultations` takes `{id?, patientId, notes, items: [{kind, description}]}`
+and answers 201 with a `Location`; the id is optional and makes a retry safe, as with booking
+(D-19). The practitioner is whoever sends it, never a field of the body. `GET
+/api/clinical-records/{patientId}` answers the patient's consultations, newest first, each with
+its practitioner's name, read from the practitioner module's api by the controller: the use
+cases need no names (D-33). The record has a route of its own rather than one under
+`/api/patients/…`, for D-32's reason: a route under another module's resource hides who answers.
+
+**Screens.** On a practitioner's agenda, today's appointments link the patient's name to their
+clinical record, and those whose patient arrived offer "Empezar consulta". It opens a view with
+the form beside the record. The items are rows, without JavaScript: the rows filled in plus three
+empty ones, at least five, and a "Más renglones" button that brings the form back with three
+more. An empty row is dropped; a row with only a kind or only a text is refused rather than
+guessed, as in D-46. A refused form comes back with everything typed, through a flash attribute,
+since the notes are too long for a URL.
 

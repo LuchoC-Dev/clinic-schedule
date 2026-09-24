@@ -24,9 +24,10 @@ Patients have **no** access at this stage. They do not book appointments and hav
 
 The minimum record needed to book an appointment:
 
-- Internal identifier, full name, optional national ID (DNI).
-- The national ID is **not** the internal identifier. When given, it is unique.
-- Patients can be registered without a national ID.
+- Internal identifier, full name, an optional identity document: a type (DNI, LE, LC, CI,
+  passport) and a number.
+- The document is **not** the internal identifier. When given, it is unique.
+- Patients can be registered without a document.
 - Several patients may share the same name.
 - There is no patient file and no login account.
 
@@ -34,7 +35,8 @@ The minimum record needed to book an appointment:
 
 - A usual weekly schedule, breaks and time off. Reception configures all of it.
 - One practitioner per consulting room: no shared resources to manage.
-- Reception records a practitioner's time off for a whole day or for a time range. The
+- Reception records a practitioner's time off for a whole day, for a time range, or for
+  several whole days. The
   system automatically cancels the affected appointments that have **no** confirmed
   patient check-in. Appointments with a confirmed check-in need manual handling.
 
@@ -73,21 +75,79 @@ The minimum record needed to book an appointment:
 - This rule is provisional: once the attendance feature exists, a patient no-show will be
   recorded instead of cancelling the appointment.
 
+## Scope of v2 — the clinical record
+
+### An appointment is only a booking
+
+An appointment says who is seen, by whom, when, for what reason and for how long, plus a short
+note. What happens once the patient is at the practice — the arrival, the consultation, what
+comes after — belongs somewhere else, and does not depend on the appointment: once the arrival
+queue exists, patients will be seen without one.
+
+In v1 the check-in lives on the appointment. It stays there until the arrival queue, which
+brings a second way of arriving, takes the arrival over. Until then the clinical record asks
+whether a practitioner is seeing a patient today without knowing where the answer comes from.
+
+### Consultations
+
+- A practitioner records a consultation of a patient they are seeing today: today that means one
+  who has checked in on an appointment with them that day.
+- A consultation holds free text about what was consulted, and a list of items. Each item has a
+  kind — a check done during the visit (pulse, electrocardiogram…), a prescription, an order for
+  a study (an X-ray, a Doppler ultrasound…) here or elsewhere — and free text. Structure comes
+  later, one kind at a time.
+- It is sent whole, once, on the day the patient is seen. Once sent it can be neither changed nor
+  deleted. Keeping a draft to finish later is the user interface's business.
+- A patient seen twice on the same day by the same practitioner has two consultations.
+- Recording a consultation changes nothing on the appointment.
+- Only practitioners write clinical content; reception writes none.
+
+### Who reads the clinical record
+
+A patient's clinical record is their consultations, from every practitioner of the practice.
+A practitioner may read the whole of it when:
+
+- they recorded a consultation of that patient within the access period — one year today, and
+  meant to change without touching the code; each consultation starts it again; or
+- they have an appointment with the patient today that is not cancelled, even before the patient
+  arrives, so they can prepare the visit.
+
+A future appointment grants nothing before its day. A patient last seen longer ago than the
+access period is treated as a new one. Reception does not read the clinical record.
+
+**Anything a user may not see is refused with 403**, here and across the whole application —
+never answered as if it were empty.
+
+### Screens
+
+On a practitioner's agenda, "Empezar consulta" on today's appointments whose patient has checked
+in. It opens a consultation view: the form, with the patient's clinical record beside it.
+
+### Delivered in parts
+
+1. Consultations and the clinical record, as above.
+2. Addenda: a practitioner with access to the record adds a note to a sent consultation, with its
+   date and author. What was written never changes.
+3. Checks whose result arrives later: done during the consultation, the result added afterwards.
+   The check may then need to live apart from the consultation; to be decided.
+4. Attachments: an electrocardiogram trace, a report from elsewhere.
+
+Not in v2: an admin role (it arrives with user administration), structure for each kind of
+item, printing prescriptions and orders, extra patient data.
+
 ## Planned evolution (DO NOT implement yet)
 
 Documented so today's decisions do not close doors, not to bring code forward.
 
-1. **Patient file**: an internal record the practice reads, showing the appointment
-   history. This is why v1 keeps every appointment, cancelled ones included.
-2. **Arrival queue** per consulting room/practitioner: accepts walk-in patients and gives
+1. **Arrival queue** per consulting room/practitioner: accepts walk-in patients and gives
    priority to those with an appointment. It absorbs the difference between the reserved
-   time and the real pace of the practice. Until it exists, reception registers a walk-in
-   by creating a same-day appointment.
-3. **Later on**: clinical history inside the file, attendance with more states, reminders or
-   a cancellation log, extra patient data (phone, health insurance) and web booking.
-4. **Web booking**: an account with login, linked to the internal file. It requires a
-   national ID or another form of identification, and **never** uses the internal id to
-   identify the patient.
-5. **Future user interface**: two separate single-page applications, one for
+   time and the real pace of the practice, and it takes the arrival — check-in, late-arrival
+   notice — over from the appointment. Until it exists, reception registers a walk-in by
+   creating a same-day appointment.
+2. **Later on**: attendance with more states, reminders or a cancellation log, extra patient
+   data (phone, health insurance), structured clinical items, printing, and web booking.
+3. **Web booking**: an account with login, linked to the patient's record. It requires an
+   identity document, and **never** uses the internal id to identify the patient.
+4. **Future user interface**: two separate single-page applications, one for
    reception/practitioners and one for patients. This is why the REST API is the main
    contract from v1 onwards.

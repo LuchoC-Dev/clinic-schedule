@@ -2,13 +2,13 @@
 
 An internal appointment schedule for a small medical practice — three or four practitioners
 and one reception desk. Reception books, moves and cancels appointments, checks patients in,
-and records the practitioners' working hours and time off. Each practitioner reads only their
-own agenda.
+and records the practitioners' working hours and time off. Each practitioner reads their own
+agenda, and records what happened in each consultation in the patients' clinical records.
 
 It was built in stages, adding nothing before the stage that used it. The functional scope is
 in [`docs/context.md`](docs/context.md), every technical decision and its reasoning in
 [`docs/decisions.md`](docs/decisions.md), and the progress in [`docs/build.md`](docs/build.md).
-**Version 1 is complete.**
+**Version 1 is complete; version 2, the clinical record, is under way.**
 
 ## Running it
 
@@ -37,8 +37,8 @@ reasons and weeks, two patients, and these users.
 | User        | Password       | Role                                       |
 |-------------|----------------|--------------------------------------------|
 | `recepcion` | `recepcion123` | Reception: everything                      |
-| `arias`     | `arias123`     | Practitioner: reads only Dra. Arias's agenda |
-| `benitez`   | `benitez123`   | Practitioner: reads only Dr. Benítez's agenda |
+| `arias`     | `arias123`     | Practitioner: Dra. Arias's agenda and consultations |
+| `benitez`   | `benitez123`   | Practitioner: Dr. Benítez's agenda and consultations |
 
 They live in `src/main/resources/db/seed`, a Flyway location of its own that a real deployment
 removes (D-34).
@@ -50,7 +50,9 @@ week, of one practitioner or everyone — with the day's operations as buttons (
 *Avisó demora*, *Mover*, *Cancelar*), a booking screen that suggests the free times, a patients
 screen, each patient's appointments, cancelled ones included, and a practitioners screen to set
 up their reasons and week and record their absences. A practitioner gets their own agenda,
-read-only. The screens are in Spanish, for the staff.
+read-only, with today's patients linked to their clinical record and *Empezar consulta* once
+they arrived: a form beside the record, sent once and never changed. The screens are in
+Spanish, for the staff.
 
 **API** — basic authentication on every request. Errors share one body:
 `{timestamp, status, error, message, fields?}`.
@@ -73,15 +75,19 @@ read-only. The screens are in Spanish, for the staff.
 | `POST` | `/api/appointments/{id}/suspend-auto-cancellation` | the patient warned they will be late |
 | `GET` | `/api/appointments?practitionerId=&date=` | a day's agenda — a practitioner may only ask for their own |
 | `POST` | `/api/time-off` | a practitioner's absence — whole days up to `untilDate`, or part of one — cancelling the appointments it hits |
+| `POST` | `/api/consultations` | a practitioner records the consultation of a patient who arrived today — notes plus checks, prescriptions and study orders |
+| `GET` | `/api/clinical-records/{patientId}` | a patient's consultations, from every practitioner — for a practitioner who saw them within the access period or is seeing them today |
 
 A booking without a check-in is cancelled automatically 30 minutes after its start, or 24 hours
-after it when the patient warned they would be late.
+after it when the patient warned they would be late. The consultation routes are the
+practitioners' only; anything a user may not see answers 403. The access period to a clinical
+record is `app.clinical-record.access-period`, a year by default.
 
 ## How it is built
 
 ```
 src/main/java/com/clinic/schedule/
-├── appointment/              hexagonal: the only module with rules of its own
+├── appointment/              hexagonal: the bookings and their rules
 │   ├── domain/               plain Java — Appointment, BookingService, TimeSlot…
 │   │   └── exception/        the rules' refusals
 │   ├── application/
@@ -96,6 +102,7 @@ src/main/java/com/clinic/schedule/
 │       └── out/              driven: the ports' implementations
 │           ├── persistence/  JPA
 │           └── external/     the other modules, through their api/
+├── consultation/             hexagonal too: consultations and who may read a clinical record
 ├── patient/                  layered: presentation/ (http, screen), service/, entity/,
 │                             persistence/ — and api/, its only door for other modules
 ├── practitioner/             layered alike, with the week's rules in plain classes
@@ -106,10 +113,11 @@ src/main/java/com/clinic/schedule/
 
 A module reaches another only through its `api/` package, and in the layered modules each layer
 is reached only by the one above it; `ArchitectureTest` checks both on every build (D-05, D-42).
-The domain of `appointment` has no framework annotations and is tested without Spring. The whole
-repository is in English; on-screen text is in Spanish (D-13).
+The domains of `appointment` and `consultation` have no framework annotations and are tested
+without Spring. The whole repository is in English; on-screen text is in Spanish (D-13).
 
 ## Deliberately postponed
 
-User administration; registering a new patient and booking them in one transaction. The planned
-evolution after v1 — patient file, arrival queue, web booking — is in the context.
+User administration; registering a new patient and booking them in one transaction. The rest of
+v2 — addenda, checks whose result arrives later, attachments — and the evolution after it —
+arrival queue, web booking — are in the context.
