@@ -291,6 +291,14 @@ and her agenda screen with no one asked for still opened on her own.
 **Verified with:** `git ls-files --eol` showing LF in the index and the working tree for every
 file but `mvnw.cmd`, and a commit without the "LF will be replaced by CRLF" warnings.
 
+### After v1: the appointment module laid out as its hexagon `[x]`
+- [x] `domain/exception/`; `application/usecase/`, `port/`, `exception/`; `adapter/in/http/`,
+      `screen/`, `scheduling/`; `adapter/out/persistence/`, `external/` (D-41)
+- [x] `shared/web/` renamed `shared/http/`
+- [x] Tests moved to the same packages; 65 files moved with their history, no behaviour changed
+
+**Verified with:** the 316 tests passing unchanged.
+
 ---
 
 ## Explicitly postponed

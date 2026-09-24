@@ -76,17 +76,25 @@ after it when the patient warned they would be late.
 
 ```
 src/main/java/com/clinic/schedule/
-├── appointment/          hexagonal: the only module with rules of its own
-│   ├── domain/           plain Java — TimeSlot, Appointment, BookingService…
-│   ├── application/      use cases and the ports they need
-│   ├── persistence/      the JPA adapter
-│   ├── external/         adapters towards the other modules' api
-│   ├── scheduling/       the job that cancels overdue appointments
-│   └── web/              REST controllers and the agenda screens
-├── patient/              layered, flat, package-private — api/ is its only public door
-├── practitioner/         layered, with the week's rules in plain classes — and its api/
-├── security/             users, login, roles — and its api/
-└── shared/               the clock and the error body
+├── appointment/              hexagonal: the only module with rules of its own
+│   ├── domain/               plain Java — Appointment, BookingService, TimeSlot…
+│   │   └── exception/        the rules' refusals
+│   ├── application/
+│   │   ├── usecase/          one class per operation
+│   │   ├── port/             what the module needs from outside
+│   │   └── exception/        the use cases' refusals
+│   └── adapter/
+│       ├── in/               driving: whoever calls the use cases
+│       │   ├── http/         the REST API
+│       │   ├── screen/       the Thymeleaf screens
+│       │   └── scheduling/   the job that cancels overdue appointments
+│       └── out/              driven: the ports' implementations
+│           ├── persistence/  JPA
+│           └── external/     the other modules, through their api/
+├── patient/                  layered, flat, package-private — api/ is its only public door
+├── practitioner/             layered, with the week's rules in plain classes — and its api/
+├── security/                 users, login, roles — and its api/
+└── shared/                   the clock; http/ holds the API's error body
 ```
 
 A module reaches another only through its `api/` package; everything else is package-private

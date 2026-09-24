@@ -1135,3 +1135,51 @@ enough to do it now.
 *Rejected:* CRLF in the working tree on Windows (`eol` left to the platform — the mixed state this
 replaces); changing `core.autocrlf` on this machine (fixes one machine, not the repository).
 
+---
+
+## D-41 — The appointment module laid out as its hexagon
+**Date:** 2026-09-24 · **Status:** accepted
+
+The module had grown to 22 files in `application/` and 14 in `domain/` and in `web/`, with its
+adapters loose at the root beside the layers they served. It is now split by the layer and the
+direction of the hexagon, not by a count of files:
+
+```
+appointment/
+├── domain/                the centre; exception/ holds its refusals
+├── application/
+│   ├── usecase/           the use cases, and AgendaReader
+│   ├── port/              the outbound ports
+│   └── exception/         the use cases' refusals
+└── adapter/
+    ├── in/                http/ (the REST API), screen/ (Thymeleaf), scheduling/
+    └── out/               persistence/, external/ (the other modules)
+```
+
+- **`adapter/in` and `adapter/out`** make the direction of every dependency visible: what calls
+  the use cases, and what the ports are answered by.
+- **`http/` and `screen/` are separate**: two clients of the same centre. When the single-page
+  applications arrive, `adapter/in/screen/` goes with `templates/`, which is D-02 made literal.
+  `http` rather than `web` or `rest`, as the practice's developer names it; `shared/web/`, which
+  holds only the API's error body and its handler, became `shared/http/` for the same reason.
+- **`port/` holds outbound ports only.** The way in is the concrete use cases (D-24).
+- **Suffixes stay** although the folder now says what a file is: an import reads the same in
+  any file, and it is Java's convention.
+
+**What package visibility keeps together.** A subfolder is a different package to Java, with no
+special access to the one above it, and a top-level class cannot be `protected`. So:
+`Appointment`, `BookingService` and `BookingPolicy` stay in one package, since `book` and
+`movedTo` are reachable only from there (D-17); `AgendaReader` stays package-private beside the
+use cases that use it, rather than being made public to live in a folder of its own.
+
+`usecase/` keeps twelve files: all of one kind, each named by what it does. Splitting it by topic
+would make `AgendaReader` public for no gain. `patient` and `practitioner` are not hexagonal and
+stay flat (D-25), since splitting them would make their package-private classes public.
+
+The earlier decisions keep the paths they were written with; `appointment/external/` in D-29 and
+D-30, for example, is now `appointment/adapter/out/external/`.
+
+*Rejected:* dividing by file count (the number says nothing about where a file belongs);
+`adapter/in/http/rest/` (a level with nothing to tell apart); an `api/` package for the REST
+controllers (in this repository `api/` is what a module exposes to the others, D-05).
+

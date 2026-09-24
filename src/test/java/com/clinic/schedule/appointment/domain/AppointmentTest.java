@@ -8,6 +8,8 @@ import java.time.LocalDateTime;
 
 import org.junit.jupiter.api.Test;
 
+import com.clinic.schedule.appointment.domain.exception.BookingRuleViolationException;
+
 class AppointmentTest {
 
     private static final AppointmentId ID = AppointmentId.newId();

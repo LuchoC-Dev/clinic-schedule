@@ -8,6 +8,9 @@ import java.util.List;
 
 import org.junit.jupiter.api.Test;
 
+import com.clinic.schedule.appointment.domain.exception.PatientAlreadyBookedException;
+import com.clinic.schedule.appointment.domain.exception.PractitionerAlreadyBookedException;
+
 class BookingPolicyTest {
 
     private static final LocalDateTime TEN = LocalDateTime.of(2026, 3, 10, 10, 0);

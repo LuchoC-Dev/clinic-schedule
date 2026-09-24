@@ -14,19 +14,19 @@ import org.springframework.security.test.context.support.WithMockUser;
 import org.springframework.test.web.servlet.MockMvc;
 
 import com.clinic.schedule.appointment.PractitionerFixture.CreatedPractitioner;
-import com.clinic.schedule.appointment.application.AppointmentNotFoundException;
-import com.clinic.schedule.appointment.application.BookAppointmentUseCase;
-import com.clinic.schedule.appointment.application.CancelAppointmentUseCase;
-import com.clinic.schedule.appointment.application.OutsideWorkingHoursException;
-import com.clinic.schedule.appointment.application.RescheduleAppointmentUseCase;
-import com.clinic.schedule.appointment.application.UnknownPatientException;
+import com.clinic.schedule.appointment.application.exception.AppointmentNotFoundException;
+import com.clinic.schedule.appointment.application.exception.OutsideWorkingHoursException;
+import com.clinic.schedule.appointment.application.exception.UnknownPatientException;
+import com.clinic.schedule.appointment.application.usecase.BookAppointmentUseCase;
+import com.clinic.schedule.appointment.application.usecase.CancelAppointmentUseCase;
+import com.clinic.schedule.appointment.application.usecase.RescheduleAppointmentUseCase;
 import com.clinic.schedule.appointment.domain.Appointment;
 import com.clinic.schedule.appointment.domain.AppointmentId;
 import com.clinic.schedule.appointment.domain.AppointmentStatus;
 import com.clinic.schedule.appointment.domain.PatientId;
-import com.clinic.schedule.appointment.domain.PractitionerAlreadyBookedException;
 import com.clinic.schedule.appointment.domain.PractitionerId;
 import com.clinic.schedule.appointment.domain.TimeSlot;
+import com.clinic.schedule.appointment.domain.exception.PractitionerAlreadyBookedException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
 /**

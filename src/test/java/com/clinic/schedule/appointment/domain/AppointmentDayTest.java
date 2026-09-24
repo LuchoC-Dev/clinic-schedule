@@ -8,6 +8,9 @@ import java.time.LocalDateTime;
 
 import org.junit.jupiter.api.Test;
 
+import com.clinic.schedule.appointment.domain.exception.BookingRuleViolationException;
+import com.clinic.schedule.appointment.domain.exception.NotTheAppointmentDayException;
+
 /**
  * What happens to an appointment on the day: the check-in, the notice of a late arrival, and
  * when it becomes overdue (D-06). Plain rules, no Spring.

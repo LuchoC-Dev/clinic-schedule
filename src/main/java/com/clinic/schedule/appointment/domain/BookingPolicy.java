@@ -4,6 +4,11 @@ import java.time.LocalDateTime;
 import java.time.Period;
 import java.util.Collection;
 
+import com.clinic.schedule.appointment.domain.exception.PatientAlreadyBookedException;
+import com.clinic.schedule.appointment.domain.exception.PractitionerAlreadyBookedException;
+import com.clinic.schedule.appointment.domain.exception.SlotInThePastException;
+import com.clinic.schedule.appointment.domain.exception.SlotTooFarAheadException;
+
 /**
  * When an appointment may be booked, and the two collision rules of the agenda.
  *

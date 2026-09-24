@@ -3,6 +3,9 @@ package com.clinic.schedule.appointment.domain;
 import java.time.Duration;
 import java.time.LocalDateTime;
 
+import com.clinic.schedule.appointment.domain.exception.BookingRuleViolationException;
+import com.clinic.schedule.appointment.domain.exception.NotTheAppointmentDayException;
+
 /**
  * An appointment in the agenda: a patient, a practitioner, the slot it takes up, the reason
  * it was requested and an optional note — plus what happens on the day: whether the patient

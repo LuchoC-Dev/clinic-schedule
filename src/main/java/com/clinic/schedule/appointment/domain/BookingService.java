@@ -3,6 +3,11 @@ package com.clinic.schedule.appointment.domain;
 import java.time.LocalDateTime;
 import java.util.Collection;
 
+import com.clinic.schedule.appointment.domain.exception.PatientAlreadyBookedException;
+import com.clinic.schedule.appointment.domain.exception.PractitionerAlreadyBookedException;
+import com.clinic.schedule.appointment.domain.exception.SlotInThePastException;
+import com.clinic.schedule.appointment.domain.exception.SlotTooFarAheadException;
+
 /**
  * The way into the booking domain. Creating an appointment and checking it against the rest
  * of the agenda happen together here, so there is no path that produces an appointment

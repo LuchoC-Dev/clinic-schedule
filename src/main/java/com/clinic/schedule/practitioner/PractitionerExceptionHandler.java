@@ -5,12 +5,12 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 
-import com.clinic.schedule.shared.web.ErrorResponse;
+import com.clinic.schedule.shared.http.ErrorResponse;
 
 /**
  * This module's exceptions as HTTP answers, scoped to its controller so no shared class has
  * to import them (D-23). Validation errors are handled once for every module, in
- * {@code shared/web}.
+ * {@code shared/http}.
  */
 @RestControllerAdvice(assignableTypes = PractitionerController.class)
 class PractitionerExceptionHandler {

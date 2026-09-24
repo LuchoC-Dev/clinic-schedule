@@ -8,6 +8,11 @@ import java.util.List;
 
 import org.junit.jupiter.api.Test;
 
+import com.clinic.schedule.appointment.domain.exception.BookingRuleViolationException;
+import com.clinic.schedule.appointment.domain.exception.PractitionerAlreadyBookedException;
+import com.clinic.schedule.appointment.domain.exception.SlotInThePastException;
+import com.clinic.schedule.appointment.domain.exception.SlotTooFarAheadException;
+
 /**
  * These tests are about the guarantee {@link BookingService} adds on top of the pieces: you
  * cannot get an appointment out of the domain without it having been checked against the
