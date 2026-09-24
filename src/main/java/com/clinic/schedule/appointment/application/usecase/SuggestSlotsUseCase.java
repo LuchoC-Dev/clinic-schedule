@@ -31,6 +31,9 @@ import com.clinic.schedule.appointment.domain.TimeSlot;
  *
  * <p>It considers the practitioner's agenda, not the patient's: the patient may not have been
  * chosen yet, and booking checks the patient anyway.
+ *
+ * <p>It also says whether the practitioner works that day at all, so an empty list can be told
+ * apart: a day they do not work — by their week or by time off — is not a full day (D-45).
  */
 @Service
 public class SuggestSlotsUseCase {
@@ -50,7 +53,7 @@ public class SuggestSlotsUseCase {
 
     /** For a new appointment: the length follows from the reason, as when booking. */
     @Transactional(readOnly = true)
-    public List<LocalTime> forReason(PractitionerId practitionerId, UUID reasonId, LocalDate date) {
+    public Suggestions forReason(PractitionerId practitionerId, UUID reasonId, LocalDate date) {
         BookableReason reason = practitioners.findReason(practitionerId, reasonId)
                 .orElseThrow(() -> new UnknownReasonException(practitionerId, reasonId));
         return free(practitionerId, Duration.ofMinutes(reason.durationMinutes()), date, null);
@@ -61,11 +64,11 @@ public class SuggestSlotsUseCase {
      * so moving it by a quarter of an hour is offered.
      */
     @Transactional(readOnly = true)
-    public List<LocalTime> forMoving(Appointment appointment, LocalDate date) {
+    public Suggestions forMoving(Appointment appointment, LocalDate date) {
         return free(appointment.practitionerId(), appointment.slot().duration(), date, appointment.id());
     }
 
-    private List<LocalTime> free(PractitionerId practitionerId, Duration length, LocalDate date, AppointmentId ignoring) {
+    private Suggestions free(PractitionerId practitionerId, Duration length, LocalDate date, AppointmentId ignoring) {
         List<Appointment> agenda = appointments.findBookedForPractitionerOn(practitionerId, date).stream()
                 .filter(appointment -> !appointment.id().equals(ignoring))
                 .toList();
@@ -81,6 +84,23 @@ public class SuggestSlotsUseCase {
                 free.add(start.toLocalTime());
             }
         }
-        return free;
+        return new Suggestions(free, !free.isEmpty() || worksAtAll(practitionerId, date));
+    }
+
+    /** Whether any quarter of the day falls inside the practitioner's hours, time off aside. */
+    private boolean worksAtAll(PractitionerId practitionerId, LocalDate date) {
+        for (LocalDateTime start = date.atStartOfDay(); start.toLocalDate().equals(date); start = start.plus(STEP)) {
+            if (practitioners.worksDuring(practitionerId, new TimeSlot(start, STEP))) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    /**
+     * The start times to offer, and whether the practitioner works that day at all: with no
+     * times, false means they do not work, true that the day is full or its times have passed.
+     */
+    public record Suggestions(List<LocalTime> times, boolean practitionerWorks) {
     }
 }

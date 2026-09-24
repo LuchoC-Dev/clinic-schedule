@@ -60,6 +60,9 @@ record BookingScreenRequest(
     /** What is still to be chosen before booking, in Spanish, or null when nothing is. */
     String missing() {
         List<String> missing = new ArrayList<>();
+        if (practitionerId == null) {
+            missing.add("el profesional");
+        }
         if (reasonId == null) {
             missing.add("la razón");
         }
@@ -78,9 +81,9 @@ record BookingScreenRequest(
 
     /** The booking screen again, holding everything chosen so far. */
     String toScreenUrl() {
-        UriComponentsBuilder url = UriComponentsBuilder.fromPath("/agenda/new")
-                .queryParam("practitionerId", practitionerId)
-                .queryParam("date", date);
+        UriComponentsBuilder url = UriComponentsBuilder.fromPath("/agenda/new");
+        addIfPresent(url, "practitionerId", practitionerId);
+        url.queryParam("date", date);
         addIfPresent(url, "reasonId", reasonId);
         addIfPresent(url, "patientQuery", blankToNull(patientQuery));
         addIfPresent(url, "patientId", patientId);

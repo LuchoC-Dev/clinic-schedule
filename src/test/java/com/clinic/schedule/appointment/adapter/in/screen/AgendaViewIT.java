@@ -373,10 +373,111 @@ class AgendaViewIT {
                 .andExpect(content().string(containsString(ana)))
                 .andExpect(content().string(containsString(juan)))
                 .andExpect(content().string(containsString("<th>Profesional</th>")))
-                // The agenda opens on everyone's, so booking must be reachable from it.
+                .andExpect(content().string(containsString("Agenda de todos los profesionales")))
+                // The agenda opens on everyone's, so booking must be reachable from it, with the
+                // practitioner left to choose on the booking screen (D-45).
+                .andExpect(content().string(containsString("href=\"/agenda/new?date=" + DAY + "\"")))
+                .andExpect(content().string(not(containsString("Nuevo turno con "))));
+    }
+
+    // --- one practitioner at a time, and never a doubt about which (D-45) ----------------
+
+    @Test
+    void aPractitionersAgendaSaysWhoseItIsAndBooksWithThem() throws Exception {
+        CreatedPractitioner arias = practitioners.workingEveryDay();
+
+        mockMvc.perform(get("/agenda").param("practitionerId", arias.id().toString()).param("date", DAY))
+                .andExpect(status().isOk())
+                .andExpect(content().string(containsString("<h1>Agenda de Dra. Arias</h1>")))
                 .andExpect(content().string(containsString(
-                        "/agenda/new?practitionerId=" + arias.id() + "&amp;date=" + DAY)))
-                .andExpect(content().string(containsString("Nuevo turno con ")));
+                        "href=\"/agenda/new?practitionerId=" + arias.id() + "&amp;date=" + DAY + "\"")))
+                .andExpect(content().string(containsString("Nuevo turno con Dra. Arias")));
+    }
+
+    @Test
+    void theAgendasChoicesRefreshTheScreenAsTheyChange() throws Exception {
+        mockMvc.perform(get("/agenda").param("date", DAY))
+                .andExpect(content().string(containsString("<select name=\"practitionerId\" data-refresh>")))
+                .andExpect(content().string(containsString("<select name=\"view\" data-refresh>")))
+                .andExpect(content().string(containsString("data-refresh-button")));
+    }
+
+    @Test
+    void theBookingScreenOpensWithoutAPractitionerAndAsksForOne() throws Exception {
+        CreatedPractitioner arias = practitioners.workingEveryDay();
+
+        mockMvc.perform(get("/agenda/new").param("date", DAY))
+                .andExpect(status().isOk())
+                .andExpect(content().string(containsString("<h1>Nuevo turno</h1>")))
+                .andExpect(content().string(containsString("<option value=\"\">— elegir —</option>")))
+                .andExpect(content().string(containsString("value=\"" + arias.id() + "\"")))
+                .andExpect(content().string(containsString("Elegí el profesional para ver sus horarios libres.")))
+                .andExpect(content().string(not(containsString("name=\"time\""))));
+    }
+
+    @Test
+    void bookingWithoutAPractitionerAsksForIt() throws Exception {
+        mockMvc.perform(post("/agenda/new").with(csrf())
+                        .param("date", DAY)
+                        .param("patientId", patients.newPatient().toString())
+                        .param("time", "11:00"))
+                .andExpect(redirectedUrlPattern("/agenda/new?*"))
+                .andExpect(flash().attribute("error", "Elegí el profesional y la razón."));
+    }
+
+    @Test
+    void changingThePractitionerKeepsWhatWasChosenAndTakesTheirReasons() throws Exception {
+        CreatedPractitioner arias = practitioners.workingEveryDay();
+        CreatedPractitioner benitez = practitioners.workingEveryDay();
+        String name = "Cambio " + UUID.randomUUID().toString().substring(0, 6);
+        String patient = registerPatientNamed(name);
+
+        MvcResult refreshed = mockMvc.perform(post("/agenda/new").with(csrf())
+                        .param("action", "refresh")
+                        .param("practitionerId", benitez.id().toString())
+                        .param("date", DAY)
+                        .param("reasonId", arias.consulta().toString())
+                        .param("patientId", patient)
+                        .param("note", "cambió de doctor"))
+                .andReturn();
+
+        mockMvc.perform(get(URI.create(refreshed.getResponse().getRedirectedUrl())))
+                .andExpect(status().isOk())
+                // Arias's reason is not Benítez's, so his first comes chosen instead.
+                .andExpect(content().string(containsString("value=\"" + benitez.consulta() + "\"\n")))
+                .andExpect(content().string(containsString("value=\"" + patient + "\" checked=\"checked\"")))
+                .andExpect(content().string(containsString("cambió de doctor")))
+                .andExpect(content().string(containsString("name=\"time\"")));
+    }
+
+    @Test
+    void aDayThePractitionerDoesNotWorkIsSaidSo() throws Exception {
+        CreatedPractitioner arias = practitioners.workingTuesdaysWithALunchBreak();
+
+        // 2026-03-11 is a Wednesday.
+        mockMvc.perform(get("/agenda/new")
+                        .param("practitionerId", arias.id().toString())
+                        .param("date", "2026-03-11")
+                        .param("reasonId", arias.consulta().toString()))
+                .andExpect(content().string(containsString("Dra. Arias no atiende ese día.")))
+                .andExpect(content().string(not(containsString("No quedan horarios libres"))));
+    }
+
+    @Test
+    void aFullDayIsNotMistakenForADayOff() throws Exception {
+        CreatedPractitioner arias = practitioners.workingTuesdaysWithALunchBreak();
+        for (String time : new String[] {"09:00:00", "09:30:00", "10:00:00", "10:30:00", "11:00:00", "11:30:00",
+                "12:00:00", "12:30:00", "14:00:00", "14:30:00", "15:00:00", "15:30:00", "16:00:00", "16:30:00",
+                "17:00:00", "17:30:00"}) {
+            bookThroughTheApi(arias, patients.newPatient(), time);
+        }
+
+        mockMvc.perform(get("/agenda/new")
+                        .param("practitionerId", arias.id().toString())
+                        .param("date", DAY)
+                        .param("reasonId", arias.consulta().toString()))
+                .andExpect(content().string(containsString("No quedan horarios libres ese día para esta razón.")))
+                .andExpect(content().string(not(containsString("no atiende ese día"))));
     }
 
     @Test

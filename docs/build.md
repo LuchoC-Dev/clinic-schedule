@@ -332,6 +332,21 @@ booking answered 201 and an overlap 409; ten simultaneous bookings of one slot l
 appointment, the other nine answered 409 and none 500; after a restart the data was still there
 and Flyway had nothing to migrate.
 
+### After v1: the agenda and booking flow `[x]`
+- [x] The agenda's practitioner, day and view apply as they change; the heading says whose
+      agenda it is (D-45)
+- [x] One "Nuevo turno" button; the practitioner is chosen on the booking screen, and changing it
+      keeps what was chosen
+- [x] "No atiende ese día" told apart from "no quedan horarios", on booking and on moving
+- [x] 3 unit and 7 integration tests. 340 in total
+
+**Verified in a browser** against the application on PostgreSQL, following the reported flow:
+choosing Benítez and then Arias on the agenda reloaded it each time, with the heading and the
+booking button following; "Nuevo turno con Dra. Laura Arias" opened her booking with fifteen free
+times; switching to Benítez there said "Dr. Martín Benítez no atiende ese día" (a Thursday);
+"Nuevo turno" from everyone's agenda asked for the practitioner, and choosing Arias brought her
+times. Changing the view and the day on the agenda reloaded it as well.
+
 ---
 
 ## Explicitly postponed

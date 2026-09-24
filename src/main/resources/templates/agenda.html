@@ -4,7 +4,8 @@
 <body>
 <header th:replace="~{fragments :: header}"></header>
 <main>
-    <h1>Agenda</h1>
+    <!-- Whose agenda this is, said in words: the choice above can never disagree with it (D-45). -->
+    <h1 th:text="${practitioner != null} ? 'Agenda de ' + ${practitioner.fullName} : 'Agenda de todos los profesionales'">Agenda</h1>
     <div th:replace="~{fragments :: messages}"></div>
 
     <p th:if="${practitioners.isEmpty()}" class="muted">
@@ -13,26 +14,22 @@
 
     <form class="bar" method="get" th:action="@{/agenda}" th:unless="${practitioners.isEmpty()}">
         <label>Profesional
-            <select name="practitionerId">
+            <select name="practitionerId" data-refresh>
                 <option value="" th:unless="${readOnly}" th:selected="${everyone}">Todos</option>
                 <option th:each="p : ${practitioners}" th:value="${p.id}" th:text="${p.fullName}"
                         th:selected="${practitioner != null and p.id == practitioner.id}"></option>
             </select>
         </label>
         <label>Día
-            <input type="date" name="date" th:value="${date}">
+            <input type="date" name="date" th:value="${date}" data-refresh>
         </label>
         <label>Vista
-            <select name="view">
+            <select name="view" data-refresh>
                 <option value="day" th:selected="${view == 'day'}">Día</option>
                 <option value="week" th:selected="${view == 'week'}">Semana</option>
             </select>
         </label>
-        <button type="submit">Ver</button>
-        <a th:if="${practitioner != null and !readOnly}"
-           th:href="@{/agenda/new(practitionerId=${practitioner.id}, date=${date})}">
-            <button type="button" class="primary">Nuevo turno</button>
-        </a>
+        <button type="submit" data-refresh-button>Ver</button>
     </form>
 
     <!-- Moving through days or weeks keeps the practitioner and the view. -->
@@ -44,10 +41,14 @@
            th:text="${view == 'week'} ? 'Semana siguiente ›' : 'Día siguiente ›'">Siguiente ›</a>
     </p>
 
-    <!-- Everyone's agenda has no single practitioner to book with, so it offers one button each. -->
-    <p class="bar" th:if="${everyone and !readOnly}">
-        <a th:each="p : ${practitioners}" th:href="@{/agenda/new(practitionerId=${p.id}, date=${date})}">
-            <button type="button" class="primary" th:text="'Nuevo turno con ' + ${p.fullName}">Nuevo turno</button>
+    <!--
+      One way to book. From a practitioner's agenda it says with whom and comes with them chosen;
+      from everyone's, the practitioner is chosen on the booking screen (D-45).
+    -->
+    <p class="bar" th:unless="${readOnly or practitioners.isEmpty()}">
+        <a th:href="${practitioner != null} ? @{/agenda/new(practitionerId=${practitioner.id}, date=${date})} : @{/agenda/new(date=${date})}">
+            <button type="button" class="primary"
+                    th:text="${practitioner != null} ? 'Nuevo turno con ' + ${practitioner.fullName} : 'Nuevo turno'">Nuevo turno</button>
         </a>
     </p>
 
@@ -107,5 +108,6 @@
         </table>
     </section>
 </main>
+<script th:replace="~{fragments :: refresh}"></script>
 </body>
 </html>

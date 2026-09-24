@@ -208,21 +208,26 @@ class AgendaViewController {
     // --- booking ------------------------------------------------------------------------
 
     /**
-     * The booking screen, refreshed as reception fills it in: choosing the reason brings the
-     * suggested times, searching brings the matching patients, and whatever was already chosen
-     * stays chosen. The first reason comes chosen, so the free times show from the start (D-36).
+     * The booking screen, refreshed as reception fills it in: choosing the practitioner brings
+     * their reasons, choosing the reason brings the suggested times, searching brings the
+     * matching patients, and whatever was already chosen stays chosen. The practitioner is one
+     * more choice on the screen: it comes chosen from a practitioner's agenda and is to be chosen
+     * from everyone's (D-45). Their first reason comes chosen, so the free times show at once
+     * (D-36).
      */
     @GetMapping("/agenda/new")
     String newAppointment(@ModelAttribute("form") BookingScreenRequest form, Model model) {
+        if (form.date() == null) {
+            return "redirect:/agenda";
+        }
+        List<PractitionerSummary> everyone = practitioners.findAll();
         PractitionerSummary practitioner = form.practitionerId() == null ? null
-                : practitioners.findAll().stream()
+                : everyone.stream()
                         .filter(candidate -> candidate.id().equals(form.practitionerId()))
                         .findFirst()
                         .orElse(null);
-        if (practitioner == null || form.date() == null) {
-            return "redirect:/agenda";
-        }
-        UUID reasonId = practitioner.reasons().stream()
+        // A reason of the practitioner chosen before is not one of this one's: it falls back to their first.
+        UUID reasonId = practitioner == null ? null : practitioner.reasons().stream()
                 .map(ReasonDetails::id)
                 .filter(id -> id.equals(form.reasonId()))
                 .findFirst()
@@ -239,6 +244,7 @@ class AgendaViewController {
         UUID chosenPatient = form.patientId() != null ? form.patientId()
                 : !form.hasNewPatient() && shown.size() == 1 ? shown.getFirst().id() : null;
 
+        model.addAttribute("practitioners", everyone);
         model.addAttribute("practitioner", practitioner);
         model.addAttribute("reasonId", reasonId);
         model.addAttribute("patients", shown);
@@ -246,7 +252,7 @@ class AgendaViewController {
         model.addAttribute("documentTypes", patients.documentTypes());
         model.addAttribute("suggestions", reasonId != null
                 ? suggestSlots.forReason(new PractitionerId(practitioner.id()), reasonId, form.date())
-                : List.of());
+                : null);
         return "appointment-new";
     }
 
@@ -261,7 +267,7 @@ class AgendaViewController {
     @PostMapping("/agenda/new")
     String book(@ModelAttribute BookingScreenRequest form, @RequestParam(defaultValue = "book") String action,
             RedirectAttributes flash) {
-        if (form.practitionerId() == null || form.date() == null) {
+        if (form.date() == null) {
             return "redirect:/agenda";
         }
         if ("refresh".equals(action)) {
@@ -321,8 +327,12 @@ class AgendaViewController {
         LocalDate day = date != null ? date : appointment.slot().startsAt().toLocalDate();
         PatientSummary patient = patients.findAll(List.of(appointment.patientId().value())).stream()
                 .findFirst().orElse(null);
+        String practitionerName = practitioners.findAll().stream()
+                .filter(practitioner -> practitioner.id().equals(appointment.practitionerId().value()))
+                .map(PractitionerSummary::fullName)
+                .findFirst().orElse(null);
 
-        model.addAttribute("row", AgendaRow.of(appointment, patient, null));
+        model.addAttribute("row", AgendaRow.of(appointment, patient, practitionerName));
         model.addAttribute("practitionerId", appointment.practitionerId().value());
         model.addAttribute("currentDate", appointment.slot().startsAt().toLocalDate());
         model.addAttribute("date", day);

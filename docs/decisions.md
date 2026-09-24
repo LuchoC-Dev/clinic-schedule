@@ -941,7 +941,7 @@ difference between roles is what is being tested.
 ---
 
 ## D-35 — More ways to read the agenda, and a booking screen that keeps what was chosen
-**Date:** 2026-09-23 · **Status:** accepted
+**Date:** 2026-09-23 · **Status:** accepted; the booking button per practitioner replaced by D-45
 
 Asked for after v1, once reception used the screens.
 
@@ -990,7 +990,7 @@ and a rule in a screen); a `formmethod="get"` refresh button (puts the CSRF toke
 ---
 
 ## D-36 — A few lines of JavaScript on the booking screen
-**Date:** 2026-09-23 · **Status:** accepted
+**Date:** 2026-09-23 · **Status:** accepted; extended to the agenda and moving screens by D-45
 
 Relaxes the "no JavaScript" of D-33, for the booking screen only.
 
@@ -1335,4 +1335,36 @@ racing two threads would not be. It also runs every migration on a real PostgreS
 need Docker); leaving the constraint untested because H2 cannot run it (a rule in the database
 with nothing checking it); a pessimistic lock on the practitioner's day instead of the
 constraint (it serialises every booking of the day and still leaves the patient's rule open).
+
+---
+
+## D-45 — The agenda never disagrees with what is chosen, and the practitioner is chosen when booking
+**Date:** 2026-09-24 · **Status:** accepted
+
+Reception reported a flow that booked with the wrong practitioner. On the agenda of Dr. Benítez,
+they picked Dra. Arias in the list and, without pressing "Ver", pressed "Nuevo turno": the list
+said Arias, the page was still Benítez's, and the button — built with the page — opened a booking
+with Benítez. Nothing on screen said whose agenda it was.
+
+- **The agenda's choices apply as they change** — practitioner, day and view — with the few lines
+  of D-36, now a shared fragment of the screens. The moving screen's day does the same. "Ver"
+  and "Ver horarios" remain for a browser without JavaScript.
+- **The agenda says whose it is** in its heading: "Agenda de Dra. Laura Arias", or "Agenda de
+  todos los profesionales". Even without JavaScript, the page can no longer look like someone
+  else's.
+- **One booking button.** From a practitioner's agenda it says "Nuevo turno con …" and comes with
+  them chosen; from everyone's it says "Nuevo turno". It replaces the button per practitioner of
+  D-35.
+- **The practitioner is a choice on the booking screen**, like the day and the reason. From
+  everyone's agenda it starts unchosen and booking asks for it; changing it keeps the day, the
+  patient and the note, and brings the new practitioner's reasons, their first one chosen when
+  the reason chosen before was not theirs.
+- **A day off is not a full day.** The suggestions also tell whether the practitioner works that
+  day at all — their week and their time off — so the screen says "Dr. Martín Benítez no atiende
+  ese día" instead of "No quedan horarios libres", which read as a booked-out day. It is only
+  asked when there are no times to offer, so a normal day costs nothing more.
+
+*Rejected:* keeping "Ver" as the only way to apply the agenda's choices (the reported bug);
+disabling "Nuevo turno" until "Ver" is pressed (the same trap, one step later); a booking screen
+that starts with the first practitioner from everyone's agenda (it would choose for reception).
 

@@ -52,5 +52,15 @@
     <p class="ok" th:if="${message}" th:text="${message}"></p>
     <p class="error" th:if="${error}" th:text="${error}"></p>
 </div>
+<!--
+  A field marked data-refresh sends its form as soon as it changes, through the form's button
+  marked data-refresh-button when it has one. What is on screen then always matches what was
+  chosen; without JavaScript, the button does the same (D-36, D-45).
+-->
+<script th:fragment="refresh">
+    document.querySelectorAll('[data-refresh]').forEach(field =>
+        field.addEventListener('change', () =>
+            field.form.requestSubmit(field.form.querySelector('[data-refresh-button]') || undefined)));
+</script>
 </body>
 </html>

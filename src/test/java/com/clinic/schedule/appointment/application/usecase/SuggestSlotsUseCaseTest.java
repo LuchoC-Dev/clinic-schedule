@@ -53,7 +53,7 @@ class SuggestSlotsUseCaseTest {
 
     @Test
     void offersEveryQuarterOfAnHourInsideTheWorkingHours() {
-        assertThat(suggest.forReason(ARIAS, consulta, DAY))
+        assertThat(suggest.forReason(ARIAS, consulta, DAY).times())
                 .isEqualTo(times("09:00", "09:15", "09:30", "09:45", "10:00", "10:15", "10:30"));
     }
 
@@ -61,14 +61,14 @@ class SuggestSlotsUseCaseTest {
     void theLastOfferEndsExactlyWhenTheHoursEnd() {
         UUID longOne = practitioners.givenReason(ARIAS, "ecografia", 60);
 
-        assertThat(suggest.forReason(ARIAS, longOne, DAY)).last().isEqualTo(LocalTime.of(10, 0));
+        assertThat(suggest.forReason(ARIAS, longOne, DAY).times()).last().isEqualTo(LocalTime.of(10, 0));
     }
 
     @Test
     void leavesOutWhatWouldOverlapABookedAppointment() {
         appointments.given(booked(LocalTime.of(9, 30), 30));
 
-        assertThat(suggest.forReason(ARIAS, consulta, DAY))
+        assertThat(suggest.forReason(ARIAS, consulta, DAY).times())
                 .isEqualTo(times("09:00", "10:00", "10:15", "10:30"));
     }
 
@@ -83,7 +83,7 @@ class SuggestSlotsUseCaseTest {
         Appointment moving = booked(LocalTime.of(9, 30), 30);
         appointments.given(moving, booked(LocalTime.of(10, 30), 30));
 
-        assertThat(suggest.forMoving(moving, DAY))
+        assertThat(suggest.forMoving(moving, DAY).times())
                 .isEqualTo(times("09:00", "09:15", "09:30", "09:45", "10:00"));
     }
 
@@ -93,7 +93,32 @@ class SuggestSlotsUseCaseTest {
                 DAY.atTime(9, 40).atZone(ZoneId.of("America/Argentina/Buenos_Aires")).toInstant(),
                 ZoneId.of("America/Argentina/Buenos_Aires"));
 
-        assertThat(new SuggestSlotsUseCase(appointments, practitioners, atTwentyToTen).forReason(ARIAS, consulta, DAY))
+        assertThat(new SuggestSlotsUseCase(appointments, practitioners, atTwentyToTen).forReason(ARIAS, consulta, DAY).times())
                 .first().isEqualTo(LocalTime.of(9, 45));
+    }
+
+    // --- whether the practitioner works that day (D-45) ----------------------------------
+
+    @Test
+    void aDayWithTimesIsADayTheyWork() {
+        assertThat(suggest.forReason(ARIAS, consulta, DAY).practitionerWorks()).isTrue();
+    }
+
+    @Test
+    void aDayTheyDoNotWorkIsToldApartFromAFullOne() {
+        var otherDay = suggest.forReason(ARIAS, consulta, DAY.plusDays(1));
+
+        assertThat(otherDay.times()).isEmpty();
+        assertThat(otherDay.practitionerWorks()).isFalse();
+    }
+
+    @Test
+    void aFullDayIsStillADayTheyWork() {
+        appointments.given(booked(LocalTime.of(9, 0), 120));
+
+        var full = suggest.forReason(ARIAS, consulta, DAY);
+
+        assertThat(full.times()).isEmpty();
+        assertThat(full.practitionerWorks()).isTrue();
     }
 }

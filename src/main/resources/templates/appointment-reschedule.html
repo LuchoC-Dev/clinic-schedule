@@ -14,18 +14,20 @@
 
     <form class="card bar" method="get" th:action="@{/agenda/appointments/{id}/reschedule(id=${row.id})}">
         <label>Nuevo día
-            <input type="date" name="date" th:value="${date}">
+            <input type="date" name="date" th:value="${date}" data-refresh>
         </label>
-        <button type="submit">Ver horarios</button>
+        <button type="submit" data-refresh-button>Ver horarios</button>
     </form>
 
     <form class="card" method="post" th:action="@{/agenda/appointments/{id}/reschedule(id=${row.id})}">
         <input type="hidden" name="practitionerId" th:value="${practitionerId}">
         <input type="hidden" name="date" th:value="${date}">
         <h2 th:text="'Horarios libres el ' + ${date}">Horarios libres</h2>
-        <p th:if="${suggestions.isEmpty()}" class="muted">No hay horarios libres ese día.</p>
+        <p th:if="${suggestions.times.isEmpty() and !suggestions.practitionerWorks}" class="muted"
+           th:text="${row.practitioner} + ' no atiende ese día.'">No atiende ese día.</p>
+        <p th:if="${suggestions.times.isEmpty() and suggestions.practitionerWorks}" class="muted">No hay horarios libres ese día.</p>
         <div class="choices">
-            <label th:each="t : ${suggestions}">
+            <label th:each="t : ${suggestions.times}">
                 <input type="radio" name="time" th:value="${t}"><span th:text="${t}"></span>
             </label>
         </div>
@@ -38,5 +40,6 @@
             <a th:href="@{/agenda(practitionerId=${practitionerId}, date=${currentDate})}">Volver</a></p>
     </form>
 </main>
+<script th:replace="~{fragments :: refresh}"></script>
 </body>
 </html>
