@@ -299,6 +299,18 @@ file but `mvnw.cmd`, and a commit without the "LF will be replaced by CRLF" warn
 
 **Verified with:** the 316 tests passing unchanged.
 
+### After v1: the layered modules split by layer `[x]`
+- [x] `patient`, `practitioner`, `security`: `presentation/http/`, `presentation/screen/`,
+      `service/`, `entity/`, `persistence/`, besides `api/` (D-42)
+- [x] What crosses a layer made public, and no more
+- [x] `archunit-junit5` 1.5.0 and `ArchitectureTest`: module boundaries for all four modules,
+      layer access in the layered ones, only the service changes an entity
+- [x] 48 files moved with their history. 324 tests in total
+
+**Verified with:** the 316 tests passing unchanged, and each architecture rule failing when a
+violation of it was planted: another module importing `PatientService`, a controller holding the
+repository, a controller renaming a patient.
+
 ---
 
 ## Explicitly postponed
@@ -308,7 +320,6 @@ These are not oversights: they are decided and waiting for their moment.
 - **PostgreSQL** replacing H2, with `docker-compose` (see D-03), which is also what makes
   the overlap check safe under concurrency: an exclusion constraint over a time range, which
   H2 cannot express (see D-21).
-- **ArchUnit** enforcing the module boundaries (see D-05).
 - A user administration screen (see D-04).
 - Registering a new patient and booking them in **one transaction** from the booking screen;
   today they are two, and a refused booking leaves the patient registered (see D-37).

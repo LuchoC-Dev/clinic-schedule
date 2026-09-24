@@ -91,19 +91,20 @@ src/main/java/com/clinic/schedule/
 │       └── out/              driven: the ports' implementations
 │           ├── persistence/  JPA
 │           └── external/     the other modules, through their api/
-├── patient/                  layered, flat, package-private — api/ is its only public door
-├── practitioner/             layered, with the week's rules in plain classes — and its api/
-├── security/                 users, login, roles — and its api/
+├── patient/                  layered: presentation/ (http, screen), service/, entity/,
+│                             persistence/ — and api/, its only door for other modules
+├── practitioner/             layered alike, with the week's rules in plain classes
+├── security/                 layered alike: users, login, roles
 └── shared/                   the clock; http/ holds the API's error body
 ```
 
-A module reaches another only through its `api/` package; everything else is package-private
-(D-05, D-24). The domain of `appointment` has no framework annotations and is tested without
-Spring. The whole repository is in English; on-screen text is in Spanish (D-13).
+A module reaches another only through its `api/` package, and in the layered modules each layer
+is reached only by the one above it; `ArchitectureTest` checks both on every build (D-05, D-42).
+The domain of `appointment` has no framework annotations and is tested without Spring. The whole
+repository is in English; on-screen text is in Spanish (D-13).
 
 ## Deliberately postponed
 
 PostgreSQL with `docker-compose`, which also makes the overlap check safe when two
-receptionists book the same slot at once (D-21); ArchUnit to enforce the module boundaries;
-and a screen for practitioners' configuration and time off, which today is API-only. The
+receptionists book the same slot at once (D-21); and a screen for practitioners' configuration and time off, which today is API-only. The
 planned evolution after v1 — patient file, arrival queue, web booking — is in the context.

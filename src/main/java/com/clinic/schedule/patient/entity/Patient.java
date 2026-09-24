@@ -1,0 +1,93 @@
+package com.clinic.schedule.patient.entity;
+
+import java.util.UUID;
+
+import jakarta.persistence.Column;
+import jakarta.persistence.Embedded;
+import jakarta.persistence.Entity;
+import jakarta.persistence.Id;
+import jakarta.persistence.Table;
+
+/**
+ * A patient, as much as booking an appointment needs: who they are and, when they gave it,
+ * the document they identify themselves with.
+ *
+ * <p>JPA maps this class directly, with no separate row class: there is no invariant here
+ * that an entity cannot hold, so the separation `appointment` needs would be ceremony
+ * (D-25).
+ *
+ * <p>The full name is one field for now. Splitting it into given and family names is a
+ * later decision, and nothing in v1 needs the parts.
+ */
+@Entity
+@Table(name = "patient")
+public class Patient {
+
+    @Id
+    private UUID id;
+
+    @Column(name = "full_name", nullable = false, length = 150)
+    private String fullName;
+
+    /** Null when the patient did not give one, which is allowed and common. */
+    @Embedded
+    private IdentityDocument document;
+
+    protected Patient() {
+        // required by JPA
+    }
+
+    private Patient(UUID id, String fullName, IdentityDocument document) {
+        this.id = id;
+        this.fullName = requireName(fullName);
+        this.document = document;
+    }
+
+    /** A new patient. The id is assigned here and not by the database (D-19). */
+    public static Patient register(String fullName, IdentityDocument document) {
+        return new Patient(UUID.randomUUID(), fullName, document);
+    }
+
+    public void rename(String fullName) {
+        this.fullName = requireName(fullName);
+    }
+
+    /** Null clears the document, which is how a wrongly entered one is taken back out. */
+    public void setDocument(IdentityDocument document) {
+        this.document = document;
+    }
+
+    /**
+     * A name is required, fits its column, and has at least one letter: "!!!" or "123" is a
+     * slip of the keyboard, not somebody's name (D-38). Nothing stricter — names carry
+     * accents, apostrophes and hyphens.
+     */
+    private static String requireName(String fullName) {
+        if (fullName == null || fullName.isBlank()) {
+            throw new IllegalArgumentException("A patient needs a full name");
+        }
+        String name = fullName.strip();
+        if (name.length() > MAX_NAME_LENGTH) {
+            throw new IllegalArgumentException("A full name is at most " + MAX_NAME_LENGTH + " characters");
+        }
+        if (name.codePoints().noneMatch(Character::isLetter)) {
+            throw new IllegalArgumentException("A full name needs at least one letter");
+        }
+        return name;
+    }
+
+    /** As long as the column that stores it. */
+    static final int MAX_NAME_LENGTH = 150;
+
+    public UUID getId() {
+        return id;
+    }
+
+    public String getFullName() {
+        return fullName;
+    }
+
+    public IdentityDocument getDocument() {
+        return document;
+    }
+}

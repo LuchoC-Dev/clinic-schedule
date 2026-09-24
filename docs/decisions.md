@@ -75,7 +75,7 @@ asking.
 ---
 
 ## D-05 — Feature modules, simple layers, boundaries by convention
-**Date:** 2026-09-22 · **Status:** accepted
+**Date:** 2026-09-22 · **Status:** accepted; the boundaries checked by ArchUnit since D-42
 
 The structure is `patient/`, `practitioner/`, `appointment/`. Inside each module, simple
 layers (web, application, domain, persistence). **Each module may organize its internals
@@ -542,7 +542,7 @@ package-private concrete class reached only through the module's service, while 
 ---
 
 ## D-25 — Layered inside `patient` and `practitioner`, with the rules kept pure
-**Date:** 2026-09-22 · **Status:** accepted
+**Date:** 2026-09-22 · **Status:** accepted; the flat package superseded by D-42
 
 Only `appointment` separates the domain from persistence (D-16). The other two map JPA
 directly onto their classes, which is what D-05 allows and what keeps them short.
@@ -1173,8 +1173,8 @@ special access to the one above it, and a top-level class cannot be `protected`.
 use cases that use it, rather than being made public to live in a folder of its own.
 
 `usecase/` keeps twelve files: all of one kind, each named by what it does. Splitting it by topic
-would make `AgendaReader` public for no gain. `patient` and `practitioner` are not hexagonal and
-stay flat (D-25), since splitting them would make their package-private classes public.
+would make `AgendaReader` public for no gain. `patient`, `practitioner` and `security` are not
+hexagonal: they are split by their own layers, in D-42.
 
 The earlier decisions keep the paths they were written with; `appointment/external/` in D-29 and
 D-30, for example, is now `appointment/adapter/out/external/`.
@@ -1182,4 +1182,60 @@ D-30, for example, is now `appointment/adapter/out/external/`.
 *Rejected:* dividing by file count (the number says nothing about where a file belongs);
 `adapter/in/http/rest/` (a level with nothing to tell apart); an `api/` package for the REST
 controllers (in this repository `api/` is what a module exposes to the others, D-05).
+
+---
+
+## D-42 — The layered modules split by layer, and ArchUnit guarding what visibility did
+**Date:** 2026-09-24 · **Status:** accepted
+
+`patient`, `practitioner` and `security` are layered, so they are split by their layers rather
+than by the hexagon of D-41:
+
+```
+patient/                         practitioner/ and security/ alike
+├── api/                         what other modules see (D-05), as before
+├── presentation/
+│   ├── http/                    the REST controllers, their Request/Response and error handler
+│   └── screen/                  the Thymeleaf controllers
+├── service/                     the service, and the refusals it raises
+├── entity/                      the entities and value objects, and the refusals they raise
+└── persistence/                 the Spring Data repository
+```
+
+- **Singular names**, like the rest of the repository.
+- **`api/` stays what it was**, the contract between modules; the controllers are not part of
+  it, since no other module calls them.
+- **An exception lives with what raises it.** The entity's refusals are in `entity/` — the entity
+  layer must not depend on the service layer — and the service's in `service/`.
+- **`AvailabilityPolicy` is in `entity/`**: `Practitioner` is what uses it, so it stays
+  package-private.
+- **`security`** keeps `SecurityConfiguration` at its root: it configures the whole application,
+  not one layer. `AppUserDetails`, the adapter Spring Security reads a user through, is in
+  `service/` with those who use it. Separating a `user` module was considered and postponed to
+  the first user feature — administering staff users, or patients' accounts for web booking —
+  when it will be clear where the boundary goes; today it would be five files with no behaviour.
+
+**What this cost.** Until now these modules were one package each, and package visibility was
+the guarantee: no other module could compile a reference to `PatientService`, nothing but the
+service could reach the repository, and nothing but the service could change an entity (D-17,
+D-24, D-25). Split into packages, whatever one layer uses of another has to be public: the
+services and the methods the controllers call, the entities and their getters, the entities'
+changing methods for the service, the value objects the requests build, the exceptions the
+handlers catch.
+
+**What gets it back.** `ArchitectureTest`, with ArchUnit, checks the compiled classes:
+
+- a module is reached from another only through its `api/` — all four modules, `appointment`
+  included, which D-05 had left to convention;
+- in the layered modules, presentation reaches only the service, and only the service reaches
+  persistence;
+- no class outside `service/` and `entity/` calls a method of an entity other than a getter.
+
+Each rule was checked to fail by planting a violation of it. The guarantee moves from the
+compiler to the build, which fails all the same.
+
+*Rejected:* keeping the modules flat (it was asked to split them by their architecture);
+splitting them by the hexagon (not their architecture); a `persistence/` package with no
+check (anything could have injected a repository and written past the service); separating
+authentication from authorization (configured together by Spring Security, in one class).
 
