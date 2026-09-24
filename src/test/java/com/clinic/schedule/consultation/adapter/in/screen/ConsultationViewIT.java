@@ -1,0 +1,208 @@
+package com.clinic.schedule.consultation.adapter.in.screen;
+
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.hamcrest.Matchers.containsString;
+import static org.hamcrest.Matchers.not;
+import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.csrf;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.flash;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.redirectedUrl;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
+
+import java.util.UUID;
+
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
+import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.http.MediaType;
+import org.springframework.jdbc.core.JdbcTemplate;
+import org.springframework.security.core.userdetails.UserDetailsService;
+import org.springframework.security.test.context.support.WithMockUser;
+import org.springframework.test.web.servlet.MockMvc;
+import org.springframework.test.web.servlet.MvcResult;
+import org.springframework.test.web.servlet.request.MockHttpServletRequestBuilder;
+import org.springframework.test.web.servlet.request.RequestPostProcessor;
+
+import com.clinic.schedule.appointment.PatientFixture;
+import com.clinic.schedule.appointment.PractitionerFixture;
+import com.clinic.schedule.appointment.PractitionerFixture.CreatedPractitioner;
+import com.clinic.schedule.consultation.PractitionerUserFixture;
+import com.fasterxml.jackson.databind.ObjectMapper;
+
+/**
+ * The practitioner's consultation screens over the real stack (D-51): the agenda leads to them,
+ * the form records a consultation, and a refusal comes back in Spanish with what was typed.
+ */
+@SpringBootTest
+@AutoConfigureMockMvc
+@WithMockUser(roles = "RECEPTION")
+class ConsultationViewIT {
+
+    private static final String TODAY = "2026-03-10";
+
+    @Autowired
+    private MockMvc mockMvc;
+
+    @Autowired
+    private ObjectMapper json;
+
+    @Autowired
+    private JdbcTemplate jdbc;
+
+    @Autowired
+    private UserDetailsService userDetails;
+
+    private CreatedPractitioner arias;
+    private RequestPostProcessor asArias;
+    private UUID patient;
+
+    @BeforeEach
+    void setUp() throws Exception {
+        arias = new PractitionerFixture(mockMvc, json).workingEveryDay();
+        asArias = new PractitionerUserFixture(jdbc, userDetails).userFor(arias.id());
+        patient = new PatientFixture(mockMvc, json).newPatient();
+    }
+
+    private String bookToday(String time) throws Exception {
+        MvcResult result = mockMvc.perform(post("/api/appointments")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {"patientId": "%s", "practitionerId": "%s", "reasonId": "%s", "startsAt": "%sT%s"}
+                                """.formatted(patient, arias.id(), arias.consulta(), TODAY, time)))
+                .andExpect(status().isCreated())
+                .andReturn();
+        return json.readTree(result.getResponse().getContentAsString()).get("id").asText();
+    }
+
+    private void arrivedToday() throws Exception {
+        String appointment = bookToday("10:00:00");
+        mockMvc.perform(post("/api/appointments/" + appointment + "/check-in")).andExpect(status().isOk());
+    }
+
+    /** The form as a practitioner sends it: five rows of items, some of them empty. */
+    private MockHttpServletRequestBuilder form(String notes, String... kindThenDescription) {
+        MockHttpServletRequestBuilder request = post("/consultations").with(asArias).with(csrf())
+                .param("patientId", patient.toString())
+                .param("notes", notes);
+        for (int row = 0; row < 5; row++) {
+            int at = row * 2;
+            request.param("kind", at < kindThenDescription.length ? kindThenDescription[at] : "");
+            request.param("description", at + 1 < kindThenDescription.length ? kindThenDescription[at + 1] : "");
+        }
+        return request;
+    }
+
+    @Test
+    void theAgendaOffersTheConsultationOnceThePatientArrived() throws Exception {
+        bookToday("10:00:00");
+
+        mockMvc.perform(get("/agenda").with(asArias).param("date", TODAY))
+                .andExpect(status().isOk())
+                .andExpect(content().string(containsString("/clinical-records/" + patient)))
+                .andExpect(content().string(not(containsString("Empezar consulta"))));
+
+        String appointment = bookToday("11:00:00");
+        mockMvc.perform(post("/api/appointments/" + appointment + "/check-in")).andExpect(status().isOk());
+
+        mockMvc.perform(get("/agenda").with(asArias).param("date", TODAY))
+                .andExpect(content().string(containsString("Empezar consulta")))
+                .andExpect(content().string(containsString("/consultations/new?patientId=" + patient)));
+    }
+
+    @Test
+    void aConsultationIsRecordedFromTheFormAndShownInTheRecord() throws Exception {
+        arrivedToday();
+
+        mockMvc.perform(get("/consultations/new").with(asArias).param("patientId", patient.toString()))
+                .andExpect(status().isOk())
+                .andExpect(content().string(containsString("Registrar consulta")))
+                .andExpect(content().string(containsString("Todavía no hay consultas registradas.")));
+
+        mockMvc.perform(form("Control de hipertensión.", "CHECK", "presión 120/80", "", "",
+                        "STUDY_ORDER", "ecodoppler de vasos de cuello"))
+                .andExpect(redirectedUrl("/clinical-records/" + patient))
+                .andExpect(flash().attribute("message", "Consulta registrada."));
+
+        mockMvc.perform(get("/clinical-records/" + patient).with(asArias))
+                .andExpect(status().isOk())
+                .andExpect(content().string(containsString("Control de hipertensión.")))
+                .andExpect(content().string(containsString("Chequeo:")))
+                .andExpect(content().string(containsString("Orden de estudio:")))
+                .andExpect(content().string(containsString("ecodoppler de vasos de cuello")));
+    }
+
+    @Test
+    void aHalfFilledRowIsRefusedKeepingWhatWasTyped() throws Exception {
+        arrivedToday();
+
+        mockMvc.perform(form("Control.", "CHECK", "pulso 72", "PRESCRIPTION", ""))
+                .andExpect(redirectedUrl("/consultations/new?patientId=" + patient))
+                .andExpect(flash().attribute("error", containsString("Cada ítem necesita su tipo y su texto")))
+                .andExpect(flash().attributeExists("form"));
+
+        mockMvc.perform(get("/clinical-records/" + patient).with(asArias))
+                .andExpect(content().string(containsString("Todavía no hay consultas registradas.")));
+    }
+
+    @Test
+    void aConsultationWithoutNotesIsRefused() throws Exception {
+        arrivedToday();
+
+        mockMvc.perform(form("  ", "CHECK", "pulso 72"))
+                .andExpect(flash().attribute("error", "Escribí lo consultado."));
+    }
+
+    @Test
+    void moreRowsBringTheFormBackWithoutRecordingIt() throws Exception {
+        arrivedToday();
+
+        MvcResult more = mockMvc.perform(form("Control.", "CHECK", "pulso 72").param("action", "more"))
+                .andExpect(redirectedUrl("/consultations/new?patientId=" + patient))
+                .andExpect(flash().attributeExists("form"))
+                .andReturn();
+
+        // The five rows sent come back as eight, with what was typed in them.
+        String page = mockMvc.perform(get("/consultations/new").with(asArias).param("patientId", patient.toString())
+                        .flashAttrs(more.getFlashMap()))
+                .andExpect(status().isOk())
+                .andExpect(content().string(containsString("pulso 72")))
+                .andReturn().getResponse().getContentAsString();
+        assertThat(page.split("name=\"kind\"", -1)).hasSize(8 + 1);
+
+        mockMvc.perform(get("/clinical-records/" + patient).with(asArias))
+                .andExpect(content().string(containsString("Todavía no hay consultas registradas.")));
+    }
+
+    @Test
+    void beforeThePatientArrivesTheFormFallsBackToTheRecord() throws Exception {
+        bookToday("10:00:00");
+
+        mockMvc.perform(get("/consultations/new").with(asArias).param("patientId", patient.toString()))
+                .andExpect(redirectedUrl("/clinical-records/" + patient))
+                .andExpect(flash().attribute("error", containsString("cuando el paciente llegó")));
+        mockMvc.perform(get("/clinical-records/" + patient).with(asArias))
+                .andExpect(status().isOk())
+                .andExpect(content().string(not(containsString("Empezar consulta"))));
+    }
+
+    @Test
+    void aRecordThePractitionerMayNotReadIsForbidden() throws Exception {
+        mockMvc.perform(get("/clinical-records/" + patient).with(asArias)).andExpect(status().isForbidden());
+        mockMvc.perform(get("/consultations/new").with(asArias).param("patientId", patient.toString()))
+                .andExpect(status().isForbidden());
+        mockMvc.perform(form("Sin turno.")).andExpect(status().isForbidden());
+    }
+
+    @Test
+    void receptionCannotReachTheConsultationScreens() throws Exception {
+        arrivedToday();
+
+        mockMvc.perform(get("/clinical-records/" + patient)).andExpect(status().isForbidden());
+        mockMvc.perform(get("/consultations/new").param("patientId", patient.toString()))
+                .andExpect(status().isForbidden());
+    }
+}

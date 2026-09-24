@@ -23,10 +23,10 @@ import com.clinic.schedule.user.api.Role;
  *   <li>everything else: a login form, a session, and CSRF protection for the screens.</li>
  * </ul>
  *
- * <p>What each role may reach is decided here, by route: a practitioner may only read the
- * agenda, reception may do everything. <em>Whose</em> agenda a practitioner reads is not a
- * route question — reception and practitioners use the same one — so it is decided by the use
- * case, which asks the security module who is asking (D-04).
+ * <p>What each role may reach is decided here, by route: a practitioner reads the agenda and
+ * works with clinical records, which are theirs alone (D-51); reception does everything else.
+ * <em>Whose</em> agenda or record a practitioner reads is not a route question, so it is
+ * decided by the use case, which asks the security module who is asking (D-04, D-49).
  */
 @Configuration
 class SecurityConfiguration {
@@ -43,6 +43,7 @@ class SecurityConfiguration {
                 .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .authorizeHttpRequests(routes -> routes
                         .requestMatchers(HttpMethod.GET, "/api/appointments").hasAnyRole(RECEPTION, PRACTITIONER)
+                        .requestMatchers("/api/consultations/**", "/api/clinical-records/**").hasRole(PRACTITIONER)
                         .anyRequest().hasRole(RECEPTION))
                 .httpBasic(basic -> basic.authenticationEntryPoint(errors))
                 .exceptionHandling(handling -> handling.authenticationEntryPoint(errors).accessDeniedHandler(errors))
@@ -56,6 +57,7 @@ class SecurityConfiguration {
                 .authorizeHttpRequests(routes -> routes
                         .requestMatchers("/login", "/error").permitAll()
                         .requestMatchers(HttpMethod.GET, "/", "/agenda").hasAnyRole(RECEPTION, PRACTITIONER)
+                        .requestMatchers("/consultations/**", "/clinical-records/**").hasRole(PRACTITIONER)
                         .anyRequest().hasRole(RECEPTION))
                 .formLogin(login -> login.loginPage("/login").defaultSuccessUrl("/agenda", true).permitAll())
                 .logout(logout -> logout.logoutSuccessUrl("/login?logout"))

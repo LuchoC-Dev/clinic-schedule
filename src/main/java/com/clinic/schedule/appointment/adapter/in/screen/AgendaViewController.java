@@ -117,6 +117,9 @@ class AgendaViewController {
      * <p>A practitioner sees only their own, read-only: whose agenda it is comes back from the
      * use case, and the choice of practitioner and the buttons are hidden, since the routes
      * behind them are closed to them anyway (D-34). Asking for someone else's answers 403 (D-39).
+     * What they get instead are links into the consultation module's screens — a patient's
+     * record, and "Empezar consulta" once the patient arrived — which are only URLs: this module
+     * does not depend on that one (D-51).
      */
     @GetMapping("/agenda")
     String agenda(@RequestParam(required = false) UUID practitionerId,

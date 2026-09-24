@@ -1,0 +1,53 @@
+<!DOCTYPE html>
+<html lang="es" xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{fragments :: head('Consulta')}"></head>
+<body>
+<header th:replace="~{fragments :: header}"></header>
+<main class="wide">
+    <h1 th:text="'Consulta de ' + ${patient.fullName}">Consulta de Ana Pérez</h1>
+    <p class="muted" th:if="${patient.document}" th:text="${patient.document}">DNI 30111222</p>
+    <div th:replace="~{fragments :: messages}"></div>
+
+    <div class="columns">
+        <!--
+          The form is sent once: after that the consultation cannot be changed (D-47). Without
+          JavaScript, "Más renglones" brings it back with everything typed and three more rows (D-51).
+        -->
+        <form method="post" th:action="@{/consultations}">
+            <input type="hidden" name="patientId" th:value="${patient.id}">
+            <label>Lo consultado
+                <textarea name="notes" rows="8" maxlength="10000" th:text="${form.notes}"></textarea>
+            </label>
+
+            <h2>Chequeos, recetas y órdenes</h2>
+            <table>
+                <thead><tr><th>Tipo</th><th>Detalle</th></tr></thead>
+                <tbody>
+                <tr th:each="row : ${rows}">
+                    <td>
+                        <select name="kind">
+                            <option value="">—</option>
+                            <option th:each="k : ${kinds}" th:value="${k.key}" th:text="${k.value}"
+                                    th:selected="${k.key == row.kind}"></option>
+                        </select>
+                    </td>
+                    <td><textarea name="description" rows="2" maxlength="2000" th:text="${row.description}"></textarea></td>
+                </tr>
+                </tbody>
+            </table>
+
+            <p class="bar">
+                <button type="submit" name="action" value="more">Más renglones</button>
+                <button type="submit" name="action" value="send" class="primary">Registrar consulta</button>
+            </p>
+            <p class="muted">Una vez registrada, la consulta no se puede modificar.</p>
+        </form>
+
+        <section>
+            <h2>Historia clínica</h2>
+            <section th:replace="~{clinical-record :: entries}"></section>
+        </section>
+    </div>
+</main>
+</body>
+</html>

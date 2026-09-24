@@ -62,7 +62,7 @@
                 <th>Horario</th>
                 <th th:if="${everyone}">Profesional</th>
                 <th>Paciente</th><th>Razón</th><th>Estado</th>
-                <th th:unless="${readOnly}"></th>
+                <th></th>
             </tr>
             </thead>
             <tbody>
@@ -70,13 +70,22 @@
                 <td th:text="${row.startsAt} + ' – ' + ${row.endsAt}">10:00 – 10:30</td>
                 <td th:if="${everyone}" th:text="${row.practitioner}">Dra. Laura Arias</td>
                 <td>
-                    <span th:if="${readOnly}" th:text="${row.patient}">Ana Pérez</span>
+                    <!-- A practitioner reads the record of today's patients, even before they arrive (D-49). -->
+                    <a th:if="${readOnly and row.date == today}"
+                       th:href="@{/clinical-records/{id}(id=${row.patientId})}" th:text="${row.patient}">Ana Pérez</a>
+                    <span th:if="${readOnly and row.date != today}" th:text="${row.patient}">Ana Pérez</span>
                     <a th:unless="${readOnly}" th:href="@{/agenda/patients/{id}(id=${row.patientId})}"
                        th:text="${row.patient}">Ana Pérez</a>
                     <div class="muted" th:if="${row.note}" th:text="${row.note}"></div>
                 </td>
                 <td th:text="${row.reason}">consulta</td>
                 <td th:text="${row.state}">Reservado</td>
+                <td class="actions" th:if="${readOnly}">
+                    <a th:if="${row.checkedIn and row.date == today}"
+                       th:href="@{/consultations/new(patientId=${row.patientId})}">
+                        <button type="button" class="primary">Empezar consulta</button>
+                    </a>
+                </td>
                 <td class="actions" th:unless="${readOnly}">
                     <form class="inline" method="post" th:unless="${row.checkedIn}"
                           th:action="@{/agenda/appointments/{id}/check-in(id=${row.id})}">

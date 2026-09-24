@@ -1,0 +1,38 @@
+<!DOCTYPE html>
+<html lang="es" xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{fragments :: head('Historia clínica')}"></head>
+<body>
+<header th:replace="~{fragments :: header}"></header>
+<main>
+    <h1 th:text="'Historia clínica de ' + ${patient.fullName}">Historia clínica de Ana Pérez</h1>
+    <p class="muted" th:if="${patient.document}" th:text="${patient.document}">DNI 30111222</p>
+    <div th:replace="~{fragments :: messages}"></div>
+
+    <p class="bar" th:if="${mayRecord}">
+        <a th:href="@{/consultations/new(patientId=${patient.id})}">
+            <button type="button" class="primary">Empezar consulta</button>
+        </a>
+    </p>
+
+    <!-- The record: every practitioner's consultations, newest first. Reused beside the consultation form. -->
+    <section th:fragment="entries">
+        <p th:if="${entries.isEmpty()}" class="muted">Todavía no hay consultas registradas.</p>
+        <article class="card" th:each="entry : ${entries}">
+            <p class="muted">
+                <span th:text="${entry.recordedAt}">mar 10/03/2026 10:15</span> —
+                <span th:text="${entry.practitioner}">Dra. Laura Arias</span>
+            </p>
+            <p class="notes" th:text="${entry.notes}">Control de presión.</p>
+            <ul th:unless="${entry.items.isEmpty()}">
+                <li th:each="item : ${entry.items}">
+                    <strong th:text="${item.kind} + ':'">Chequeo:</strong>
+                    <span class="notes" th:text="${item.description}">presión 120/80</span>
+                </li>
+            </ul>
+        </article>
+    </section>
+
+    <p><a th:href="@{/agenda}">Volver a la agenda</a></p>
+</main>
+</body>
+</html>
