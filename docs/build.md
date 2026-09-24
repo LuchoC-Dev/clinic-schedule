@@ -347,6 +347,23 @@ times; switching to Benítez there said "Dr. Martín Benítez no atiende ese dí
 "Nuevo turno" from everyone's agenda asked for the practitioner, and choosing Arias brought her
 times. Changing the view and the day on the agenda reloaded it as well.
 
+### After v1: practitioners and time off on the screens `[x]`
+- [x] `/practitioners` and `/practitioners/{id}`: register, rename, reasons, the week as a table
+      saved whole, the coming absences (D-46)
+- [x] `/time-off` in the appointment module: the absence form, answering with what was cancelled
+      and who needs handling by hand
+- [x] Absences of several days, on the screen and in the API (`untilDate`); the rule in
+      `RecordTimeOffUseCase.Command.of`
+- [x] `TimeOffInThePastException`; a practitioner's name checked in the entity
+- [x] 5 unit and 17 integration tests. 362 in total
+
+**Verified in a browser** against the application on PostgreSQL: a practitioner registered, a
+reason added, a week of two stretches saved; an appointment booked on the Friday; an absence from
+Friday 25 to Monday 28 recorded, which answered "Turnos cancelados (1): vie 25/09 10:00 …" and
+listed "del vie 25/09/2026 al lun 28/09/2026"; a day already gone refused in Spanish.
+
+**v1 is usable end to end from the screens.**
+
 ---
 
 ## Explicitly postponed
@@ -354,9 +371,6 @@ times. Changing the view and the day on the agenda reloaded it as well.
 These are not oversights: they are decided and waiting for their moment.
 
 - A user administration screen (see D-04); it has a module to land in since D-43.
-- A screen to configure practitioners — reasons and weekly hours — and to record time off;
-  today both are done through the API (see D-33).
-- Time off over several days in one request; today it is recorded a day at a time (see D-32).
 - Registering a new patient and booking them in **one transaction** from the booking screen;
   today they are two, and a refused booking leaves the patient registered (see D-37).
 

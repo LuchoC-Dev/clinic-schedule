@@ -1,13 +1,17 @@
 package com.clinic.schedule.appointment.application.usecase;
 
 import java.time.Clock;
+import java.time.Duration;
 import java.time.LocalDate;
+import java.time.LocalDateTime;
+import java.time.LocalTime;
 import java.util.ArrayList;
 import java.util.List;
 
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import com.clinic.schedule.appointment.application.exception.TimeOffInThePastException;
 import com.clinic.schedule.appointment.application.exception.UnknownPractitionerException;
 import com.clinic.schedule.appointment.application.port.AppointmentRepository;
 import com.clinic.schedule.appointment.application.port.PractitionerSchedulePort;
@@ -47,15 +51,14 @@ public class RecordTimeOffUseCase {
     }
 
     /**
-     * @throws IllegalArgumentException when the absence is on a day already gone: there is
+     * @throws TimeOffInThePastException when the absence is on a day already gone: there is
      *         nothing left to cancel, so recording it can only be a mistyped date (D-38). Today
      *         is accepted whole, so an absence reported in the morning can start at midnight.
      */
     @Transactional
     public Result handle(Command command) {
         if (command.span().startsAt().toLocalDate().isBefore(LocalDate.now(clock))) {
-            throw new IllegalArgumentException("Time off cannot be recorded for a day already gone: "
-                    + command.span().startsAt().toLocalDate());
+            throw new TimeOffInThePastException(command.span().startsAt().toLocalDate());
         }
         if (!practitioners.recordTimeOff(command.practitionerId(), command.span())) {
             throw new UnknownPractitionerException(command.practitionerId());
@@ -89,8 +92,38 @@ public class RecordTimeOffUseCase {
         return hit;
     }
 
-    /** The practitioner and the span they are absent for: a whole day, or part of one. */
+    /** The practitioner and the span they are absent for: whole days, or part of one day. */
     public record Command(PractitionerId practitionerId, TimeSlot span) {
+
+        /**
+         * The absence as reception describes it (D-46): from a day, until another day or the same
+         * one, and optionally between two times. Without times it is whole days; with both, part
+         * of a single day. Several days are always whole: an absence from Monday afternoon to
+         * Wednesday noon is recorded as two.
+         *
+         * @param untilDate the last day of the absence, included; null for a single day
+         * @throws IllegalArgumentException when the combination does not describe an absence
+         */
+        public static Command of(PractitionerId practitionerId, LocalDate date, LocalDate untilDate,
+                LocalTime startsAt, LocalTime endsAt) {
+            LocalDate lastDay = untilDate != null ? untilDate : date;
+            if (lastDay.isBefore(date)) {
+                throw new IllegalArgumentException("Time off cannot end on a day before it starts: " + date + " to " + lastDay);
+            }
+            if ((startsAt == null) != (endsAt == null)) {
+                throw new IllegalArgumentException("Time off needs both a start and an end time, or neither for whole days");
+            }
+            if (startsAt == null) {
+                LocalDateTime from = date.atStartOfDay();
+                return new Command(practitionerId,
+                        new TimeSlot(from, Duration.between(from, lastDay.plusDays(1).atStartOfDay())));
+            }
+            if (!lastDay.equals(date)) {
+                throw new IllegalArgumentException("Time off over several days is recorded as whole days, without times");
+            }
+            LocalDateTime from = date.atTime(startsAt);
+            return new Command(practitionerId, new TimeSlot(from, Duration.between(from, date.atTime(endsAt))));
+        }
     }
 
     /**

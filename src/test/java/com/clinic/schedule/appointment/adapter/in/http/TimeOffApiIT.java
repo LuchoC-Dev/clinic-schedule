@@ -1,5 +1,6 @@
 package com.clinic.schedule.appointment.adapter.in.http;
 
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.hamcrest.Matchers.containsString;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
@@ -80,11 +81,11 @@ class TimeOffApiIT {
                 {"practitionerId": "%s", "date": "%s"}
                 """.formatted(arias.id(), DAY));
 
-        org.assertj.core.api.Assertions.assertThat(result.get("startsAt").asText()).isEqualTo(DAY + "T00:00:00");
-        org.assertj.core.api.Assertions.assertThat(result.get("cancelled")).hasSize(1);
-        org.assertj.core.api.Assertions.assertThat(result.get("cancelled").get(0).get("id").asText()).isEqualTo(notYet);
-        org.assertj.core.api.Assertions.assertThat(result.get("needsManualHandling")).hasSize(1);
-        org.assertj.core.api.Assertions.assertThat(result.get("needsManualHandling").get(0).get("id").asText())
+        assertThat(result.get("startsAt").asText()).isEqualTo(DAY + "T00:00:00");
+        assertThat(result.get("cancelled")).hasSize(1);
+        assertThat(result.get("cancelled").get(0).get("id").asText()).isEqualTo(notYet);
+        assertThat(result.get("needsManualHandling")).hasSize(1);
+        assertThat(result.get("needsManualHandling").get(0).get("id").asText())
                 .isEqualTo(arrived);
     }
 
@@ -99,8 +100,8 @@ class TimeOffApiIT {
                 {"practitionerId": "%s", "date": "%s", "startsAt": "11:00", "endsAt": "13:00"}
                 """.formatted(arias.id(), DAY));
 
-        org.assertj.core.api.Assertions.assertThat(result.get("cancelled")).hasSize(1);
-        org.assertj.core.api.Assertions.assertThat(result.get("cancelled").get(0).get("id").asText()).isEqualTo(inside);
+        assertThat(result.get("cancelled")).hasSize(1);
+        assertThat(result.get("cancelled").get(0).get("id").asText()).isEqualTo(inside);
 
         mockMvc.perform(get("/api/appointments").param("practitionerId", arias.id().toString()).param("date", DAY))
                 .andExpect(jsonPath("$.length()").value(2));
@@ -181,5 +182,48 @@ class TimeOffApiIT {
                                 """.formatted(arias.id())))
                 .andExpect(status().isBadRequest())
                 .andExpect(jsonPath("$.message").value(containsString("day already gone")));
+    }
+
+    // --- several days (D-46) -----------------------------------------------------------
+
+    @Test
+    void anAbsenceOfSeveralDaysCancelsEachOfThemAndNothingAfter() throws Exception {
+        CreatedPractitioner arias = practitioners.workingEveryDay();
+        String today = book(arias, "10:00:00");
+        String dayAfterTomorrow = bookOn(arias, "2026-03-12", "10:00:00");
+        String later = bookOn(arias, "2026-03-13", "10:00:00");
+
+        JsonNode result = recordTimeOff("""
+                {"practitionerId": "%s", "date": "%s", "untilDate": "2026-03-12"}
+                """.formatted(arias.id(), DAY));
+
+        assertThat(result.get("endsAt").asText()).isEqualTo("2026-03-13T00:00:00");
+        assertThat(result.get("cancelled").findValuesAsText("id"))
+                .containsExactlyInAnyOrder(today, dayAfterTomorrow);
+        assertThat(result.get("cancelled").findValuesAsText("id")).doesNotContain(later);
+    }
+
+    @Test
+    void timesOverSeveralDaysAnswer400() throws Exception {
+        CreatedPractitioner arias = practitioners.workingEveryDay();
+
+        mockMvc.perform(post("/api/time-off").contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {"practitionerId": "%s", "date": "%s", "untilDate": "2026-03-12",
+                                 "startsAt": "10:00", "endsAt": "12:00"}
+                                """.formatted(arias.id(), DAY)))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.message").value(containsString("whole days")));
+    }
+
+    private String bookOn(CreatedPractitioner practitioner, String day, String time) throws Exception {
+        MvcResult result = mockMvc.perform(post("/api/appointments")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {"patientId": "%s", "practitionerId": "%s", "reasonId": "%s", "startsAt": "%sT%s"}
+                                """.formatted(patients.newPatient(), practitioner.id(), practitioner.consulta(), day, time)))
+                .andExpect(status().isCreated())
+                .andReturn();
+        return json.readTree(result.getResponse().getContentAsString()).get("id").asText();
     }
 }

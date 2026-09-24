@@ -1,5 +1,6 @@
 package com.clinic.schedule.appointment.application.usecase;
 
+import java.time.LocalTime;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
@@ -153,5 +154,54 @@ class RecordTimeOffUseCaseTest {
 
         assertThat(result.cancelled()).extracting(Appointment::id).containsExactly(afternoon.id());
         assertThat(statusOf(afternoon)).isEqualTo(AppointmentStatus.CANCELLED);
+    }
+
+    // --- how reception describes an absence (D-46) --------------------------------------
+
+    private static RecordTimeOffUseCase.Command of(LocalDate date, LocalDate untilDate, LocalTime from, LocalTime until) {
+        return RecordTimeOffUseCase.Command.of(ARIAS, date, untilDate, from, until);
+    }
+
+    @Test
+    void aDayWithoutTimesIsTheWholeDay() {
+        assertThat(of(DAY, null, null, null).span()).isEqualTo(wholeDay());
+        assertThat(of(DAY, DAY, null, null).span()).isEqualTo(wholeDay());
+    }
+
+    @Test
+    void severalDaysAreWholeDaysUpToTheLastOneIncluded() {
+        TimeSlot span = of(DAY, DAY.plusDays(2), null, null).span();
+
+        assertThat(span.startsAt()).isEqualTo(DAY.atStartOfDay());
+        assertThat(span.endsAt()).isEqualTo(DAY.plusDays(3).atStartOfDay());
+    }
+
+    @Test
+    void twoTimesArePartOfTheDay() {
+        assertThat(of(DAY, null, LocalTime.of(11, 0), LocalTime.of(13, 0)).span()).isEqualTo(between(11, 13));
+    }
+
+    @Test
+    void combinationsThatDescribeNoAbsenceAreRefused() {
+        assertThatThrownBy(() -> of(DAY, DAY.minusDays(1), null, null)).isInstanceOf(IllegalArgumentException.class);
+        assertThatThrownBy(() -> of(DAY, null, LocalTime.of(11, 0), null)).isInstanceOf(IllegalArgumentException.class);
+        assertThatThrownBy(() -> of(DAY, DAY.plusDays(1), LocalTime.of(11, 0), LocalTime.of(13, 0)))
+                .isInstanceOf(IllegalArgumentException.class)
+                .hasMessageContaining("whole days");
+        assertThatThrownBy(() -> of(DAY, null, LocalTime.of(13, 0), LocalTime.of(11, 0)))
+                .isInstanceOf(IllegalArgumentException.class);
+    }
+
+    @Test
+    void anAbsenceOfSeveralDaysCancelsWhatItTouchesOnEachOfThem() {
+        Appointment first = booked(ARIAS, DAY.atTime(10, 0));
+        Appointment second = booked(ARIAS, DAY.plusDays(2).atTime(17, 30));
+        Appointment after = booked(ARIAS, DAY.plusDays(3).atTime(9, 0));
+        appointments.given(first, second, after);
+
+        RecordTimeOffUseCase.Result result = recordTimeOff.handle(of(DAY, DAY.plusDays(2), null, null));
+
+        assertThat(result.cancelled()).extracting(Appointment::id).containsExactlyInAnyOrder(first.id(), second.id());
+        assertThat(statusOf(after)).isEqualTo(AppointmentStatus.BOOKED);
     }
 }

@@ -48,8 +48,9 @@ removes (D-34).
 **Screens** — open http://localhost:8080 and log in. Reception gets the agenda — a day or a
 week, of one practitioner or everyone — with the day's operations as buttons (*Llegó*,
 *Avisó demora*, *Mover*, *Cancelar*), a booking screen that suggests the free times, a patients
-screen, and each patient's appointments, cancelled ones included. A practitioner gets their own
-agenda, read-only. The screens are in Spanish, for the staff.
+screen, each patient's appointments, cancelled ones included, and a practitioners screen to set
+up their reasons and week and record their absences. A practitioner gets their own agenda,
+read-only. The screens are in Spanish, for the staff.
 
 **API** — basic authentication on every request. Errors share one body:
 `{timestamp, status, error, message, fields?}`.
@@ -71,7 +72,7 @@ agenda, read-only. The screens are in Spanish, for the staff.
 | `POST` | `/api/appointments/{id}/check-in` | the patient arrived |
 | `POST` | `/api/appointments/{id}/suspend-auto-cancellation` | the patient warned they will be late |
 | `GET` | `/api/appointments?practitionerId=&date=` | a day's agenda — a practitioner may only ask for their own |
-| `POST` | `/api/time-off` | a practitioner's absence, cancelling the appointments it hits |
+| `POST` | `/api/time-off` | a practitioner's absence — whole days up to `untilDate`, or part of one — cancelling the appointments it hits |
 
 A booking without a check-in is cancelled automatically 30 minutes after its start, or 24 hours
 after it when the patient warned they would be late.
@@ -110,6 +111,5 @@ repository is in English; on-screen text is in Spanish (D-13).
 
 ## Deliberately postponed
 
-A screen for practitioners' configuration and time off, which today is API-only; time off over
-several days; user administration. The planned evolution after v1 — patient file, arrival queue,
-web booking — is in the context.
+User administration; registering a new patient and booking them in one transaction. The planned
+evolution after v1 — patient file, arrival queue, web booking — is in the context.

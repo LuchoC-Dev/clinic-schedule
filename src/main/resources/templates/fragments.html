@@ -44,6 +44,7 @@
     <a th:href="@{/agenda}">Agenda</a>
     <!-- A practitioner only reads their agenda (D-34); readOnly is only set on that screen. -->
     <a th:href="@{/patients}" th:unless="${readOnly}">Pacientes</a>
+    <a th:href="@{/practitioners}" th:unless="${readOnly}">Profesionales</a>
     <form class="inline" method="post" th:action="@{/logout}">
         <button type="submit">Salir</button>
     </form>

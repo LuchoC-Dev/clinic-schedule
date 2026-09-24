@@ -1,0 +1,95 @@
+<!DOCTYPE html>
+<html lang="es" xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{fragments :: head('Profesional')}"></head>
+<body>
+<header th:replace="~{fragments :: header}"></header>
+<main>
+    <h1 th:text="${practitioner.fullName}">Dra. Laura Arias</h1>
+    <div th:replace="~{fragments :: messages}"></div>
+    <p><a th:href="@{/practitioners}">‹ Profesionales</a>
+        · <a th:href="@{/agenda(practitionerId=${practitioner.id})}">Ver su agenda</a></p>
+
+    <h2>Nombre</h2>
+    <form class="card bar" method="post" th:action="@{/practitioners/{id}/name(id=${practitioner.id})}">
+        <label>Nombre completo
+            <input type="text" name="fullName" required maxlength="150" th:value="${practitioner.fullName}">
+        </label>
+        <button type="submit">Guardar</button>
+    </form>
+
+    <h2>Razones</h2>
+    <p class="muted">Cada razón dura siempre lo mismo con este profesional. Cambiar una duración no mueve los turnos ya dados.</p>
+    <div class="card">
+        <p th:if="${practitioner.reasons.isEmpty()}" class="muted">Todavía no tiene razones: sin ellas no se le pueden dar turnos.</p>
+        <form class="bar" method="post" th:each="r : ${practitioner.reasons}"
+              th:action="@{/practitioners/{id}/reasons/{reasonId}(id=${practitioner.id}, reasonId=${r.id})}">
+            <label>Razón
+                <input type="text" name="name" required maxlength="60" th:value="${r.name}">
+            </label>
+            <label>Minutos
+                <input type="number" name="durationMinutes" required min="1" max="480" th:value="${r.durationMinutes}">
+            </label>
+            <button type="submit">Guardar</button>
+        </form>
+        <form class="bar" method="post" th:action="@{/practitioners/{id}/reasons(id=${practitioner.id})}">
+            <label>Nueva razón
+                <input type="text" name="name" required maxlength="60" placeholder="consulta">
+            </label>
+            <label>Minutos
+                <input type="number" name="durationMinutes" required min="1" max="480" value="30">
+            </label>
+            <button type="submit" class="primary">Agregar</button>
+        </form>
+    </div>
+
+    <h2>Semana</h2>
+    <p class="muted">Un tramo por fila. Una pausa es el hueco entre dos tramos del mismo día.
+        Para sacar un tramo, vaciá su fila. Se guarda la semana entera.</p>
+    <form class="card" method="post" th:action="@{/practitioners/{id}/weekly-schedule(id=${practitioner.id})}">
+        <div class="bar" th:each="row : ${week}">
+            <label>Día
+                <select name="day">
+                    <option value="">—</option>
+                    <option th:each="d : ${days}" th:value="${d.value}" th:text="${d.label}"
+                            th:selected="${d.value == row.day}"></option>
+                </select>
+            </label>
+            <label>Desde
+                <input type="time" name="startsAt" th:value="${row.startsAt}">
+            </label>
+            <label>Hasta
+                <input type="time" name="endsAt" th:value="${row.endsAt}">
+            </label>
+        </div>
+        <p><button type="submit" class="primary">Guardar semana</button></p>
+    </form>
+
+    <h2>Ausencias</h2>
+    <div class="card">
+        <p th:if="${timeOff.isEmpty()}" class="muted">No tiene ausencias próximas.</p>
+        <ul th:unless="${timeOff.isEmpty()}">
+            <li th:each="t : ${timeOff}" th:text="${t}">vie 25/09/2026</li>
+        </ul>
+        <!-- Posted to the appointment module, which cancels what the absence touches (D-32, D-46). -->
+        <form class="bar" method="post" th:action="@{/time-off}">
+            <input type="hidden" name="practitionerId" th:value="${practitioner.id}">
+            <label>Desde el día
+                <input type="date" name="date" required th:min="${today}" th:value="${today}">
+            </label>
+            <label>Hasta el día (opcional)
+                <input type="date" name="untilDate" th:min="${today}">
+            </label>
+            <label>Desde la hora (opcional)
+                <input type="time" name="startsAt">
+            </label>
+            <label>Hasta la hora
+                <input type="time" name="endsAt">
+            </label>
+            <button type="submit" class="primary">Registrar ausencia</button>
+        </form>
+        <p class="muted">Sin horario son días completos. Con horario es una franja de un solo día.
+            Cancela los turnos que toca, salvo los de pacientes que ya llegaron.</p>
+    </div>
+</main>
+</body>
+</html>

@@ -235,6 +235,15 @@ class SecurityIT {
 
     @Test
     @WithUserDetails("arias")
+    void aPractitionerMayNotConfigurePractitionersNorRecordTimeOffOnTheScreens() throws Exception {
+        mockMvc.perform(get("/practitioners")).andExpect(status().isForbidden());
+        mockMvc.perform(get("/practitioners/" + ARIAS)).andExpect(status().isForbidden());
+        mockMvc.perform(post("/time-off").with(csrf()).param("practitionerId", ARIAS).param("date", DAY))
+                .andExpect(status().isForbidden());
+    }
+
+    @Test
+    @WithUserDetails("arias")
     void aPractitionerMayNotReadAPatientsAppointments() throws Exception {
         mockMvc.perform(get("/agenda/patients/" + ANA)).andExpect(status().isForbidden());
     }

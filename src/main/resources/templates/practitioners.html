@@ -1,0 +1,32 @@
+<!DOCTYPE html>
+<html lang="es" xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{fragments :: head('Profesionales')}"></head>
+<body>
+<header th:replace="~{fragments :: header}"></header>
+<main>
+    <h1>Profesionales</h1>
+    <div th:replace="~{fragments :: messages}"></div>
+
+    <p th:if="${practitioners.isEmpty()}" class="muted">Todavía no hay profesionales cargados.</p>
+    <table th:unless="${practitioners.isEmpty()}">
+        <thead><tr><th>Nombre</th><th>Razones</th><th>Tramos por semana</th><th></th></tr></thead>
+        <tbody>
+        <tr th:each="p : ${practitioners}">
+            <td th:text="${p.fullName}">Dra. Laura Arias</td>
+            <td th:text="${p.reasons.size()}">3</td>
+            <td th:text="${p.workingHours.size()}">10</td>
+            <td><a th:href="@{/practitioners/{id}(id=${p.id})}">Configurar</a></td>
+        </tr>
+        </tbody>
+    </table>
+
+    <h2>Registrar profesional</h2>
+    <form class="card bar" method="post" th:action="@{/practitioners}">
+        <label>Nombre completo
+            <input type="text" name="fullName" required maxlength="150" placeholder="Dra. Laura Arias">
+        </label>
+        <button type="submit" class="primary">Registrar</button>
+    </form>
+</main>
+</body>
+</html>

@@ -819,7 +819,7 @@ rule.
 ---
 
 ## D-32 — Time off, and what it does to the agenda
-**Date:** 2026-09-23 · **Status:** accepted
+**Date:** 2026-09-23 · **Status:** accepted; several days in one absence since D-46
 
 **Time off belongs to the practitioner.** `TimeOff` is a value object stored inside the
 practitioner (`V5`), a whole day or part of one, with an exclusive end like every other stretch.
@@ -862,7 +862,7 @@ context asks for manual handling).
 ---
 
 ## D-33 — The screens
-**Date:** 2026-09-23 · **Status:** accepted; "no JavaScript" relaxed by D-36
+**Date:** 2026-09-23 · **Status:** accepted; "no JavaScript" relaxed by D-36; the practitioner and time-off screen added by D-46
 
 Applies D-02. Four screens for reception, in Spanish (D-13): the agenda of a practitioner's day,
 booking, moving an appointment, and patients. On the agenda, the day's operations are buttons:
@@ -1367,4 +1367,45 @@ with Benítez. Nothing on screen said whose agenda it was.
 *Rejected:* keeping "Ver" as the only way to apply the agenda's choices (the reported bug);
 disabling "Nuevo turno" until "Ver" is pressed (the same trap, one step later); a booking screen
 that starts with the first practitioner from everyone's agenda (it would choose for reception).
+
+---
+
+## D-46 — A screen for practitioners and their time off, and absences of several days
+**Date:** 2026-09-24 · **Status:** accepted
+
+Reception configures practitioners and records their absences, but until now only through the
+API (D-33), which reception does not use. With this screen, v1 is usable end to end from the
+screens alone.
+
+**The practitioner screens live in `practitioner/presentation/screen`**, like the patient screen
+in its module: `/practitioners` lists them and registers one; `/practitioners/{id}` edits the
+name, the reasons — each changed in place, one more added below; none deleted, as in the API
+(D-28) — and the week. The week is a table of stretches plus three empty rows and is saved whole,
+as the API replaces it; emptying a row takes its stretch out, and a half-filled row is refused
+rather than guessed. Refusals come back in Spanish. A "Profesionales" link in the header shows
+for reception only, and the routes are reception's by the general rule of
+`SecurityConfiguration`.
+
+**The absence form posts to the appointment module** (`/time-off`, `TimeOffViewController`),
+since what matters is the cascade over the appointments, which only that module knows (D-32). It
+goes back to the practitioner saying what it did: the appointments cancelled, and — as an error,
+so it stands out — the patients already there, for reception to handle. The practitioner page
+lists the coming absences.
+
+**An absence can span several days.** From a day until another, whole days; or part of a single
+day between two times. A span such as Monday afternoon to Wednesday noon is not offered: it can
+be recorded as two absences, and would complicate the form for a rare case. The rule lives once,
+in `RecordTimeOffUseCase.Command.of`, which the API and the screen both use; the API gains an
+optional `untilDate`. Nothing deeper changed: the use case, `TimeOff` and the cascade already
+worked on a span, day by day.
+
+A day already gone is refused with its own exception, `TimeOffInThePastException`, still a 400
+on the API, so the screen can say it without reading a message. A practitioner's name now checks
+its length in the entity too, as D-38 did for patients: the screen reaches it without the API's
+Bean Validation.
+
+*Rejected:* the practitioner module serving the absence form (it would have to know
+appointments, reversing D-05's direction); spans across days with times; deleting or editing an
+absence (not in the API either, and the appointments it cancelled would not come back by
+themselves — rules of their own, for when it is asked for).
 

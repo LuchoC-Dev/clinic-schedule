@@ -134,12 +134,20 @@ public class Practitioner {
         }
     }
 
+    /** Fits its column: the screen reaches this without the API's Bean Validation (D-38, D-46). */
     private static String requireName(String fullName) {
         if (fullName == null || fullName.isBlank()) {
             throw new IllegalArgumentException("A practitioner needs a full name");
         }
-        return fullName.strip();
+        String name = fullName.strip();
+        if (name.length() > MAX_NAME_LENGTH) {
+            throw new IllegalArgumentException("A full name is at most " + MAX_NAME_LENGTH + " characters");
+        }
+        return name;
     }
+
+    /** As long as the column that stores it. */
+    static final int MAX_NAME_LENGTH = 150;
 
     public UUID getId() {
         return id;
