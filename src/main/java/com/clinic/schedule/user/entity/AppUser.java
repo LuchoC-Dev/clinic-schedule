@@ -1,4 +1,4 @@
-package com.clinic.schedule.security.entity;
+package com.clinic.schedule.user.entity;
 
 import java.util.UUID;
 
@@ -8,6 +8,8 @@ import jakarta.persistence.EnumType;
 import jakarta.persistence.Enumerated;
 import jakarta.persistence.Id;
 import jakarta.persistence.Table;
+
+import com.clinic.schedule.user.api.Role;
 
 /**
  * A user of the application. Read-only here: in v1 users come from the seed and there is no

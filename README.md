@@ -94,7 +94,8 @@ src/main/java/com/clinic/schedule/
 ├── patient/                  layered: presentation/ (http, screen), service/, entity/,
 │                             persistence/ — and api/, its only door for other modules
 ├── practitioner/             layered alike, with the week's rules in plain classes
-├── security/                 layered alike: users, login, roles
+├── security/                 the access rules: login, roles per route, who is asking
+├── user/                     layered alike: the users, and the role each one has
 └── shared/                   the clock; http/ holds the API's error body
 ```
 

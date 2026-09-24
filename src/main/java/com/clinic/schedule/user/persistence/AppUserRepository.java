@@ -1,11 +1,11 @@
-package com.clinic.schedule.security.persistence;
+package com.clinic.schedule.user.persistence;
 
 import java.util.Optional;
 import java.util.UUID;
 
 import org.springframework.data.jpa.repository.JpaRepository;
 
-import com.clinic.schedule.security.entity.AppUser;
+import com.clinic.schedule.user.entity.AppUser;
 
 public interface AppUserRepository extends JpaRepository<AppUser, UUID> {
 

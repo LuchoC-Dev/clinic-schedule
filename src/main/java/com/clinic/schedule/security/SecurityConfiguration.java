@@ -11,8 +11,8 @@ import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.web.SecurityFilterChain;
 
-import com.clinic.schedule.security.entity.Role;
 import com.clinic.schedule.security.presentation.http.ApiSecurityErrorHandler;
+import com.clinic.schedule.user.api.Role;
 
 /**
  * Two filter chains, one per kind of client (D-02, D-34):

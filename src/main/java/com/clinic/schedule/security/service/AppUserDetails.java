@@ -8,8 +8,8 @@ import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.userdetails.UserDetails;
 
-import com.clinic.schedule.security.entity.AppUser;
-import com.clinic.schedule.security.entity.Role;
+import com.clinic.schedule.user.api.Role;
+import com.clinic.schedule.user.api.UserAccount;
 
 /**
  * The logged-in user as Spring Security holds it, carrying the one thing the application needs
@@ -23,11 +23,16 @@ class AppUserDetails implements UserDetails {
     private final Role role;
     private final UUID practitionerId;
 
-    AppUserDetails(AppUser user) {
-        this.username = user.getUsername();
-        this.passwordHash = user.getPasswordHash();
-        this.role = user.getRole();
-        this.practitionerId = user.getPractitionerId();
+    AppUserDetails(UserAccount account) {
+        this.username = account.username();
+        this.passwordHash = account.passwordHash();
+        this.role = account.role();
+        this.practitionerId = account.practitionerId();
+    }
+
+    /** The authority Spring Security checks: the role with its conventional prefix. */
+    static String authorityOf(Role role) {
+        return "ROLE_" + role.name();
     }
 
     UUID practitionerId() {
@@ -36,7 +41,7 @@ class AppUserDetails implements UserDetails {
 
     @Override
     public Collection<? extends GrantedAuthority> getAuthorities() {
-        return List.of(new SimpleGrantedAuthority(role.authority()));
+        return List.of(new SimpleGrantedAuthority(authorityOf(role)));
     }
 
     @Override

@@ -22,8 +22,9 @@ import jakarta.persistence.Entity;
  *
  * <ul>
  *   <li>a module reaches another only through its {@code api/} (D-05);</li>
- *   <li>inside {@code patient}, {@code practitioner} and {@code security}, each layer is reached
- *       only by the one above it, so nothing but the service reads or writes storage;</li>
+ *   <li>inside the layered modules — {@code patient}, {@code practitioner}, {@code security}
+ *       and {@code user} — each layer is reached only by the one above it, so nothing but the
+ *       service reads or writes storage;</li>
  *   <li>only the service changes an entity (D-17): presentation may read one, through its
  *       getters, and nothing more.</li>
  * </ul>
@@ -39,7 +40,7 @@ class ArchitectureTest {
             .importPackages("com.clinic.schedule");
 
     @ParameterizedTest
-    @ValueSource(strings = {"appointment", "patient", "practitioner", "security"})
+    @ValueSource(strings = {"appointment", "patient", "practitioner", "security", "user"})
     void anotherModuleIsReachedOnlyThroughItsApi(String module) {
         noClasses().that().resideOutsideOfPackage(BASE + module + "..")
                 .should().dependOnClassesThat(resideInAPackage(BASE + module + "..")
@@ -49,10 +50,12 @@ class ArchitectureTest {
     }
 
     @ParameterizedTest
-    @ValueSource(strings = {"patient", "practitioner", "security"})
+    @ValueSource(strings = {"patient", "practitioner", "security", "user"})
     void eachLayerIsReachedOnlyByTheOneAboveIt(String module) {
         String root = BASE + module;
+        // Optional layers: not every module has every layer — security keeps no entities, user has no screen.
         layeredArchitecture().consideringOnlyDependenciesInLayers()
+                .withOptionalLayers(true)
                 .layer("Presentation").definedBy(root + ".presentation..")
                 .layer("Service").definedBy(root + ".service..")
                 .layer("Persistence").definedBy(root + ".persistence..")

@@ -305,11 +305,15 @@ file but `mvnw.cmd`, and a commit without the "LF will be replaced by CRLF" warn
 - [x] What crosses a layer made public, and no more
 - [x] `archunit-junit5` 1.5.0 and `ArchitectureTest`: module boundaries for all four modules,
       layer access in the layered ones, only the service changes an entity
-- [x] 48 files moved with their history. 324 tests in total
+- [x] 48 files moved with their history
+- [x] `user` separated from `security`: `UserAccountReader`, `UserAccount` and `Role` in its api,
+      `security` logs users in through it (D-43)
+- [x] 326 tests in total
 
 **Verified with:** the 316 tests passing unchanged, and each architecture rule failing when a
 violation of it was planted: another module importing `PatientService`, a controller holding the
-repository, a controller renaming a patient.
+repository, a controller renaming a patient, and `security` holding the user entity. Logging in
+with the seeded users, by form and by basic authentication, goes through the user module.
 
 ---
 

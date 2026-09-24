@@ -32,18 +32,20 @@ H2 (PostgreSQL mode) · Thymeleaf.
   user is in Spanish.
 - **Undecided technical questions:** propose the simplest option and explain it before
   treating it as agreed. Once accepted, add it to `docs/decisions.md`.
-- **Module boundaries:** `patient/`, `practitioner/`, `appointment/`, `security/`. A module only uses
-  another module's `api/` package (interface plus DTOs). Never import entities or
-  repositories from another module. Each module may organize its internals as it sees fit.
+- **Module boundaries:** `patient/`, `practitioner/`, `appointment/`, `security/`, `user/`. A
+  module only uses another module's `api/` package (interface plus DTOs); `ArchitectureTest`
+  checks it. Never import entities or repositories from another module. Each module is laid out
+  by its own architecture: `appointment` as its hexagon (D-41), the others by layer (D-42).
 - **The booking domain works with a start time and a duration** and knows nothing about
   what the appointment reason means. The duration is resolved by the application layer,
   which asks `practitioner`.
 - **Entity and domain services are separate, with a single way in (D-17).** The entity
   guards its own invariants and has no unvalidated creation path. Rules that need context
   the entity cannot have live in a domain service, which is the only way in: the entity's
-  mutating operations stay package-private. A domain service receives the context as a
-  collection and never reads it — fetching data and the transaction are the use case's job,
-  so the domain has no ports. Aggregates are immutable: operations return a new instance, so
+  mutating operations stay package-private, or, where the layers are separate packages, are
+  called only from the service, which `ArchitectureTest` checks. A domain service receives the
+  context as a collection and never reads it — fetching data and the transaction are the use
+  case's job, so the domain has no ports. Aggregates are immutable: operations return a new instance, so
   a rejected rule leaves nothing half-changed.
 - **Naming (D-18).** Either the folder says what a file is, or the name must. Where kinds
   share a folder, use the suffix of the kind: `Exception`, `Service`, `Policy`,

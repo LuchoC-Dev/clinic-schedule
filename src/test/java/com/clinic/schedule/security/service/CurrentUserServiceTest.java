@@ -11,7 +11,8 @@ import org.springframework.security.authentication.UsernamePasswordAuthenticatio
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.context.SecurityContextHolder;
 
-import com.clinic.schedule.security.entity.Role;
+import com.clinic.schedule.user.api.Role;
+
 
 /**
  * Who the current user stands for, and the case the database cannot produce: a user with the
@@ -28,7 +29,7 @@ class CurrentUserServiceTest {
 
     private static void loggedInAs(Role role) {
         SecurityContextHolder.getContext().setAuthentication(UsernamePasswordAuthenticationToken.authenticated(
-                "someone", null, List.of(new SimpleGrantedAuthority(role.authority()))));
+                "someone", null, List.of(new SimpleGrantedAuthority(AppUserDetails.authorityOf(role)))));
     }
 
     @Test

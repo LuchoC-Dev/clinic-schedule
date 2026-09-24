@@ -9,7 +9,7 @@ import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 
 import com.clinic.schedule.security.api.CurrentUserReader;
-import com.clinic.schedule.security.entity.Role;
+import com.clinic.schedule.user.api.Role;
 
 /**
  * Answers {@link CurrentUserReader} from the security context of the current request.
@@ -32,7 +32,7 @@ class CurrentUserService implements CurrentUserReader {
         }
         boolean isPractitioner = authentication.getAuthorities().stream()
                 .map(GrantedAuthority::getAuthority)
-                .anyMatch(Role.PRACTITIONER.authority()::equals);
+                .anyMatch(AppUserDetails.authorityOf(Role.PRACTITIONER)::equals);
         if (isPractitioner) {
             throw new IllegalStateException("A practitioner user without a practitioner cannot be served");
         }

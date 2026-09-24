@@ -884,7 +884,8 @@ and they are available through the API; a screen can be added when it is asked f
 ---
 
 ## D-34 — Security
-**Date:** 2026-09-23 · **Status:** accepted; a practitioner asking for another agenda is refused since D-39
+**Date:** 2026-09-23 · **Status:** accepted; a practitioner asking for another agenda is refused since D-39;
+the users moved to their own module in D-43
 
 Applies D-04, the design that was built in stage 1 and removed until there was something to
 protect.
@@ -1211,9 +1212,7 @@ patient/                         practitioner/ and security/ alike
   package-private.
 - **`security`** keeps `SecurityConfiguration` at its root: it configures the whole application,
   not one layer. `AppUserDetails`, the adapter Spring Security reads a user through, is in
-  `service/` with those who use it. Separating a `user` module was considered and postponed to
-  the first user feature — administering staff users, or patients' accounts for web booking —
-  when it will be clear where the boundary goes; today it would be five files with no behaviour.
+  `service/` with those who use it. Its users moved to a module of their own in D-43.
 
 **What this cost.** Until now these modules were one package each, and package visibility was
 the guarantee: no other module could compile a reference to `PatientService`, nothing but the
@@ -1238,4 +1237,45 @@ compiler to the build, which fails all the same.
 splitting them by the hexagon (not their architecture); a `persistence/` package with no
 check (anything could have injected a repository and written past the service); separating
 authentication from authorization (configured together by Spring Security, in one class).
+
+---
+
+## D-43 — Users are a module of their own
+**Date:** 2026-09-24 · **Status:** accepted
+
+`security` held two things: the access rules of the whole application — the filter chains,
+the login, the 401 and 403, who is asking — and the users those rules authenticate. The users are
+expected to change a lot: administering the practice's staff, and patients' accounts for web
+booking (see the context). They now live in `user`, layered like the other modules (D-42):
+
+```
+user/
+├── api/          UserAccountReader, UserAccount, Role
+├── service/      UserAccountService, implementing the api
+├── entity/       AppUser
+└── persistence/  AppUserRepository
+
+security/         the access rules; asks user/api for who someone is when they log in
+```
+
+- **`security` reaches users only through `user/api`**, as any module reaches another (D-05):
+  `AppUserDetailsService` asks `UserAccountReader.findActiveByUsername` and wraps the answer for
+  Spring Security. `security` has no entity and no storage left.
+- **`Role` is part of `user`'s contract.** A user has a role, and `SecurityConfiguration` decides
+  routes by it. The `ROLE_` prefix is Spring Security's convention, not the user's, so it moved
+  out of `Role` into `security` (`AppUserDetails.authorityOf`).
+- **`UserAccount` carries the password hash** across the boundary, since checking it is
+  security's job. It is the hash, never the password, and only `security` asks for it.
+- **The `app_user` table** now belongs to `user`. The migration that created it (`V6`) is left as
+  it is: the schema did not change, only which module owns it.
+- **Authentication and authorization stay together** in `security`: Spring Security configures
+  them in one filter chain, and splitting them would add a boundary between two things that
+  always change together.
+
+This was first recommended against — "it will change" is the reason D-14 rejects — and then
+decided the other way: the split is mechanical, it changes no behaviour, and it gives the user
+features that are coming a module to land in.
+
+*Rejected:* naming the rest `gateway` (the word usually means an API gateway, or an adapter to an
+external system; `security` says what it is); separating authentication from authorization.
 
