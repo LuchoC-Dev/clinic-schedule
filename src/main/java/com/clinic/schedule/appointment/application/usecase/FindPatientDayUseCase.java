@@ -11,7 +11,7 @@ import com.clinic.schedule.appointment.domain.Appointment;
 import com.clinic.schedule.appointment.domain.PatientId;
 
 /**
- * A patient's booked appointments on a day, with any practitioner. What the consultation module
+ * A patient's booked appointments on a day, with any practitioner. What the clinical record module
  * asks to know whether a practitioner is seeing the patient today (D-48).
  */
 @Service

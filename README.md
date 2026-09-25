@@ -104,7 +104,7 @@ src/main/java/com/clinic/schedule/
 │       └── out/              driven: the ports' implementations
 │           ├── persistence/  JPA
 │           └── external/     the other modules, through their api/
-├── consultation/             hexagonal too: consultations and who may read a clinical record
+├── clinicalrecord/           hexagonal too: consultations, and who may read a clinical record
 ├── patient/                  layered: presentation/ (http, screen), service/, entity/,
 │                             persistence/ — and api/, its only door for other modules
 ├── practitioner/             layered alike, with the week's rules in plain classes
@@ -115,7 +115,7 @@ src/main/java/com/clinic/schedule/
 
 A module reaches another only through its `api/` package, and in the layered modules each layer
 is reached only by the one above it; `ArchitectureTest` checks both on every build (D-05, D-42).
-The domains of `appointment` and `consultation` have no framework annotations and are tested
+The domains of `appointment` and `clinicalrecord` have no framework annotations and are tested
 without Spring. The whole repository is in English; on-screen text is in Spanish (D-13).
 
 ## Deliberately postponed

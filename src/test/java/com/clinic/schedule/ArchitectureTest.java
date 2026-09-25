@@ -40,7 +40,7 @@ class ArchitectureTest {
             .importPackages("com.clinic.schedule");
 
     @ParameterizedTest
-    @ValueSource(strings = {"appointment", "consultation", "patient", "practitioner", "security", "user"})
+    @ValueSource(strings = {"appointment", "clinicalrecord", "patient", "practitioner", "security", "user"})
     void anotherModuleIsReachedOnlyThroughItsApi(String module) {
         noClasses().that().resideOutsideOfPackage(BASE + module + "..")
                 .should().dependOnClassesThat(resideInAPackage(BASE + module + "..")

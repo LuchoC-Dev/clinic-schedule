@@ -432,7 +432,8 @@ its time and author; the prescription above stayed as written. Reception got 403
 - The final single-page applications must keep what was typed when an addendum answers 409, and
   send it again, by hand or by themselves (D-52).
 
-### Part 3 — Checks whose result arrives later `[ ]`
+### Part 3 — Checks whose result arrives later `[~]`
+- [x] The `consultation` module renamed `clinicalrecord`, as D-52 planned: no behaviour changed
 ### Part 4 — Attachments `[ ]`
 
 ---

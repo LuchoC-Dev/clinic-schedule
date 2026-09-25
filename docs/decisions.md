@@ -1412,7 +1412,7 @@ themselves — rules of their own, for when it is asked for).
 ---
 
 ## D-47 — Consultations are a module of their own, hexagonal
-**Date:** 2026-09-24 · **Status:** accepted; the consultation gains addenda in D-52, and the module is to be renamed in part 3
+**Date:** 2026-09-24 · **Status:** accepted; the consultation gains addenda in D-52; the module renamed `clinicalrecord` as part 3 began, as D-52 planned
 
 v2 starts with the clinical record (see the context): what a practitioner did in each
 consultation, which the other practitioners of the practice read. It is not the appointment:

@@ -9,7 +9,7 @@ import java.util.UUID;
  * endpoints and screens (D-24), and read-only, hence the name (D-18).
  *
  * <p>It answers facts, not what they mean to the caller: whether a checked-in appointment lets
- * a practitioner record a consultation is the consultation module's rule, not this one's (D-48).
+ * a practitioner record a consultation is the clinical record module's rule, not this one's (D-48).
  */
 public interface AppointmentReader {
 
