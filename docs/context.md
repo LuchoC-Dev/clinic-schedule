@@ -165,7 +165,13 @@ in. It opens a consultation view: the form, with the patient's clinical record b
      or done and waiting for the result), and those reported in the last 30 days, or all of them
      on asking. It shows where each stands, never what a result says. Marking a result as
      reviewed, a state of each practitioner's own, is left for later.
-4. Attachments: an electrocardiogram trace, a report from elsewhere.
+4. Attachments: files attached to a consultation — a photo — or to a check — an electrocardiogram
+   trace, a laboratory's PDF — at the time or later, by any practitioner who may read the record.
+   PDF, PNG or JPEG, up to 10 MB each. A file may be a check's whole result. Nothing attached is
+   ever deleted; a file attached by mistake is said so in an addendum. Only practitioners attach
+   files. Files attached to the record as a whole — a report the patient brings from elsewhere —
+   come later, with the orders from elsewhere. The files live in the database today, and must be
+   able to move to an object store.
 
 Not in v2: an admin role (it arrives with user administration), structure for each kind of
 item, printing prescriptions and orders, extra patient data.

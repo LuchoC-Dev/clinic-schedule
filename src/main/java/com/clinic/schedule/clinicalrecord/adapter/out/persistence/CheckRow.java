@@ -84,7 +84,8 @@ class CheckRow {
     }
 
     Check toCheck() {
-        CheckResult result = resultText == null ? null
+        // A result is there when it has an author; its text may be empty (D-57).
+        CheckResult result = resultAuthor == null ? null
                 : new CheckResult(new PractitionerId(resultAuthor), resultWrittenAt, resultText);
         return Check.restore(new CheckId(id), new PatientId(patientId), new PractitionerId(performedBy), performedAt,
                 description, consultationId == null ? null : new ConsultationId(consultationId), result);

@@ -13,6 +13,7 @@ import java.util.function.Function;
 import java.util.stream.Collectors;
 
 import com.clinic.schedule.clinicalrecord.application.usecase.ViewClinicalRecordUseCase;
+import com.clinic.schedule.clinicalrecord.domain.AttachmentOwner;
 import com.clinic.schedule.clinicalrecord.domain.Check;
 import com.clinic.schedule.clinicalrecord.domain.CheckId;
 import com.clinic.schedule.clinicalrecord.domain.Consultation;
@@ -31,7 +32,7 @@ record ClinicalRecordEntry(ConsultationView consultation, CheckEntry check) {
 
     /** A consultation as the screen shows it. */
     record ConsultationView(UUID id, String recordedAt, String practitioner, String notes, List<Line> items,
-            List<CheckEntry> checks, List<OrderEntry> orders, List<Note> addenda) {
+            List<CheckEntry> checks, List<OrderEntry> orders, List<AttachmentEntry> attachments, List<Note> addenda) {
     }
 
     /** One item: its kind in Spanish and its text. */
@@ -53,18 +54,20 @@ record ClinicalRecordEntry(ConsultationView consultation, CheckEntry check) {
             List<CheckEntry> itsChecks = record.checks().stream()
                     .filter(check -> check.consultationId().equals(Optional.of(consultation.id())))
                     .sorted(Comparator.comparing(Check::performedAt))
-                    .map(check -> CheckEntry.of(check, names))
+                    .map(check -> CheckEntry.of(check, record.attachments(), names))
                     .toList();
+            List<AttachmentEntry> itsAttachments = AttachmentEntry.ofOwner(record.attachments(),
+                    new AttachmentOwner.OfConsultation(consultation.id()), names);
             List<OrderEntry> itsOrders = record.orders().stream()
                     .filter(order -> order.consultationId().equals(consultation.id()))
                     .map(order -> OrderEntry.of(order, checksById, record.reader()))
                     .toList();
             timed.add(new Timed(consultation.recordedAt(),
-                    new ClinicalRecordEntry(consultationOf(consultation, itsChecks, itsOrders, names), null)));
+                    new ClinicalRecordEntry(consultationOf(consultation, itsChecks, itsOrders, itsAttachments, names), null)));
         }
         for (Check check : record.checks()) {
             if (check.consultationId().isEmpty()) {
-                timed.add(new Timed(check.performedAt(), new ClinicalRecordEntry(null, CheckEntry.of(check, names))));
+                timed.add(new Timed(check.performedAt(), new ClinicalRecordEntry(null, CheckEntry.of(check, record.attachments(), names))));
             }
         }
         return timed.stream()
@@ -74,7 +77,7 @@ record ClinicalRecordEntry(ConsultationView consultation, CheckEntry check) {
     }
 
     private static ConsultationView consultationOf(Consultation consultation, List<CheckEntry> checks,
-            List<OrderEntry> orders, Map<UUID, String> names) {
+            List<OrderEntry> orders, List<AttachmentEntry> attachments, Map<UUID, String> names) {
         return new ConsultationView(
                 consultation.id().value(),
                 format(consultation.recordedAt()),
@@ -85,6 +88,7 @@ record ClinicalRecordEntry(ConsultationView consultation, CheckEntry check) {
                         .toList(),
                 checks,
                 orders,
+                attachments,
                 consultation.addenda().stream()
                         .map(addendum -> new Note(format(addendum.writtenAt()),
                                 nameOf(names, addendum.author().value()), addendum.text()))

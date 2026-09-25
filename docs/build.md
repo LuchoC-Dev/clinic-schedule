@@ -538,7 +538,30 @@ under "Con resultado en los últimos 30 días", with who reported it and when an
   how it should work is not decided. The users already stand for their practitioners, so it does
   not wait for user administration.
 
-### Part 4 — Attachments `[ ]`
+### Part 4 — Attachments `[x]`
+- [x] `Attachment`, an aggregate of its own: belonging to a consultation or a check
+      (`AttachmentOwner`, a sealed type), with its name, kind, size and SHA-256 fingerprint (D-57)
+- [x] The kind told by the file's first bytes — PDF, PNG, JPEG — never by its name; up to 10 MB
+- [x] The content behind `AttachmentContentStore`: in the database today, in a table of its own
+      (`V14`), and meant to move to an object store by changing the adapter alone
+- [x] Attached at any time by any practitioner who may read the record; nothing is deleted
+- [x] A check's result may be only its attachments: the text is optional when the check has one
+- [x] `POST /api/consultations/{id}/attachments`, `POST /api/checks/{id}/attachments`,
+      `GET /api/attachments/{id}`; 415, 413 and 403 as they apply
+- [x] Screens: each consultation and check lists its files and takes new ones; the result form
+      takes a file
+- [x] 6 unit and 7 integration tests. 226 unit and 251 integration tests, 477 in total
+
+**Verified with:** each of these failing its tests when broken on purpose — a download without the
+access rule, any file accepted, a result with neither text nor file; `mvnw clean verify` with the
+PostgreSQL tests running V14.
+
+**Verified in a browser** against the application on a throwaway PostgreSQL: a text file named
+`.pdf` was refused in Spanish; a PNG was attached to a consultation; a pending blood test got its
+result as a PDF alone, shown as "Resultado: en el archivo adjunto"; both files, downloaded back
+from PostgreSQL, had the same SHA-256 as the originals and as the one stored; Dr. Benítez, with no
+access to the record, got 403 on both.
+
 
 ---
 
@@ -550,6 +573,8 @@ These are not oversights: they are decided and waiting for their moment.
 - Addenda on checks (see D-53).
 - Orders coming from elsewhere — on paper, or from another practice — and their validation, with
   the anti-corruption layer (see D-55).
+- Files attached to the record as a whole, such as a report the patient brings (see D-57).
+- Moving the attached files to an object store, when they outgrow the database (see D-57).
 
 - A user administration screen (see D-04); it has a module to land in since D-43.
 - Registering a new patient and booking them in **one transaction** from the booking screen;

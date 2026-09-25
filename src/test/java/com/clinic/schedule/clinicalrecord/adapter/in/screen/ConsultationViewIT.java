@@ -5,12 +5,14 @@ import static org.hamcrest.Matchers.containsString;
 import static org.hamcrest.Matchers.not;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.csrf;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.multipart;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.flash;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.redirectedUrl;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
+import java.nio.charset.StandardCharsets;
 import java.util.UUID;
 
 import org.junit.jupiter.api.BeforeEach;
@@ -20,6 +22,7 @@ import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMock
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.http.MediaType;
 import org.springframework.jdbc.core.JdbcTemplate;
+import org.springframework.mock.web.MockMultipartFile;
 import org.springframework.security.core.userdetails.UserDetailsService;
 import org.springframework.security.test.context.support.WithMockUser;
 import org.springframework.test.web.servlet.MockMvc;
@@ -362,5 +365,65 @@ class ConsultationViewIT {
                         .param("patientId", patient.toString())
                         .param("reason", " "))
                 .andExpect(flash().attribute("error", "Escribí el motivo para anular la orden."));
+    }
+
+    // --- attachments (D-57) -------------------------------------------------------------
+
+    private static final byte[] PDF = "%PDF-1.4\n% informe\n".getBytes(StandardCharsets.US_ASCII);
+
+    @Test
+    void aFileIsAttachedToAConsultationAndDownloadedFromTheRecord() throws Exception {
+        String consultation = recordedConsultation();
+
+        mockMvc.perform(multipart("/consultations/" + consultation + "/attachments")
+                        .file(new MockMultipartFile("file", "ecg.pdf", "application/pdf", PDF))
+                        .param("patientId", patient.toString())
+                        .with(asArias).with(csrf()))
+                .andExpect(redirectedUrl("/clinical-records/" + patient))
+                .andExpect(flash().attribute("message", "Archivo adjuntado."));
+        MvcResult record = mockMvc.perform(get("/api/clinical-records/" + patient).with(asArias)).andReturn();
+        String attachment = json.readTree(record.getResponse().getContentAsString()).get("attachments").get(0)
+                .get("id").asText();
+
+        mockMvc.perform(get("/clinical-records/" + patient).with(asArias))
+                .andExpect(content().string(containsString("ecg.pdf")))
+                .andExpect(content().string(containsString("/attachments/" + attachment)));
+        mockMvc.perform(get("/attachments/" + attachment).with(asArias))
+                .andExpect(status().isOk())
+                .andExpect(content().bytes(PDF));
+    }
+
+    @Test
+    void aFileWithADisguisedNameIsRefusedInSpanish() throws Exception {
+        String consultation = recordedConsultation();
+
+        mockMvc.perform(multipart("/consultations/" + consultation + "/attachments")
+                        .file(new MockMultipartFile("file", "informe.pdf", "application/pdf", "hola".getBytes()))
+                        .param("patientId", patient.toString())
+                        .with(asArias).with(csrf()))
+                .andExpect(flash().attribute("error", "Solo se adjuntan archivos PDF, PNG o JPG."));
+    }
+
+    @Test
+    void aPendingResultIsRecordedWithOnlyItsFile() throws Exception {
+        arrivedToday();
+        mockMvc.perform(post("/checks").with(asArias).with(csrf())
+                .param("patientId", patient.toString())
+                .param("description", "Extracción de sangre")
+                .param("result", ""));
+        MvcResult record = mockMvc.perform(get("/api/clinical-records/" + patient).with(asArias)).andReturn();
+        String check = json.readTree(record.getResponse().getContentAsString()).get("checks").get(0).get("id").asText();
+
+        mockMvc.perform(multipart("/checks/" + check + "/result")
+                        .file(new MockMultipartFile("file", "hemograma.pdf", "application/pdf", PDF))
+                        .param("patientId", patient.toString())
+                        .param("text", "")
+                        .with(asArias).with(csrf()))
+                .andExpect(flash().attribute("message", "Resultado cargado."));
+
+        mockMvc.perform(get("/clinical-records/" + patient).with(asArias))
+                .andExpect(content().string(containsString("en el archivo adjunto")))
+                .andExpect(content().string(containsString("hemograma.pdf")))
+                .andExpect(content().string(not(containsString("Resultado pendiente."))));
     }
 }

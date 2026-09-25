@@ -81,6 +81,8 @@ Spanish, for the staff.
 | `POST` | `/api/consultations/{id}/addenda` | an addendum to a consultation already sent, by any practitioner with access to the record |
 | `POST` | `/api/checks` | a check without a consultation — the emergency precaution — with its result or pending; it may fulfil an open order |
 | `POST` | `/api/orders/{id}/cancel` | the author cancels an open order, with a reason |
+| `POST` | `/api/consultations/{id}/attachments`, `/api/checks/{id}/attachments` | attach a PDF, PNG or JPEG of up to 10 MB, as `multipart/form-data` with a `file` part |
+| `GET` | `/api/attachments/{id}` | download an attached file — only for whoever may read the record |
 | `GET` | `/api/orders/mine` | the user's own orders not cancelled, and where each stands — no result texts |
 | `POST` | `/api/checks/{id}/result` | the result of a pending check, by any practitioner with access to the record |
 | `GET` | `/api/checks/pending` | the checks of the practice waiting for a result: only the patient and the check |
@@ -111,7 +113,7 @@ src/main/java/com/clinic/schedule/
 │       └── out/              driven: the ports' implementations
 │           ├── persistence/  JPA
 │           └── external/     the other modules, through their api/
-├── clinicalrecord/           hexagonal too: consultations, checks, orders, and who may read a record
+├── clinicalrecord/           hexagonal too: consultations, checks, orders, attachments, and who may read a record
 ├── patient/                  layered: presentation/ (http, screen), service/, entity/,
 │                             persistence/ — and api/, its only door for other modules
 ├── practitioner/             layered alike, with the week's rules in plain classes

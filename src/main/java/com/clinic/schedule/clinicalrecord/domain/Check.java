@@ -58,7 +58,7 @@ public class Check {
         return restore(id, patientId, performedBy, performedAt, description, consultationId, null);
     }
 
-    /** A check just done whose result is known at once: reported by whoever did it, at that time. */
+    /** A check just done whose result is known at once, in words: reported by whoever did it, at that time. */
     public static Check performWithResult(CheckId id, PatientId patientId, PractitionerId performedBy,
             LocalDateTime performedAt, String description, ConsultationId consultationId, String result) {
         return restore(id, patientId, performedBy, performedAt, description, consultationId,
@@ -84,18 +84,33 @@ public class Check {
             throw new IllegalArgumentException("A check is described in at most " + MAX_DESCRIPTION_LENGTH + " characters");
         }
         Check pending = new Check(id, patientId, performedBy, performedAt, stripped, consultationId, null);
-        return result == null ? pending : pending.withResult(result);
+        // Whether a result without text had its attachments was checked when it was written.
+        return result == null ? pending : pending.withResult(result, true);
     }
 
     /**
-     * The same check with its result. A check has one result, and it never changes: a second one
-     * is refused. The result is written when the check was done or later.
+     * The same check with its result, in words. A check has one result, and it never changes: a
+     * second one is refused. The result is written when the check was done or later.
      *
      * @throws ResultAlreadyRecordedException when the check already has one
      */
     public Check withResult(CheckResult newResult) {
+        return withResult(newResult, false);
+    }
+
+    /**
+     * The same check with its result, which may be only its attachments: without text, the check
+     * must have at least one (D-57).
+     *
+     * @param hasAttachments whether files are attached to this check
+     * @throws ResultAlreadyRecordedException when the check already has one
+     */
+    public Check withResult(CheckResult newResult, boolean hasAttachments) {
         if (newResult == null) {
             throw new IllegalArgumentException("A result is required");
+        }
+        if (!newResult.hasText() && !hasAttachments) {
+            throw new IllegalArgumentException("A result without text needs the check to have an attachment");
         }
         if (result != null) {
             throw new ResultAlreadyRecordedException(id);

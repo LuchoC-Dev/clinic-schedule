@@ -4,23 +4,27 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
+import org.springframework.web.multipart.support.MissingServletRequestPartException;
 
 import com.clinic.schedule.clinicalrecord.application.exception.CheckNotFoundException;
 import com.clinic.schedule.clinicalrecord.application.exception.ClinicalRecordAccessDeniedException;
 import com.clinic.schedule.clinicalrecord.application.exception.ConsultationChangedException;
 import com.clinic.schedule.clinicalrecord.application.exception.UnknownOrderException;
 import com.clinic.schedule.clinicalrecord.domain.exception.CheckNotPendingException;
+import com.clinic.schedule.clinicalrecord.domain.exception.FileTooLargeException;
 import com.clinic.schedule.clinicalrecord.domain.exception.NotTheOrderAuthorException;
 import com.clinic.schedule.clinicalrecord.domain.exception.OrderNotOpenException;
 import com.clinic.schedule.clinicalrecord.domain.exception.ReasonRequiredException;
 import com.clinic.schedule.clinicalrecord.domain.exception.ResultAlreadyRecordedException;
+import com.clinic.schedule.clinicalrecord.domain.exception.UnsupportedFileException;
 import com.clinic.schedule.shared.http.ErrorResponse;
 
 /**
  * Turns this module's refusals into HTTP answers, for its own controller only (D-23). Malformed
  * requests are answered once for every module, in {@code shared/http}.
  */
-@RestControllerAdvice(assignableTypes = {ConsultationController.class, CheckController.class, OrderController.class})
+@RestControllerAdvice(assignableTypes = {ConsultationController.class, CheckController.class, OrderController.class,
+        AttachmentController.class})
 class ConsultationExceptionHandler {
 
     /** Not this user's to read or to write: a 403, never an empty record (D-50). */
@@ -78,6 +82,27 @@ class ConsultationExceptionHandler {
     @ExceptionHandler(UnknownOrderException.class)
     ResponseEntity<ErrorResponse> unknownOrder(UnknownOrderException e) {
         return ResponseEntity.badRequest().body(ErrorResponse.of(400, "Bad request", e.getMessage()));
+    }
+
+    /** Not a PDF, a PNG or a JPEG, whatever its name says (D-57). */
+    @ExceptionHandler(UnsupportedFileException.class)
+    ResponseEntity<ErrorResponse> unsupportedFile(UnsupportedFileException e) {
+        return ResponseEntity.status(HttpStatus.UNSUPPORTED_MEDIA_TYPE)
+                .body(ErrorResponse.of(415, "Unsupported media type", e.getMessage()));
+    }
+
+    /** Larger than a record keeps (D-57). */
+    @ExceptionHandler(FileTooLargeException.class)
+    ResponseEntity<ErrorResponse> fileTooLarge(FileTooLargeException e) {
+        return ResponseEntity.status(HttpStatus.PAYLOAD_TOO_LARGE)
+                .body(ErrorResponse.of(413, "Payload too large", e.getMessage()));
+    }
+
+    /** An upload without its file part (D-57). */
+    @ExceptionHandler(MissingServletRequestPartException.class)
+    ResponseEntity<ErrorResponse> missingFile(MissingServletRequestPartException e) {
+        return ResponseEntity.badRequest()
+                .body(ErrorResponse.of(400, "Bad request", "Part '" + e.getRequestPartName() + "' is required"));
     }
 
     /** A consultation that breaks its own rules, when Bean Validation did not already catch it. */

@@ -44,7 +44,7 @@ class SecurityConfiguration {
                 .authorizeHttpRequests(routes -> routes
                         .requestMatchers(HttpMethod.GET, "/api/appointments").hasAnyRole(RECEPTION, PRACTITIONER)
                         .requestMatchers("/api/consultations/**", "/api/checks/**", "/api/orders/**",
-                                "/api/clinical-records/**").hasRole(PRACTITIONER)
+                                "/api/attachments/**", "/api/clinical-records/**").hasRole(PRACTITIONER)
                         .anyRequest().hasRole(RECEPTION))
                 .httpBasic(basic -> basic.authenticationEntryPoint(errors))
                 .exceptionHandling(handling -> handling.authenticationEntryPoint(errors).accessDeniedHandler(errors))
@@ -58,7 +58,8 @@ class SecurityConfiguration {
                 .authorizeHttpRequests(routes -> routes
                         .requestMatchers("/login", "/error").permitAll()
                         .requestMatchers(HttpMethod.GET, "/", "/agenda").hasAnyRole(RECEPTION, PRACTITIONER)
-                        .requestMatchers("/consultations/**", "/checks/**", "/orders/**", "/clinical-records/**").hasRole(PRACTITIONER)
+                        .requestMatchers("/consultations/**", "/checks/**", "/orders/**", "/attachments/**",
+                                "/clinical-records/**").hasRole(PRACTITIONER)
                         .anyRequest().hasRole(RECEPTION))
                 .formLogin(login -> login.loginPage("/login").defaultSuccessUrl("/agenda", true).permitAll())
                 .logout(logout -> logout.logoutSuccessUrl("/login?logout"))

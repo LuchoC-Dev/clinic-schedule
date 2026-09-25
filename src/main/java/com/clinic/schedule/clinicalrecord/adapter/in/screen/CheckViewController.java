@@ -1,5 +1,6 @@
 package com.clinic.schedule.clinicalrecord.adapter.in.screen;
 
+import java.io.IOException;
 import java.util.UUID;
 
 import org.springframework.http.HttpStatus;
@@ -8,17 +9,22 @@ import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.server.ResponseStatusException;
+import org.springframework.web.multipart.MultipartFile;
 import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 
 import com.clinic.schedule.clinicalrecord.application.exception.ClinicalRecordAccessDeniedException;
+import com.clinic.schedule.clinicalrecord.application.usecase.AddAttachmentUseCase;
 import com.clinic.schedule.clinicalrecord.application.usecase.RecordCheckResultUseCase;
 import com.clinic.schedule.clinicalrecord.application.usecase.RecordCheckUseCase;
 import com.clinic.schedule.clinicalrecord.application.exception.UnknownOrderException;
+import com.clinic.schedule.clinicalrecord.domain.AttachmentOwner;
 import com.clinic.schedule.clinicalrecord.domain.CheckId;
 import com.clinic.schedule.clinicalrecord.domain.CheckOrderId;
 import com.clinic.schedule.clinicalrecord.domain.exception.OrderNotOpenException;
 import com.clinic.schedule.clinicalrecord.domain.PatientId;
+import com.clinic.schedule.clinicalrecord.domain.exception.FileTooLargeException;
 import com.clinic.schedule.clinicalrecord.domain.exception.ResultAlreadyRecordedException;
+import com.clinic.schedule.clinicalrecord.domain.exception.UnsupportedFileException;
 
 /**
  * The practitioner's actions on checks from the clinical record screen: a check done without a
@@ -30,10 +36,13 @@ class CheckViewController {
 
     private final RecordCheckUseCase recordCheck;
     private final RecordCheckResultUseCase recordResult;
+    private final AddAttachmentUseCase addAttachment;
 
-    CheckViewController(RecordCheckUseCase recordCheck, RecordCheckResultUseCase recordResult) {
+    CheckViewController(RecordCheckUseCase recordCheck, RecordCheckResultUseCase recordResult,
+            AddAttachmentUseCase addAttachment) {
         this.recordCheck = recordCheck;
         this.recordResult = recordResult;
+        this.addAttachment = addAttachment;
     }
 
     @PostMapping("/checks")
@@ -68,19 +77,33 @@ class CheckViewController {
         return "redirect:/clinical-records/" + patientId;
     }
 
+    /**
+     * The result of a pending check, in words, in a file, or both: the file is attached first, and
+     * the result may then leave its text out (D-57).
+     */
     @PostMapping("/checks/{id}/result")
     String recordResult(@PathVariable UUID id, @RequestParam UUID patientId,
-            @RequestParam(required = false) String text, RedirectAttributes flash) {
+            @RequestParam(required = false) String text, @RequestParam(required = false) MultipartFile file,
+            RedirectAttributes flash) throws IOException {
+        boolean withFile = file != null && !file.isEmpty();
         String problem = null;
-        if (text == null || text.isBlank()) {
-            problem = "Escribí el resultado.";
+        if ((text == null || text.isBlank()) && !withFile) {
+            problem = "Escribí el resultado o adjuntá el archivo que lo trae.";
         } else {
             try {
+                if (withFile) {
+                    addAttachment.handle(new AddAttachmentUseCase.Command(new AttachmentOwner.OfCheck(new CheckId(id)),
+                            file.getOriginalFilename(), file.getBytes()));
+                }
                 recordResult.handle(new RecordCheckResultUseCase.Command(new CheckId(id), text));
             } catch (ClinicalRecordAccessDeniedException e) {
                 throw new ResponseStatusException(HttpStatus.FORBIDDEN, e.getMessage());
             } catch (ResultAlreadyRecordedException e) {
                 problem = "Ese chequeo ya tiene resultado: se cargó recién.";
+            } catch (UnsupportedFileException e) {
+                problem = AttachmentViewController.UNSUPPORTED;
+            } catch (FileTooLargeException e) {
+                problem = AttachmentViewController.TOO_LARGE;
             } catch (IllegalArgumentException e) {
                 problem = "El resultado tiene hasta 10 000 caracteres.";
             }

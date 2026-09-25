@@ -37,7 +37,7 @@ class CheckJpaAdapter implements CheckRepository {
 
     @Override
     public List<Check> findAllPending() {
-        return rows.findByResultTextIsNull().stream().map(CheckRow::toCheck).toList();
+        return rows.findByResultAuthorIsNull().stream().map(CheckRow::toCheck).toList();
     }
 
     @Override

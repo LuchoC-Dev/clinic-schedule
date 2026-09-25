@@ -93,7 +93,6 @@ class CheckTest {
     void aResultNeedsAnAuthorATimeAndATextOfAtMostTenThousandCharacters() {
         assertThatIllegalArgumentException().isThrownBy(() -> new CheckResult(null, AT, "x"));
         assertThatIllegalArgumentException().isThrownBy(() -> new CheckResult(ANALYST, null, "x"));
-        assertThatIllegalArgumentException().isThrownBy(() -> new CheckResult(ANALYST, AT, " "));
         assertThat(new CheckResult(ANALYST, AT, "a".repeat(10_000)).text()).hasSize(10_000);
         assertThatIllegalArgumentException().isThrownBy(() -> new CheckResult(ANALYST, AT, "a".repeat(10_001)));
     }
@@ -105,5 +104,17 @@ class CheckTest {
         assertThatIllegalArgumentException()
                 .isThrownBy(() -> Check.restore(ID, PATIENT, WHO_DID_IT, AT, "x", null, early));
         assertThat(Check.restore(ID, PATIENT, WHO_DID_IT, AT, "x", null, null).isPending()).isTrue();
+    }
+
+    @Test
+    void aResultMayBeOnlyTheChecksAttachmentsButNeedsOneThen() {
+        CheckResult withoutText = new CheckResult(ANALYST, AT.plusDays(1), "  ");
+
+        assertThat(withoutText.hasText()).isFalse();
+        assertThatIllegalArgumentException().isThrownBy(() -> pending().withResult(withoutText));
+        assertThatIllegalArgumentException().isThrownBy(() -> pending().withResult(withoutText, false));
+        assertThat(pending().withResult(withoutText, true).isPending()).isFalse();
+        assertThat(pending().withResult(new CheckResult(ANALYST, AT.plusDays(1), "Normal."), false).isPending())
+                .isFalse();
     }
 }

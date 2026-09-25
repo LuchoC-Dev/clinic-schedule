@@ -9,6 +9,14 @@ spring:
     username: schedule
     password: schedule
 
+  # A file attached to a clinical record is at most 10 MB, and the record says so (D-57). The limit
+  # here sits a little above it, so a file just over 10 MB still reaches the record and is refused
+  # with that message; anything far larger is cut off before it is read.
+  servlet:
+    multipart:
+      max-file-size: 11MB
+      max-request-size: 12MB
+
   jpa:
     open-in-view: false
     hibernate:

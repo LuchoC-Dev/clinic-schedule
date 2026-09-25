@@ -1768,3 +1768,48 @@ decided.
 (the record's access rule would be bypassed); every result with no window (the list would only
 grow, with nothing telling new from seen); a "reviewed" mark now (undecided).
 
+---
+
+## D-57 — Attached files: described in the record, stored behind a port
+**Date:** 2026-09-25 · **Status:** accepted
+
+A consultation or a check may carry files: a photo, an electrocardiogram trace, a laboratory's
+PDF. Any practitioner who may read the record attaches them, at the time or later — adding to the
+record, like an addendum, never changing it. Nothing attached is deleted: a file attached by
+mistake is said so in an addendum. Only practitioners attach files (D-51).
+
+**`Attachment` is an aggregate of its own.** It belongs to one thing, `AttachmentOwner`, a sealed
+type — `OfConsultation` or `OfCheck`; a file of the record as a whole, a report brought from
+elsewhere, will be a third case, with the orders from elsewhere. It keeps the patient, who uploaded
+it and when, the name without any path the browser sent, the kind, the size and a SHA-256
+fingerprint, which tells the stored content is the one uploaded. It holds no bytes.
+
+**The kind is told by the content.** `FileKind` reads the first bytes — PDF, PNG, JPEG — so a file
+named `.pdf` that is not one is refused (`UnsupportedFileException`, 415). A file is at most 10 MB
+(`FileTooLargeException`, 413). Spring's multipart limit sits a little higher, 11 MB, so a file just
+over the limit still reaches the record and is refused with its message. Downloads are sent as
+attachments with `X-Content-Type-Options: nosniff`, only to whoever may read the record, never
+from a public address.
+
+**The content lives behind a port, `AttachmentContentStore`**, keyed by the attachment's id.
+Today its adapter keeps the bytes in PostgreSQL, in `attachment_content`, apart from `attachment`
+so listing a record never reads the files; the file and what describes it are written in one
+transaction and backed up together. When the files outgrow the database, an adapter over an object
+store (S3, MinIO) replaces this one, and nothing else changes — except that the store will not join
+the transaction: the file will be written first, and what a failed write leaves behind cleared.
+That is decided with the store.
+
+**A check's result may be only its attachments.** `CheckResult.text` is optional, and
+`Check.withResult(result, hasAttachments)` refuses a result with neither text nor file.
+
+**API and screens.** `POST /api/consultations/{id}/attachments` and `POST /api/checks/{id}/attachments`
+take one file as `multipart/form-data`; `GET /api/attachments/{id}` downloads it. The record lists
+every attachment in `attachments`, each saying what it belongs to — a flat list, so the answers of
+consultations and checks stay as they were. On the screen, each consultation and check lists its
+files and takes new ones, and the result form takes a file.
+
+*Rejected:* files on disk (not transactional, backed up apart, awkward with more than one
+instance); an object store now (infrastructure the practice does not need yet); trusting the
+declared type; deleting or marking files (the record only grows); files as a check result's own
+field (a file is attached to the check, and may come before its result).
+

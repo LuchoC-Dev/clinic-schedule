@@ -71,6 +71,16 @@
                         <p class="bar"><button type="submit" class="danger">Anular orden</button></p>
                     </form>
                 </div>
+                <!-- Files attached to the consultation, at the time or later (D-57). -->
+                <ul class="files" th:unless="${c.attachments.isEmpty()}">
+                    <li th:each="file : ${c.attachments}" th:insert="~{clinical-record :: file(${file})}"></li>
+                </ul>
+                <form method="post" enctype="multipart/form-data" th:if="${recordActions}"
+                      th:action="@{/consultations/{id}/attachments(id=${c.id})}" class="attach">
+                    <input type="hidden" name="patientId" th:value="${patient.id}">
+                    <input type="file" name="file" accept=".pdf,.png,.jpg,.jpeg,application/pdf,image/png,image/jpeg">
+                    <button type="submit">Adjuntar archivo</button>
+                </form>
                 <!-- Addenda: added afterwards, never changing what was written above (D-52). -->
                 <div class="addendum" th:each="note : ${c.addenda}">
                     <p class="muted">
@@ -126,20 +136,39 @@
     </p>
     <p class="notes" th:text="${check.description}">Extracción de sangre para hemograma.</p>
     <p th:unless="${check.pending}">
-        <strong>Resultado:</strong> <span class="notes" th:text="${check.result}">Hemoglobina 13,5 g/dl</span>
+        <strong>Resultado:</strong>
+        <span class="notes" th:text="${check.result != null} ? ${check.result} : 'en el archivo adjunto'">Hemoglobina 13,5 g/dl</span>
         <span class="muted" th:text="'— ' + ${check.resultAuthor} + ', ' + ${check.resultWrittenAt}">— Dr. Martín Benítez, vie 25/09/2026 12:00</span>
     </p>
     <p th:if="${check.pending}"><strong>Resultado pendiente.</strong></p>
-    <form method="post" th:if="${check.pending and recordActions}"
+    <ul class="files" th:unless="${check.attachments.isEmpty()}">
+        <li th:each="file : ${check.attachments}" th:insert="~{clinical-record :: file(${file})}"></li>
+    </ul>
+    <!-- The result in words, in a file, or both: a laboratory's PDF is enough (D-57). -->
+    <form method="post" enctype="multipart/form-data" th:if="${check.pending and recordActions}"
           th:action="@{/checks/{id}/result(id=${check.id})}">
         <input type="hidden" name="patientId" th:value="${patient.id}">
         <label>Resultado
             <textarea name="text" rows="2" maxlength="10000"
                       th:text="${resultFor == check.id} ? ${resultText} : ''"></textarea>
         </label>
+        <label>Archivo del resultado (PDF, PNG o JPG, hasta 10 MB; opcional si escribís el resultado)
+            <input type="file" name="file" accept=".pdf,.png,.jpg,.jpeg,application/pdf,image/png,image/jpeg">
+        </label>
         <p class="bar"><button type="submit">Cargar resultado</button></p>
     </form>
+    <form method="post" enctype="multipart/form-data" th:if="${!check.pending and recordActions}"
+          th:action="@{/checks/{id}/attachments(id=${check.id})}" class="attach">
+        <input type="hidden" name="patientId" th:value="${patient.id}">
+        <input type="file" name="file" accept=".pdf,.png,.jpg,.jpeg,application/pdf,image/png,image/jpeg">
+        <button type="submit">Adjuntar archivo</button>
+    </form>
 </div>
+<!-- One attached file: downloaded through the application, never from a public address (D-57). -->
+<th:block th:fragment="file(file)">
+    <a th:href="@{/attachments/{id}(id=${file.id})}" th:text="${file.fileName}">hemograma.pdf</a>
+    <span class="muted" th:text="'(' + ${file.size} + ') — ' + ${file.uploadedBy} + ', ' + ${file.uploadedAt}">(120 KB) — Dr. Martín Benítez, vie 25/09/2026 12:00</span>
+</th:block>
 </div>
 </body>
 </html>

@@ -13,7 +13,7 @@ interface CheckRowRepository extends JpaRepository<CheckRow, UUID> {
 
     List<CheckRow> findByPatientId(UUID patientId);
 
-    List<CheckRow> findByResultTextIsNull();
+    List<CheckRow> findByResultAuthorIsNull();
 
     List<CheckRow> findByConsultationIdOrderByPerformedAt(UUID consultationId);
 
