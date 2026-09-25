@@ -13,6 +13,7 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RestController;
 
+import com.clinic.schedule.consultation.application.usecase.AddAddendumUseCase;
 import com.clinic.schedule.consultation.application.usecase.RecordConsultationUseCase;
 import com.clinic.schedule.consultation.application.usecase.ViewClinicalRecordUseCase;
 import com.clinic.schedule.consultation.domain.Consultation;
@@ -34,12 +35,14 @@ import jakarta.validation.Valid;
 class ConsultationController {
 
     private final RecordConsultationUseCase record;
+    private final AddAddendumUseCase addAddendum;
     private final ViewClinicalRecordUseCase clinicalRecord;
     private final PractitionerReader practitioners;
 
-    ConsultationController(RecordConsultationUseCase record, ViewClinicalRecordUseCase clinicalRecord,
-            PractitionerReader practitioners) {
+    ConsultationController(RecordConsultationUseCase record, AddAddendumUseCase addAddendum,
+            ViewClinicalRecordUseCase clinicalRecord, PractitionerReader practitioners) {
         this.record = record;
+        this.addAddendum = addAddendum;
         this.clinicalRecord = clinicalRecord;
         this.practitioners = practitioners;
     }
@@ -50,7 +53,20 @@ class ConsultationController {
         Consultation recorded = record.handle(request.toCommand());
         return ResponseEntity
                 .created(URI.create("/api/consultations/" + recorded.id().value()))
-                .body(ConsultationResponse.of(recorded, practitionerNames().get(recorded.practitionerId().value())));
+                .body(ConsultationResponse.of(recorded, practitionerNames()));
+    }
+
+    /**
+     * Adds an addendum to a consultation already sent, answering the consultation with it. A
+     * business operation on the consultation, so a {@code POST} on a sub-path (D-23, D-52).
+     */
+    @PostMapping("/api/consultations/{id}/addenda")
+    ResponseEntity<ConsultationResponse> addAddendum(@PathVariable UUID id,
+            @Valid @RequestBody AddAddendumRequest request) {
+        Consultation added = addAddendum.handle(request.toCommand(id));
+        return ResponseEntity
+                .created(URI.create("/api/consultations/" + id))
+                .body(ConsultationResponse.of(added, practitionerNames()));
     }
 
     /** The patient's consultations from every practitioner, newest first; 403 without access (D-49). */
@@ -59,8 +75,7 @@ class ConsultationController {
         List<Consultation> consultations = clinicalRecord.handle(new PatientId(patientId)).consultations();
         Map<UUID, String> names = practitionerNames();
         return consultations.stream()
-                .map(consultation -> ConsultationResponse.of(consultation,
-                        names.get(consultation.practitionerId().value())))
+                .map(consultation -> ConsultationResponse.of(consultation, names))
                 .toList();
     }
 

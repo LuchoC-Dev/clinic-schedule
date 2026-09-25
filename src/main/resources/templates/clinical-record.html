@@ -29,6 +29,23 @@
                     <span class="notes" th:text="${item.description}">presión 120/80</span>
                 </li>
             </ul>
+            <!-- Addenda: added afterwards, never changing what was written above (D-52). -->
+            <div class="addendum" th:each="note : ${entry.addenda}">
+                <p class="muted">
+                    Aclaración — <span th:text="${note.writtenAt}">vie 25/09/2026 09:10</span> —
+                    <span th:text="${note.author}">Dr. Martín Benítez</span>
+                </p>
+                <p class="notes" th:text="${note.text}">La dosis es 5 mg.</p>
+            </div>
+            <form method="post" th:if="${addendumForms}"
+                  th:action="@{/consultations/{id}/addenda(id=${entry.id})}">
+                <input type="hidden" name="patientId" th:value="${patient.id}">
+                <label>Aclaración
+                    <textarea name="text" rows="2" maxlength="2000"
+                              th:text="${addendumFor == entry.id} ? ${addendumText} : ''"></textarea>
+                </label>
+                <p class="bar"><button type="submit">Agregar aclaración</button></p>
+            </form>
         </article>
     </section>
 

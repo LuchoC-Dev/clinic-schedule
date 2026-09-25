@@ -98,6 +98,75 @@ class ConsultationTest {
         assertThatIllegalArgumentException().isThrownBy(() -> withNotes("notas", nullItem()));
     }
 
+    // --- addenda ------------------------------------------------------------------------
+
+    private static final PractitionerId ANOTHER = new PractitionerId(UUID.randomUUID());
+
+    private static Addendum addendum(PractitionerId author, LocalDateTime at, String text) {
+        return new Addendum(AddendumId.newId(), author, at, text);
+    }
+
+    @Test
+    void anAddendumIsAddedAtTheEndAndChangesNothingElse() {
+        Consultation sent = withNotes("Control.", List.of(new ConsultationItem(ItemKind.PRESCRIPTION, "enalapril 10 mg")));
+
+        Consultation once = sent.withAddendum(addendum(PRACTITIONER, AT.plusHours(1), "  La dosis es 5 mg.  "));
+        Consultation twice = once.withAddendum(addendum(ANOTHER, AT.plusDays(3), "Tolera bien la medicación."));
+
+        assertThat(sent.addenda()).isEmpty();
+        assertThat(twice.addenda()).extracting(Addendum::text)
+                .containsExactly("La dosis es 5 mg.", "Tolera bien la medicación.");
+        assertThat(twice.addenda().get(1).author()).isEqualTo(ANOTHER);
+        assertThat(twice.notes()).isEqualTo(sent.notes());
+        assertThat(twice.items()).isEqualTo(sent.items());
+        assertThat(twice.recordedAt()).isEqualTo(sent.recordedAt());
+    }
+
+    @Test
+    void anAddendumIsWrittenAfterTheConsultationAndTheAddendaBeforeIt() {
+        Consultation sent = withNotes("Control.", List.of());
+        Consultation later = sent.withAddendum(addendum(PRACTITIONER, AT.plusDays(2), "Primera."));
+
+        assertThatIllegalArgumentException()
+                .isThrownBy(() -> sent.withAddendum(addendum(PRACTITIONER, AT.minusMinutes(1), "Antes.")));
+        assertThatIllegalArgumentException()
+                .isThrownBy(() -> later.withAddendum(addendum(PRACTITIONER, AT.plusDays(1), "Fuera de orden.")));
+        assertThat(sent.withAddendum(addendum(PRACTITIONER, AT, "En el momento.")).addenda()).hasSize(1);
+    }
+
+    @Test
+    void theSameAddendumIsAddedOnce() {
+        Addendum note = addendum(PRACTITIONER, AT.plusHours(1), "Una vez.");
+        Consultation added = withNotes("Control.", List.of()).withAddendum(note);
+
+        assertThat(added.hasAddendum(note.id())).isTrue();
+        assertThatIllegalArgumentException().isThrownBy(() -> added.withAddendum(note));
+    }
+
+    @Test
+    void anAddendumNeedsATextOfAtMostTwoThousandCharacters() {
+        assertThatIllegalArgumentException().isThrownBy(() -> addendum(PRACTITIONER, AT, "  "));
+        assertThatIllegalArgumentException().isThrownBy(() -> addendum(PRACTITIONER, AT, null));
+        assertThatIllegalArgumentException().isThrownBy(() -> addendum(null, AT, "texto"));
+        assertThatIllegalArgumentException().isThrownBy(() -> addendum(PRACTITIONER, null, "texto"));
+        assertThat(addendum(PRACTITIONER, AT, "a".repeat(2_000)).text()).hasSize(2_000);
+        assertThatIllegalArgumentException().isThrownBy(() -> addendum(PRACTITIONER, AT, "a".repeat(2_001)));
+    }
+
+    @Test
+    void aStoredConsultationIsCheckedWithItsAddenda() {
+        Addendum first = addendum(PRACTITIONER, AT.plusDays(2), "Primera.");
+        Addendum second = addendum(ANOTHER, AT.plusDays(1), "Fuera de orden.");
+
+        assertThat(Consultation.restore(ID, PATIENT, PRACTITIONER, AT, "notas", List.of(), List.of(first)).addenda())
+                .containsExactly(first);
+        assertThatIllegalArgumentException()
+                .isThrownBy(() -> Consultation.restore(ID, PATIENT, PRACTITIONER, AT, "notas", List.of(),
+                        List.of(first, second)));
+        assertThatIllegalArgumentException()
+                .isThrownBy(() -> Consultation.restore(ID, PATIENT, PRACTITIONER, AT, "notas", List.of(), null));
+    }
+
     private static List<ConsultationItem> nullItem() {
         List<ConsultationItem> items = new ArrayList<>();
         items.add(null);

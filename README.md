@@ -51,7 +51,8 @@ week, of one practitioner or everyone — with the day's operations as buttons (
 screen, each patient's appointments, cancelled ones included, and a practitioners screen to set
 up their reasons and week and record their absences. A practitioner gets their own agenda,
 read-only, with today's patients linked to their clinical record and *Empezar consulta* once
-they arrived: a form beside the record, sent once and never changed. The screens are in
+they arrived: a form beside the record, sent once and never changed, and completed afterwards
+with addenda. The screens are in
 Spanish, for the staff.
 
 **API** — basic authentication on every request. Errors share one body:
@@ -76,6 +77,7 @@ Spanish, for the staff.
 | `GET` | `/api/appointments?practitionerId=&date=` | a day's agenda — a practitioner may only ask for their own |
 | `POST` | `/api/time-off` | a practitioner's absence — whole days up to `untilDate`, or part of one — cancelling the appointments it hits |
 | `POST` | `/api/consultations` | a practitioner records the consultation of a patient who arrived today — notes plus checks, prescriptions and study orders |
+| `POST` | `/api/consultations/{id}/addenda` | an addendum to a consultation already sent, by any practitioner with access to the record |
 | `GET` | `/api/clinical-records/{patientId}` | a patient's consultations, from every practitioner — for a practitioner who saw them within the access period or is seeing them today |
 
 A booking without a check-in is cancelled automatically 30 minutes after its start, or 24 hours

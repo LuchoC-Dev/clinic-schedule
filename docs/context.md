@@ -126,10 +126,12 @@ in. It opens a consultation view: the form, with the patient's clinical record b
 ### Delivered in parts
 
 1. Consultations and the clinical record, as above.
-2. Addenda: a practitioner with access to the record adds a note to a sent consultation, with its
-   date and author. What was written never changes.
+2. Addenda: a practitioner with access to the record — its author or any other — adds a note to
+   a sent consultation, with its date and author, at any time. It is about the consultation as a
+   whole, and addenda are not added to addenda. What was written never changes.
 3. Checks whose result arrives later: done during the consultation, the result added afterwards.
-   The check may then need to live apart from the consultation; to be decided.
+   The check may then need to live apart from the consultation; to be decided. The clinical record
+   then gathers more than consultations, and is set apart from them as a concept of its own.
 4. Attachments: an electrocardiogram trace, a report from elsewhere.
 
 Not in v2: an admin role (it arrives with user administration), structure for each kind of

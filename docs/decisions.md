@@ -1412,7 +1412,7 @@ themselves — rules of their own, for when it is asked for).
 ---
 
 ## D-47 — Consultations are a module of their own, hexagonal
-**Date:** 2026-09-24 · **Status:** accepted
+**Date:** 2026-09-24 · **Status:** accepted; the consultation gains addenda in D-52, and the module is to be renamed in part 3
 
 v2 starts with the clinical record (see the context): what a practitioner did in each
 consultation, which the other practitioners of the practice read. It is not the appointment:
@@ -1545,3 +1545,44 @@ more. An empty row is dropped; a row with only a kind or only a text is refused 
 guessed, as in D-46. A refused form comes back with everything typed, through a flash attribute,
 since the notes are too long for a URL.
 
+---
+
+## D-52 — Addenda belong to the consultation, and two at once do not overwrite each other
+**Date:** 2026-09-25 · **Status:** accepted
+
+An addendum corrects or completes a consultation already sent: its author or any other
+practitioner with access to the patient's record writes one, at any time. It carries its time
+and author, holds up to 2 000 characters of free text about the consultation as a whole — an item
+it refers to is named in the text — and is not added to other addenda.
+
+**The addendum is part of the `Consultation` aggregate.** It clarifies that consultation, not the
+record. `withAddendum` returns a new consultation with one more addendum at the end and
+everything already written unchanged; an addendum is written after the consultation and after
+the addenda before it, and each id is added once. `Consultation.restore` reads a stored one back
+through the same checks, as `Appointment.restore` does, next to `record` for a new one. No domain
+service: who may add one is the record's access rule (D-49), applied by `AddAddendumUseCase`. A
+consultation that does not exist is a 403, like one the user may not read.
+
+**`POST /api/consultations/{id}/addenda`** with `{id?, text}` answers 201 with the whole
+consultation; the id makes a retry safe (D-19). On the record screen, each consultation shows its
+addenda and a form to add one.
+
+**Two addenda at the same time do not overwrite each other.** The consultation row has a
+`@Version` (`V9`). The adapter adds the new addenda to the row read earlier in the same
+transaction and flushes: if someone else added one meanwhile, the version no longer matches and
+the write is refused as `ConsultationChangedException`, a 409. Nothing is saved, and sending it
+again works. The screen says so and keeps the text.
+
+**The final user interface must not lose the text on a 409.** The single-page applications that
+replace these screens keep what was typed and send it again, by hand or by themselves. Noted
+here because the Thymeleaf screens only need to show the text again.
+
+**The clinical record is a concept apart from the consultation.** The access rule is the
+record's; the addenda are the consultation's. The module keeps its name, `consultation`, until
+part 3: checks whose result arrives later make the record gather more than consultations, and the
+module becomes `clinicalrecord` then, not before (D-14).
+
+*Rejected:* addenda as an aggregate of their own (they only exist on a consultation, and the
+record reads them with it); a limit in time to add one (the user wants none); addenda to addenda;
+no concurrency guard (the second of two simultaneous addenda would silently erase the first);
+renaming the module now, before the second kind of entry that justifies it.

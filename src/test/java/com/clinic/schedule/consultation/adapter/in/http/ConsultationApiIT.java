@@ -248,4 +248,93 @@ class ConsultationApiIT {
                 """.formatted(patient))
                 .andExpect(status().isBadRequest());
     }
+
+    // --- addenda (D-52) -----------------------------------------------------------------
+
+    private String recordedConsultation() throws Exception {
+        arrivedToday();
+        MvcResult result = send(asArias, consultation(patient, "Control de hipertensión."))
+                .andExpect(status().isCreated())
+                .andReturn();
+        return json.readTree(result.getResponse().getContentAsString()).get("id").asText();
+    }
+
+    private ResultActions addAddendum(RequestPostProcessor as, String consultationId, String body) throws Exception {
+        return mockMvc.perform(post("/api/consultations/" + consultationId + "/addenda").with(as)
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(body));
+    }
+
+    @Test
+    void theAuthorAddsAnAddendumThatTheRecordShowsUnderTheConsultation() throws Exception {
+        String consultation = recordedConsultation();
+
+        addAddendum(asArias, consultation, """
+                {"text": "La dosis del enalapril es 5 mg."}
+                """)
+                .andExpect(status().isCreated())
+                .andExpect(jsonPath("$.notes").value("Control de hipertensión."))
+                .andExpect(jsonPath("$.addenda", hasSize(1)))
+                .andExpect(jsonPath("$.addenda[0].practitionerName").value("Dra. Arias"))
+                .andExpect(jsonPath("$.addenda[0].writtenAt").value("2026-03-10T00:00:00"));
+
+        readRecord(asArias)
+                .andExpect(jsonPath("$[0].items", hasSize(2)))
+                .andExpect(jsonPath("$[0].addenda[0].text").value("La dosis del enalapril es 5 mg."));
+    }
+
+    @Test
+    void anotherPractitionerWithAccessAddsOneAndOneWithoutAccessIsForbidden() throws Exception {
+        String consultation = recordedConsultation();
+        CreatedPractitioner benitez = practitioners.workingEveryDay();
+        RequestPostProcessor asBenitez = users.userFor(benitez.id());
+        String body = """
+                {"text": "Visto en interconsulta."}
+                """;
+
+        addAddendum(asBenitez, consultation, body).andExpect(status().isForbidden());
+
+        book(benitez, TODAY, "11:00:00");
+        addAddendum(asBenitez, consultation, body)
+                .andExpect(status().isCreated())
+                .andExpect(jsonPath("$.addenda[0].practitionerId").value(benitez.id().toString()));
+    }
+
+    @Test
+    void aRetriedAddendumIsAddedOnce() throws Exception {
+        String consultation = recordedConsultation();
+        String body = """
+                {"id": "%s", "text": "Una sola vez."}
+                """.formatted(UUID.randomUUID());
+
+        addAddendum(asArias, consultation, body).andExpect(status().isCreated());
+        addAddendum(asArias, consultation, body)
+                .andExpect(status().isCreated())
+                .andExpect(jsonPath("$.addenda", hasSize(1)));
+    }
+
+    @Test
+    void anUnknownConsultationIsForbiddenAndReceptionCannotAddAnAddendum() throws Exception {
+        String consultation = recordedConsultation();
+        String body = """
+                {"text": "Aclaración."}
+                """;
+
+        addAddendum(asArias, UUID.randomUUID().toString(), body).andExpect(status().isForbidden());
+        mockMvc.perform(post("/api/consultations/" + consultation + "/addenda")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(body))
+                .andExpect(status().isForbidden());
+    }
+
+    @Test
+    void anAddendumWithoutTextIsA400() throws Exception {
+        String consultation = recordedConsultation();
+
+        addAddendum(asArias, consultation, """
+                {"text": "  "}
+                """)
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.fields.text").exists());
+    }
 }

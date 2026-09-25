@@ -205,4 +205,57 @@ class ConsultationViewIT {
         mockMvc.perform(get("/consultations/new").param("patientId", patient.toString()))
                 .andExpect(status().isForbidden());
     }
+
+    // --- addenda (D-52) -----------------------------------------------------------------
+
+    private String recordedConsultation() throws Exception {
+        arrivedToday();
+        mockMvc.perform(form("Control de hipertensión.", "PRESCRIPTION", "enalapril 10 mg"))
+                .andExpect(redirectedUrl("/clinical-records/" + patient));
+        MvcResult record = mockMvc.perform(get("/api/clinical-records/" + patient).with(asArias)).andReturn();
+        return json.readTree(record.getResponse().getContentAsString()).get(0).get("id").asText();
+    }
+
+    @Test
+    void anAddendumIsAddedFromTheRecordAndShownUnderItsConsultation() throws Exception {
+        String consultation = recordedConsultation();
+
+        mockMvc.perform(get("/clinical-records/" + patient).with(asArias))
+                .andExpect(content().string(containsString("Agregar aclaración")));
+
+        mockMvc.perform(post("/consultations/" + consultation + "/addenda").with(asArias).with(csrf())
+                        .param("patientId", patient.toString())
+                        .param("text", "La dosis es 5 mg."))
+                .andExpect(redirectedUrl("/clinical-records/" + patient))
+                .andExpect(flash().attribute("message", "Aclaración agregada."));
+
+        mockMvc.perform(get("/clinical-records/" + patient).with(asArias))
+                .andExpect(content().string(containsString("Aclaración —")))
+                .andExpect(content().string(containsString("La dosis es 5 mg.")))
+                .andExpect(content().string(containsString("enalapril 10 mg")));
+    }
+
+    @Test
+    void anEmptyAddendumIsRefusedNextToItsConsultation() throws Exception {
+        String consultation = recordedConsultation();
+
+        mockMvc.perform(post("/consultations/" + consultation + "/addenda").with(asArias).with(csrf())
+                        .param("patientId", patient.toString())
+                        .param("text", "  "))
+                .andExpect(redirectedUrl("/clinical-records/" + patient))
+                .andExpect(flash().attribute("error", "Escribí la aclaración."))
+                .andExpect(flash().attribute("addendumFor", UUID.fromString(consultation)));
+    }
+
+    @Test
+    void anAddendumToARecordThePractitionerMayNotReadIsForbidden() throws Exception {
+        String consultation = recordedConsultation();
+        CreatedPractitioner benitez = new PractitionerFixture(mockMvc, json).workingEveryDay();
+
+        mockMvc.perform(post("/consultations/" + consultation + "/addenda")
+                        .with(new PractitionerUserFixture(jdbc, userDetails).userFor(benitez.id())).with(csrf())
+                        .param("patientId", patient.toString())
+                        .param("text", "No debería."))
+                .andExpect(status().isForbidden());
+    }
 }

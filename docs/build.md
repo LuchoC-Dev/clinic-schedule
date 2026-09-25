@@ -405,7 +405,33 @@ record but not the form. Dr. Benítez and reception got 403 on both screens and 
 - The browser caught "Más renglones" adding nothing when few rows were filled; it now adds three
   to the rows on screen, and the integration test counts them.
 
-### Part 2 — Addenda `[ ]`
+### Part 2 — Addenda `[x]`
+- [x] `Addendum` inside the `Consultation` aggregate: `withAddendum` returns a new consultation,
+      with nothing already written changed; in order, each one once (D-52)
+- [x] `AddAddendumUseCase`: any practitioner with access to the record, at any time; an unknown
+      consultation is a 403; a retry with the same id adds nothing
+- [x] `V9__consultation_addendum.sql`, and a version on the consultation: two addenda at the same
+      time do not overwrite each other, the second is a 409
+- [x] `POST /api/consultations/{id}/addenda`; the record shows each consultation's addenda
+- [x] On the record screen, the addenda under each consultation and a form to add one
+- [x] 5 unit and 10 integration tests. 199 unit and 214 integration tests, 413 in total
+
+**Verified with:** the concurrency test failing without the version, and the access tests failing
+with the access rule skipped; `mvnw verify` with the PostgreSQL tests running V9 on a container.
+
+**Verified in a browser** against the application on a throwaway PostgreSQL: an empty addendum
+was refused in Spanish; Dra. Arias's addendum appeared under her consultation after two of Dr.
+Benítez's, sent through the API once he had an appointment with the patient that day, each with
+its time and author; the prescription above stayed as written. Reception got 403.
+
+**Stage notes:**
+- The clinical record is a concept apart from the consultation: the access rule is the record's,
+  the addenda are the consultation's. The module is still called `consultation`; it is renamed
+  `clinicalrecord` in part 3, when checks with a later result make the record gather more than
+  consultations.
+- The final single-page applications must keep what was typed when an addendum answers 409, and
+  send it again, by hand or by themselves (D-52).
+
 ### Part 3 — Checks whose result arrives later `[ ]`
 ### Part 4 — Attachments `[ ]`
 

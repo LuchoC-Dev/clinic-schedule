@@ -6,6 +6,7 @@ import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 
 import com.clinic.schedule.consultation.application.exception.ClinicalRecordAccessDeniedException;
+import com.clinic.schedule.consultation.application.exception.ConsultationChangedException;
 import com.clinic.schedule.shared.http.ErrorResponse;
 
 /**
@@ -20,6 +21,13 @@ class ConsultationExceptionHandler {
     ResponseEntity<ErrorResponse> forbidden(ClinicalRecordAccessDeniedException e) {
         return ResponseEntity.status(HttpStatus.FORBIDDEN)
                 .body(ErrorResponse.of(403, "Forbidden", e.getMessage()));
+    }
+
+    /** Another addendum was added at the same time: nothing was saved, and sending it again works (D-52). */
+    @ExceptionHandler(ConsultationChangedException.class)
+    ResponseEntity<ErrorResponse> conflict(ConsultationChangedException e) {
+        return ResponseEntity.status(HttpStatus.CONFLICT)
+                .body(ErrorResponse.of(409, "Conflict", e.getMessage()));
     }
 
     /** A consultation that breaks its own rules, when Bean Validation did not already catch it. */

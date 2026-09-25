@@ -19,8 +19,11 @@ import org.springframework.web.server.ResponseStatusException;
 import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 
 import com.clinic.schedule.consultation.application.exception.ClinicalRecordAccessDeniedException;
+import com.clinic.schedule.consultation.application.exception.ConsultationChangedException;
+import com.clinic.schedule.consultation.application.usecase.AddAddendumUseCase;
 import com.clinic.schedule.consultation.application.usecase.RecordConsultationUseCase;
 import com.clinic.schedule.consultation.application.usecase.ViewClinicalRecordUseCase;
+import com.clinic.schedule.consultation.domain.AddendumId;
 import com.clinic.schedule.consultation.domain.ConsultationId;
 import com.clinic.schedule.consultation.domain.ItemKind;
 import com.clinic.schedule.consultation.domain.PatientId;
@@ -30,8 +33,8 @@ import com.clinic.schedule.practitioner.api.PractitionerReader;
 import com.clinic.schedule.practitioner.api.PractitionerSummary;
 
 /**
- * The practitioner's screens over the clinical record: reading a patient's record, and the
- * consultation view — the form beside the record (D-51).
+ * The practitioner's screens over the clinical record: reading a patient's record and adding
+ * addenda to it, and the consultation view — the form beside the record (D-51, D-52).
  *
  * <p>Thin and throwaway, as D-02 requires: it calls the same use cases as the REST controller
  * and holds no rule. A user who may not read the record gets a 403, never an empty page (D-50).
@@ -49,23 +52,62 @@ class ConsultationViewController {
 
     private final ViewClinicalRecordUseCase clinicalRecord;
     private final RecordConsultationUseCase record;
+    private final AddAddendumUseCase addAddendum;
     private final PatientReader patients;
     private final PractitionerReader practitioners;
 
     ConsultationViewController(ViewClinicalRecordUseCase clinicalRecord, RecordConsultationUseCase record,
-            PatientReader patients, PractitionerReader practitioners) {
+            AddAddendumUseCase addAddendum, PatientReader patients, PractitionerReader practitioners) {
         this.clinicalRecord = clinicalRecord;
         this.record = record;
+        this.addAddendum = addAddendum;
         this.patients = patients;
         this.practitioners = practitioners;
     }
 
-    /** A patient's clinical record, to read — before the patient arrives, for instance. */
+    /**
+     * A patient's clinical record, to read — before the patient arrives, for instance — and to
+     * add addenda to its consultations (D-52).
+     */
     @GetMapping("/clinical-records/{patientId}")
     String clinicalRecord(@PathVariable UUID patientId, Model model) {
         ViewClinicalRecordUseCase.ClinicalRecord read = readOrRefuse(patientId);
         addRecord(model, patientId, read);
+        model.addAttribute("addendumForms", true);
         return "clinical-record";
+    }
+
+    /**
+     * Adds an addendum to a consultation, and goes back to the record. A refusal comes back with
+     * the text typed, next to the consultation it was for; a user who may not read the record
+     * gets a 403.
+     */
+    @PostMapping("/consultations/{id}/addenda")
+    String addAddendum(@PathVariable UUID id, @RequestParam UUID patientId,
+            @RequestParam(required = false) String text, RedirectAttributes flash) {
+        String backToRecord = "redirect:/clinical-records/" + patientId;
+        String problem = null;
+        if (text == null || text.isBlank()) {
+            problem = "Escribí la aclaración.";
+        } else {
+            try {
+                addAddendum.handle(new AddAddendumUseCase.Command(new ConsultationId(id), AddendumId.newId(), text));
+            } catch (ClinicalRecordAccessDeniedException e) {
+                throw new ResponseStatusException(HttpStatus.FORBIDDEN, e.getMessage());
+            } catch (ConsultationChangedException e) {
+                problem = "Otro profesional agregó una aclaración a esta consulta recién: revisala y volvé a enviar la tuya.";
+            } catch (IllegalArgumentException e) {
+                problem = "La aclaración tiene hasta 2 000 caracteres.";
+            }
+        }
+        if (problem != null) {
+            flash.addFlashAttribute("error", problem);
+            flash.addFlashAttribute("addendumFor", id);
+            flash.addFlashAttribute("addendumText", text);
+            return backToRecord;
+        }
+        flash.addFlashAttribute("message", "Aclaración agregada.");
+        return backToRecord;
     }
 
     /**
@@ -161,7 +203,7 @@ class ConsultationViewController {
                 .collect(Collectors.toMap(PractitionerSummary::id, PractitionerSummary::fullName));
         model.addAttribute("patient", patient);
         model.addAttribute("entries", read.consultations().stream()
-                .map(consultation -> ClinicalRecordEntry.of(consultation, names.get(consultation.practitionerId().value())))
+                .map(consultation -> ClinicalRecordEntry.of(consultation, names))
                 .toList());
         model.addAttribute("mayRecord", read.mayRecord());
         // The header offers a practitioner their agenda only (D-34).
