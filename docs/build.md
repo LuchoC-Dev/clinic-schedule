@@ -488,7 +488,34 @@ pendientes", seeing only the patient and the check; asking without a reason was 
 Spanish; with one, he landed on the record ("Acceso autorizado hasta el 25/09/2027."), reported
 the result, and the record showed the grant under "Accesos autorizados"; the list was then empty.
 
-#### 3c — Orders `[ ]`
+#### 3c — Orders `[x]`
+- [x] `CheckOrder`: issued in a consultation, open until one check fulfils it or its author
+      cancels it with a reason; the order names the check that fulfilled it (D-55)
+- [x] The `STUDY_ORDER` item leaves the consultation; `V12__check_order.sql`, starting from an
+      empty database again
+- [x] Orders sent with the consultation; a check, in a consultation or not, may name the open order
+      it fulfils, and without a description it is what the order asks for
+- [x] `POST /api/orders/{id}/cancel`, only by the author; a version and a unique constraint keep two
+      checks from fulfilling one order
+- [x] Screens: an "Órdenes" section in the consultation form, the open orders to choose from for a
+      check, orders under their consultation with where they stand, "Anular orden" for the author
+- [x] 6 unit and 9 integration tests. 220 unit and 240 integration tests, 460 in total
+
+**Verified with:** each of these failing its tests when broken on purpose — the version removed
+from orders, anyone allowed to cancel, a consultation's checks not fulfilling their order;
+`mvnw clean verify` with the PostgreSQL tests running V12.
+
+**Verified in a browser** against the application on a throwaway PostgreSQL: Dra. Arias issued two
+orders in a consultation and cancelled the X-ray with its reason; Dr. Benítez, seeing the patient
+that day, recorded a check choosing the blood-test order, with no description, and it took the
+order's; the record showed the X-ray order cancelled with its reason and the blood test fulfilled
+with its time, and offered him no "Anular orden".
+
+**Stage notes:**
+- A development database from before V12 must be wiped again (`docker compose down -v`).
+- An order coming from elsewhere — on paper, or another practice — is left for later, with the
+  validation it needs; meanwhile a check is recorded with no order, naming it in its description.
+
 #### 3d — Pending lists `[ ]`
 ### Part 4 — Attachments `[ ]`
 

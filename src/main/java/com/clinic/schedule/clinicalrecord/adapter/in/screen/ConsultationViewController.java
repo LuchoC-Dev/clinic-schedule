@@ -20,13 +20,16 @@ import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 
 import com.clinic.schedule.clinicalrecord.application.exception.ClinicalRecordAccessDeniedException;
 import com.clinic.schedule.clinicalrecord.application.exception.ConsultationChangedException;
+import com.clinic.schedule.clinicalrecord.application.exception.UnknownOrderException;
 import com.clinic.schedule.clinicalrecord.application.usecase.AddAddendumUseCase;
 import com.clinic.schedule.clinicalrecord.application.usecase.RecordConsultationUseCase;
 import com.clinic.schedule.clinicalrecord.application.usecase.ViewClinicalRecordUseCase;
 import com.clinic.schedule.clinicalrecord.domain.AddendumId;
+import com.clinic.schedule.clinicalrecord.domain.CheckOrder;
 import com.clinic.schedule.clinicalrecord.domain.ConsultationId;
 import com.clinic.schedule.clinicalrecord.domain.ItemKind;
 import com.clinic.schedule.clinicalrecord.domain.PatientId;
+import com.clinic.schedule.clinicalrecord.domain.exception.OrderNotOpenException;
 import com.clinic.schedule.patient.api.PatientReader;
 import com.clinic.schedule.patient.api.PatientSummary;
 import com.clinic.schedule.practitioner.api.PractitionerReader;
@@ -131,6 +134,7 @@ class ConsultationViewController {
         model.addAttribute("form", form);
         model.addAttribute("rows", form.itemRowsToShow());
         model.addAttribute("checkRows", form.checkRowsToShow());
+        model.addAttribute("orderRows", form.orderRowsToShow());
         model.addAttribute("kinds", Arrays.stream(ItemKind.values())
                 .collect(Collectors.toMap(ItemKind::name, ClinicalRecordEntry::labelOf,
                         (first, second) -> first, LinkedHashMap::new)));
@@ -161,13 +165,17 @@ class ConsultationViewController {
         }
         try {
             record.handle(new RecordConsultationUseCase.Command(ConsultationId.newId(),
-                    new PatientId(form.patientId()), form.notes(), form.items(), form.checks()));
+                    new PatientId(form.patientId()), form.notes(), form.items(), form.checks(), form.orders()));
         } catch (ClinicalRecordAccessDeniedException e) {
             if (!e.mayRead()) {
                 throw new ResponseStatusException(HttpStatus.FORBIDDEN, e.getMessage());
             }
             flash.addFlashAttribute("form", form);
             flash.addFlashAttribute("error", NOT_ARRIVED);
+            return backToForm;
+        } catch (UnknownOrderException | OrderNotOpenException e) {
+            flash.addFlashAttribute("form", form);
+            flash.addFlashAttribute("error", "Una de las órdenes elegidas ya no está abierta: revisá los chequeos.");
             return backToForm;
         } catch (IllegalArgumentException e) {
             flash.addFlashAttribute("form", form);
@@ -184,7 +192,7 @@ class ConsultationViewController {
             return "Escribí lo consultado.";
         }
         if (form.hasHalfFilledRow()) {
-            return "Cada ítem necesita su tipo y su texto, y cada chequeo qué se hizo: completá o vaciá los renglones a medias.";
+            return "Cada ítem necesita su tipo y su texto, y cada chequeo qué se hizo o la orden que cumple: completá o vaciá los renglones a medias.";
         }
         return null;
     }
@@ -205,6 +213,8 @@ class ConsultationViewController {
         model.addAttribute("patient", patient);
         model.addAttribute("entries", ClinicalRecordEntry.of(read, names));
         model.addAttribute("grants", GrantEntry.of(read, names));
+        // The orders a check done now may fulfil (D-55).
+        model.addAttribute("openOrders", read.orders().stream().filter(CheckOrder::isOpen).toList());
         model.addAttribute("mayRecord", read.mayRecord());
         // The header offers a practitioner their agenda only (D-34).
         model.addAttribute("readOnly", true);

@@ -26,13 +26,13 @@ class ConsultationTest {
     void aConsultationKeepsWhatWasWrittenInOrder() {
         List<ConsultationItem> items = List.of(
                 new ConsultationItem(ItemKind.PRESCRIPTION, "  enalapril 10 mg  "),
-                new ConsultationItem(ItemKind.STUDY_ORDER, "ecodoppler de vasos de cuello"));
+                new ConsultationItem(ItemKind.PRESCRIPTION, "amlodipina 5 mg"));
 
         Consultation consultation = withNotes("  Control de hipertensión.  ", items);
 
         assertThat(consultation.notes()).isEqualTo("Control de hipertensión.");
         assertThat(consultation.items()).extracting(ConsultationItem::kind)
-                .containsExactly(ItemKind.PRESCRIPTION, ItemKind.STUDY_ORDER);
+                .containsExactly(ItemKind.PRESCRIPTION, ItemKind.PRESCRIPTION);
         assertThat(consultation.items().getFirst().description()).isEqualTo("enalapril 10 mg");
         assertThat(consultation.recordedAt()).isEqualTo(AT);
     }

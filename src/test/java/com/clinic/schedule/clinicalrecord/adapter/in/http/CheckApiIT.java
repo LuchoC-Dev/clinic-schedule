@@ -211,7 +211,6 @@ class CheckApiIT {
         send(asArias, "/api/consultations", """
                 {"patientId": "%s", "notes": "Control.", "checks": [{"description": " ", "result": "72"}]}
                 """.formatted(patient))
-                .andExpect(status().isBadRequest())
-                .andExpect(jsonPath("$.fields['checks[0].description']").exists());
+                .andExpect(status().isBadRequest());
     }
 }

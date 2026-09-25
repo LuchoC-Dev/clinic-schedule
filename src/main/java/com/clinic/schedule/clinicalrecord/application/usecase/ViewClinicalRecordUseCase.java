@@ -10,11 +10,13 @@ import org.springframework.transaction.annotation.Transactional;
 
 import com.clinic.schedule.clinicalrecord.application.exception.ClinicalRecordAccessDeniedException;
 import com.clinic.schedule.clinicalrecord.application.port.AccessGrantRepository;
+import com.clinic.schedule.clinicalrecord.application.port.CheckOrderRepository;
 import com.clinic.schedule.clinicalrecord.application.port.CheckRepository;
 import com.clinic.schedule.clinicalrecord.application.port.ConsultationRepository;
 import com.clinic.schedule.clinicalrecord.application.port.CurrentPractitionerPort;
 import com.clinic.schedule.clinicalrecord.domain.AccessGrant;
 import com.clinic.schedule.clinicalrecord.domain.Check;
+import com.clinic.schedule.clinicalrecord.domain.CheckOrder;
 import com.clinic.schedule.clinicalrecord.domain.ClinicalRecordAccessPolicy;
 import com.clinic.schedule.clinicalrecord.domain.Consultation;
 import com.clinic.schedule.clinicalrecord.domain.PatientId;
@@ -36,16 +38,18 @@ public class ViewClinicalRecordUseCase {
     private final ConsultationRepository consultations;
     private final CheckRepository checks;
     private final AccessGrantRepository grants;
+    private final CheckOrderRepository orders;
     private final CurrentPractitionerPort currentPractitioner;
     private final ClinicalRecordAccessReader access;
     private final Clock clock;
 
     public ViewClinicalRecordUseCase(ConsultationRepository consultations, CheckRepository checks,
-            AccessGrantRepository grants, CurrentPractitionerPort currentPractitioner, ClinicalRecordAccessReader access,
-            Clock clock) {
+            AccessGrantRepository grants, CheckOrderRepository orders, CurrentPractitionerPort currentPractitioner,
+            ClinicalRecordAccessReader access, Clock clock) {
         this.consultations = consultations;
         this.checks = checks;
         this.grants = grants;
+        this.orders = orders;
         this.currentPractitioner = currentPractitioner;
         this.access = access;
         this.clock = clock;
@@ -70,7 +74,11 @@ public class ViewClinicalRecordUseCase {
         List<AccessGrant> foundGrants = grants.findAllForPatient(patientId).stream()
                 .sorted(Comparator.comparing(AccessGrant::grantedAt).reversed())
                 .toList();
-        return new ClinicalRecord(foundConsultations, foundChecks, foundGrants, access.mayRecord(visit));
+        List<CheckOrder> foundOrders = orders.findAllForPatient(patientId).stream()
+                .sorted(Comparator.comparing(CheckOrder::orderedAt))
+                .toList();
+        return new ClinicalRecord(foundConsultations, foundChecks, foundOrders, foundGrants, practitionerId,
+                access.mayRecord(visit));
     }
 
     /**
@@ -78,9 +86,11 @@ public class ViewClinicalRecordUseCase {
      * screen offers the forms only when sending them would be accepted.
      *
      * @param checks every check, done in a consultation or not; each says which
+     * @param orders every order for the patient, open or not, each with the consultation it was issued in (D-55)
      * @param grants every access granted to the record, to whoever, valid or not: who else opened it (D-54)
+     * @param reader the practitioner reading it, so a screen can offer what only they may do
      */
-    public record ClinicalRecord(List<Consultation> consultations, List<Check> checks, List<AccessGrant> grants,
-            boolean mayRecord) {
+    public record ClinicalRecord(List<Consultation> consultations, List<Check> checks, List<CheckOrder> orders,
+            List<AccessGrant> grants, PractitionerId reader, boolean mayRecord) {
     }
 }

@@ -5,6 +5,8 @@ import java.util.UUID;
 
 import com.clinic.schedule.clinicalrecord.application.usecase.RecordConsultationUseCase;
 import com.clinic.schedule.clinicalrecord.domain.Check;
+import com.clinic.schedule.clinicalrecord.domain.CheckOrder;
+import com.clinic.schedule.clinicalrecord.domain.CheckOrderId;
 import com.clinic.schedule.clinicalrecord.domain.CheckResult;
 import com.clinic.schedule.clinicalrecord.domain.Consultation;
 import com.clinic.schedule.clinicalrecord.domain.ConsultationId;
@@ -36,7 +38,10 @@ record RecordConsultationRequest(
         List<@NotNull(message = "an item cannot be empty") @Valid Item> items,
 
         @Size(max = Consultation.MAX_ITEMS, message = "a consultation has at most 50 checks")
-        List<@NotNull(message = "a check cannot be empty") @Valid CheckDone> checks) {
+        List<@NotNull(message = "a check cannot be empty") @Valid CheckDone> checks,
+
+        @Size(max = Consultation.MAX_ITEMS, message = "a consultation has at most 50 orders")
+        List<@NotNull(message = "an order cannot be empty") @Valid OrderIssued> orders) {
 
     record Item(
             @NotNull(message = "the kind is required")
@@ -47,14 +52,25 @@ record RecordConsultationRequest(
             String description) {
     }
 
-    /** A check done during the consultation; without a result, the result is pending (D-53). */
+    /**
+     * A check done during the consultation; without a result, the result is pending (D-53). It may
+     * fulfil one of the patient's open orders, and then its description may be left out (D-55).
+     */
     record CheckDone(
-            @NotBlank(message = "the description is required")
             @Size(max = Check.MAX_DESCRIPTION_LENGTH, message = "the description is at most 2000 characters")
             String description,
 
             @Size(max = CheckResult.MAX_TEXT_LENGTH, message = "the result is at most 10000 characters")
-            String result) {
+            String result,
+
+            UUID orderId) {
+    }
+
+    /** An order issued during the consultation: what check it asks for (D-55). */
+    record OrderIssued(
+            @NotBlank(message = "the description is required")
+            @Size(max = CheckOrder.MAX_DESCRIPTION_LENGTH, message = "the description is at most 2000 characters")
+            String description) {
     }
 
     RecordConsultationUseCase.Command toCommand() {
@@ -66,7 +82,9 @@ record RecordConsultationRequest(
                         : items.stream().map(item -> new ConsultationItem(item.kind(), item.description())).toList(),
                 checks == null ? List.of()
                         : checks.stream()
-                                .map(check -> new RecordConsultationUseCase.CheckDone(check.description(), check.result()))
-                                .toList());
+                                .map(check -> new RecordConsultationUseCase.CheckDone(check.description(), check.result(),
+                                        check.orderId() == null ? null : new CheckOrderId(check.orderId())))
+                                .toList(),
+                orders == null ? List.of() : orders.stream().map(OrderIssued::description).toList());
     }
 }

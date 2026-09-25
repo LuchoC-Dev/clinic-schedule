@@ -92,9 +92,8 @@ whether a practitioner is seeing a patient today without knowing where the answe
 
 - A practitioner records a consultation of a patient they are seeing today: today that means one
   who has checked in on an appointment with them that day.
-- A consultation holds free text about what was consulted, a list of items and the checks done
-  during it. Each item has a kind — a prescription, or an order for a study (an X-ray, a Doppler
-  ultrasound…) here or elsewhere — and free text. Structure comes later, one kind at a time.
+- A consultation holds free text about what was consulted, its prescriptions, the checks done
+  during it and the orders issued in it. Prescriptions are free text; structure comes later.
 - It is sent whole, once, on the day the patient is seen. Once sent it can be neither changed nor
   deleted. Keeping a draft to finish later is the user interface's business.
 - A patient seen twice on the same day by the same practitioner has two consultations.
@@ -156,8 +155,12 @@ in. It opens a consultation view: the form, with the patient's clinical record b
      waiting for a result, showing only the patient and the check, lets whoever reports them ask
      for access. A grant opens the record; it does not let anyone record a consultation or a
      check.
-   - **3c** — the order: a practitioner who needs a check they cannot do authorizes it. Whoever
-     fulfils it, here or at another practice, does not matter. It replaces the study-order item.
+   - **3c** — the order: a practitioner who needs a check they cannot do authorizes it, during a
+     consultation for now. Whoever fulfils it does not matter: one check fulfils it, done by any
+     practitioner who sees the patient. Its author may cancel it, with a reason. One fulfilled
+     elsewhere stays open: that is none of the application's business, and an order coming from
+     elsewhere — on paper, or from another practice — will need validating, later. It replaces the
+     study-order item.
    - **3d** — the lists of what is pending for whoever ordered.
 4. Attachments: an electrocardiogram trace, a report from elsewhere.
 

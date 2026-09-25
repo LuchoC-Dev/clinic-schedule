@@ -19,9 +19,14 @@ record ClinicalRecordResponse(List<ConsultationResponse> consultations, List<Che
     static ClinicalRecordResponse of(ViewClinicalRecordUseCase.ClinicalRecord record, Map<UUID, String> names) {
         return new ClinicalRecordResponse(
                 record.consultations().stream()
-                        .map(consultation -> ConsultationResponse.of(consultation, record.checks().stream()
-                                .filter(check -> check.consultationId().equals(Optional.of(consultation.id())))
-                                .toList(), names))
+                        .map(consultation -> ConsultationResponse.of(consultation,
+                                record.checks().stream()
+                                        .filter(check -> check.consultationId().equals(Optional.of(consultation.id())))
+                                        .toList(),
+                                record.orders().stream()
+                                        .filter(order -> order.consultationId().equals(consultation.id()))
+                                        .toList(),
+                                names))
                         .toList(),
                 record.checks().stream()
                         .filter(check -> check.consultationId().isEmpty())

@@ -123,7 +123,8 @@ class ConsultationViewIT {
                 .andExpect(content().string(containsString("Todavía no hay nada registrado.")));
 
         mockMvc.perform(form("Control de hipertensión.", "PRESCRIPTION", "enalapril 10 mg", "", "",
-                        "STUDY_ORDER", "ecodoppler de vasos de cuello"))
+                        "PRESCRIPTION", "amlodipina 5 mg")
+                        .param("orderDescription", "Ecodoppler de vasos de cuello", "", ""))
                 .andExpect(redirectedUrl("/clinical-records/" + patient))
                 .andExpect(flash().attribute("message", "Consulta registrada."));
 
@@ -131,15 +132,17 @@ class ConsultationViewIT {
                 .andExpect(status().isOk())
                 .andExpect(content().string(containsString("Control de hipertensión.")))
                 .andExpect(content().string(containsString("Receta:")))
-                .andExpect(content().string(containsString("Orden de estudio:")))
-                .andExpect(content().string(containsString("ecodoppler de vasos de cuello")));
+                .andExpect(content().string(containsString("amlodipina 5 mg")))
+                .andExpect(content().string(containsString("Orden:")))
+                .andExpect(content().string(containsString("Ecodoppler de vasos de cuello")))
+                .andExpect(content().string(containsString("Abierta")));
     }
 
     @Test
     void aHalfFilledRowIsRefusedKeepingWhatWasTyped() throws Exception {
         arrivedToday();
 
-        mockMvc.perform(form("Control.", "STUDY_ORDER", "radiografía de tórax", "PRESCRIPTION", ""))
+        mockMvc.perform(form("Control.", "PRESCRIPTION", "ibuprofeno 400 mg", "PRESCRIPTION", ""))
                 .andExpect(redirectedUrl("/consultations/new?patientId=" + patient))
                 .andExpect(flash().attribute("error", containsString("Cada ítem necesita su tipo y su texto")))
                 .andExpect(flash().attributeExists("form"));
@@ -312,5 +315,52 @@ class ConsultationViewIT {
         mockMvc.perform(get("/clinical-records/" + patient).with(asArias))
                 .andExpect(content().string(containsString("Electrocardiograma")))
                 .andExpect(content().string(containsString("Resultado pendiente.")));
+    }
+
+    // --- orders (D-55) ------------------------------------------------------------------
+
+    @Test
+    void anOrderIsFulfilledFromTheRecordAndItsAuthorMayCancelAnother() throws Exception {
+        arrivedToday();
+        mockMvc.perform(form("Control.").param("orderDescription", "Hemograma completo", "Radiografía de tórax"))
+                .andExpect(redirectedUrl("/clinical-records/" + patient));
+        MvcResult record = mockMvc.perform(get("/api/clinical-records/" + patient).with(asArias)).andReturn();
+        String blood = json.readTree(record.getResponse().getContentAsString())
+                .get("consultations").get(0).get("orders").get(0).get("id").asText();
+        String xray = json.readTree(record.getResponse().getContentAsString())
+                .get("consultations").get(0).get("orders").get(1).get("id").asText();
+
+        mockMvc.perform(get("/clinical-records/" + patient).with(asArias))
+                .andExpect(content().string(containsString("Cumple la orden")))
+                .andExpect(content().string(containsString("Anular orden")));
+
+        mockMvc.perform(post("/checks").with(asArias).with(csrf())
+                        .param("patientId", patient.toString())
+                        .param("description", "")
+                        .param("orderId", blood))
+                .andExpect(flash().attribute("message", "Chequeo registrado."));
+        mockMvc.perform(post("/orders/" + xray + "/cancel").with(asArias).with(csrf())
+                        .param("patientId", patient.toString())
+                        .param("reason", "Trajo una reciente"))
+                .andExpect(flash().attribute("message", "Orden anulada."));
+
+        mockMvc.perform(get("/clinical-records/" + patient).with(asArias))
+                .andExpect(content().string(containsString("Cumplida el")))
+                .andExpect(content().string(containsString("Anulada: Trajo una reciente")))
+                .andExpect(content().string(not(containsString("Anular orden"))));
+    }
+
+    @Test
+    void cancellingWithoutAReasonIsRefused() throws Exception {
+        arrivedToday();
+        mockMvc.perform(form("Control.").param("orderDescription", "Hemograma completo"));
+        MvcResult record = mockMvc.perform(get("/api/clinical-records/" + patient).with(asArias)).andReturn();
+        String order = json.readTree(record.getResponse().getContentAsString())
+                .get("consultations").get(0).get("orders").get(0).get("id").asText();
+
+        mockMvc.perform(post("/orders/" + order + "/cancel").with(asArias).with(csrf())
+                        .param("patientId", patient.toString())
+                        .param("reason", " "))
+                .andExpect(flash().attribute("error", "Escribí el motivo para anular la orden."));
     }
 }

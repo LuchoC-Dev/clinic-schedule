@@ -6,12 +6,13 @@ import java.util.Map;
 import java.util.UUID;
 
 import com.clinic.schedule.clinicalrecord.domain.Check;
+import com.clinic.schedule.clinicalrecord.domain.CheckOrder;
 import com.clinic.schedule.clinicalrecord.domain.Consultation;
 import com.clinic.schedule.clinicalrecord.domain.ItemKind;
 
 /**
- * A consultation as the API shows it: with the practitioners' names next to their ids, and the
- * checks done during it, so a client does not have to pair them (D-53).
+ * A consultation as the API shows it: with the practitioners' names next to their ids, the checks
+ * done during it and the orders issued in it, so a client does not have to pair them (D-53, D-55).
  */
 record ConsultationResponse(
         UUID id,
@@ -22,6 +23,7 @@ record ConsultationResponse(
         String notes,
         List<Item> items,
         List<CheckResponse> checks,
+        List<CheckOrderResponse> orders,
         List<AddendumResponse> addenda) {
 
     record Item(ItemKind kind, String description) {
@@ -33,9 +35,11 @@ record ConsultationResponse(
 
     /**
      * @param checks the checks done during this consultation
+     * @param orders the orders issued in this consultation
      * @param names every practitioner's name by id; an unknown one is left null
      */
-    static ConsultationResponse of(Consultation consultation, List<Check> checks, Map<UUID, String> names) {
+    static ConsultationResponse of(Consultation consultation, List<Check> checks, List<CheckOrder> orders,
+            Map<UUID, String> names) {
         return new ConsultationResponse(
                 consultation.id().value(),
                 consultation.patientId().value(),
@@ -45,6 +49,7 @@ record ConsultationResponse(
                 consultation.notes(),
                 consultation.items().stream().map(item -> new Item(item.kind(), item.description())).toList(),
                 checks.stream().map(check -> CheckResponse.of(check, names)).toList(),
+                orders.stream().map(order -> CheckOrderResponse.of(order, names)).toList(),
                 consultation.addenda().stream()
                         .map(addendum -> new AddendumResponse(addendum.id().value(), addendum.author().value(),
                                 names.get(addendum.author().value()), addendum.writtenAt(), addendum.text()))

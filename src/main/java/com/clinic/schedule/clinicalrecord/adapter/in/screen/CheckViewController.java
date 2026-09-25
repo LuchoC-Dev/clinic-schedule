@@ -13,7 +13,10 @@ import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 import com.clinic.schedule.clinicalrecord.application.exception.ClinicalRecordAccessDeniedException;
 import com.clinic.schedule.clinicalrecord.application.usecase.RecordCheckResultUseCase;
 import com.clinic.schedule.clinicalrecord.application.usecase.RecordCheckUseCase;
+import com.clinic.schedule.clinicalrecord.application.exception.UnknownOrderException;
 import com.clinic.schedule.clinicalrecord.domain.CheckId;
+import com.clinic.schedule.clinicalrecord.domain.CheckOrderId;
+import com.clinic.schedule.clinicalrecord.domain.exception.OrderNotOpenException;
 import com.clinic.schedule.clinicalrecord.domain.PatientId;
 import com.clinic.schedule.clinicalrecord.domain.exception.ResultAlreadyRecordedException;
 
@@ -35,19 +38,22 @@ class CheckViewController {
 
     @PostMapping("/checks")
     String recordCheck(@RequestParam UUID patientId, @RequestParam(required = false) String description,
-            @RequestParam(required = false) String result, RedirectAttributes flash) {
+            @RequestParam(required = false) String result, @RequestParam(required = false) UUID orderId,
+            RedirectAttributes flash) {
         String problem = null;
-        if (description == null || description.isBlank()) {
-            problem = "Escribí qué chequeo se hizo.";
+        if ((description == null || description.isBlank()) && orderId == null) {
+            problem = "Escribí qué chequeo se hizo, o elegí la orden que cumple.";
         } else {
             try {
                 recordCheck.handle(new RecordCheckUseCase.Command(CheckId.newId(), new PatientId(patientId),
-                        description, result));
+                        description, result, orderId == null ? null : new CheckOrderId(orderId)));
             } catch (ClinicalRecordAccessDeniedException e) {
                 if (!e.mayRead()) {
                     throw new ResponseStatusException(HttpStatus.FORBIDDEN, e.getMessage());
                 }
                 problem = "El chequeo se registra cuando el paciente llegó a atenderse con vos hoy.";
+            } catch (UnknownOrderException | OrderNotOpenException e) {
+                problem = "Esa orden ya no está abierta.";
             } catch (IllegalArgumentException e) {
                 problem = "Revisá el chequeo: qué se hizo tiene hasta 2 000 caracteres, y el resultado hasta 10 000.";
             }

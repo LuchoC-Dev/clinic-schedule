@@ -22,6 +22,12 @@
             <label>Qué se hizo
                 <textarea name="description" rows="2" maxlength="2000" th:text="${checkDescription}"></textarea>
             </label>
+            <label th:unless="${openOrders.isEmpty()}">Cumple la orden (sin descripción, es lo que la orden pide)
+                <select name="orderId">
+                    <option value="">—</option>
+                    <option th:each="o : ${openOrders}" th:value="${o.id.value}" th:text="${o.description}"></option>
+                </select>
+            </label>
             <label>Resultado (vacío si queda pendiente)
                 <textarea name="result" rows="2" maxlength="10000" th:text="${checkResult}"></textarea>
             </label>
@@ -49,6 +55,22 @@
                     </li>
                 </ul>
                 <div th:each="check : ${c.checks}" th:insert="~{clinical-record :: check(${check})}"></div>
+                <!-- Orders issued in this consultation, and where each stands (D-55). -->
+                <div class="order" th:each="order : ${c.orders}">
+                    <p>
+                        <strong>Orden:</strong> <span class="notes" th:text="${order.description}">Ecodoppler de vasos de cuello</span>
+                        <span class="muted" th:text="'— ' + ${order.state}">— Abierta</span>
+                    </p>
+                    <form method="post" th:if="${order.mayCancel and recordActions}"
+                          th:action="@{/orders/{id}/cancel(id=${order.id})}">
+                        <input type="hidden" name="patientId" th:value="${patient.id}">
+                        <label>Motivo para anularla
+                            <textarea name="reason" rows="1" maxlength="500"
+                                      th:text="${cancelFor == order.id} ? ${cancelReason} : ''"></textarea>
+                        </label>
+                        <p class="bar"><button type="submit" class="danger">Anular orden</button></p>
+                    </form>
+                </div>
                 <!-- Addenda: added afterwards, never changing what was written above (D-52). -->
                 <div class="addendum" th:each="note : ${c.addenda}">
                     <p class="muted">

@@ -1685,3 +1685,55 @@ else of the record — with "Ver historia" or "Pedir acceso" as the user may alr
 hard-coded, or an optional one (the law decides, and it is not known yet); grants that never end
 (kept, but for a year); hiding grants from the record (who opened a record should be visible).
 
+---
+
+## D-55 — An order authorizes a check, and one check fulfils it
+**Date:** 2026-09-25 · **Status:** accepted
+
+A practitioner who needs a check they cannot do authorizes it with an order. Who does the check
+does not matter — here, or at another practice. So an order is an aggregate of its own,
+`CheckOrder`, in the clinical record, and the study-order item leaves the consultation, which keeps
+only prescriptions as items.
+
+**Its life.** It is issued during a consultation — without one, later — and is `OPEN` until one
+check fulfils it (`FULFILLED`) or its author cancels it with a reason of up to 500 characters
+(`CANCELLED`). One order, one check. Only an open order is fulfilled or cancelled; otherwise
+`OrderNotOpenException`, a 409. Anyone else trying to cancel it gets `NotTheOrderAuthorException`,
+a 403, and an order that does not exist is refused the same way. It does not expire.
+
+**How it ended is a type, not loose fields.** An open order has no `OrderOutcome`; a closed one has
+exactly one: `Fulfilled(check)` or `Cancelled(at, reason)`, a sealed interface. A cancelled order
+cannot lack its reason, nor a fulfilled one its check, because the type demands them, and a
+`switch` over the outcome is exhaustive. `status()` follows from it. The first version had three
+nullable fields — the check, the time, the reason — kept consistent by hand, and two methods named
+`fulfilledBy`: the operation and the getter; the outcome removed both problems.
+
+**The order names the check that fulfilled it, not the other way round.** A check stays what it
+was, whether it fulfils an order, was done with none, or will come from elsewhere; it needs no new
+field. The check must be of the order's patient and done after it — the order's rule.
+
+**Fulfilling one.** A check recorded with a consultation or on its own may name one of the
+patient's open orders (`orderId`); without a description it is what the order asks for. The check
+and the fulfilled order are stored in one transaction. Two checks fulfilling one order at the same
+time are refused as the second, by the order's version (`V12`), and the database also keeps one
+check from fulfilling two orders.
+
+**Orders from elsewhere wait.** One fulfilled at another practice stays open: none of this
+application's business yet. One coming from elsewhere — on paper, or from another practice — will
+need validating, and comes with the anti-corruption layer; meanwhile its check is recorded with no
+order, naming it in the description.
+
+**API and screens.** `POST /api/consultations` takes `orders: [{description}]` and `checks[].orderId`;
+`POST /api/checks` takes `orderId`; `POST /api/orders/{id}/cancel` takes `{reason}`. The record shows
+each consultation's orders and where they stand. The consultation form has an "Órdenes" section,
+and both check forms offer the open orders.
+
+**Storage.** `V12` creates `check_order` — `order` is a reserved word — with checks that keep status,
+fulfilment and cancellation consistent, and drops the study-order item kind. The database starts
+empty again: no item is carried over.
+
+*Rejected:* the check naming its order (a field on every check for what only some have, and one an
+external check would not); several checks per order (one order per check, as agreed); orders that
+expire (not asked for); cancelling without a reason, or by someone else; recording orders from
+elsewhere now (they need a validation not yet designed).
+

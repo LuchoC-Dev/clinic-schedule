@@ -77,9 +77,10 @@ Spanish, for the staff.
 | `POST` | `/api/appointments/{id}/suspend-auto-cancellation` | the patient warned they will be late |
 | `GET` | `/api/appointments?practitionerId=&date=` | a day's agenda — a practitioner may only ask for their own |
 | `POST` | `/api/time-off` | a practitioner's absence — whole days up to `untilDate`, or part of one — cancelling the appointments it hits |
-| `POST` | `/api/consultations` | a practitioner records the consultation of a patient who arrived today — notes, prescriptions, study orders and the checks done |
+| `POST` | `/api/consultations` | a practitioner records the consultation of a patient who arrived today — notes, prescriptions, the checks done and the orders issued |
 | `POST` | `/api/consultations/{id}/addenda` | an addendum to a consultation already sent, by any practitioner with access to the record |
-| `POST` | `/api/checks` | a check without a consultation — the emergency precaution — with its result or pending |
+| `POST` | `/api/checks` | a check without a consultation — the emergency precaution — with its result or pending; it may fulfil an open order |
+| `POST` | `/api/orders/{id}/cancel` | the author cancels an open order, with a reason |
 | `POST` | `/api/checks/{id}/result` | the result of a pending check, by any practitioner with access to the record |
 | `GET` | `/api/checks/pending` | the checks of the practice waiting for a result: only the patient and the check |
 | `POST` | `/api/checks/{id}/access-grants` | access to the record to report that pending check — granted at once, for now, and recorded |
@@ -109,7 +110,7 @@ src/main/java/com/clinic/schedule/
 │       └── out/              driven: the ports' implementations
 │           ├── persistence/  JPA
 │           └── external/     the other modules, through their api/
-├── clinicalrecord/           hexagonal too: consultations, checks, and who may read a record
+├── clinicalrecord/           hexagonal too: consultations, checks, orders, and who may read a record
 ├── patient/                  layered: presentation/ (http, screen), service/, entity/,
 │                             persistence/ — and api/, its only door for other modules
 ├── practitioner/             layered alike, with the week's rules in plain classes

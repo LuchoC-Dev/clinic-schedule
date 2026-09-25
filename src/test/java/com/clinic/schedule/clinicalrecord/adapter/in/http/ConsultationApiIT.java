@@ -97,7 +97,7 @@ class ConsultationApiIT {
         return """
                 {"patientId": "%s", "notes": "%s", "items": [
                   {"kind": "PRESCRIPTION", "description": "enalapril 10 mg"},
-                  {"kind": "STUDY_ORDER", "description": "ecodoppler de vasos de cuello"}]}
+                  {"kind": "PRESCRIPTION", "description": "amlodipina 5 mg"}]}
                 """.formatted(patient, notes);
     }
 
@@ -122,7 +122,7 @@ class ConsultationApiIT {
                 .andExpect(jsonPath("$.practitionerId").value(arias.id().toString()))
                 .andExpect(jsonPath("$.recordedAt").value("2026-03-10T00:00:00"))
                 .andExpect(jsonPath("$.items[0].kind").value("PRESCRIPTION"))
-                .andExpect(jsonPath("$.items[1].description").value("ecodoppler de vasos de cuello"));
+                .andExpect(jsonPath("$.items[1].description").value("amlodipina 5 mg"));
 
         readRecord(asArias)
                 .andExpect(status().isOk())

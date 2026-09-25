@@ -8,10 +8,14 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import com.clinic.schedule.clinicalrecord.application.exception.ClinicalRecordAccessDeniedException;
+import com.clinic.schedule.clinicalrecord.application.exception.UnknownOrderException;
+import com.clinic.schedule.clinicalrecord.application.port.CheckOrderRepository;
 import com.clinic.schedule.clinicalrecord.application.port.CheckRepository;
 import com.clinic.schedule.clinicalrecord.application.port.CurrentPractitionerPort;
 import com.clinic.schedule.clinicalrecord.domain.Check;
 import com.clinic.schedule.clinicalrecord.domain.CheckId;
+import com.clinic.schedule.clinicalrecord.domain.CheckOrder;
+import com.clinic.schedule.clinicalrecord.domain.CheckOrderId;
 import com.clinic.schedule.clinicalrecord.domain.PatientId;
 import com.clinic.schedule.clinicalrecord.domain.PractitionerId;
 import com.clinic.schedule.clinicalrecord.domain.VisitToday;
@@ -22,7 +26,8 @@ import com.clinic.schedule.clinicalrecord.domain.VisitToday;
  * with it, by {@link RecordConsultationUseCase}.
  *
  * <p>The patient is there to be checked, so the rule is the consultation's: they arrived to be
- * seen by this practitioner today (D-49). The result may come with it or later.
+ * seen by this practitioner today (D-49). The result may come with it or later, and it may fulfil
+ * one of the patient's open orders (D-55).
  *
  * <p>Retrying is safe: an id already recorded by this practitioner answers that check (D-19).
  */
@@ -30,13 +35,15 @@ import com.clinic.schedule.clinicalrecord.domain.VisitToday;
 public class RecordCheckUseCase {
 
     private final CheckRepository checks;
+    private final CheckOrderRepository orders;
     private final CurrentPractitionerPort currentPractitioner;
     private final ClinicalRecordAccessReader access;
     private final Clock clock;
 
-    public RecordCheckUseCase(CheckRepository checks, CurrentPractitionerPort currentPractitioner,
-            ClinicalRecordAccessReader access, Clock clock) {
+    public RecordCheckUseCase(CheckRepository checks, CheckOrderRepository orders,
+            CurrentPractitionerPort currentPractitioner, ClinicalRecordAccessReader access, Clock clock) {
         this.checks = checks;
+        this.orders = orders;
         this.currentPractitioner = currentPractitioner;
         this.access = access;
         this.clock = clock;
@@ -62,15 +69,28 @@ public class RecordCheckUseCase {
             throw mayRead ? ClinicalRecordAccessDeniedException.toRecord() : ClinicalRecordAccessDeniedException.toRead();
         }
 
+        String description = command.description();
+        if ((description == null || description.isBlank()) && command.orderId() != null) {
+            description = orders.findById(command.orderId())
+                    .filter(order -> order.patientId().equals(command.patientId()))
+                    .map(CheckOrder::description)
+                    .orElseThrow(() -> new UnknownOrderException(command.orderId()));
+        }
         Check check = command.result() == null || command.result().isBlank()
-                ? Check.perform(command.id(), command.patientId(), practitionerId, now, command.description(), null)
-                : Check.performWithResult(command.id(), command.patientId(), practitionerId, now,
-                        command.description(), null, command.result());
+                ? Check.perform(command.id(), command.patientId(), practitionerId, now, description, null)
+                : Check.performWithResult(command.id(), command.patientId(), practitionerId, now, description, null,
+                        command.result());
         checks.save(check);
+        if (command.orderId() != null) {
+            OrderFulfilment.fulfil(orders, command.orderId(), check);
+        }
         return check;
     }
 
-    /** @param result null or blank while it is pending */
-    public record Command(CheckId id, PatientId patientId, String description, String result) {
+    /**
+     * @param result null or blank while it is pending
+     * @param orderId the order it fulfils, if any; without a description, the check is what the order asks for
+     */
+    public record Command(CheckId id, PatientId patientId, String description, String result, CheckOrderId orderId) {
     }
 }

@@ -20,18 +20,40 @@
             </label>
 
             <h2>Chequeos</h2>
-            <p class="muted">Si el resultado no está todavía, dejalo vacío: queda pendiente y se carga después.</p>
+            <p class="muted">
+                Si el resultado no está todavía, dejalo vacío: queda pendiente y se carga después. Si el
+                chequeo cumple una orden abierta del paciente, elegila: sin descripción, es lo que la orden pide.
+            </p>
             <table>
-                <thead><tr><th>Qué se hizo</th><th>Resultado</th></tr></thead>
+                <thead><tr><th>Qué se hizo</th><th>Resultado</th><th th:unless="${openOrders.isEmpty()}">Cumple la orden</th></tr></thead>
                 <tbody>
                 <tr th:each="row : ${checkRows}">
                     <td><textarea name="checkDescription" rows="2" maxlength="2000" th:text="${row.first}"></textarea></td>
-                    <td><textarea name="checkResult" rows="2" maxlength="10000" th:text="${row.second}"></textarea></td>
+                    <td><textarea name="checkResult" rows="2" maxlength="10000" th:text="${row.second}"></textarea>
+                        <input type="hidden" name="checkOrder" value="" th:if="${openOrders.isEmpty()}"></td>
+                    <td th:unless="${openOrders.isEmpty()}">
+                        <select name="checkOrder">
+                            <option value="">—</option>
+                            <option th:each="o : ${openOrders}" th:value="${o.id.value}" th:text="${o.description}"
+                                    th:selected="${#strings.equals(o.id.value, row.third)}"></option>
+                        </select>
+                    </td>
                 </tr>
                 </tbody>
             </table>
 
-            <h2>Recetas y órdenes</h2>
+            <h2>Órdenes</h2>
+            <p class="muted">Los chequeos que pedís y no hacés vos: los cumple quien los haga.</p>
+            <table>
+                <thead><tr><th>Qué se pide</th></tr></thead>
+                <tbody>
+                <tr th:each="row : ${orderRows}">
+                    <td><textarea name="orderDescription" rows="2" maxlength="2000" th:text="${row.first}"></textarea></td>
+                </tr>
+                </tbody>
+            </table>
+
+            <h2>Recetas</h2>
             <table>
                 <thead><tr><th>Tipo</th><th>Detalle</th></tr></thead>
                 <tbody>

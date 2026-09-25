@@ -8,7 +8,10 @@ import org.springframework.web.bind.annotation.RestControllerAdvice;
 import com.clinic.schedule.clinicalrecord.application.exception.CheckNotFoundException;
 import com.clinic.schedule.clinicalrecord.application.exception.ClinicalRecordAccessDeniedException;
 import com.clinic.schedule.clinicalrecord.application.exception.ConsultationChangedException;
+import com.clinic.schedule.clinicalrecord.application.exception.UnknownOrderException;
 import com.clinic.schedule.clinicalrecord.domain.exception.CheckNotPendingException;
+import com.clinic.schedule.clinicalrecord.domain.exception.NotTheOrderAuthorException;
+import com.clinic.schedule.clinicalrecord.domain.exception.OrderNotOpenException;
 import com.clinic.schedule.clinicalrecord.domain.exception.ReasonRequiredException;
 import com.clinic.schedule.clinicalrecord.domain.exception.ResultAlreadyRecordedException;
 import com.clinic.schedule.shared.http.ErrorResponse;
@@ -17,7 +20,7 @@ import com.clinic.schedule.shared.http.ErrorResponse;
  * Turns this module's refusals into HTTP answers, for its own controller only (D-23). Malformed
  * requests are answered once for every module, in {@code shared/http}.
  */
-@RestControllerAdvice(assignableTypes = {ConsultationController.class, CheckController.class})
+@RestControllerAdvice(assignableTypes = {ConsultationController.class, CheckController.class, OrderController.class})
 class ConsultationExceptionHandler {
 
     /** Not this user's to read or to write: a 403, never an empty record (D-50). */
@@ -56,6 +59,24 @@ class ConsultationExceptionHandler {
     /** Access asked without a reason, when the practice requires one (D-54). */
     @ExceptionHandler(ReasonRequiredException.class)
     ResponseEntity<ErrorResponse> reasonRequired(ReasonRequiredException e) {
+        return ResponseEntity.badRequest().body(ErrorResponse.of(400, "Bad request", e.getMessage()));
+    }
+
+    /** The order was already fulfilled or cancelled, maybe a moment ago (D-55). */
+    @ExceptionHandler(OrderNotOpenException.class)
+    ResponseEntity<ErrorResponse> orderNotOpen(OrderNotOpenException e) {
+        return ResponseEntity.status(HttpStatus.CONFLICT).body(ErrorResponse.of(409, "Conflict", e.getMessage()));
+    }
+
+    /** Only whoever issued an order may cancel it (D-55). */
+    @ExceptionHandler(NotTheOrderAuthorException.class)
+    ResponseEntity<ErrorResponse> notTheOrderAuthor(NotTheOrderAuthorException e) {
+        return ResponseEntity.status(HttpStatus.FORBIDDEN).body(ErrorResponse.of(403, "Forbidden", e.getMessage()));
+    }
+
+    /** A check said to fulfil an order that is not one of its patient's (D-55). */
+    @ExceptionHandler(UnknownOrderException.class)
+    ResponseEntity<ErrorResponse> unknownOrder(UnknownOrderException e) {
         return ResponseEntity.badRequest().body(ErrorResponse.of(400, "Bad request", e.getMessage()));
     }
 

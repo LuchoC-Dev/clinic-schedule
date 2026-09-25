@@ -46,7 +46,7 @@ class ConsultationJpaAdapterIT {
     private Consultation stored() {
         Consultation consultation = Consultation.record(ConsultationId.newId(), new PatientId(UUID.randomUUID()),
                 arias, AT, "Control.", List.of(
-                        new ConsultationItem(ItemKind.STUDY_ORDER, "ecodoppler de vasos de cuello"),
+                        new ConsultationItem(ItemKind.PRESCRIPTION, "amlodipina 5 mg"),
                         new ConsultationItem(ItemKind.PRESCRIPTION, "enalapril 10 mg")));
         inTransaction(TransactionDefinition.PROPAGATION_REQUIRED).executeWithoutResult(status -> adapter.save(consultation));
         return consultation;
@@ -75,7 +75,7 @@ class ConsultationJpaAdapterIT {
         });
 
         Consultation read = adapter.findById(consultation.id()).orElseThrow();
-        assertThat(read.items()).extracting(ConsultationItem::kind).containsExactly(ItemKind.STUDY_ORDER, ItemKind.PRESCRIPTION);
+        assertThat(read.items()).extracting(ConsultationItem::kind).containsExactly(ItemKind.PRESCRIPTION, ItemKind.PRESCRIPTION);
         assertThat(read.addenda()).extracting(Addendum::text).containsExactly("Primera.", "Segunda.");
     }
 

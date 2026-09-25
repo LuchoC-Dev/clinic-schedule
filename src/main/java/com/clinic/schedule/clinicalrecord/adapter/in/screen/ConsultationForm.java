@@ -5,61 +5,76 @@ import java.util.List;
 import java.util.UUID;
 
 import com.clinic.schedule.clinicalrecord.application.usecase.RecordConsultationUseCase;
+import com.clinic.schedule.clinicalrecord.domain.CheckOrderId;
 import com.clinic.schedule.clinicalrecord.domain.ConsultationItem;
 import com.clinic.schedule.clinicalrecord.domain.ItemKind;
 
 /**
- * The consultation form as the screen sends it: the notes; one kind and one description per row
- * of items; and one description and one result per row of checks, in order. A refused form travels
- * back to the screen in this shape, so nothing typed is lost (D-51, D-53).
+ * The consultation form as the screen sends it: the notes; one kind and one description per row of
+ * items; one description, one result and one order fulfilled per row of checks; and one
+ * description per row of orders issued, in order. A refused form travels back to the screen in this
+ * shape, so nothing typed is lost (D-51, D-53, D-55).
  *
  * <p>The rows are parallel lists because that is how an HTML form without JavaScript sends a
  * table of fields.
  */
 record ConsultationForm(UUID patientId, String notes, List<String> kind, List<String> description,
-        List<String> checkDescription, List<String> checkResult) {
+        List<String> checkDescription, List<String> checkResult, List<String> checkOrder,
+        List<String> orderDescription) {
 
     /** Rows offered below the ones filled in, and at least this many rows in all, in each table. */
     static final int EMPTY_ROWS = 3;
     static final int MIN_ROWS = 5;
 
     ConsultationForm {
-        kind = kind == null ? List.of() : kind;
-        description = description == null ? List.of() : description;
-        checkDescription = checkDescription == null ? List.of() : checkDescription;
-        checkResult = checkResult == null ? List.of() : checkResult;
+        kind = orEmpty(kind);
+        description = orEmpty(description);
+        checkDescription = orEmpty(checkDescription);
+        checkResult = orEmpty(checkResult);
+        checkOrder = orEmpty(checkOrder);
+        orderDescription = orEmpty(orderDescription);
     }
 
     static ConsultationForm empty(UUID patientId) {
-        return new ConsultationForm(patientId, null, List.of(), List.of(), List.of(), List.of());
+        return new ConsultationForm(patientId, null, null, null, null, null, null, null);
     }
 
     /** The same form with {@link #EMPTY_ROWS} more empty rows in each table: what "Más renglones" asks for. */
     ConsultationForm withMoreRows() {
-        int items = Math.max(kind.size(), description.size()) + EMPTY_ROWS;
-        int checks = Math.max(checkDescription.size(), checkResult.size()) + EMPTY_ROWS;
+        int items = size(kind, description) + EMPTY_ROWS;
+        int checks = size(checkDescription, checkResult, checkOrder) + EMPTY_ROWS;
+        int orders = orderDescription.size() + EMPTY_ROWS;
         return new ConsultationForm(patientId, notes, padded(kind, items), padded(description, items),
-                padded(checkDescription, checks), padded(checkResult, checks));
+                padded(checkDescription, checks), padded(checkResult, checks), padded(checkOrder, checks),
+                padded(orderDescription, orders));
     }
 
-    /** The item rows to show: the filled ones first, then empty ones; see {@link #toShow}. */
+    /** The item rows to show: kind and text. */
     List<Row> itemRowsToShow() {
-        return toShow(rows(kind, description), Math.max(kind.size(), description.size()));
+        return toShow(rows(kind, description, List.of()), size(kind, description));
     }
 
-    /** The check rows to show: the filled ones first, then empty ones; see {@link #toShow}. */
+    /** The check rows to show: what was done, its result, the order it fulfils. */
     List<Row> checkRowsToShow() {
-        return toShow(rows(checkDescription, checkResult), Math.max(checkDescription.size(), checkResult.size()));
+        return toShow(rows(checkDescription, checkResult, checkOrder), size(checkDescription, checkResult, checkOrder));
+    }
+
+    /** The order rows to show: what each order asks for. */
+    List<Row> orderRowsToShow() {
+        return toShow(rows(orderDescription, List.of(), List.of()), orderDescription.size());
     }
 
     /**
-     * Whether some row is half filled in: an item with a kind and no text or a text and no kind, or
-     * a check with a result and no description of what was done. Refused, not guessed. A check with
-     * a description and no result is whole: its result is pending.
+     * Whether some row is half filled in: an item with a kind and no text or a text and no kind, or a
+     * check with a result and neither a description of what was done nor an order it fulfils. Refused,
+     * not guessed. A check with a description and no result is whole: its result is pending; one with
+     * only an order is what the order asks for.
      */
     boolean hasHalfFilledRow() {
-        return rows(kind, description).stream().anyMatch(row -> row.first().isBlank() || row.second().isBlank())
-                || rows(checkDescription, checkResult).stream().anyMatch(row -> row.first().isBlank());
+        return rows(kind, description, List.of()).stream()
+                        .anyMatch(row -> row.first().isBlank() || row.second().isBlank())
+                || rows(checkDescription, checkResult, checkOrder).stream()
+                        .anyMatch(row -> row.first().isBlank() && row.third().isBlank());
     }
 
     /**
@@ -68,23 +83,33 @@ record ConsultationForm(UUID patientId, String notes, List<String> kind, List<St
      * @throws IllegalArgumentException for a kind the screen does not offer, or an item too long
      */
     List<ConsultationItem> items() {
-        return rows(kind, description).stream()
+        return rows(kind, description, List.of()).stream()
                 .map(row -> new ConsultationItem(ItemKind.valueOf(row.first()), row.second()))
                 .toList();
     }
 
-    /** The checks, from the filled rows; a blank result is a pending one. */
+    /**
+     * The checks, from the filled rows; a blank result is a pending one.
+     *
+     * @throws IllegalArgumentException for an order that is not an id
+     */
     List<RecordConsultationUseCase.CheckDone> checks() {
-        return rows(checkDescription, checkResult).stream()
-                .map(row -> new RecordConsultationUseCase.CheckDone(row.first(), row.second()))
+        return rows(checkDescription, checkResult, checkOrder).stream()
+                .map(row -> new RecordConsultationUseCase.CheckDone(row.first(), row.second(),
+                        row.third().isBlank() ? null : new CheckOrderId(UUID.fromString(row.third()))))
                 .toList();
     }
 
+    /** What each order issued asks for, from the filled rows. */
+    List<String> orders() {
+        return rows(orderDescription, List.of(), List.of()).stream().map(Row::first).toList();
+    }
+
     /** The rows with something typed in, as they were typed. */
-    private static List<Row> rows(List<String> firsts, List<String> seconds) {
+    private static List<Row> rows(List<String> firsts, List<String> seconds, List<String> thirds) {
         List<Row> filled = new ArrayList<>();
-        for (int i = 0; i < Math.max(firsts.size(), seconds.size()); i++) {
-            Row row = new Row(valueAt(firsts, i), valueAt(seconds, i));
+        for (int i = 0; i < size(firsts, seconds, thirds); i++) {
+            Row row = new Row(valueAt(firsts, i), valueAt(seconds, i), valueAt(thirds, i));
             if (!row.isEmpty()) {
                 filled.add(row);
             }
@@ -100,9 +125,22 @@ record ConsultationForm(UUID patientId, String notes, List<String> kind, List<St
         List<Row> rows = new ArrayList<>(filled);
         int total = Math.max(Math.max(MIN_ROWS, sent), rows.size() + EMPTY_ROWS);
         while (rows.size() < total) {
-            rows.add(new Row("", ""));
+            rows.add(new Row("", "", ""));
         }
         return rows;
+    }
+
+    @SafeVarargs
+    private static int size(List<String>... columns) {
+        int size = 0;
+        for (List<String> column : columns) {
+            size = Math.max(size, column.size());
+        }
+        return size;
+    }
+
+    private static List<String> orEmpty(List<String> values) {
+        return values == null ? List.of() : values;
     }
 
     private static List<String> padded(List<String> values, int size) {
@@ -119,13 +157,13 @@ record ConsultationForm(UUID patientId, String notes, List<String> kind, List<St
     }
 
     /**
-     * One row of a table: an item's kind and text, or a check's description and result. Public
-     * accessors, so the template can read it.
+     * One row of a table: an item's kind and text; a check's description, result and order; or an
+     * order's description. Public accessors, so the template can read it.
      */
-    record Row(String first, String second) {
+    record Row(String first, String second, String third) {
 
         boolean isEmpty() {
-            return first.isBlank() && second.isBlank();
+            return first.isBlank() && second.isBlank() && third.isBlank();
         }
     }
 }

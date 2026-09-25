@@ -51,7 +51,8 @@ class ConsultationController {
         RecordConsultationUseCase.Recorded recorded = record.handle(request.toCommand());
         return ResponseEntity
                 .created(URI.create("/api/consultations/" + recorded.consultation().id().value()))
-                .body(ConsultationResponse.of(recorded.consultation(), recorded.checks(), practitionerNames()));
+                .body(ConsultationResponse.of(recorded.consultation(), recorded.checks(), recorded.orders(),
+                        practitionerNames()));
     }
 
     /**
@@ -64,7 +65,7 @@ class ConsultationController {
         AddAddendumUseCase.Added added = addAddendum.handle(request.toCommand(id));
         return ResponseEntity
                 .created(URI.create("/api/consultations/" + id))
-                .body(ConsultationResponse.of(added.consultation(), added.checks(), practitionerNames()));
+                .body(ConsultationResponse.of(added.consultation(), added.checks(), added.orders(), practitionerNames()));
     }
 
     /**

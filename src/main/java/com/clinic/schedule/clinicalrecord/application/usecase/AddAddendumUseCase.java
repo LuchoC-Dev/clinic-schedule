@@ -9,11 +9,13 @@ import org.springframework.transaction.annotation.Transactional;
 
 import com.clinic.schedule.clinicalrecord.application.exception.ClinicalRecordAccessDeniedException;
 import com.clinic.schedule.clinicalrecord.application.exception.ConsultationChangedException;
+import com.clinic.schedule.clinicalrecord.application.port.CheckOrderRepository;
 import com.clinic.schedule.clinicalrecord.application.port.CheckRepository;
 import com.clinic.schedule.clinicalrecord.application.port.ConsultationRepository;
 import com.clinic.schedule.clinicalrecord.application.port.CurrentPractitionerPort;
 import com.clinic.schedule.clinicalrecord.domain.Addendum;
 import com.clinic.schedule.clinicalrecord.domain.Check;
+import com.clinic.schedule.clinicalrecord.domain.CheckOrder;
 import com.clinic.schedule.clinicalrecord.domain.AddendumId;
 import com.clinic.schedule.clinicalrecord.domain.Consultation;
 import com.clinic.schedule.clinicalrecord.domain.ConsultationId;
@@ -36,14 +38,16 @@ public class AddAddendumUseCase {
 
     private final ConsultationRepository consultations;
     private final CheckRepository checks;
+    private final CheckOrderRepository orders;
     private final CurrentPractitionerPort currentPractitioner;
     private final ClinicalRecordAccessReader access;
     private final Clock clock;
 
-    public AddAddendumUseCase(ConsultationRepository consultations, CheckRepository checks,
+    public AddAddendumUseCase(ConsultationRepository consultations, CheckRepository checks, CheckOrderRepository orders,
             CurrentPractitionerPort currentPractitioner, ClinicalRecordAccessReader access, Clock clock) {
         this.consultations = consultations;
         this.checks = checks;
+        this.orders = orders;
         this.currentPractitioner = currentPractitioner;
         this.access = access;
         this.clock = clock;
@@ -66,16 +70,23 @@ public class AddAddendumUseCase {
         }
 
         if (consultation.hasAddendum(command.addendumId())) {
-            return new Added(consultation, checks.findAllForConsultation(consultation.id()));
+            return added(consultation);
         }
         Consultation added = consultation.withAddendum(
                 new Addendum(command.addendumId(), practitionerId, now, command.text()));
         consultations.save(added);
-        return new Added(added, checks.findAllForConsultation(added.id()));
+        return added(added);
     }
 
-    /** The consultation with its new addendum, and the checks done during it, to answer it whole. */
-    public record Added(Consultation consultation, List<Check> checks) {
+    private Added added(Consultation consultation) {
+        return new Added(consultation, checks.findAllForConsultation(consultation.id()),
+                orders.findAllForPatient(consultation.patientId()).stream()
+                        .filter(order -> order.consultationId().equals(consultation.id()))
+                        .toList());
+    }
+
+    /** The consultation with its new addendum, the checks done during it and its orders, to answer it whole. */
+    public record Added(Consultation consultation, List<Check> checks, List<CheckOrder> orders) {
     }
 
     public record Command(ConsultationId consultationId, AddendumId addendumId, String text) {
