@@ -9,14 +9,12 @@ import org.springframework.transaction.annotation.Transactional;
 
 import com.clinic.schedule.clinicalrecord.application.exception.ClinicalRecordAccessDeniedException;
 import com.clinic.schedule.clinicalrecord.application.exception.ConsultationChangedException;
-import com.clinic.schedule.clinicalrecord.application.port.AttendancePort;
 import com.clinic.schedule.clinicalrecord.application.port.CheckRepository;
 import com.clinic.schedule.clinicalrecord.application.port.ConsultationRepository;
 import com.clinic.schedule.clinicalrecord.application.port.CurrentPractitionerPort;
 import com.clinic.schedule.clinicalrecord.domain.Addendum;
 import com.clinic.schedule.clinicalrecord.domain.Check;
 import com.clinic.schedule.clinicalrecord.domain.AddendumId;
-import com.clinic.schedule.clinicalrecord.domain.ClinicalRecordAccessPolicy;
 import com.clinic.schedule.clinicalrecord.domain.Consultation;
 import com.clinic.schedule.clinicalrecord.domain.ConsultationId;
 import com.clinic.schedule.clinicalrecord.domain.PractitionerId;
@@ -42,12 +40,12 @@ public class AddAddendumUseCase {
     private final ClinicalRecordAccessReader access;
     private final Clock clock;
 
-    public AddAddendumUseCase(ConsultationRepository consultations, CheckRepository checks, AttendancePort attendance,
-            CurrentPractitionerPort currentPractitioner, ClinicalRecordAccessPolicy policy, Clock clock) {
+    public AddAddendumUseCase(ConsultationRepository consultations, CheckRepository checks,
+            CurrentPractitionerPort currentPractitioner, ClinicalRecordAccessReader access, Clock clock) {
         this.consultations = consultations;
         this.checks = checks;
         this.currentPractitioner = currentPractitioner;
-        this.access = new ClinicalRecordAccessReader(consultations, checks, attendance, policy);
+        this.access = access;
         this.clock = clock;
     }
 

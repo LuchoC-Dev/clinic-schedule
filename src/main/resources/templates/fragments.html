@@ -52,7 +52,11 @@
 <header th:fragment="header">
     <strong>Consultorio</strong>
     <a th:href="@{/agenda}">Agenda</a>
-    <!-- A practitioner only reads their agenda (D-34); readOnly is only set on that screen. -->
+    <!--
+      readOnly is set on a practitioner's screens: they read their agenda (D-34) and work with
+      clinical records, reported through the list of pending results (D-54).
+    -->
+    <a th:href="@{/checks/pending}" th:if="${readOnly}">Resultados pendientes</a>
     <a th:href="@{/patients}" th:unless="${readOnly}">Pacientes</a>
     <a th:href="@{/practitioners}" th:unless="${readOnly}">Profesionales</a>
     <form class="inline" method="post" th:action="@{/logout}">

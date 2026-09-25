@@ -1644,3 +1644,44 @@ nowhere to live); keeping immediate checks as items and only pending ones apart 
 record one thing); several results per check (not needed yet: a check has one); carrying the old
 check items over (the database starts empty); addenda on checks now (after part 3d).
 
+---
+
+## D-54 — Asking for access to a record to report a check
+**Date:** 2026-09-25 · **Status:** accepted
+
+Whoever analyses a sample may never have seen the patient, so by D-49 they cannot read the record
+nor report the result. They ask for access, and the practice will later decide who authorizes it
+and why. For now it is granted at once.
+
+**Only for a pending check.** With an automatic approval, a request for any patient would let any
+practitioner open any record at will. So access is asked to report one of the patient's pending
+checks, `POST /api/checks/{id}/access-grants`: none for a check that has its result (409) or does
+not exist (404). When approvals are real, asking for other reasons can be allowed then.
+
+**Everything is recorded, and shown.** `AccessGrant` keeps who asked, for which patient and check,
+when, until when, why, and how it was approved (`Approval.AUTOMATIC`, the only value today). Every
+grant is kept, valid or not, and the record shows them under "Accesos autorizados" and in the
+API's `accessGrants`: whoever reads a record sees who else opened it.
+
+**The rules are `AccessGrantPolicy`'s, and two are settings.**
+- The grant lasts `app.clinical-record.access-grant.period` from the day it is granted, a year
+  today, whether or not a duration turns out to be needed.
+- `app.clinical-record.access-grant.reason-required` says whether a reason is required. The law
+  decides that, and it is not known yet, so it is a setting, required by default. Required or
+  not, the reason is never judged: nobody checks what it says.
+
+**A grant is a third way to read.** `ClinicalRecordAccessPolicy` opens the record to a practitioner
+who saw the patient within the access period, who is seeing them today, or who holds a valid
+grant. A grant does not allow recording a consultation or a check: those need the patient there.
+Asking again while already holding access is accepted and recorded, like any request.
+`ClinicalRecordAccessReader` became a component, given to the use cases, now that it reads grants
+as well.
+
+**The list of pending results**, `GET /api/checks/pending` and the "Resultados pendientes" screen,
+shows every check of the practice waiting for a result — only the patient and the check, nothing
+else of the record — with "Ver historia" or "Pedir acceso" as the user may already read it or not.
+
+*Rejected:* asking for any patient (an automatic approval would be an open door); a required reason
+hard-coded, or an optional one (the law decides, and it is not known yet); grants that never end
+(kept, but for a year); hiding grants from the record (who opened a record should be visible).
+

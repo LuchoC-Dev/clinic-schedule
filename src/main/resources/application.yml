@@ -29,10 +29,16 @@ app:
   # The job that cancels overdue appointments every minute (D-06). The tests turn it off.
   scheduling:
     enabled: true
-  # How long after their last consultation of a patient a practitioner may still read the
-  # patient's clinical record: an ISO-8601 period (D-49).
+  # How long after they last saw a patient - a consultation, or a check - a practitioner may still
+  # read the patient's clinical record: an ISO-8601 period (D-49, D-53).
   clinical-record:
     access-period: P1Y
+    # Access asked for to report a pending check (D-54): how long it lasts, an ISO-8601 period, and
+    # whether asking needs a reason. The reason is never judged; whether it is required is for the
+    # law to say, so it is a setting.
+    access-grant:
+      period: P1Y
+      reason-required: true
 
 logging:
   level:

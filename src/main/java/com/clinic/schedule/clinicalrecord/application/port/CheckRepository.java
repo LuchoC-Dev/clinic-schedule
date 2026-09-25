@@ -18,6 +18,9 @@ public interface CheckRepository {
     /** Every check of the patient, done in a consultation or not: part of their clinical record. */
     List<Check> findAllForPatient(PatientId patientId);
 
+    /** Every check of the practice still waiting for its result (D-54). */
+    List<Check> findAllPending();
+
     /** The checks done during that consultation, in the order they were done. */
     List<Check> findAllForConsultation(ConsultationId consultationId);
 

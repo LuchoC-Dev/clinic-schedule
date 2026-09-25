@@ -5,8 +5,11 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 
+import com.clinic.schedule.clinicalrecord.application.exception.CheckNotFoundException;
 import com.clinic.schedule.clinicalrecord.application.exception.ClinicalRecordAccessDeniedException;
 import com.clinic.schedule.clinicalrecord.application.exception.ConsultationChangedException;
+import com.clinic.schedule.clinicalrecord.domain.exception.CheckNotPendingException;
+import com.clinic.schedule.clinicalrecord.domain.exception.ReasonRequiredException;
 import com.clinic.schedule.clinicalrecord.domain.exception.ResultAlreadyRecordedException;
 import com.clinic.schedule.shared.http.ErrorResponse;
 
@@ -36,6 +39,24 @@ class ConsultationExceptionHandler {
     ResponseEntity<ErrorResponse> resultAlreadyRecorded(ResultAlreadyRecordedException e) {
         return ResponseEntity.status(HttpStatus.CONFLICT)
                 .body(ErrorResponse.of(409, "Conflict", e.getMessage()));
+    }
+
+    /** Access asked to report a check that does not exist (D-54). */
+    @ExceptionHandler(CheckNotFoundException.class)
+    ResponseEntity<ErrorResponse> checkNotFound(CheckNotFoundException e) {
+        return ResponseEntity.status(HttpStatus.NOT_FOUND).body(ErrorResponse.of(404, "Not found", e.getMessage()));
+    }
+
+    /** Access asked to report a check that already has its result (D-54). */
+    @ExceptionHandler(CheckNotPendingException.class)
+    ResponseEntity<ErrorResponse> checkNotPending(CheckNotPendingException e) {
+        return ResponseEntity.status(HttpStatus.CONFLICT).body(ErrorResponse.of(409, "Conflict", e.getMessage()));
+    }
+
+    /** Access asked without a reason, when the practice requires one (D-54). */
+    @ExceptionHandler(ReasonRequiredException.class)
+    ResponseEntity<ErrorResponse> reasonRequired(ReasonRequiredException e) {
+        return ResponseEntity.badRequest().body(ErrorResponse.of(400, "Bad request", e.getMessage()));
     }
 
     /** A consultation that breaks its own rules, when Bean Validation did not already catch it. */

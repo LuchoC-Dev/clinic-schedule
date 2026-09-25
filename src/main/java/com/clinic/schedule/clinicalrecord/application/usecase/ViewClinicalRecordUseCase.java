@@ -9,10 +9,11 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import com.clinic.schedule.clinicalrecord.application.exception.ClinicalRecordAccessDeniedException;
-import com.clinic.schedule.clinicalrecord.application.port.AttendancePort;
+import com.clinic.schedule.clinicalrecord.application.port.AccessGrantRepository;
 import com.clinic.schedule.clinicalrecord.application.port.CheckRepository;
 import com.clinic.schedule.clinicalrecord.application.port.ConsultationRepository;
 import com.clinic.schedule.clinicalrecord.application.port.CurrentPractitionerPort;
+import com.clinic.schedule.clinicalrecord.domain.AccessGrant;
 import com.clinic.schedule.clinicalrecord.domain.Check;
 import com.clinic.schedule.clinicalrecord.domain.ClinicalRecordAccessPolicy;
 import com.clinic.schedule.clinicalrecord.domain.Consultation;
@@ -22,7 +23,7 @@ import com.clinic.schedule.clinicalrecord.domain.VisitToday;
 
 /**
  * A patient's clinical record: their consultations and their checks, from every practitioner of
- * the practice, the most recent first (D-53).
+ * the practice, and the access granted to it, the most recent first (D-53, D-54).
  *
  * <p>Whether the user may read it is decided here, not by route (D-34): the route only says it
  * takes a practitioner. Which practitioner may read which patient is the rule of
@@ -34,17 +35,19 @@ public class ViewClinicalRecordUseCase {
 
     private final ConsultationRepository consultations;
     private final CheckRepository checks;
+    private final AccessGrantRepository grants;
     private final CurrentPractitionerPort currentPractitioner;
     private final ClinicalRecordAccessReader access;
     private final Clock clock;
 
     public ViewClinicalRecordUseCase(ConsultationRepository consultations, CheckRepository checks,
-            AttendancePort attendance, CurrentPractitionerPort currentPractitioner, ClinicalRecordAccessPolicy policy,
+            AccessGrantRepository grants, CurrentPractitionerPort currentPractitioner, ClinicalRecordAccessReader access,
             Clock clock) {
         this.consultations = consultations;
         this.checks = checks;
+        this.grants = grants;
         this.currentPractitioner = currentPractitioner;
-        this.access = new ClinicalRecordAccessReader(consultations, checks, attendance, policy);
+        this.access = access;
         this.clock = clock;
     }
 
@@ -64,7 +67,10 @@ public class ViewClinicalRecordUseCase {
         List<Check> foundChecks = checks.findAllForPatient(patientId).stream()
                 .sorted(Comparator.comparing(Check::performedAt).reversed())
                 .toList();
-        return new ClinicalRecord(foundConsultations, foundChecks, access.mayRecord(visit));
+        List<AccessGrant> foundGrants = grants.findAllForPatient(patientId).stream()
+                .sorted(Comparator.comparing(AccessGrant::grantedAt).reversed())
+                .toList();
+        return new ClinicalRecord(foundConsultations, foundChecks, foundGrants, access.mayRecord(visit));
     }
 
     /**
@@ -72,7 +78,9 @@ public class ViewClinicalRecordUseCase {
      * screen offers the forms only when sending them would be accepted.
      *
      * @param checks every check, done in a consultation or not; each says which
+     * @param grants every access granted to the record, to whoever, valid or not: who else opened it (D-54)
      */
-    public record ClinicalRecord(List<Consultation> consultations, List<Check> checks, boolean mayRecord) {
+    public record ClinicalRecord(List<Consultation> consultations, List<Check> checks, List<AccessGrant> grants,
+            boolean mayRecord) {
     }
 }

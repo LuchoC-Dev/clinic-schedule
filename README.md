@@ -52,7 +52,8 @@ screen, each patient's appointments, cancelled ones included, and a practitioner
 up their reasons and week and record their absences. A practitioner gets their own agenda,
 read-only, with today's patients linked to their clinical record and *Empezar consulta* once
 they arrived: a form beside the record, sent once and never changed, and completed afterwards
-with addenda. The screens are in
+with addenda. Under *Resultados pendientes* they find the checks waiting for a result, and ask
+for access to a record to report one. The screens are in
 Spanish, for the staff.
 
 **API** — basic authentication on every request. Errors share one body:
@@ -80,6 +81,8 @@ Spanish, for the staff.
 | `POST` | `/api/consultations/{id}/addenda` | an addendum to a consultation already sent, by any practitioner with access to the record |
 | `POST` | `/api/checks` | a check without a consultation — the emergency precaution — with its result or pending |
 | `POST` | `/api/checks/{id}/result` | the result of a pending check, by any practitioner with access to the record |
+| `GET` | `/api/checks/pending` | the checks of the practice waiting for a result: only the patient and the check |
+| `POST` | `/api/checks/{id}/access-grants` | access to the record to report that pending check — granted at once, for now, and recorded |
 | `GET` | `/api/clinical-records/{patientId}` | a patient's consultations with their checks, and the checks done without one — for a practitioner who saw them within the access period or is seeing them today |
 
 A booking without a check-in is cancelled automatically 30 minutes after its start, or 24 hours

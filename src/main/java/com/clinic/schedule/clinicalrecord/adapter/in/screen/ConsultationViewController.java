@@ -204,6 +204,7 @@ class ConsultationViewController {
                 .collect(Collectors.toMap(PractitionerSummary::id, PractitionerSummary::fullName));
         model.addAttribute("patient", patient);
         model.addAttribute("entries", ClinicalRecordEntry.of(read, names));
+        model.addAttribute("grants", GrantEntry.of(read, names));
         model.addAttribute("mayRecord", read.mayRecord());
         // The header offers a practitioner their agenda only (D-34).
         model.addAttribute("readOnly", true);

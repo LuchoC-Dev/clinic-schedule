@@ -71,6 +71,24 @@
         </article>
     </section>
 
+    <!-- Who else was granted access to this record, and why: every grant is kept, valid or not (D-54). -->
+    <section th:unless="${grants.isEmpty()}">
+        <h2>Accesos autorizados</h2>
+        <table>
+            <thead><tr><th>Profesional</th><th>Cuándo</th><th>Hasta</th><th>Para informar</th><th>Motivo</th></tr></thead>
+            <tbody>
+            <tr th:each="grant : ${grants}">
+                <td th:text="${grant.practitioner}">Dr. Martín Benítez</td>
+                <td th:text="${grant.grantedAt}">vie 25/09/2026 12:10</td>
+                <td th:text="${grant.validUntil}">25/09/2027</td>
+                <td class="notes" th:text="${grant.check}">Extracción de sangre</td>
+                <td class="notes" th:text="${grant.reason}">Informar el hemograma</td>
+            </tr>
+            </tbody>
+        </table>
+        <p class="muted">Aprobados automáticamente.</p>
+    </section>
+
     <p><a th:href="@{/agenda}">Volver a la agenda</a></p>
 </main>
 

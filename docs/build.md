@@ -466,7 +466,28 @@ and saw no "Empezar consulta".
 - The record's answer changed shape, from a list of consultations to `{consultations, checks}`;
   no client used it yet.
 
-#### 3b — Asking for access to a record `[ ]`
+#### 3b — Asking for access to a record `[x]`
+- [x] `AccessGrant` and `AccessGrantPolicy`: only for a pending check, approved automatically,
+      lasting `app.clinical-record.access-grant.period` (a year), a reason required or not by
+      `app.clinical-record.access-grant.reason-required` (required) (D-54)
+- [x] A valid grant is a third way to read a record; it does not allow recording
+- [x] `V11__record_access_grant.sql`; every grant kept, and shown in the record
+- [x] `GET /api/checks/pending` and `POST /api/checks/{id}/access-grants`
+- [x] Screens: "Resultados pendientes" for practitioners, with "Ver historia" or "Pedir acceso";
+      "Accesos autorizados" in the record
+- [x] `ClinicalRecordAccessReader` a component, given to the use cases
+- [x] 6 unit and 7 integration tests. 214 unit and 231 integration tests, 445 in total
+
+**Verified with:** each of these failing its tests when broken on purpose — grants ignored by the
+access rule, a grant for a check that has its result, grants that never expire — the first two
+failing the integration tests as well; `mvnw clean verify` with the PostgreSQL tests running V11.
+
+**Verified in a browser** against the application on a throwaway PostgreSQL: Dr. Benítez, with no
+appointment with the patient, found Dra. Arias's pending blood sample under "Resultados
+pendientes", seeing only the patient and the check; asking without a reason was refused in
+Spanish; with one, he landed on the record ("Acceso autorizado hasta el 25/09/2027."), reported
+the result, and the record showed the grant under "Accesos autorizados"; the list was then empty.
+
 #### 3c — Orders `[ ]`
 #### 3d — Pending lists `[ ]`
 ### Part 4 — Attachments `[ ]`

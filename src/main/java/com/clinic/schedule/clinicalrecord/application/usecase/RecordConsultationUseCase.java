@@ -9,13 +9,11 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import com.clinic.schedule.clinicalrecord.application.exception.ClinicalRecordAccessDeniedException;
-import com.clinic.schedule.clinicalrecord.application.port.AttendancePort;
 import com.clinic.schedule.clinicalrecord.application.port.CheckRepository;
 import com.clinic.schedule.clinicalrecord.application.port.ConsultationRepository;
 import com.clinic.schedule.clinicalrecord.application.port.CurrentPractitionerPort;
 import com.clinic.schedule.clinicalrecord.domain.Check;
 import com.clinic.schedule.clinicalrecord.domain.CheckId;
-import com.clinic.schedule.clinicalrecord.domain.ClinicalRecordAccessPolicy;
 import com.clinic.schedule.clinicalrecord.domain.Consultation;
 import com.clinic.schedule.clinicalrecord.domain.ConsultationId;
 import com.clinic.schedule.clinicalrecord.domain.ConsultationItem;
@@ -49,12 +47,11 @@ public class RecordConsultationUseCase {
     private final Clock clock;
 
     public RecordConsultationUseCase(ConsultationRepository consultations, CheckRepository checks,
-            AttendancePort attendance, CurrentPractitionerPort currentPractitioner, ClinicalRecordAccessPolicy policy,
-            Clock clock) {
+            CurrentPractitionerPort currentPractitioner, ClinicalRecordAccessReader access, Clock clock) {
         this.consultations = consultations;
         this.checks = checks;
         this.currentPractitioner = currentPractitioner;
-        this.access = new ClinicalRecordAccessReader(consultations, checks, attendance, policy);
+        this.access = access;
         this.clock = clock;
     }
 

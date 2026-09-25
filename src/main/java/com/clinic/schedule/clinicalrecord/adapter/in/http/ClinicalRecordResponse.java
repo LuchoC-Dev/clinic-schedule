@@ -10,9 +10,11 @@ import com.clinic.schedule.clinicalrecord.domain.Check;
 
 /**
  * A patient's clinical record as the API shows it: the consultations, each with the checks done
- * during it, and the checks done without a consultation, both the most recent first (D-53).
+ * during it, the checks done without a consultation, and the access granted to the record to
+ * whoever, all the most recent first (D-53, D-54).
  */
-record ClinicalRecordResponse(List<ConsultationResponse> consultations, List<CheckResponse> checks) {
+record ClinicalRecordResponse(List<ConsultationResponse> consultations, List<CheckResponse> checks,
+        List<AccessGrantResponse> accessGrants) {
 
     static ClinicalRecordResponse of(ViewClinicalRecordUseCase.ClinicalRecord record, Map<UUID, String> names) {
         return new ClinicalRecordResponse(
@@ -24,6 +26,7 @@ record ClinicalRecordResponse(List<ConsultationResponse> consultations, List<Che
                 record.checks().stream()
                         .filter(check -> check.consultationId().isEmpty())
                         .map((Check check) -> CheckResponse.of(check, names))
-                        .toList());
+                        .toList(),
+                record.grants().stream().map(grant -> AccessGrantResponse.of(grant, names)).toList());
     }
 }

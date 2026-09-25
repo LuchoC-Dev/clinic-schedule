@@ -5,6 +5,9 @@ import java.time.LocalDateTime;
 import java.util.Optional;
 import java.util.stream.Stream;
 
+import org.springframework.stereotype.Component;
+
+import com.clinic.schedule.clinicalrecord.application.port.AccessGrantRepository;
 import com.clinic.schedule.clinicalrecord.application.port.AttendancePort;
 import com.clinic.schedule.clinicalrecord.application.port.CheckRepository;
 import com.clinic.schedule.clinicalrecord.application.port.ConsultationRepository;
@@ -14,26 +17,30 @@ import com.clinic.schedule.clinicalrecord.domain.PractitionerId;
 import com.clinic.schedule.clinicalrecord.domain.VisitToday;
 
 /**
- * Reads what the access rule needs — when the practitioner last saw the patient, and whether they
- * are seeing them today — and asks {@link ClinicalRecordAccessPolicy}. Every use case of the
- * record asks the same, so it is read in one place, as {@code AgendaReader} does in the
- * appointment module. Package-private: a detail of the use cases, which own the transaction.
+ * Reads what the access rule needs — when the practitioner last saw the patient, whether they are
+ * seeing them today, and the access grants they hold — and asks {@link ClinicalRecordAccessPolicy}.
+ * Every use case of the record asks the same, so it is read in one place. Package-private: a
+ * detail of the use cases, which own the transaction; a component, so they are given it rather
+ * than each building it from its parts.
  *
  * <p>Having seen the patient means having recorded a consultation of them or having done a check
  * to them (D-53). Reporting a result does not count: whoever analyses a sample has not seen the
  * patient.
  */
+@Component
 class ClinicalRecordAccessReader {
 
     private final ConsultationRepository consultations;
     private final CheckRepository checks;
+    private final AccessGrantRepository grants;
     private final AttendancePort attendance;
     private final ClinicalRecordAccessPolicy policy;
 
-    ClinicalRecordAccessReader(ConsultationRepository consultations, CheckRepository checks, AttendancePort attendance,
-            ClinicalRecordAccessPolicy policy) {
+    ClinicalRecordAccessReader(ConsultationRepository consultations, CheckRepository checks,
+            AccessGrantRepository grants, AttendancePort attendance, ClinicalRecordAccessPolicy policy) {
         this.consultations = consultations;
         this.checks = checks;
+        this.grants = grants;
         this.attendance = attendance;
         this.policy = policy;
     }
@@ -43,7 +50,8 @@ class ClinicalRecordAccessReader {
     }
 
     boolean mayRead(PractitionerId practitionerId, PatientId patientId, VisitToday visit, LocalDate today) {
-        return policy.mayRead(lastSeen(practitionerId, patientId), visit, today);
+        return policy.mayRead(lastSeen(practitionerId, patientId), visit, grants.findFor(patientId, practitionerId),
+                today);
     }
 
     boolean mayRead(PractitionerId practitionerId, PatientId patientId, LocalDate today) {

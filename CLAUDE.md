@@ -9,7 +9,7 @@ Read these before proposing design or code:
 
 - `docs/context.md` — what the application does, who uses it, the business rules and the
   planned evolution.
-- `docs/decisions.md` — technical decisions and their reasoning (D-01 … D-53).
+- `docs/decisions.md` — technical decisions and their reasoning (D-01 … D-54).
 - `docs/build.md` — the staged plan and the current progress.
 
 ## Stack
@@ -86,4 +86,4 @@ PostgreSQL 18 (docker-compose) · Thymeleaf. The integration tests run on H2 in 
 patient · practitioner · appointment (`BOOKED`/`CANCELLED`) · reason · duration ·
 weekly schedule · break · time off · check-in · reschedule · reception
 · consultation · item (prescription, study order) · check · result · addendum · clinical record ·
-access period
+access period · access grant

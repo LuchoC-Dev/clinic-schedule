@@ -36,6 +36,11 @@ class CheckJpaAdapter implements CheckRepository {
     }
 
     @Override
+    public List<Check> findAllPending() {
+        return rows.findByResultTextIsNull().stream().map(CheckRow::toCheck).toList();
+    }
+
+    @Override
     public List<Check> findAllForConsultation(ConsultationId consultationId) {
         return rows.findByConsultationIdOrderByPerformedAt(consultationId.value()).stream().map(CheckRow::toCheck).toList();
     }

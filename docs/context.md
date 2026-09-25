@@ -146,11 +146,16 @@ in. It opens a consultation view: the form, with the patient's clinical record b
 3. Checks, in four steps:
    - **3a** — checks with their result at once or later, as above; the clinical record becomes a
      module of its own.
-   - **3b** — asking for access to a record: a practitioner of the practice who will do or report a
-     check, and cannot read the record, asks for it. Granted automatically for now, and recorded —
-     who asked, for which patient, when, why, who granted it — so that who authorizes, and why,
-     can be decided later. It lasts a configurable period. A list of the checks waiting for a
-     result, showing only the patient and the check, lets whoever reports them ask for access.
+   - **3b** — asking for access to a record: a practitioner of the practice who will report a
+     pending check, and cannot read the record, asks for it — only for a pending check, so an
+     automatic approval cannot open any record at will. Granted automatically for now, and
+     recorded — who asked, for which patient and check, when, until when, why, how it was
+     approved — so that who authorizes, and why, can be decided later. It lasts a configurable
+     period, a year today. Whether a reason is required depends on the law, so it is a setting;
+     required or not, nobody judges it. Every grant shows in the record. A list of the checks
+     waiting for a result, showing only the patient and the check, lets whoever reports them ask
+     for access. A grant opens the record; it does not let anyone record a consultation or a
+     check.
    - **3c** — the order: a practitioner who needs a check they cannot do authorizes it. Whoever
      fulfils it, here or at another practice, does not matter. It replaces the study-order item.
    - **3d** — the lists of what is pending for whoever ordered.
