@@ -6,6 +6,7 @@ import java.util.Optional;
 import com.clinic.schedule.clinicalrecord.domain.CheckOrder;
 import com.clinic.schedule.clinicalrecord.domain.CheckOrderId;
 import com.clinic.schedule.clinicalrecord.domain.PatientId;
+import com.clinic.schedule.clinicalrecord.domain.PractitionerId;
 
 /** Where orders for a check are kept (D-55). */
 public interface CheckOrderRepository {
@@ -14,6 +15,9 @@ public interface CheckOrderRepository {
 
     /** Every order for the patient, open or not. */
     List<CheckOrder> findAllForPatient(PatientId patientId);
+
+    /** Every order that practitioner issued, open or not (D-56). */
+    List<CheckOrder> findAllIssuedBy(PractitionerId practitionerId);
 
     /**
      * Stores a new order, or the new state of one read in the same transaction.

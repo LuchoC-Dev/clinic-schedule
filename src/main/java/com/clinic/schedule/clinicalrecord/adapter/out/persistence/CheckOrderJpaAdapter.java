@@ -12,6 +12,7 @@ import com.clinic.schedule.clinicalrecord.domain.CheckOrder;
 import com.clinic.schedule.clinicalrecord.domain.CheckOrderId;
 import com.clinic.schedule.clinicalrecord.domain.OrderOutcome;
 import com.clinic.schedule.clinicalrecord.domain.PatientId;
+import com.clinic.schedule.clinicalrecord.domain.PractitionerId;
 import com.clinic.schedule.clinicalrecord.domain.exception.OrderNotOpenException;
 
 /** Implements the port over JPA. The only place that knows orders live in a table. */
@@ -32,6 +33,11 @@ class CheckOrderJpaAdapter implements CheckOrderRepository {
     @Override
     public List<CheckOrder> findAllForPatient(PatientId patientId) {
         return rows.findByPatientId(patientId.value()).stream().map(CheckOrderRow::toOrder).toList();
+    }
+
+    @Override
+    public List<CheckOrder> findAllIssuedBy(PractitionerId practitionerId) {
+        return rows.findByOrderedBy(practitionerId.value()).stream().map(CheckOrderRow::toOrder).toList();
     }
 
     /**

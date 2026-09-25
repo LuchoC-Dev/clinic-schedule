@@ -9,4 +9,6 @@ import org.springframework.data.jpa.repository.JpaRepository;
 interface CheckOrderRowRepository extends JpaRepository<CheckOrderRow, UUID> {
 
     List<CheckOrderRow> findByPatientId(UUID patientId);
+
+    List<CheckOrderRow> findByOrderedBy(UUID orderedBy);
 }

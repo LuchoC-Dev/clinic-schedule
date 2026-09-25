@@ -432,7 +432,7 @@ its time and author; the prescription above stayed as written. Reception got 403
 - The final single-page applications must keep what was typed when an addendum answers 409, and
   send it again, by hand or by themselves (D-52).
 
-### Part 3 — Checks `[~]`
+### Part 3 — Checks `[x]`
 
 #### 3a — Checks and their results `[x]`
 - [x] The `consultation` module renamed `clinicalrecord`, as D-52 planned: no behaviour changed
@@ -516,7 +516,28 @@ with its time, and offered him no "Anular orden".
 - An order coming from elsewhere — on paper, or another practice — is left for later, with the
   validation it needs; meanwhile a check is recorded with no order, naming it in its description.
 
-#### 3d — Pending lists `[ ]`
+#### 3d — Following up one's orders `[x]`
+- [x] `ListMyOrdersUseCase`: the user's own orders not cancelled, each open, waiting for its result
+      or reported, and whether the user may still read the record (D-56)
+- [x] `GET /api/orders/mine`, with no result texts; `V13`, an index on who issued an order
+- [x] "Mis órdenes" for practitioners: what waits, the oldest first; what was reported in the last
+      30 days, the newest first, and all of it on asking
+- [x] 4 integration tests. 220 unit and 244 integration tests, 464 in total
+
+**Verified with:** each of these failing its tests when broken on purpose — cancelled orders
+listed, the 30-day window dropped; `mvnw clean verify` with the PostgreSQL tests running V13.
+
+**Verified in a browser** against the application on a throwaway PostgreSQL: Dra. Arias issued
+three orders; Dr. Benítez did the blood test without a result and the X-ray with one; "Mis órdenes"
+showed the Doppler open and the blood test waiting for its result under "Pendientes", and the X-ray
+under "Con resultado en los últimos 30 días", with who reported it and when and no result text;
+"Ver todos los resultados" showed the list without the window.
+
+**Stage notes:**
+- Marking a result as reviewed is left for later: it is a state of each practitioner's own, and
+  how it should work is not decided. The users already stand for their practitioners, so it does
+  not wait for user administration.
+
 ### Part 4 — Attachments `[ ]`
 
 ---
@@ -524,6 +545,11 @@ with its time, and offered him no "Anular orden".
 ## Explicitly postponed
 
 These are not oversights: they are decided and waiting for their moment.
+
+- Marking a check's result as reviewed, per practitioner (see D-56).
+- Addenda on checks (see D-53).
+- Orders coming from elsewhere — on paper, or from another practice — and their validation, with
+  the anti-corruption layer (see D-55).
 
 - A user administration screen (see D-04); it has a module to land in since D-43.
 - Registering a new patient and booking them in **one transaction** from the booking screen;

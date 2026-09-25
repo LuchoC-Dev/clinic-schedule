@@ -161,7 +161,10 @@ in. It opens a consultation view: the form, with the patient's clinical record b
      elsewhere stays open: that is none of the application's business, and an order coming from
      elsewhere — on paper, or from another practice — will need validating, later. It replaces the
      study-order item.
-   - **3d** — the lists of what is pending for whoever ordered.
+   - **3d** — "Mis órdenes": whoever issued orders follows them up — those still waiting (open,
+     or done and waiting for the result), and those reported in the last 30 days, or all of them
+     on asking. It shows where each stands, never what a result says. Marking a result as
+     reviewed, a state of each practitioner's own, is left for later.
 4. Attachments: an electrocardiogram trace, a report from elsewhere.
 
 Not in v2: an admin role (it arrives with user administration), structure for each kind of

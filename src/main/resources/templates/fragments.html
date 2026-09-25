@@ -55,9 +55,11 @@
     <a th:href="@{/agenda}">Agenda</a>
     <!--
       readOnly is set on a practitioner's screens: they read their agenda (D-34) and work with
-      clinical records, reported through the list of pending results (D-54).
+      clinical records, reported through the list of pending results (D-54) and followed up through
+      their own orders (D-56).
     -->
     <a th:href="@{/checks/pending}" th:if="${readOnly}">Resultados pendientes</a>
+    <a th:href="@{/orders/mine}" th:if="${readOnly}">Mis órdenes</a>
     <a th:href="@{/patients}" th:unless="${readOnly}">Pacientes</a>
     <a th:href="@{/practitioners}" th:unless="${readOnly}">Profesionales</a>
     <form class="inline" method="post" th:action="@{/logout}">

@@ -1737,3 +1737,34 @@ external check would not); several checks per order (one order per check, as agr
 expire (not asked for); cancelling without a reason, or by someone else; recording orders from
 elsewhere now (they need a validation not yet designed).
 
+---
+
+## D-56 — Whoever issued orders follows them up
+**Date:** 2026-09-25 · **Status:** accepted
+
+A practitioner who issues orders needs to know which are still waiting and which came back. So
+"Mis órdenes" lists the user's own orders that were not cancelled — cancelled ones wait for
+nothing — each in one of three situations: `OPEN`, nobody did the check; `AWAITING_RESULT`, the
+check was done and its result has not arrived; `REPORTED`. `ListMyOrdersUseCase` answers it, with
+whether the user may still read each patient's record; `GET /api/orders/mine` returns it.
+
+**Where each order stands, never what its result says.** The list names the patient, the order,
+who did the check and who reported it, and when; the result is in the record, behind the access
+rule, with a "Ver historia" link only while the user may read it. The same line as the list of
+pending results (D-54).
+
+**The screen splits it in two.** What waits, the oldest first, since it is what is overdue; and
+what was reported, the newest first, from the last 30 days unless all are asked for. Nothing marks
+a result as seen, so how recent it is stands for how new it is. The window is the screen's; the API
+answers everything.
+
+**Marking a result as reviewed is left for later.** It is a state of each practitioner's own: the
+users already stand for their practitioners, so nothing blocks it, but how it should work is not
+decided.
+
+`V13` indexes the orders by who issued them, the read this list makes.
+
+*Rejected:* listing cancelled orders (they wait for nothing); showing result texts in the list
+(the record's access rule would be bypassed); every result with no window (the list would only
+grow, with nothing telling new from seen); a "reviewed" mark now (undecided).
+

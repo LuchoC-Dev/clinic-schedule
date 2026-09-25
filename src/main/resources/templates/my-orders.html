@@ -1,0 +1,46 @@
+<!DOCTYPE html>
+<html lang="es" xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{fragments :: head('Mis órdenes')}"></head>
+<body>
+<header th:replace="~{fragments :: header}"></header>
+<main>
+    <h1>Mis órdenes</h1>
+    <div th:replace="~{fragments :: messages}"></div>
+
+    <!-- Where each order stands, never what its result says: that is in the record (D-56). -->
+    <h2>Pendientes</h2>
+    <p th:if="${waiting.isEmpty()}" class="muted">No tenés órdenes esperando.</p>
+    <table th:unless="${waiting.isEmpty()}">
+        <thead><tr><th>Paciente</th><th>Orden</th><th>Emitida</th><th>Situación</th><th></th></tr></thead>
+        <tbody>
+        <tr th:each="row : ${waiting}">
+            <td th:text="${row.patient}">Ana Pérez — DNI 30111222</td>
+            <td class="notes" th:text="${row.description}">Hemograma completo</td>
+            <td th:text="${row.orderedAt}">vie 25/09/2026 13:14</td>
+            <td th:text="${row.state}">Abierta: nadie hizo el chequeo todavía</td>
+            <td><a th:if="${row.mayRead}" th:href="@{/clinical-records/{id}(id=${row.patientId})}">Ver historia</a></td>
+        </tr>
+        </tbody>
+    </table>
+
+    <h2 th:text="${all} ? 'Con resultado' : 'Con resultado en los últimos ' + ${recentDays} + ' días'">Con resultado</h2>
+    <p th:if="${reported.isEmpty()}" class="muted">No hay resultados para mostrar.</p>
+    <table th:unless="${reported.isEmpty()}">
+        <thead><tr><th>Paciente</th><th>Orden</th><th>Emitida</th><th>Resultado</th><th></th></tr></thead>
+        <tbody>
+        <tr th:each="row : ${reported}">
+            <td th:text="${row.patient}">Ana Pérez — DNI 30111222</td>
+            <td class="notes" th:text="${row.description}">Hemograma completo</td>
+            <td th:text="${row.orderedAt}">vie 25/09/2026 13:14</td>
+            <td th:text="${row.state}">Resultado del vie 25/09/2026 14:02, de Dr. Martín Benítez</td>
+            <td><a th:if="${row.mayRead}" th:href="@{/clinical-records/{id}(id=${row.patientId})}">Ver historia</a></td>
+        </tr>
+        </tbody>
+    </table>
+    <p>
+        <a th:unless="${all}" th:href="@{/orders/mine(all=true)}">Ver todos los resultados</a>
+        <a th:if="${all}" th:href="@{/orders/mine}" th:text="'Ver solo los últimos ' + ${recentDays} + ' días'">Ver solo los recientes</a>
+    </p>
+</main>
+</body>
+</html>
