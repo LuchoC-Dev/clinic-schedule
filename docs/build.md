@@ -366,12 +366,17 @@ listed "del vie 25/09/2026 al lun 28/09/2026"; a day already gone refused in Spa
 
 ---
 
-## v2 — The clinical record
+## v2
 
-Scope in `docs/context.md`, section "Scope of v2". Delivered in parts; each one is usable on its
-own.
+v2 is built in phases, each one closed on its own. Which phase comes next is decided when the one
+before is closed; the candidates are in `docs/context.md`, section "Planned evolution".
 
-### Part 1 — Consultations and the clinical record `[x]`
+### Phase 1 — The clinical record `[x]`
+
+Scope in `docs/context.md`, section "v2, phase 1 — the clinical record". Delivered in parts; each
+one is usable on its own.
+
+#### Part 1 — Consultations and the clinical record `[x]`
 - [x] `docs/context.md`: the v2 scope; two stale v1 passages fixed (the typed document, time off
       of several days)
 - [x] `consultation` module, hexagonal (D-47): `Consultation` with free-text notes and typed
@@ -405,7 +410,7 @@ record but not the form. Dr. Benítez and reception got 403 on both screens and 
 - The browser caught "Más renglones" adding nothing when few rows were filled; it now adds three
   to the rows on screen, and the integration test counts them.
 
-### Part 2 — Addenda `[x]`
+#### Part 2 — Addenda `[x]`
 - [x] `Addendum` inside the `Consultation` aggregate: `withAddendum` returns a new consultation,
       with nothing already written changed; in order, each one once (D-52)
 - [x] `AddAddendumUseCase`: any practitioner with access to the record, at any time; an unknown
@@ -432,9 +437,9 @@ its time and author; the prescription above stayed as written. Reception got 403
 - The final single-page applications must keep what was typed when an addendum answers 409, and
   send it again, by hand or by themselves (D-52).
 
-### Part 3 — Checks `[x]`
+#### Part 3 — Checks `[x]`
 
-#### 3a — Checks and their results `[x]`
+##### 3a — Checks and their results `[x]`
 - [x] The `consultation` module renamed `clinicalrecord`, as D-52 planned: no behaviour changed
 - [x] `Check`, an aggregate of its own: done during a consultation or without one, its result at
       once or later, `CheckResult` in a class of its own (D-53)
@@ -466,7 +471,7 @@ and saw no "Empezar consulta".
 - The record's answer changed shape, from a list of consultations to `{consultations, checks}`;
   no client used it yet.
 
-#### 3b — Asking for access to a record `[x]`
+##### 3b — Asking for access to a record `[x]`
 - [x] `AccessGrant` and `AccessGrantPolicy`: only for a pending check, approved automatically,
       lasting `app.clinical-record.access-grant.period` (a year), a reason required or not by
       `app.clinical-record.access-grant.reason-required` (required) (D-54)
@@ -488,7 +493,7 @@ pendientes", seeing only the patient and the check; asking without a reason was 
 Spanish; with one, he landed on the record ("Acceso autorizado hasta el 25/09/2027."), reported
 the result, and the record showed the grant under "Accesos autorizados"; the list was then empty.
 
-#### 3c — Orders `[x]`
+##### 3c — Orders `[x]`
 - [x] `CheckOrder`: issued in a consultation, open until one check fulfils it or its author
       cancels it with a reason; the order names the check that fulfilled it (D-55)
 - [x] The `STUDY_ORDER` item leaves the consultation; `V12__check_order.sql`, starting from an
@@ -516,7 +521,7 @@ with its time, and offered him no "Anular orden".
 - An order coming from elsewhere — on paper, or another practice — is left for later, with the
   validation it needs; meanwhile a check is recorded with no order, naming it in its description.
 
-#### 3d — Following up one's orders `[x]`
+##### 3d — Following up one's orders `[x]`
 - [x] `ListMyOrdersUseCase`: the user's own orders not cancelled, each open, waiting for its result
       or reported, and whether the user may still read the record (D-56)
 - [x] `GET /api/orders/mine`, with no result texts; `V13`, an index on who issued an order
@@ -538,7 +543,7 @@ under "Con resultado en los últimos 30 días", with who reported it and when an
   how it should work is not decided. The users already stand for their practitioners, so it does
   not wait for user administration.
 
-### Addenda on checks `[x]`
+#### Addenda on checks `[x]`
 
 Brought forward from the postponed list after testing by hand: a wrong result had no way to be
 corrected, and a check done without a consultation had no consultation to add a note to.
@@ -560,7 +565,7 @@ the result "esto es falso, debe eliminarse", as found when testing by hand, got 
 resultado cargado es un error: corresponde a otro paciente. Repetir el estudio." from the record
 screen, shown under it with its time and author, the result above it unchanged.
 
-### Part 4 — Attachments `[x]`
+#### Part 4 — Attachments `[x]`
 - [x] `Attachment`, an aggregate of its own: belonging to a consultation or a check
       (`AttachmentOwner`, a sealed type), with its name, kind, size and SHA-256 fingerprint (D-57)
 - [x] The kind told by the file's first bytes — PDF, PNG, JPEG — never by its name; up to 10 MB
@@ -584,6 +589,10 @@ result as a PDF alone, shown as "Resultado: en el archivo adjunto"; both files, 
 from PostgreSQL, had the same SHA-256 as the originals and as the one stored; Dr. Benítez, with no
 access to the record, got 403 on both.
 
+**Phase 1 of v2, the clinical record, is closed.** Consultations with their addenda, checks with
+results now or later, orders, access asked to report a check, the follow-up of one's orders and
+attached files, all usable from the screens and the API. What it left for later is listed below,
+under "Explicitly postponed".
 
 ---
 
@@ -591,11 +600,15 @@ access to the record, got 403 on both.
 
 These are not oversights: they are decided and waiting for their moment.
 
+From v2, phase 1:
+
 - Marking a check's result as reviewed, per practitioner (see D-56).
 - Orders coming from elsewhere — on paper, or from another practice — and their validation, with
   the anti-corruption layer (see D-55).
 - Files attached to the record as a whole, such as a report the patient brings (see D-57).
 - Moving the attached files to an object store, when they outgrow the database (see D-57).
+
+From v1:
 
 - A user administration screen (see D-04); it has a module to land in since D-43.
 - Registering a new patient and booking them in **one transaction** from the booking screen;
@@ -604,4 +617,4 @@ These are not oversights: they are decided and waiting for their moment.
 ## Out of scope for v1
 
 See `docs/context.md`, section "Planned evolution": arrival queue, attendance with more states,
-reminders, extra patient data and web booking. The clinical record is v2, above.
+reminders, extra patient data and web booking. The clinical record is v2's first phase, above.

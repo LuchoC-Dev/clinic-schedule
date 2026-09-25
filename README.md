@@ -8,7 +8,8 @@ agenda, and records what happened in each consultation in the patients' clinical
 It was built in stages, adding nothing before the stage that used it. The functional scope is
 in [`docs/context.md`](docs/context.md), every technical decision and its reasoning in
 [`docs/decisions.md`](docs/decisions.md), and the progress in [`docs/build.md`](docs/build.md).
-**Version 1 is complete; version 2, the clinical record, is under way.**
+**Version 1 is complete. Version 2 is built in phases; the first, the clinical record, is
+closed.**
 
 ## Running it
 
@@ -130,6 +131,7 @@ without Spring. The whole repository is in English; on-screen text is in Spanish
 
 ## Deliberately postponed
 
-User administration; registering a new patient and booking them in one transaction. The rest of
-v2 — addenda, checks whose result arrives later, attachments — and the evolution after it —
-arrival queue, web booking — are in the context.
+User administration; registering a new patient and booking them in one transaction; from the
+clinical record, marking results as reviewed, orders and files coming from elsewhere, and moving
+the files to an object store. The next phases — the arrival queue, web booking and the rest — are
+in the context's planned evolution.

@@ -75,7 +75,13 @@ The minimum record needed to book an appointment:
 - This rule is provisional: once the attendance feature exists, a patient no-show will be
   recorded instead of cancelling the appointment.
 
-## Scope of v2 — the clinical record
+## v2
+
+v2 is built in phases, each one scoped here before it starts and closed on its own. The first,
+the clinical record, is closed. The next is chosen from the planned evolution below, and its scope
+is written here before any code.
+
+## v2, phase 1 — the clinical record (closed)
 
 ### An appointment is only a booking
 
@@ -174,12 +180,14 @@ in. It opens a consultation view: the form, with the patient's clinical record b
    come later, with the orders from elsewhere. The files live in the database today, and must be
    able to move to an object store.
 
-Not in v2: an admin role (it arrives with user administration), structure for each kind of
-item, printing prescriptions and orders, extra patient data.
+Not in this phase: an admin role (it arrives with user administration), structure for each kind
+of item, printing prescriptions and orders, extra patient data, marking results as reviewed,
+orders and files coming from elsewhere.
 
 ## Planned evolution (DO NOT implement yet)
 
-Documented so today's decisions do not close doors, not to bring code forward.
+Documented so today's decisions do not close doors, not to bring code forward. The next phases of
+v2 are chosen from here.
 
 1. **Arrival queue** per consulting room/practitioner: accepts walk-in patients and gives
    priority to those with an appointment. It absorbs the difference between the reserved
