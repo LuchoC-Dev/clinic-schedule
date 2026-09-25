@@ -1,7 +1,6 @@
 package com.clinic.schedule.clinicalrecord.adapter.in.http;
 
 import java.net.URI;
-import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 import java.util.stream.Collectors;
@@ -16,7 +15,6 @@ import org.springframework.web.bind.annotation.RestController;
 import com.clinic.schedule.clinicalrecord.application.usecase.AddAddendumUseCase;
 import com.clinic.schedule.clinicalrecord.application.usecase.RecordConsultationUseCase;
 import com.clinic.schedule.clinicalrecord.application.usecase.ViewClinicalRecordUseCase;
-import com.clinic.schedule.clinicalrecord.domain.Consultation;
 import com.clinic.schedule.clinicalrecord.domain.PatientId;
 import com.clinic.schedule.practitioner.api.PractitionerReader;
 import com.clinic.schedule.practitioner.api.PractitionerSummary;
@@ -50,10 +48,10 @@ class ConsultationController {
     /** Records a consultation. A retry with the same id answers the same one, still 201. */
     @PostMapping("/api/consultations")
     ResponseEntity<ConsultationResponse> record(@Valid @RequestBody RecordConsultationRequest request) {
-        Consultation recorded = record.handle(request.toCommand());
+        RecordConsultationUseCase.Recorded recorded = record.handle(request.toCommand());
         return ResponseEntity
-                .created(URI.create("/api/consultations/" + recorded.id().value()))
-                .body(ConsultationResponse.of(recorded, practitionerNames()));
+                .created(URI.create("/api/consultations/" + recorded.consultation().id().value()))
+                .body(ConsultationResponse.of(recorded.consultation(), recorded.checks(), practitionerNames()));
     }
 
     /**
@@ -63,20 +61,19 @@ class ConsultationController {
     @PostMapping("/api/consultations/{id}/addenda")
     ResponseEntity<ConsultationResponse> addAddendum(@PathVariable UUID id,
             @Valid @RequestBody AddAddendumRequest request) {
-        Consultation added = addAddendum.handle(request.toCommand(id));
+        AddAddendumUseCase.Added added = addAddendum.handle(request.toCommand(id));
         return ResponseEntity
                 .created(URI.create("/api/consultations/" + id))
-                .body(ConsultationResponse.of(added, practitionerNames()));
+                .body(ConsultationResponse.of(added.consultation(), added.checks(), practitionerNames()));
     }
 
-    /** The patient's consultations from every practitioner, newest first; 403 without access (D-49). */
+    /**
+     * The patient's consultations, each with its checks, and the checks done without one, from
+     * every practitioner, newest first; 403 without access (D-49, D-53).
+     */
     @GetMapping("/api/clinical-records/{patientId}")
-    List<ConsultationResponse> clinicalRecord(@PathVariable UUID patientId) {
-        List<Consultation> consultations = clinicalRecord.handle(new PatientId(patientId)).consultations();
-        Map<UUID, String> names = practitionerNames();
-        return consultations.stream()
-                .map(consultation -> ConsultationResponse.of(consultation, names))
-                .toList();
+    ClinicalRecordResponse clinicalRecord(@PathVariable UUID patientId) {
+        return ClinicalRecordResponse.of(clinicalRecord.handle(new PatientId(patientId)), practitionerNames());
     }
 
     private Map<UUID, String> practitionerNames() {

@@ -96,8 +96,8 @@ class ConsultationApiIT {
     private static String consultation(UUID patient, String notes) {
         return """
                 {"patientId": "%s", "notes": "%s", "items": [
-                  {"kind": "CHECK", "description": "presión 120/80"},
-                  {"kind": "PRESCRIPTION", "description": "enalapril 10 mg"}]}
+                  {"kind": "PRESCRIPTION", "description": "enalapril 10 mg"},
+                  {"kind": "STUDY_ORDER", "description": "ecodoppler de vasos de cuello"}]}
                 """.formatted(patient, notes);
     }
 
@@ -121,22 +121,22 @@ class ConsultationApiIT {
                 .andExpect(header().exists("Location"))
                 .andExpect(jsonPath("$.practitionerId").value(arias.id().toString()))
                 .andExpect(jsonPath("$.recordedAt").value("2026-03-10T00:00:00"))
-                .andExpect(jsonPath("$.items[0].kind").value("CHECK"))
-                .andExpect(jsonPath("$.items[1].description").value("enalapril 10 mg"));
+                .andExpect(jsonPath("$.items[0].kind").value("PRESCRIPTION"))
+                .andExpect(jsonPath("$.items[1].description").value("ecodoppler de vasos de cuello"));
 
         readRecord(asArias)
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$", hasSize(1)))
-                .andExpect(jsonPath("$[0].notes").value("Control de hipertensión."))
-                .andExpect(jsonPath("$[0].practitionerName").value("Dra. Arias"))
-                .andExpect(jsonPath("$[0].items", hasSize(2)));
+                .andExpect(jsonPath("$.consultations", hasSize(1)))
+                .andExpect(jsonPath("$.consultations[0].notes").value("Control de hipertensión."))
+                .andExpect(jsonPath("$.consultations[0].practitionerName").value("Dra. Arias"))
+                .andExpect(jsonPath("$.consultations[0].items", hasSize(2)));
     }
 
     @Test
     void beforeThePatientArrivesTheRecordIsReadButNoConsultationIsRecorded() throws Exception {
         book(arias, TODAY, "10:00:00");
 
-        readRecord(asArias).andExpect(status().isOk()).andExpect(jsonPath("$", hasSize(0)));
+        readRecord(asArias).andExpect(status().isOk()).andExpect(jsonPath("$.consultations", hasSize(0)));
         send(asArias, consultation(patient, "Todavía no llegó."))
                 .andExpect(status().isForbidden())
                 .andExpect(jsonPath("$.status").value(403));
@@ -175,8 +175,8 @@ class ConsultationApiIT {
         book(benitez, TODAY, "11:00:00");
         readRecord(asBenitez)
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$", hasSize(1)))
-                .andExpect(jsonPath("$[0].practitionerId").value(arias.id().toString()));
+                .andExpect(jsonPath("$.consultations", hasSize(1)))
+                .andExpect(jsonPath("$.consultations[0].practitionerId").value(arias.id().toString()));
     }
 
     @Test
@@ -187,7 +187,7 @@ class ConsultationApiIT {
         // The appointment cancelled by hand leaves no visit today: the consultation alone keeps the record open.
         mockMvc.perform(post("/api/appointments/" + appointment + "/cancel")).andExpect(status().isOk());
 
-        readRecord(asArias).andExpect(status().isOk()).andExpect(jsonPath("$", hasSize(1)));
+        readRecord(asArias).andExpect(status().isOk()).andExpect(jsonPath("$.consultations", hasSize(1)));
     }
 
     @Test
@@ -196,7 +196,7 @@ class ConsultationApiIT {
         send(asArias, consultation(patient, "Primera.")).andExpect(status().isCreated());
         send(asArias, consultation(patient, "Segunda.")).andExpect(status().isCreated());
 
-        readRecord(asArias).andExpect(jsonPath("$", hasSize(2)));
+        readRecord(asArias).andExpect(jsonPath("$.consultations", hasSize(2)));
     }
 
     @Test
@@ -209,7 +209,7 @@ class ConsultationApiIT {
         send(asArias, body).andExpect(status().isCreated());
         send(asArias, body).andExpect(status().isCreated());
 
-        readRecord(asArias).andExpect(jsonPath("$", hasSize(1)));
+        readRecord(asArias).andExpect(jsonPath("$.consultations", hasSize(1)));
     }
 
     @Test
@@ -239,7 +239,7 @@ class ConsultationApiIT {
                 .andExpect(status().isBadRequest())
                 .andExpect(jsonPath("$.fields.notes").exists());
         send(asArias, """
-                {"patientId": "%s", "notes": "Control.", "items": [{"kind": "CHECK", "description": ""}]}
+                {"patientId": "%s", "notes": "Control.", "items": [{"kind": "PRESCRIPTION", "description": ""}]}
                 """.formatted(patient))
                 .andExpect(status().isBadRequest())
                 .andExpect(jsonPath("$.fields['items[0].description']").exists());
@@ -279,8 +279,8 @@ class ConsultationApiIT {
                 .andExpect(jsonPath("$.addenda[0].writtenAt").value("2026-03-10T00:00:00"));
 
         readRecord(asArias)
-                .andExpect(jsonPath("$[0].items", hasSize(2)))
-                .andExpect(jsonPath("$[0].addenda[0].text").value("La dosis del enalapril es 5 mg."));
+                .andExpect(jsonPath("$.consultations[0].items", hasSize(2)))
+                .andExpect(jsonPath("$.consultations[0].addenda[0].text").value("La dosis del enalapril es 5 mg."));
     }
 
     @Test

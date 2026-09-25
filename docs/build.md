@@ -432,8 +432,43 @@ its time and author; the prescription above stayed as written. Reception got 403
 - The final single-page applications must keep what was typed when an addendum answers 409, and
   send it again, by hand or by themselves (D-52).
 
-### Part 3 — Checks whose result arrives later `[~]`
+### Part 3 — Checks `[~]`
+
+#### 3a — Checks and their results `[x]`
 - [x] The `consultation` module renamed `clinicalrecord`, as D-52 planned: no behaviour changed
+- [x] `Check`, an aggregate of its own: done during a consultation or without one, its result at
+      once or later, `CheckResult` in a class of its own (D-53)
+- [x] The `CHECK` item leaves the consultation; `V10__clinical_check.sql`, starting from an empty
+      database
+- [x] Checks sent with the consultation, in one transaction; `POST /api/checks` for one without a
+      consultation, only for a patient who arrived today
+- [x] `POST /api/checks/{id}/result`, by any practitioner with access to the record; a second
+      result, or two at the same time, is a 409
+- [x] Doing a check counts as seeing the patient for the access period, like a consultation
+- [x] The record answers `{consultations, checks}`, each consultation with its checks; on the
+      screen, checks under their consultation and alone by time, with the form for a pending result
+- [x] 9 unit and 10 integration tests. 208 unit and 224 integration tests, 432 in total
+
+**Verified with:** each of these failing its tests when broken on purpose — a second result
+accepted, a check not counting as seeing the patient, the version removed, the access rule skipped
+for a result; `mvnw clean verify` with the PostgreSQL tests running V10 on a container.
+
+**Verified in a browser** against the application on a throwaway PostgreSQL: Dra. Arias sent a
+consultation with a prescription, a blood pressure with its result and a blood sample pending,
+and recorded an electrocardiogram without a consultation; the record showed the consultation with
+its two checks and the electrocardiogram on its own, both pending ones with the result form. Dr.
+Benítez, with an appointment with the patient that day, recorded the blood result under his name,
+and saw no "Empezar consulta".
+
+**Stage notes:**
+- A development database from before V10 must be wiped (`docker compose down -v`): V10 refuses
+  the check items it may hold, and none are carried over (D-53).
+- The record's answer changed shape, from a list of consultations to `{consultations, checks}`;
+  no client used it yet.
+
+#### 3b — Asking for access to a record `[ ]`
+#### 3c — Orders `[ ]`
+#### 3d — Pending lists `[ ]`
 ### Part 4 — Attachments `[ ]`
 
 ---

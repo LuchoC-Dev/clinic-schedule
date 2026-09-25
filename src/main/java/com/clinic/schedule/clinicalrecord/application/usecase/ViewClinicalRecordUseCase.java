@@ -10,8 +10,10 @@ import org.springframework.transaction.annotation.Transactional;
 
 import com.clinic.schedule.clinicalrecord.application.exception.ClinicalRecordAccessDeniedException;
 import com.clinic.schedule.clinicalrecord.application.port.AttendancePort;
+import com.clinic.schedule.clinicalrecord.application.port.CheckRepository;
 import com.clinic.schedule.clinicalrecord.application.port.ConsultationRepository;
 import com.clinic.schedule.clinicalrecord.application.port.CurrentPractitionerPort;
+import com.clinic.schedule.clinicalrecord.domain.Check;
 import com.clinic.schedule.clinicalrecord.domain.ClinicalRecordAccessPolicy;
 import com.clinic.schedule.clinicalrecord.domain.Consultation;
 import com.clinic.schedule.clinicalrecord.domain.PatientId;
@@ -19,8 +21,8 @@ import com.clinic.schedule.clinicalrecord.domain.PractitionerId;
 import com.clinic.schedule.clinicalrecord.domain.VisitToday;
 
 /**
- * A patient's clinical record: their consultations, from every practitioner of the practice,
- * the most recent first.
+ * A patient's clinical record: their consultations and their checks, from every practitioner of
+ * the practice, the most recent first (D-53).
  *
  * <p>Whether the user may read it is decided here, not by route (D-34): the route only says it
  * takes a practitioner. Which practitioner may read which patient is the rule of
@@ -31,17 +33,18 @@ import com.clinic.schedule.clinicalrecord.domain.VisitToday;
 public class ViewClinicalRecordUseCase {
 
     private final ConsultationRepository consultations;
-    private final AttendancePort attendance;
+    private final CheckRepository checks;
     private final CurrentPractitionerPort currentPractitioner;
-    private final ClinicalRecordAccessPolicy policy;
+    private final ClinicalRecordAccessReader access;
     private final Clock clock;
 
-    public ViewClinicalRecordUseCase(ConsultationRepository consultations, AttendancePort attendance,
-            CurrentPractitionerPort currentPractitioner, ClinicalRecordAccessPolicy policy, Clock clock) {
+    public ViewClinicalRecordUseCase(ConsultationRepository consultations, CheckRepository checks,
+            AttendancePort attendance, CurrentPractitionerPort currentPractitioner, ClinicalRecordAccessPolicy policy,
+            Clock clock) {
         this.consultations = consultations;
-        this.attendance = attendance;
+        this.checks = checks;
         this.currentPractitioner = currentPractitioner;
-        this.policy = policy;
+        this.access = new ClinicalRecordAccessReader(consultations, checks, attendance, policy);
         this.clock = clock;
     }
 
@@ -51,20 +54,25 @@ public class ViewClinicalRecordUseCase {
         PractitionerId practitionerId = currentPractitioner.practitionerId()
                 .orElseThrow(ClinicalRecordAccessDeniedException::toRead);
         LocalDate today = LocalDate.now(clock);
-        VisitToday visit = attendance.visitOn(practitionerId, patientId, today);
-        if (!policy.mayRead(consultations.findLastRecordedAt(patientId, practitionerId), visit, today)) {
+        VisitToday visit = access.visitOn(practitionerId, patientId, today);
+        if (!access.mayRead(practitionerId, patientId, visit, today)) {
             throw ClinicalRecordAccessDeniedException.toRead();
         }
-        List<Consultation> found = consultations.findAllForPatient(patientId).stream()
+        List<Consultation> foundConsultations = consultations.findAllForPatient(patientId).stream()
                 .sorted(Comparator.comparing(Consultation::recordedAt).reversed())
                 .toList();
-        return new ClinicalRecord(found, policy.mayRecord(visit));
+        List<Check> foundChecks = checks.findAllForPatient(patientId).stream()
+                .sorted(Comparator.comparing(Check::performedAt).reversed())
+                .toList();
+        return new ClinicalRecord(foundConsultations, foundChecks, access.mayRecord(visit));
     }
 
     /**
-     * The record, and whether the user may add a consultation to it right now — so a screen
-     * offers the form only when sending it would be accepted.
+     * The record, and whether the user may add a consultation or a check to it right now — so a
+     * screen offers the forms only when sending them would be accepted.
+     *
+     * @param checks every check, done in a consultation or not; each says which
      */
-    public record ClinicalRecord(List<Consultation> consultations, boolean mayRecord) {
+    public record ClinicalRecord(List<Consultation> consultations, List<Check> checks, boolean mayRecord) {
     }
 }

@@ -14,42 +14,92 @@
         </a>
     </p>
 
-    <!-- The record: every practitioner's consultations, newest first. Reused beside the consultation form. -->
+    <!-- A check without a consultation: the precaution for an emergency (D-53). -->
+    <details class="card" th:if="${mayRecord}" th:open="${checkDescription != null}">
+        <summary>Registrar un chequeo sin consulta</summary>
+        <form method="post" th:action="@{/checks}">
+            <input type="hidden" name="patientId" th:value="${patient.id}">
+            <label>Qué se hizo
+                <textarea name="description" rows="2" maxlength="2000" th:text="${checkDescription}"></textarea>
+            </label>
+            <label>Resultado (vacío si queda pendiente)
+                <textarea name="result" rows="2" maxlength="10000" th:text="${checkResult}"></textarea>
+            </label>
+            <p class="bar"><button type="submit">Registrar chequeo</button></p>
+        </form>
+    </details>
+
+    <!--
+      The record: every practitioner's consultations, each with its checks, and the checks done
+      without one, newest first. Reused beside the consultation form, where it shows no forms.
+    -->
     <section th:fragment="entries">
-        <p th:if="${entries.isEmpty()}" class="muted">Todavía no hay consultas registradas.</p>
+        <p th:if="${entries.isEmpty()}" class="muted">Todavía no hay nada registrado.</p>
         <article class="card" th:each="entry : ${entries}">
-            <p class="muted">
-                <span th:text="${entry.recordedAt}">mar 10/03/2026 10:15</span> —
-                <span th:text="${entry.practitioner}">Dra. Laura Arias</span>
-            </p>
-            <p class="notes" th:text="${entry.notes}">Control de presión.</p>
-            <ul th:unless="${entry.items.isEmpty()}">
-                <li th:each="item : ${entry.items}">
-                    <strong th:text="${item.kind} + ':'">Chequeo:</strong>
-                    <span class="notes" th:text="${item.description}">presión 120/80</span>
-                </li>
-            </ul>
-            <!-- Addenda: added afterwards, never changing what was written above (D-52). -->
-            <div class="addendum" th:each="note : ${entry.addenda}">
+            <th:block th:if="${entry.consultation != null}" th:with="c=${entry.consultation}">
                 <p class="muted">
-                    Aclaración — <span th:text="${note.writtenAt}">vie 25/09/2026 09:10</span> —
-                    <span th:text="${note.author}">Dr. Martín Benítez</span>
+                    Consulta — <span th:text="${c.recordedAt}">mar 10/03/2026 10:15</span> —
+                    <span th:text="${c.practitioner}">Dra. Laura Arias</span>
                 </p>
-                <p class="notes" th:text="${note.text}">La dosis es 5 mg.</p>
-            </div>
-            <form method="post" th:if="${addendumForms}"
-                  th:action="@{/consultations/{id}/addenda(id=${entry.id})}">
-                <input type="hidden" name="patientId" th:value="${patient.id}">
-                <label>Aclaración
-                    <textarea name="text" rows="2" maxlength="2000"
-                              th:text="${addendumFor == entry.id} ? ${addendumText} : ''"></textarea>
-                </label>
-                <p class="bar"><button type="submit">Agregar aclaración</button></p>
-            </form>
+                <p class="notes" th:text="${c.notes}">Control de presión.</p>
+                <ul th:unless="${c.items.isEmpty()}">
+                    <li th:each="item : ${c.items}">
+                        <strong th:text="${item.kind} + ':'">Receta:</strong>
+                        <span class="notes" th:text="${item.description}">enalapril 10 mg</span>
+                    </li>
+                </ul>
+                <div th:each="check : ${c.checks}" th:insert="~{clinical-record :: check(${check})}"></div>
+                <!-- Addenda: added afterwards, never changing what was written above (D-52). -->
+                <div class="addendum" th:each="note : ${c.addenda}">
+                    <p class="muted">
+                        Aclaración — <span th:text="${note.writtenAt}">vie 25/09/2026 09:10</span> —
+                        <span th:text="${note.author}">Dr. Martín Benítez</span>
+                    </p>
+                    <p class="notes" th:text="${note.text}">La dosis es 5 mg.</p>
+                </div>
+                <form method="post" th:if="${recordActions}"
+                      th:action="@{/consultations/{id}/addenda(id=${c.id})}">
+                    <input type="hidden" name="patientId" th:value="${patient.id}">
+                    <label>Aclaración
+                        <textarea name="text" rows="2" maxlength="2000"
+                                  th:text="${addendumFor == c.id} ? ${addendumText} : ''"></textarea>
+                    </label>
+                    <p class="bar"><button type="submit">Agregar aclaración</button></p>
+                </form>
+            </th:block>
+            <div th:if="${entry.check != null}" th:insert="~{clinical-record :: check(${entry.check})}"></div>
         </article>
     </section>
 
     <p><a th:href="@{/agenda}">Volver a la agenda</a></p>
 </main>
+
+<!--
+  One check: what was done, by whom and when, and its result, or a form for it while pending (D-53).
+  Only ever inserted: the wrapper keeps it off this page itself.
+-->
+<div th:remove="all">
+<div th:fragment="check(check)" class="check">
+    <p class="muted">
+        Chequeo — <span th:text="${check.performedAt}">mar 10/03/2026 10:15</span> —
+        <span th:text="${check.performedBy}">Dra. Laura Arias</span>
+    </p>
+    <p class="notes" th:text="${check.description}">Extracción de sangre para hemograma.</p>
+    <p th:unless="${check.pending}">
+        <strong>Resultado:</strong> <span class="notes" th:text="${check.result}">Hemoglobina 13,5 g/dl</span>
+        <span class="muted" th:text="'— ' + ${check.resultAuthor} + ', ' + ${check.resultWrittenAt}">— Dr. Martín Benítez, vie 25/09/2026 12:00</span>
+    </p>
+    <p th:if="${check.pending}"><strong>Resultado pendiente.</strong></p>
+    <form method="post" th:if="${check.pending and recordActions}"
+          th:action="@{/checks/{id}/result(id=${check.id})}">
+        <input type="hidden" name="patientId" th:value="${patient.id}">
+        <label>Resultado
+            <textarea name="text" rows="2" maxlength="10000"
+                      th:text="${resultFor == check.id} ? ${resultText} : ''"></textarea>
+        </label>
+        <p class="bar"><button type="submit">Cargar resultado</button></p>
+    </form>
+</div>
+</div>
 </body>
 </html>

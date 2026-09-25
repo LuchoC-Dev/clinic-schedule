@@ -92,23 +92,37 @@ whether a practitioner is seeing a patient today without knowing where the answe
 
 - A practitioner records a consultation of a patient they are seeing today: today that means one
   who has checked in on an appointment with them that day.
-- A consultation holds free text about what was consulted, and a list of items. Each item has a
-  kind — a check done during the visit (pulse, electrocardiogram…), a prescription, an order for
-  a study (an X-ray, a Doppler ultrasound…) here or elsewhere — and free text. Structure comes
-  later, one kind at a time.
+- A consultation holds free text about what was consulted, a list of items and the checks done
+  during it. Each item has a kind — a prescription, or an order for a study (an X-ray, a Doppler
+  ultrasound…) here or elsewhere — and free text. Structure comes later, one kind at a time.
 - It is sent whole, once, on the day the patient is seen. Once sent it can be neither changed nor
   deleted. Keeping a draft to finish later is the user interface's business.
 - A patient seen twice on the same day by the same practitioner has two consultations.
 - Recording a consultation changes nothing on the appointment.
 - Only practitioners write clinical content; reception writes none.
 
+### Checks
+
+A check is a procedure, not an encounter: what is done once and reported once, by one author. An
+electrocardiogram is one check, whose report includes the heart rate the device measures; the
+heartbeat heard with a stethoscope during the consultation is another.
+
+- A practitioner records a check done to a patient they are seeing today: during a consultation,
+  sent with it, or — as a precaution for an emergency — without one.
+- Its result is known at once (a pulse of 72) or arrives later (a blood test). Free text today,
+  meant to be given a structure later.
+- A pending result is recorded by any practitioner who may read the patient's record — whoever
+  did the check, or whoever analyses a sample. A check has one result, and it never changes.
+- Checks may one day come from other practices, through an anti-corruption layer; nothing in the
+  model assumes a check was done here.
+
 ### Who reads the clinical record
 
-A patient's clinical record is their consultations, from every practitioner of the practice.
-A practitioner may read the whole of it when:
+A patient's clinical record is their consultations and their checks, from every practitioner of
+the practice. A practitioner may read the whole of it when:
 
-- they recorded a consultation of that patient within the access period — one year today, and
-  meant to change without touching the code; each consultation starts it again; or
+- they recorded a consultation of that patient, or did a check to them, within the access period
+  — one year today, and meant to change without touching the code; each one starts it again; or
 - they have an appointment with the patient today that is not cancelled, even before the patient
   arrives, so they can prepare the visit.
 
@@ -129,9 +143,17 @@ in. It opens a consultation view: the form, with the patient's clinical record b
 2. Addenda: a practitioner with access to the record — its author or any other — adds a note to
    a sent consultation, with its date and author, at any time. It is about the consultation as a
    whole, and addenda are not added to addenda. What was written never changes.
-3. Checks whose result arrives later: done during the consultation, the result added afterwards.
-   The check may then need to live apart from the consultation; to be decided. The clinical record
-   then gathers more than consultations, and is set apart from them as a concept of its own.
+3. Checks, in four steps:
+   - **3a** — checks with their result at once or later, as above; the clinical record becomes a
+     module of its own.
+   - **3b** — asking for access to a record: a practitioner of the practice who will do or report a
+     check, and cannot read the record, asks for it. Granted automatically for now, and recorded —
+     who asked, for which patient, when, why, who granted it — so that who authorizes, and why,
+     can be decided later. It lasts a configurable period. A list of the checks waiting for a
+     result, showing only the patient and the check, lets whoever reports them ask for access.
+   - **3c** — the order: a practitioner who needs a check they cannot do authorizes it. Whoever
+     fulfils it, here or at another practice, does not matter. It replaces the study-order item.
+   - **3d** — the lists of what is pending for whoever ordered.
 4. Attachments: an electrocardiogram trace, a report from elsewhere.
 
 Not in v2: an admin role (it arrives with user administration), structure for each kind of

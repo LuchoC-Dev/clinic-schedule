@@ -19,19 +19,31 @@
                 <textarea name="notes" rows="8" maxlength="10000" th:text="${form.notes}"></textarea>
             </label>
 
-            <h2>Chequeos, recetas y órdenes</h2>
+            <h2>Chequeos</h2>
+            <p class="muted">Si el resultado no está todavía, dejalo vacío: queda pendiente y se carga después.</p>
+            <table>
+                <thead><tr><th>Qué se hizo</th><th>Resultado</th></tr></thead>
+                <tbody>
+                <tr th:each="row : ${checkRows}">
+                    <td><textarea name="checkDescription" rows="2" maxlength="2000" th:text="${row.first}"></textarea></td>
+                    <td><textarea name="checkResult" rows="2" maxlength="10000" th:text="${row.second}"></textarea></td>
+                </tr>
+                </tbody>
+            </table>
+
+            <h2>Recetas y órdenes</h2>
             <table>
                 <thead><tr><th>Tipo</th><th>Detalle</th></tr></thead>
                 <tbody>
                 <tr th:each="row : ${rows}">
-                    <td>
+                    <td class="kind">
                         <select name="kind">
                             <option value="">—</option>
                             <option th:each="k : ${kinds}" th:value="${k.key}" th:text="${k.value}"
-                                    th:selected="${k.key == row.kind}"></option>
+                                    th:selected="${k.key == row.first}"></option>
                         </select>
                     </td>
-                    <td><textarea name="description" rows="2" maxlength="2000" th:text="${row.description}"></textarea></td>
+                    <td><textarea name="description" rows="2" maxlength="2000" th:text="${row.second}"></textarea></td>
                 </tr>
                 </tbody>
             </table>

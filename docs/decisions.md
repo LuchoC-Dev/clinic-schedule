@@ -1586,3 +1586,61 @@ module becomes `clinicalrecord` then, not before (D-14).
 record reads them with it); a limit in time to add one (the user wants none); addenda to addenda;
 no concurrency guard (the second of two simultaneous addenda would silently erase the first);
 renaming the module now, before the second kind of entry that justifies it.
+
+---
+
+## D-53 — A check is an aggregate of its own, and the clinical record gathers consultations and checks
+**Date:** 2026-09-25 · **Status:** accepted
+
+A check is a procedure, not an encounter: it is done, and reported. Its result may arrive later
+and come from someone else — a blood sample drawn by one practitioner and analysed by another —
+and, as a precaution for an emergency, a check may be done with no consultation at all. So it is
+not an item of the consultation any more but an aggregate of its own, `Check`, in the module that
+holds the patient's clinical record, renamed `clinicalrecord` as D-52 planned.
+
+**What one check is.** What is done once and reported once, by one author. An electrocardiogram is
+one check, whose report includes the heart rate the device measures; the heartbeat heard with a
+stethoscope is another. If parts of a study are reported apart, at different times or by different
+people, they are different checks.
+
+**Its states follow from its result.** `Check.perform` records one whose result is pending;
+`Check.performWithResult` one whose result is known at once, reported by whoever did it.
+`withResult` adds the result later; a check has one, and a second is refused with
+`ResultAlreadyRecordedException`, a 409. `CheckResult` — author, time, free text of up to 10 000
+characters — is a class of its own so that giving results a structure changes it alone. A check
+records the consultation it was done in, when there was one.
+
+**Who does what.**
+- Checks done during a consultation are sent with it and stored in the same transaction.
+- A check without a consultation, `POST /api/checks`, takes the consultation's rule: the patient
+  arrived today to be seen by that practitioner. An emergency without a registered patient or an
+  appointment waits for the arrival queue.
+- A pending result, `POST /api/checks/{id}/result`, is recorded by any practitioner who may read
+  the record (D-49): the patient need not be there. A practitioner who never saw the patient — the
+  analyst — gets access through the authorization of part 3b.
+- Doing a check counts as seeing the patient for the access period, like recording a consultation.
+  Reporting a result does not. The reads the rule needs are gathered in
+  `ClinicalRecordAccessReader`, package-private in the use cases, as `AgendaReader` is in
+  appointment.
+
+**Checks from elsewhere.** An order authorizes a check that may be done here or at another
+practice, and checks done elsewhere will come in later through an anti-corruption layer. Today
+whoever does a check is one of the practice's practitioners; nothing else in the model assumes it.
+
+**Storage.** `V10` creates `clinical_check` — `check` is a reserved word — with the result in three
+columns that are all empty or all set, a foreign key to the consultation (same module), and a
+version: two results recorded at the same time are refused as the second one, as with addenda
+(D-52). The `CHECK` item kind is removed. The database starts empty for this version, as agreed:
+no check item is carried over, and a development database must be wiped.
+
+**The record's answer.** `GET /api/clinical-records/{patientId}` answers `{consultations, checks}`:
+each consultation carries the checks done during it, and `checks` holds those done without one.
+Nesting them spares a client pairing checks with consultations. On the screen, checks show under
+their consultation, the others by time among the consultations, a pending one with the form for
+its result; a check without a consultation is recorded from the record screen.
+
+*Rejected:* checks as items with a result added later (a check without a consultation would have
+nowhere to live); keeping immediate checks as items and only pending ones apart (two ways to
+record one thing); several results per check (not needed yet: a check has one); carrying the old
+check items over (the database starts empty); addenda on checks now (after part 3d).
+

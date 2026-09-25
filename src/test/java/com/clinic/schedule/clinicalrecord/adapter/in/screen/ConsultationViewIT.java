@@ -120,9 +120,9 @@ class ConsultationViewIT {
         mockMvc.perform(get("/consultations/new").with(asArias).param("patientId", patient.toString()))
                 .andExpect(status().isOk())
                 .andExpect(content().string(containsString("Registrar consulta")))
-                .andExpect(content().string(containsString("Todavía no hay consultas registradas.")));
+                .andExpect(content().string(containsString("Todavía no hay nada registrado.")));
 
-        mockMvc.perform(form("Control de hipertensión.", "CHECK", "presión 120/80", "", "",
+        mockMvc.perform(form("Control de hipertensión.", "PRESCRIPTION", "enalapril 10 mg", "", "",
                         "STUDY_ORDER", "ecodoppler de vasos de cuello"))
                 .andExpect(redirectedUrl("/clinical-records/" + patient))
                 .andExpect(flash().attribute("message", "Consulta registrada."));
@@ -130,7 +130,7 @@ class ConsultationViewIT {
         mockMvc.perform(get("/clinical-records/" + patient).with(asArias))
                 .andExpect(status().isOk())
                 .andExpect(content().string(containsString("Control de hipertensión.")))
-                .andExpect(content().string(containsString("Chequeo:")))
+                .andExpect(content().string(containsString("Receta:")))
                 .andExpect(content().string(containsString("Orden de estudio:")))
                 .andExpect(content().string(containsString("ecodoppler de vasos de cuello")));
     }
@@ -139,20 +139,20 @@ class ConsultationViewIT {
     void aHalfFilledRowIsRefusedKeepingWhatWasTyped() throws Exception {
         arrivedToday();
 
-        mockMvc.perform(form("Control.", "CHECK", "pulso 72", "PRESCRIPTION", ""))
+        mockMvc.perform(form("Control.", "STUDY_ORDER", "radiografía de tórax", "PRESCRIPTION", ""))
                 .andExpect(redirectedUrl("/consultations/new?patientId=" + patient))
                 .andExpect(flash().attribute("error", containsString("Cada ítem necesita su tipo y su texto")))
                 .andExpect(flash().attributeExists("form"));
 
         mockMvc.perform(get("/clinical-records/" + patient).with(asArias))
-                .andExpect(content().string(containsString("Todavía no hay consultas registradas.")));
+                .andExpect(content().string(containsString("Todavía no hay nada registrado.")));
     }
 
     @Test
     void aConsultationWithoutNotesIsRefused() throws Exception {
         arrivedToday();
 
-        mockMvc.perform(form("  ", "CHECK", "pulso 72"))
+        mockMvc.perform(form("  ", "PRESCRIPTION", "ibuprofeno"))
                 .andExpect(flash().attribute("error", "Escribí lo consultado."));
     }
 
@@ -160,7 +160,7 @@ class ConsultationViewIT {
     void moreRowsBringTheFormBackWithoutRecordingIt() throws Exception {
         arrivedToday();
 
-        MvcResult more = mockMvc.perform(form("Control.", "CHECK", "pulso 72").param("action", "more"))
+        MvcResult more = mockMvc.perform(form("Control.", "PRESCRIPTION", "ibuprofeno 400 mg").param("action", "more"))
                 .andExpect(redirectedUrl("/consultations/new?patientId=" + patient))
                 .andExpect(flash().attributeExists("form"))
                 .andReturn();
@@ -169,12 +169,12 @@ class ConsultationViewIT {
         String page = mockMvc.perform(get("/consultations/new").with(asArias).param("patientId", patient.toString())
                         .flashAttrs(more.getFlashMap()))
                 .andExpect(status().isOk())
-                .andExpect(content().string(containsString("pulso 72")))
+                .andExpect(content().string(containsString("ibuprofeno 400 mg")))
                 .andReturn().getResponse().getContentAsString();
         assertThat(page.split("name=\"kind\"", -1)).hasSize(8 + 1);
 
         mockMvc.perform(get("/clinical-records/" + patient).with(asArias))
-                .andExpect(content().string(containsString("Todavía no hay consultas registradas.")));
+                .andExpect(content().string(containsString("Todavía no hay nada registrado.")));
     }
 
     @Test
@@ -213,7 +213,7 @@ class ConsultationViewIT {
         mockMvc.perform(form("Control de hipertensión.", "PRESCRIPTION", "enalapril 10 mg"))
                 .andExpect(redirectedUrl("/clinical-records/" + patient));
         MvcResult record = mockMvc.perform(get("/api/clinical-records/" + patient).with(asArias)).andReturn();
-        return json.readTree(record.getResponse().getContentAsString()).get(0).get("id").asText();
+        return json.readTree(record.getResponse().getContentAsString()).get("consultations").get(0).get("id").asText();
     }
 
     @Test
@@ -257,5 +257,60 @@ class ConsultationViewIT {
                         .param("patientId", patient.toString())
                         .param("text", "No debería."))
                 .andExpect(status().isForbidden());
+    }
+
+    // --- checks (D-53) ------------------------------------------------------------------
+
+    @Test
+    void aPendingCheckOfTheConsultationGetsItsResultFromTheRecord() throws Exception {
+        arrivedToday();
+        mockMvc.perform(form("Control.")
+                        .param("checkDescription", "Pulso", "Extracción de sangre para hemograma", "")
+                        .param("checkResult", "72 lpm", "", ""))
+                .andExpect(redirectedUrl("/clinical-records/" + patient));
+
+        mockMvc.perform(get("/clinical-records/" + patient).with(asArias))
+                .andExpect(content().string(containsString("72 lpm")))
+                .andExpect(content().string(containsString("Resultado pendiente.")))
+                .andExpect(content().string(containsString("Cargar resultado")));
+
+        MvcResult record = mockMvc.perform(get("/api/clinical-records/" + patient).with(asArias)).andReturn();
+        String pending = json.readTree(record.getResponse().getContentAsString())
+                .get("consultations").get(0).get("checks").get(1).get("id").asText();
+
+        mockMvc.perform(post("/checks/" + pending + "/result").with(asArias).with(csrf())
+                        .param("patientId", patient.toString())
+                        .param("text", "Hemoglobina 13,5 g/dl"))
+                .andExpect(redirectedUrl("/clinical-records/" + patient))
+                .andExpect(flash().attribute("message", "Resultado cargado."));
+
+        mockMvc.perform(get("/clinical-records/" + patient).with(asArias))
+                .andExpect(content().string(containsString("Hemoglobina 13,5 g/dl")))
+                .andExpect(content().string(not(containsString("Resultado pendiente."))));
+    }
+
+    @Test
+    void aCheckResultWithoutWhatWasDoneIsRefused() throws Exception {
+        arrivedToday();
+
+        mockMvc.perform(form("Control.").param("checkDescription", "").param("checkResult", "72 lpm"))
+                .andExpect(redirectedUrl("/consultations/new?patientId=" + patient))
+                .andExpect(flash().attribute("error", containsString("cada chequeo qué se hizo")));
+    }
+
+    @Test
+    void aCheckWithoutAConsultationIsRecordedFromTheRecord() throws Exception {
+        arrivedToday();
+
+        mockMvc.perform(post("/checks").with(asArias).with(csrf())
+                        .param("patientId", patient.toString())
+                        .param("description", "Electrocardiograma")
+                        .param("result", ""))
+                .andExpect(redirectedUrl("/clinical-records/" + patient))
+                .andExpect(flash().attribute("message", "Chequeo registrado."));
+
+        mockMvc.perform(get("/clinical-records/" + patient).with(asArias))
+                .andExpect(content().string(containsString("Electrocardiograma")))
+                .andExpect(content().string(containsString("Resultado pendiente.")));
     }
 }

@@ -76,9 +76,11 @@ Spanish, for the staff.
 | `POST` | `/api/appointments/{id}/suspend-auto-cancellation` | the patient warned they will be late |
 | `GET` | `/api/appointments?practitionerId=&date=` | a day's agenda — a practitioner may only ask for their own |
 | `POST` | `/api/time-off` | a practitioner's absence — whole days up to `untilDate`, or part of one — cancelling the appointments it hits |
-| `POST` | `/api/consultations` | a practitioner records the consultation of a patient who arrived today — notes plus checks, prescriptions and study orders |
+| `POST` | `/api/consultations` | a practitioner records the consultation of a patient who arrived today — notes, prescriptions, study orders and the checks done |
 | `POST` | `/api/consultations/{id}/addenda` | an addendum to a consultation already sent, by any practitioner with access to the record |
-| `GET` | `/api/clinical-records/{patientId}` | a patient's consultations, from every practitioner — for a practitioner who saw them within the access period or is seeing them today |
+| `POST` | `/api/checks` | a check without a consultation — the emergency precaution — with its result or pending |
+| `POST` | `/api/checks/{id}/result` | the result of a pending check, by any practitioner with access to the record |
+| `GET` | `/api/clinical-records/{patientId}` | a patient's consultations with their checks, and the checks done without one — for a practitioner who saw them within the access period or is seeing them today |
 
 A booking without a check-in is cancelled automatically 30 minutes after its start, or 24 hours
 after it when the patient warned they would be late. The consultation routes are the
@@ -104,7 +106,7 @@ src/main/java/com/clinic/schedule/
 │       └── out/              driven: the ports' implementations
 │           ├── persistence/  JPA
 │           └── external/     the other modules, through their api/
-├── clinicalrecord/           hexagonal too: consultations, and who may read a clinical record
+├── clinicalrecord/           hexagonal too: consultations, checks, and who may read a record
 ├── patient/                  layered: presentation/ (http, screen), service/, entity/,
 │                             persistence/ — and api/, its only door for other modules
 ├── practitioner/             layered alike, with the week's rules in plain classes

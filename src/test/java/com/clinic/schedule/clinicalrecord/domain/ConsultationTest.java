@@ -25,16 +25,15 @@ class ConsultationTest {
     @Test
     void aConsultationKeepsWhatWasWrittenInOrder() {
         List<ConsultationItem> items = List.of(
-                new ConsultationItem(ItemKind.CHECK, "  presión 120/80  "),
-                new ConsultationItem(ItemKind.PRESCRIPTION, "enalapril 10 mg"),
+                new ConsultationItem(ItemKind.PRESCRIPTION, "  enalapril 10 mg  "),
                 new ConsultationItem(ItemKind.STUDY_ORDER, "ecodoppler de vasos de cuello"));
 
         Consultation consultation = withNotes("  Control de hipertensión.  ", items);
 
         assertThat(consultation.notes()).isEqualTo("Control de hipertensión.");
         assertThat(consultation.items()).extracting(ConsultationItem::kind)
-                .containsExactly(ItemKind.CHECK, ItemKind.PRESCRIPTION, ItemKind.STUDY_ORDER);
-        assertThat(consultation.items().getFirst().description()).isEqualTo("presión 120/80");
+                .containsExactly(ItemKind.PRESCRIPTION, ItemKind.STUDY_ORDER);
+        assertThat(consultation.items().getFirst().description()).isEqualTo("enalapril 10 mg");
         assertThat(consultation.recordedAt()).isEqualTo(AT);
     }
 
@@ -71,7 +70,7 @@ class ConsultationTest {
 
     @Test
     void aConsultationHasAtMostFiftyItems() {
-        ConsultationItem item = new ConsultationItem(ItemKind.CHECK, "pulso 72");
+        ConsultationItem item = new ConsultationItem(ItemKind.PRESCRIPTION, "ibuprofeno 400 mg");
 
         assertThat(withNotes("notas", Collections.nCopies(50, item)).items()).hasSize(50);
         assertThatIllegalArgumentException().isThrownBy(() -> withNotes("notas", Collections.nCopies(51, item)));
@@ -80,16 +79,16 @@ class ConsultationTest {
     @Test
     void anItemNeedsAKindAndADescriptionOfAtMostTwoThousandCharacters() {
         assertThatIllegalArgumentException().isThrownBy(() -> new ConsultationItem(null, "pulso 72"));
-        assertThatIllegalArgumentException().isThrownBy(() -> new ConsultationItem(ItemKind.CHECK, " "));
-        assertThatIllegalArgumentException().isThrownBy(() -> new ConsultationItem(ItemKind.CHECK, null));
-        assertThat(new ConsultationItem(ItemKind.CHECK, "a".repeat(2_000)).description()).hasSize(2_000);
+        assertThatIllegalArgumentException().isThrownBy(() -> new ConsultationItem(ItemKind.PRESCRIPTION, " "));
+        assertThatIllegalArgumentException().isThrownBy(() -> new ConsultationItem(ItemKind.PRESCRIPTION, null));
+        assertThat(new ConsultationItem(ItemKind.PRESCRIPTION, "a".repeat(2_000)).description()).hasSize(2_000);
         assertThatIllegalArgumentException()
-                .isThrownBy(() -> new ConsultationItem(ItemKind.CHECK, "a".repeat(2_001)));
+                .isThrownBy(() -> new ConsultationItem(ItemKind.PRESCRIPTION, "a".repeat(2_001)));
     }
 
     @Test
     void whatWasSentCannotBeChangedThroughTheListItCameIn() {
-        List<ConsultationItem> items = new ArrayList<>(List.of(new ConsultationItem(ItemKind.CHECK, "pulso 72")));
+        List<ConsultationItem> items = new ArrayList<>(List.of(new ConsultationItem(ItemKind.PRESCRIPTION, "ibuprofeno 400 mg")));
         Consultation consultation = withNotes("notas", items);
 
         items.add(new ConsultationItem(ItemKind.PRESCRIPTION, "ibuprofeno"));

@@ -48,7 +48,7 @@ class ConsultationViewController {
             "La consulta se registra cuando el paciente llegó a atenderse con vos hoy.";
 
     private static final String INVALID = "Revisá la consulta: lo consultado tiene hasta 10 000 caracteres, "
-            + "cada ítem hasta 2 000, y son 50 ítems como máximo.";
+            + "cada ítem y cada chequeo hasta 2 000, cada resultado hasta 10 000, y son 50 de cada uno como máximo.";
 
     private final ViewClinicalRecordUseCase clinicalRecord;
     private final RecordConsultationUseCase record;
@@ -73,7 +73,7 @@ class ConsultationViewController {
     String clinicalRecord(@PathVariable UUID patientId, Model model) {
         ViewClinicalRecordUseCase.ClinicalRecord read = readOrRefuse(patientId);
         addRecord(model, patientId, read);
-        model.addAttribute("addendumForms", true);
+        model.addAttribute("recordActions", true);
         return "clinical-record";
     }
 
@@ -129,7 +129,8 @@ class ConsultationViewController {
                 : ConsultationForm.empty(patientId);
         addRecord(model, patientId, read);
         model.addAttribute("form", form);
-        model.addAttribute("rows", form.rowsToShow());
+        model.addAttribute("rows", form.itemRowsToShow());
+        model.addAttribute("checkRows", form.checkRowsToShow());
         model.addAttribute("kinds", Arrays.stream(ItemKind.values())
                 .collect(Collectors.toMap(ItemKind::name, ClinicalRecordEntry::labelOf,
                         (first, second) -> first, LinkedHashMap::new)));
@@ -160,7 +161,7 @@ class ConsultationViewController {
         }
         try {
             record.handle(new RecordConsultationUseCase.Command(ConsultationId.newId(),
-                    new PatientId(form.patientId()), form.notes(), form.items()));
+                    new PatientId(form.patientId()), form.notes(), form.items(), form.checks()));
         } catch (ClinicalRecordAccessDeniedException e) {
             if (!e.mayRead()) {
                 throw new ResponseStatusException(HttpStatus.FORBIDDEN, e.getMessage());
@@ -183,7 +184,7 @@ class ConsultationViewController {
             return "Escribí lo consultado.";
         }
         if (form.hasHalfFilledRow()) {
-            return "Cada ítem necesita su tipo y su texto: completá o vaciá los renglones a medias.";
+            return "Cada ítem necesita su tipo y su texto, y cada chequeo qué se hizo: completá o vaciá los renglones a medias.";
         }
         return null;
     }
@@ -202,9 +203,7 @@ class ConsultationViewController {
         Map<UUID, String> names = practitioners.findAll().stream()
                 .collect(Collectors.toMap(PractitionerSummary::id, PractitionerSummary::fullName));
         model.addAttribute("patient", patient);
-        model.addAttribute("entries", read.consultations().stream()
-                .map(consultation -> ClinicalRecordEntry.of(consultation, names))
-                .toList());
+        model.addAttribute("entries", ClinicalRecordEntry.of(read, names));
         model.addAttribute("mayRecord", read.mayRecord());
         // The header offers a practitioner their agenda only (D-34).
         model.addAttribute("readOnly", true);

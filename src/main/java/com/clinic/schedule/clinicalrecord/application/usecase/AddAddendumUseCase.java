@@ -2,6 +2,7 @@ package com.clinic.schedule.clinicalrecord.application.usecase;
 
 import java.time.Clock;
 import java.time.LocalDateTime;
+import java.util.List;
 
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -9,9 +10,11 @@ import org.springframework.transaction.annotation.Transactional;
 import com.clinic.schedule.clinicalrecord.application.exception.ClinicalRecordAccessDeniedException;
 import com.clinic.schedule.clinicalrecord.application.exception.ConsultationChangedException;
 import com.clinic.schedule.clinicalrecord.application.port.AttendancePort;
+import com.clinic.schedule.clinicalrecord.application.port.CheckRepository;
 import com.clinic.schedule.clinicalrecord.application.port.ConsultationRepository;
 import com.clinic.schedule.clinicalrecord.application.port.CurrentPractitionerPort;
 import com.clinic.schedule.clinicalrecord.domain.Addendum;
+import com.clinic.schedule.clinicalrecord.domain.Check;
 import com.clinic.schedule.clinicalrecord.domain.AddendumId;
 import com.clinic.schedule.clinicalrecord.domain.ClinicalRecordAccessPolicy;
 import com.clinic.schedule.clinicalrecord.domain.Consultation;
@@ -34,17 +37,17 @@ import com.clinic.schedule.clinicalrecord.domain.PractitionerId;
 public class AddAddendumUseCase {
 
     private final ConsultationRepository consultations;
-    private final AttendancePort attendance;
+    private final CheckRepository checks;
     private final CurrentPractitionerPort currentPractitioner;
-    private final ClinicalRecordAccessPolicy policy;
+    private final ClinicalRecordAccessReader access;
     private final Clock clock;
 
-    public AddAddendumUseCase(ConsultationRepository consultations, AttendancePort attendance,
+    public AddAddendumUseCase(ConsultationRepository consultations, CheckRepository checks, AttendancePort attendance,
             CurrentPractitionerPort currentPractitioner, ClinicalRecordAccessPolicy policy, Clock clock) {
         this.consultations = consultations;
-        this.attendance = attendance;
+        this.checks = checks;
         this.currentPractitioner = currentPractitioner;
-        this.policy = policy;
+        this.access = new ClinicalRecordAccessReader(consultations, checks, attendance, policy);
         this.clock = clock;
     }
 
@@ -53,28 +56,28 @@ public class AddAddendumUseCase {
      * @throws ConsultationChangedException when another addendum was added at the same time
      */
     @Transactional
-    public Consultation handle(Command command) {
+    public Added handle(Command command) {
         PractitionerId practitionerId = currentPractitioner.practitionerId()
                 .orElseThrow(ClinicalRecordAccessDeniedException::toRead);
         Consultation consultation = consultations.findById(command.consultationId())
                 .orElseThrow(ClinicalRecordAccessDeniedException::toRead);
 
         LocalDateTime now = LocalDateTime.now(clock);
-        boolean mayRead = policy.mayRead(
-                consultations.findLastRecordedAt(consultation.patientId(), practitionerId),
-                attendance.visitOn(practitionerId, consultation.patientId(), now.toLocalDate()),
-                now.toLocalDate());
-        if (!mayRead) {
+        if (!access.mayRead(practitionerId, consultation.patientId(), now.toLocalDate())) {
             throw ClinicalRecordAccessDeniedException.toRead();
         }
 
         if (consultation.hasAddendum(command.addendumId())) {
-            return consultation;
+            return new Added(consultation, checks.findAllForConsultation(consultation.id()));
         }
         Consultation added = consultation.withAddendum(
                 new Addendum(command.addendumId(), practitionerId, now, command.text()));
         consultations.save(added);
-        return added;
+        return new Added(added, checks.findAllForConsultation(added.id()));
+    }
+
+    /** The consultation with its new addendum, and the checks done during it, to answer it whole. */
+    public record Added(Consultation consultation, List<Check> checks) {
     }
 
     public record Command(ConsultationId consultationId, AddendumId addendumId, String text) {
