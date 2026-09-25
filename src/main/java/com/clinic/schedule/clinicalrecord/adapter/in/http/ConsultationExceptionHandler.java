@@ -6,6 +6,7 @@ import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 import org.springframework.web.multipart.support.MissingServletRequestPartException;
 
+import com.clinic.schedule.clinicalrecord.application.exception.CheckChangedException;
 import com.clinic.schedule.clinicalrecord.application.exception.CheckNotFoundException;
 import com.clinic.schedule.clinicalrecord.application.exception.ClinicalRecordAccessDeniedException;
 import com.clinic.schedule.clinicalrecord.application.exception.ConsultationChangedException;
@@ -103,6 +104,12 @@ class ConsultationExceptionHandler {
     ResponseEntity<ErrorResponse> missingFile(MissingServletRequestPartException e) {
         return ResponseEntity.badRequest()
                 .body(ErrorResponse.of(400, "Bad request", "Part '" + e.getRequestPartName() + "' is required"));
+    }
+
+    /** Someone else changed the check at the same time: nothing was saved, and sending it again works (D-58). */
+    @ExceptionHandler(CheckChangedException.class)
+    ResponseEntity<ErrorResponse> checkChanged(CheckChangedException e) {
+        return ResponseEntity.status(HttpStatus.CONFLICT).body(ErrorResponse.of(409, "Conflict", e.getMessage()));
     }
 
     /** A consultation that breaks its own rules, when Bean Validation did not already catch it. */

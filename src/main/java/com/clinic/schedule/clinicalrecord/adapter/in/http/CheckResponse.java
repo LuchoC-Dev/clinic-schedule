@@ -1,6 +1,7 @@
 package com.clinic.schedule.clinicalrecord.adapter.in.http;
 
 import java.time.LocalDateTime;
+import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 
@@ -20,7 +21,8 @@ record CheckResponse(
         String description,
         UUID consultationId,
         boolean pending,
-        Result result) {
+        Result result,
+        List<ConsultationResponse.AddendumResponse> addenda) {
 
     record Result(UUID authorId, String authorName, LocalDateTime writtenAt, String text) {
     }
@@ -39,6 +41,11 @@ record CheckResponse(
                 check.result()
                         .map(result -> new Result(result.author().value(), names.get(result.author().value()),
                                 result.writtenAt(), result.text()))
-                        .orElse(null));
+                        .orElse(null),
+                check.addenda().stream()
+                        .map(addendum -> new ConsultationResponse.AddendumResponse(addendum.id().value(),
+                                addendum.author().value(), names.get(addendum.author().value()), addendum.writtenAt(),
+                                addendum.text()))
+                        .toList());
     }
 }

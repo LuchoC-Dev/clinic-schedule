@@ -538,6 +538,28 @@ under "Con resultado en los últimos 30 días", with who reported it and when an
   how it should work is not decided. The users already stand for their practitioners, so it does
   not wait for user administration.
 
+### Addenda on checks `[x]`
+
+Brought forward from the postponed list after testing by hand: a wrong result had no way to be
+corrected, and a check done without a consultation had no consultation to add a note to.
+
+- [x] `Check.withAddendum`, the same rule as a consultation's: at the end, in order, each once,
+      pending or reported alike (D-58)
+- [x] `AddCheckAddendumUseCase`: any practitioner who may read the record; `POST /api/checks/{id}/addenda`
+- [x] `V15__check_addendum.sql`; the check's version guards addenda as it guards the result, now
+      refused as `CheckChangedException`, which the result's use case still answers as
+      `ResultAlreadyRecordedException`
+- [x] On the record screen, each check lists its addenda and takes a new one
+- [x] 2 unit and 4 integration tests. 228 unit and 255 integration tests, 483 in total
+
+**Verified with:** the tests failing with the access rule skipped and with the addenda not stored;
+`mvnw clean verify` with the PostgreSQL tests running V15.
+
+**Verified in a browser** against the application on a throwaway PostgreSQL: a check recorded with
+the result "esto es falso, debe eliminarse", as found when testing by hand, got the addendum "El
+resultado cargado es un error: corresponde a otro paciente. Repetir el estudio." from the record
+screen, shown under it with its time and author, the result above it unchanged.
+
 ### Part 4 — Attachments `[x]`
 - [x] `Attachment`, an aggregate of its own: belonging to a consultation or a check
       (`AttachmentOwner`, a sealed type), with its name, kind, size and SHA-256 fingerprint (D-57)
@@ -570,7 +592,6 @@ access to the record, got 403 on both.
 These are not oversights: they are decided and waiting for their moment.
 
 - Marking a check's result as reviewed, per practitioner (see D-56).
-- Addenda on checks (see D-53).
 - Orders coming from elsewhere — on paper, or from another practice — and their validation, with
   the anti-corruption layer (see D-55).
 - Files attached to the record as a whole, such as a report the patient brings (see D-57).

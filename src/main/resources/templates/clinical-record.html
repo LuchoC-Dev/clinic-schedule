@@ -163,6 +163,22 @@
         <input type="file" name="file" accept=".pdf,.png,.jpg,.jpeg,application/pdf,image/png,image/jpeg">
         <button type="submit">Adjuntar archivo</button>
     </form>
+    <!-- Addenda: how a wrong result is corrected, since a result never changes (D-58). -->
+    <div class="addendum" th:each="note : ${check.addenda}">
+        <p class="muted">
+            Aclaración — <span th:text="${note.writtenAt}">vie 25/09/2026 09:10</span> —
+            <span th:text="${note.author}">Dra. Laura Arias</span>
+        </p>
+        <p class="notes" th:text="${note.text}">El resultado cargado corresponde a otro paciente.</p>
+    </div>
+    <form method="post" th:if="${recordActions}" th:action="@{/checks/{id}/addenda(id=${check.id})}">
+        <input type="hidden" name="patientId" th:value="${patient.id}">
+        <label>Aclaración sobre el chequeo
+            <textarea name="text" rows="1" maxlength="2000"
+                      th:text="${addendumFor == check.id} ? ${addendumText} : ''"></textarea>
+        </label>
+        <p class="bar"><button type="submit">Agregar aclaración</button></p>
+    </form>
 </div>
 <!-- One attached file: downloaded through the application, never from a public address (D-57). -->
 <th:block th:fragment="file(file)">

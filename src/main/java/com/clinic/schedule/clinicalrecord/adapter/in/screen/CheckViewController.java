@@ -12,11 +12,14 @@ import org.springframework.web.server.ResponseStatusException;
 import org.springframework.web.multipart.MultipartFile;
 import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 
+import com.clinic.schedule.clinicalrecord.application.exception.CheckChangedException;
 import com.clinic.schedule.clinicalrecord.application.exception.ClinicalRecordAccessDeniedException;
 import com.clinic.schedule.clinicalrecord.application.usecase.AddAttachmentUseCase;
+import com.clinic.schedule.clinicalrecord.application.usecase.AddCheckAddendumUseCase;
 import com.clinic.schedule.clinicalrecord.application.usecase.RecordCheckResultUseCase;
 import com.clinic.schedule.clinicalrecord.application.usecase.RecordCheckUseCase;
 import com.clinic.schedule.clinicalrecord.application.exception.UnknownOrderException;
+import com.clinic.schedule.clinicalrecord.domain.AddendumId;
 import com.clinic.schedule.clinicalrecord.domain.AttachmentOwner;
 import com.clinic.schedule.clinicalrecord.domain.CheckId;
 import com.clinic.schedule.clinicalrecord.domain.CheckOrderId;
@@ -37,12 +40,14 @@ class CheckViewController {
     private final RecordCheckUseCase recordCheck;
     private final RecordCheckResultUseCase recordResult;
     private final AddAttachmentUseCase addAttachment;
+    private final AddCheckAddendumUseCase addAddendum;
 
     CheckViewController(RecordCheckUseCase recordCheck, RecordCheckResultUseCase recordResult,
-            AddAttachmentUseCase addAttachment) {
+            AddAttachmentUseCase addAttachment, AddCheckAddendumUseCase addAddendum) {
         this.recordCheck = recordCheck;
         this.recordResult = recordResult;
         this.addAttachment = addAttachment;
+        this.addAddendum = addAddendum;
     }
 
     @PostMapping("/checks")
@@ -81,6 +86,37 @@ class CheckViewController {
      * The result of a pending check, in words, in a file, or both: the file is attached first, and
      * the result may then leave its text out (D-57).
      */
+    /**
+     * Adds an addendum to a check, and goes back to the record: how a wrong result is corrected
+     * (D-58). A refusal comes back with the text typed; a user who may not read the record gets a 403.
+     */
+    @PostMapping("/checks/{id}/addenda")
+    String addAddendum(@PathVariable UUID id, @RequestParam UUID patientId,
+            @RequestParam(required = false) String text, RedirectAttributes flash) {
+        String problem = null;
+        if (text == null || text.isBlank()) {
+            problem = "Escribí la aclaración.";
+        } else {
+            try {
+                addAddendum.handle(new AddCheckAddendumUseCase.Command(new CheckId(id), AddendumId.newId(), text));
+            } catch (ClinicalRecordAccessDeniedException e) {
+                throw new ResponseStatusException(HttpStatus.FORBIDDEN, e.getMessage());
+            } catch (CheckChangedException e) {
+                problem = "Otro profesional cambió este chequeo recién: revisalo y volvé a enviar tu aclaración.";
+            } catch (IllegalArgumentException e) {
+                problem = "La aclaración tiene hasta 2 000 caracteres.";
+            }
+        }
+        if (problem != null) {
+            flash.addFlashAttribute("error", problem);
+            flash.addFlashAttribute("addendumFor", id);
+            flash.addFlashAttribute("addendumText", text);
+        } else {
+            flash.addFlashAttribute("message", "Aclaración agregada.");
+        }
+        return "redirect:/clinical-records/" + patientId;
+    }
+
     @PostMapping("/checks/{id}/result")
     String recordResult(@PathVariable UUID id, @RequestParam UUID patientId,
             @RequestParam(required = false) String text, @RequestParam(required = false) MultipartFile file,

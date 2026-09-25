@@ -14,11 +14,13 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RestController;
 
+import com.clinic.schedule.clinicalrecord.application.usecase.AddCheckAddendumUseCase;
 import com.clinic.schedule.clinicalrecord.application.usecase.ListPendingChecksUseCase;
 import com.clinic.schedule.clinicalrecord.application.usecase.RecordCheckResultUseCase;
 import com.clinic.schedule.clinicalrecord.application.usecase.RecordCheckUseCase;
 import com.clinic.schedule.clinicalrecord.application.usecase.RequestAccessUseCase;
 import com.clinic.schedule.clinicalrecord.domain.AccessGrant;
+import com.clinic.schedule.clinicalrecord.domain.AddendumId;
 import com.clinic.schedule.clinicalrecord.domain.Check;
 import com.clinic.schedule.clinicalrecord.domain.CheckId;
 import com.clinic.schedule.patient.api.PatientReader;
@@ -41,16 +43,18 @@ class CheckController {
     private final RecordCheckResultUseCase recordResult;
     private final ListPendingChecksUseCase pendingChecks;
     private final RequestAccessUseCase requestAccess;
+    private final AddCheckAddendumUseCase addAddendum;
     private final PractitionerReader practitioners;
     private final PatientReader patients;
 
     CheckController(RecordCheckUseCase recordCheck, RecordCheckResultUseCase recordResult,
             ListPendingChecksUseCase pendingChecks, RequestAccessUseCase requestAccess,
-            PractitionerReader practitioners, PatientReader patients) {
+            AddCheckAddendumUseCase addAddendum, PractitionerReader practitioners, PatientReader patients) {
         this.recordCheck = recordCheck;
         this.recordResult = recordResult;
         this.pendingChecks = pendingChecks;
         this.requestAccess = requestAccess;
+        this.addAddendum = addAddendum;
         this.practitioners = practitioners;
         this.patients = patients;
     }
@@ -102,6 +106,19 @@ class CheckController {
         return ResponseEntity
                 .created(URI.create("/api/clinical-records/" + grant.patientId().value()))
                 .body(AccessGrantResponse.of(grant, practitionerNames()));
+    }
+
+    /**
+     * Adds an addendum to a check, pending or reported: how a wrong result is corrected (D-58). A
+     * business operation on the check, so a {@code POST} on a sub-path (D-23).
+     */
+    @PostMapping("/api/checks/{id}/addenda")
+    ResponseEntity<CheckResponse> addAddendum(@PathVariable UUID id, @Valid @RequestBody AddAddendumRequest request) {
+        Check added = addAddendum.handle(new AddCheckAddendumUseCase.Command(new CheckId(id),
+                request.id() == null ? AddendumId.newId() : new AddendumId(request.id()), request.text()));
+        return ResponseEntity
+                .created(URI.create("/api/checks/" + id))
+                .body(CheckResponse.of(added, practitionerNames()));
     }
 
     private Map<UUID, String> practitionerNames() {

@@ -1,13 +1,16 @@
 package com.clinic.schedule.clinicalrecord.domain;
 
 import java.time.LocalDateTime;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Objects;
 import java.util.Optional;
 
 import com.clinic.schedule.clinicalrecord.domain.exception.ResultAlreadyRecordedException;
 
 /**
- * A check done to a patient — a pulse taken, a blood sample drawn, an electrocardiogram — and its
- * result, once there is one (D-53).
+ * A check done to a patient — a pulse taken, a blood sample drawn, an electrocardiogram — its
+ * result, once there is one, and the addenda written about it afterwards (D-53, D-58).
  *
  * <p>A check is what is done once and reported once, by one author: an electrocardiogram is one
  * check, whose report includes the heart rate the device measures; the heartbeat heard with a
@@ -16,13 +19,14 @@ import com.clinic.schedule.clinicalrecord.domain.exception.ResultAlreadyRecorded
  *
  * <p>Its states follow from the result: without one, the result is pending; with one, the check
  * is reported, and the result never changes. A check whose result is known at once is born
- * reported.
+ * reported. A mistake in it — a wrong result, say — is corrected with an addendum, as a
+ * consultation is (D-52): added at the end, nothing already written changed.
  *
  * <p>Whoever did it is one of the practice's practitioners today. Checks done elsewhere will come
  * in through an anti-corruption layer later; nothing else here assumes where a check was done.
  *
- * <p>Plain domain object and immutable, like {@link Consultation}. Who may record a check or its
- * result is the clinical record's access rule, applied by the use cases.
+ * <p>Plain domain object and immutable, like {@link Consultation}. Who may record a check, its
+ * result or an addendum is the clinical record's access rule, applied by the use cases.
  */
 public class Check {
 
@@ -36,9 +40,10 @@ public class Check {
     private final String description;
     private final ConsultationId consultationId;
     private final CheckResult result;
+    private final List<Addendum> addenda;
 
     private Check(CheckId id, PatientId patientId, PractitionerId performedBy, LocalDateTime performedAt,
-            String description, ConsultationId consultationId, CheckResult result) {
+            String description, ConsultationId consultationId, CheckResult result, List<Addendum> addenda) {
         this.id = id;
         this.patientId = patientId;
         this.performedBy = performedBy;
@@ -46,6 +51,7 @@ public class Check {
         this.description = description;
         this.consultationId = consultationId;
         this.result = result;
+        this.addenda = addenda;
     }
 
     /**
@@ -65,14 +71,22 @@ public class Check {
                 new CheckResult(performedBy, performedAt, result));
     }
 
-    /**
-     * A check read back from storage, checked the same way, so there is no way to obtain an
-     * invalid one. Public because the storage adapter lives in another package.
-     *
-     * @param result null while it is pending
-     */
+    /** A stored check without addenda; see {@link #restore(CheckId, PatientId, PractitionerId, LocalDateTime, String, ConsultationId, CheckResult, List)}. */
     public static Check restore(CheckId id, PatientId patientId, PractitionerId performedBy,
             LocalDateTime performedAt, String description, ConsultationId consultationId, CheckResult result) {
+        return restore(id, patientId, performedBy, performedAt, description, consultationId, result, List.of());
+    }
+
+    /**
+     * A check read back from storage, with its addenda, checked the same way, so there is no way
+     * to obtain an invalid one. Public because the storage adapter lives in another package.
+     *
+     * @param result null while it is pending
+     * @param addenda in the order they were written
+     */
+    public static Check restore(CheckId id, PatientId patientId, PractitionerId performedBy,
+            LocalDateTime performedAt, String description, ConsultationId consultationId, CheckResult result,
+            List<Addendum> addenda) {
         if (id == null || patientId == null || performedBy == null || performedAt == null) {
             throw new IllegalArgumentException("A check needs an id, a patient, who did it and when");
         }
@@ -83,9 +97,18 @@ public class Check {
         if (stripped.length() > MAX_DESCRIPTION_LENGTH) {
             throw new IllegalArgumentException("A check is described in at most " + MAX_DESCRIPTION_LENGTH + " characters");
         }
-        Check pending = new Check(id, patientId, performedBy, performedAt, stripped, consultationId, null);
+        if (addenda == null || addenda.stream().anyMatch(Objects::isNull)) {
+            throw new IllegalArgumentException("The addenda of a check cannot be missing");
+        }
+        Check check = new Check(id, patientId, performedBy, performedAt, stripped, consultationId, null, List.of());
         // Whether a result without text had its attachments was checked when it was written.
-        return result == null ? pending : pending.withResult(result, true);
+        if (result != null) {
+            check = check.withResult(result, true);
+        }
+        for (Addendum addendum : addenda) {
+            check = check.withAddendum(addendum);
+        }
+        return check;
     }
 
     /**
@@ -118,7 +141,33 @@ public class Check {
         if (newResult.writtenAt().isBefore(performedAt)) {
             throw new IllegalArgumentException("A result is written after the check was done");
         }
-        return new Check(id, patientId, performedBy, performedAt, description, consultationId, newResult);
+        return new Check(id, patientId, performedBy, performedAt, description, consultationId, newResult, addenda);
+    }
+
+    /**
+     * The same check with one more addendum at the end, pending or reported alike. Nothing already
+     * written changes (D-58). An addendum is written after the check was done and after the addenda
+     * before it, and each one is added once.
+     */
+    public Check withAddendum(Addendum addendum) {
+        if (addendum == null) {
+            throw new IllegalArgumentException("An addendum is required");
+        }
+        LocalDateTime latest = addenda.isEmpty() ? performedAt : addenda.getLast().writtenAt();
+        if (addendum.writtenAt().isBefore(latest)) {
+            throw new IllegalArgumentException("An addendum is written after the check and the addenda before it");
+        }
+        if (hasAddendum(addendum.id())) {
+            throw new IllegalArgumentException("The check already has addendum " + addendum.id().value());
+        }
+        List<Addendum> more = new ArrayList<>(addenda);
+        more.add(addendum);
+        return new Check(id, patientId, performedBy, performedAt, description, consultationId, result,
+                List.copyOf(more));
+    }
+
+    public boolean hasAddendum(AddendumId addendumId) {
+        return addenda.stream().anyMatch(addendum -> addendum.id().equals(addendumId));
     }
 
     public boolean isPending() {
@@ -153,5 +202,10 @@ public class Check {
     /** Empty while the result is pending. */
     public Optional<CheckResult> result() {
         return Optional.ofNullable(result);
+    }
+
+    /** In the order they were written. */
+    public List<Addendum> addenda() {
+        return addenda;
     }
 }

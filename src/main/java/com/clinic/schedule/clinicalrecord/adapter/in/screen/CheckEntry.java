@@ -13,7 +13,8 @@ import com.clinic.schedule.clinicalrecord.domain.Check;
  * author — or that it is pending, when {@code pending} is true and the result fields are null.
  */
 record CheckEntry(UUID id, String performedAt, String performedBy, String description, boolean pending,
-        String result, String resultAuthor, String resultWrittenAt, List<AttachmentEntry> attachments) {
+        String result, String resultAuthor, String resultWrittenAt, List<AttachmentEntry> attachments,
+        List<ClinicalRecordEntry.Note> addenda) {
 
     /**
      * @param attachments every attachment of the record; this check's are picked
@@ -29,6 +30,10 @@ record CheckEntry(UUID id, String performedAt, String performedBy, String descri
                 check.result().map(result -> result.text()).orElse(null),
                 check.result().map(result -> ClinicalRecordEntry.nameOf(names, result.author().value())).orElse(null),
                 check.result().map(result -> ClinicalRecordEntry.format(result.writtenAt())).orElse(null),
-                AttachmentEntry.ofOwner(attachments, new AttachmentOwner.OfCheck(check.id()), names));
+                AttachmentEntry.ofOwner(attachments, new AttachmentOwner.OfCheck(check.id()), names),
+                check.addenda().stream()
+                        .map(addendum -> new ClinicalRecordEntry.Note(ClinicalRecordEntry.format(addendum.writtenAt()),
+                                ClinicalRecordEntry.nameOf(names, addendum.author().value()), addendum.text()))
+                        .toList());
     }
 }

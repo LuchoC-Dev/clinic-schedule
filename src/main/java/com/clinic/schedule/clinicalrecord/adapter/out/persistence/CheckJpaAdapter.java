@@ -7,13 +7,13 @@ import java.util.Optional;
 import org.springframework.orm.ObjectOptimisticLockingFailureException;
 import org.springframework.stereotype.Repository;
 
+import com.clinic.schedule.clinicalrecord.application.exception.CheckChangedException;
 import com.clinic.schedule.clinicalrecord.application.port.CheckRepository;
 import com.clinic.schedule.clinicalrecord.domain.Check;
 import com.clinic.schedule.clinicalrecord.domain.CheckId;
 import com.clinic.schedule.clinicalrecord.domain.ConsultationId;
 import com.clinic.schedule.clinicalrecord.domain.PatientId;
 import com.clinic.schedule.clinicalrecord.domain.PractitionerId;
-import com.clinic.schedule.clinicalrecord.domain.exception.ResultAlreadyRecordedException;
 
 /** Implements the port over JPA. The only place that knows checks live in a table. */
 @Repository
@@ -51,23 +51,23 @@ class CheckJpaAdapter implements CheckRepository {
     }
 
     /**
-     * A new check is inserted whole. An existing one only ever gains its result (D-53): it is
-     * written onto the row read earlier in the same transaction, whose version then says whether
-     * someone else recorded a result meanwhile. It flushes at once, so that refusal is answered
-     * here, as the {@link ResultAlreadyRecordedException} it means, and not at commit.
+     * A new check is inserted whole. An existing one only ever gains its result and addenda (D-53,
+     * D-58): they are written onto the row read earlier in the same transaction, whose version then
+     * says whether someone else changed it meanwhile. It flushes at once, so that refusal is
+     * answered here, as a {@link CheckChangedException}, and not at commit.
      */
     @Override
     public void save(Check check) {
         try {
             CheckRow row = rows.findById(check.id().value())
                     .map(existing -> {
-                        existing.resultFrom(check);
+                        existing.changesFrom(check);
                         return existing;
                     })
                     .orElseGet(() -> CheckRow.from(check));
             rows.saveAndFlush(row);
         } catch (ObjectOptimisticLockingFailureException e) {
-            throw new ResultAlreadyRecordedException(check.id());
+            throw new CheckChangedException(check.id());
         }
     }
 }

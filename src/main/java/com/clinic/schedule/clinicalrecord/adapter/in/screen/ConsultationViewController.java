@@ -70,7 +70,7 @@ class ConsultationViewController {
 
     /**
      * A patient's clinical record, to read — before the patient arrives, for instance — and to
-     * add addenda to its consultations (D-52).
+     * add addenda to its consultations and checks (D-52, D-58).
      */
     @GetMapping("/clinical-records/{patientId}")
     String clinicalRecord(@PathVariable UUID patientId, Model model) {

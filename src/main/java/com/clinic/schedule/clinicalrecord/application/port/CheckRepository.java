@@ -28,10 +28,10 @@ public interface CheckRepository {
     Optional<LocalDateTime> findLastPerformedAt(PatientId patientId, PractitionerId practitionerId);
 
     /**
-     * Stores a new check, or the result of one read in the same transaction.
+     * Stores a new check, or what one read in the same transaction gained: its result, addenda.
      *
-     * @throws com.clinic.schedule.clinicalrecord.domain.exception.ResultAlreadyRecordedException
-     *         when someone else recorded a result for it meanwhile
+     * @throws com.clinic.schedule.clinicalrecord.application.exception.CheckChangedException when
+     *         someone else changed it meanwhile
      */
     void save(Check check);
 }

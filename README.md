@@ -80,6 +80,7 @@ Spanish, for the staff.
 | `POST` | `/api/consultations` | a practitioner records the consultation of a patient who arrived today — notes, prescriptions, the checks done and the orders issued |
 | `POST` | `/api/consultations/{id}/addenda` | an addendum to a consultation already sent, by any practitioner with access to the record |
 | `POST` | `/api/checks` | a check without a consultation — the emergency precaution — with its result or pending; it may fulfil an open order |
+| `POST` | `/api/checks/{id}/addenda` | an addendum to a check — how a wrong result is corrected — by any practitioner with access to the record |
 | `POST` | `/api/orders/{id}/cancel` | the author cancels an open order, with a reason |
 | `POST` | `/api/consultations/{id}/attachments`, `/api/checks/{id}/attachments` | attach a PDF, PNG or JPEG of up to 10 MB, as `multipart/form-data` with a `file` part |
 | `GET` | `/api/attachments/{id}` | download an attached file — only for whoever may read the record |

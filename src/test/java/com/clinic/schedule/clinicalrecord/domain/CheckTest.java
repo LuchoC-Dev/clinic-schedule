@@ -5,6 +5,7 @@ import static org.assertj.core.api.Assertions.assertThatIllegalArgumentException
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import java.time.LocalDateTime;
+import java.util.List;
 import java.util.UUID;
 
 import org.junit.jupiter.api.Test;
@@ -116,5 +117,34 @@ class CheckTest {
         assertThat(pending().withResult(withoutText, true).isPending()).isFalse();
         assertThat(pending().withResult(new CheckResult(ANALYST, AT.plusDays(1), "Normal."), false).isPending())
                 .isFalse();
+    }
+
+    @Test
+    void anAddendumCorrectsACheckWithoutChangingIt() {
+        Check reported = pending().withResult(new CheckResult(ANALYST, AT.plusDays(1), "Resultado equivocado."));
+        Addendum correction = new Addendum(AddendumId.newId(), WHO_DID_IT, AT.plusDays(2),
+                "El resultado corresponde a otro paciente.");
+
+        Check corrected = reported.withAddendum(correction);
+
+        assertThat(corrected.addenda()).containsExactly(correction);
+        assertThat(corrected.result()).isEqualTo(reported.result());
+        assertThat(corrected.description()).isEqualTo(reported.description());
+        assertThat(reported.addenda()).isEmpty();
+        assertThat(pending().withAddendum(correction).isPending()).isTrue();
+    }
+
+    @Test
+    void addendaGoInOrderAfterTheCheckAndEachOnce() {
+        Addendum first = new Addendum(AddendumId.newId(), ANALYST, AT.plusDays(2), "Primera.");
+        Check once = pending().withAddendum(first);
+
+        assertThatIllegalArgumentException().isThrownBy(() -> once.withAddendum(first));
+        assertThatIllegalArgumentException().isThrownBy(() -> once.withAddendum(
+                new Addendum(AddendumId.newId(), ANALYST, AT.plusDays(1), "Fuera de orden.")));
+        assertThatIllegalArgumentException().isThrownBy(() -> pending().withAddendum(
+                new Addendum(AddendumId.newId(), ANALYST, AT.minusMinutes(1), "Antes del chequeo.")));
+        assertThat(Check.restore(ID, PATIENT, WHO_DID_IT, AT, "x", null, null, List.of(first)).addenda())
+                .containsExactly(first);
     }
 }

@@ -7,6 +7,7 @@ import java.util.Objects;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import com.clinic.schedule.clinicalrecord.application.exception.CheckChangedException;
 import com.clinic.schedule.clinicalrecord.application.exception.ClinicalRecordAccessDeniedException;
 import com.clinic.schedule.clinicalrecord.application.port.AttachmentRepository;
 import com.clinic.schedule.clinicalrecord.application.port.CheckRepository;
@@ -69,7 +70,12 @@ public class RecordCheckResultUseCase {
             return check;
         }
         Check reported = check.withResult(result, attachments.existsFor(new AttachmentOwner.OfCheck(check.id())));
-        checks.save(reported);
+        try {
+            checks.save(reported);
+        } catch (CheckChangedException e) {
+            // Whatever changed it meanwhile, a result recorded at the same time is what this refusal means.
+            throw new ResultAlreadyRecordedException(check.id());
+        }
         return reported;
     }
 

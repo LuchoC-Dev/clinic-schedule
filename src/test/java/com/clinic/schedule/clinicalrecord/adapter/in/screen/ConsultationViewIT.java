@@ -426,4 +426,28 @@ class ConsultationViewIT {
                 .andExpect(content().string(containsString("hemograma.pdf")))
                 .andExpect(content().string(not(containsString("Resultado pendiente."))));
     }
+
+    // --- addenda on checks (D-58) -------------------------------------------------------
+
+    @Test
+    void aCheckGetsAnAddendumFromTheRecord() throws Exception {
+        arrivedToday();
+        mockMvc.perform(post("/checks").with(asArias).with(csrf())
+                .param("patientId", patient.toString())
+                .param("description", "Microalbuminuria")
+                .param("result", "Resultado equivocado"));
+        MvcResult record = mockMvc.perform(get("/api/clinical-records/" + patient).with(asArias)).andReturn();
+        String check = json.readTree(record.getResponse().getContentAsString()).get("checks").get(0).get("id").asText();
+
+        mockMvc.perform(post("/checks/" + check + "/addenda").with(asArias).with(csrf())
+                        .param("patientId", patient.toString())
+                        .param("text", "El resultado corresponde a otro paciente."))
+                .andExpect(redirectedUrl("/clinical-records/" + patient))
+                .andExpect(flash().attribute("message", "Aclaración agregada."));
+
+        mockMvc.perform(get("/clinical-records/" + patient).with(asArias))
+                .andExpect(content().string(containsString("Resultado equivocado")))
+                .andExpect(content().string(containsString("El resultado corresponde a otro paciente.")))
+                .andExpect(content().string(containsString("Aclaración sobre el chequeo")));
+    }
 }

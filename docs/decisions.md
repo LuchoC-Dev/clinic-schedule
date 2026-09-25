@@ -1590,7 +1590,7 @@ renaming the module now, before the second kind of entry that justifies it.
 ---
 
 ## D-53 — A check is an aggregate of its own, and the clinical record gathers consultations and checks
-**Date:** 2026-09-25 · **Status:** accepted
+**Date:** 2026-09-25 · **Status:** accepted; addenda on checks brought forward in D-58
 
 A check is a procedure, not an encounter: it is done, and reported. Its result may arrive later
 and come from someone else — a blood sample drawn by one practitioner and analysed by another —
@@ -1812,4 +1812,28 @@ files and takes new ones, and the result form takes a file.
 instance); an object store now (infrastructure the practice does not need yet); trusting the
 declared type; deleting or marking files (the record only grows); files as a check result's own
 field (a file is attached to the check, and may come before its result).
+
+---
+
+## D-58 — Addenda on checks
+**Date:** 2026-09-25 · **Status:** accepted
+
+D-53 left addenda on checks for after part 3. Testing by hand showed why they cannot wait: a result
+recorded by mistake — "esto es falso, debe eliminarse" — had no way to be corrected, since a result
+never changes, and a check done without a consultation had no consultation to add a note to.
+
+**The rule is the consultation's (D-52).** Any practitioner who may read the patient's record adds
+an addendum to a check, pending or reported, at any time: its time and author, up to 2 000
+characters, added at the end, nothing already written changed. `Check.withAddendum` keeps them in
+order and each once, reusing `Addendum`. A check that does not exist is refused like one the user
+may not read; a retry with the same id adds nothing. `POST /api/checks/{id}/addenda`; the check's
+answer carries its `addenda`; the record screen shows them under each check with a form to add one.
+
+**The version guards both.** `V15` stores the addenda in `check_addendum`, in order. The check's
+version, which guarded its result, now guards its addenda too, so the adapter refuses a concurrent
+write as `CheckChangedException` (409) whatever changed. The result's use case still answers it as
+`ResultAlreadyRecordedException`, since for a result that is what it means.
+
+*Rejected:* editing or deleting the result (the record only grows); addenda only through the
+consultation (a check without one would have nowhere to be corrected).
 

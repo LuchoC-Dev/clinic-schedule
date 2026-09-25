@@ -111,7 +111,8 @@ heartbeat heard with a stethoscope during the consultation is another.
 - Its result is known at once (a pulse of 72) or arrives later (a blood test). Free text today,
   meant to be given a structure later.
 - A pending result is recorded by any practitioner who may read the patient's record — whoever
-  did the check, or whoever analyses a sample. A check has one result, and it never changes.
+  did the check, or whoever analyses a sample. A check has one result, and it never changes: a
+  wrong one is corrected with an addendum to the check, as a consultation is.
 - Checks may one day come from other practices, through an anti-corruption layer; nothing in the
   model assumes a check was done here.
 

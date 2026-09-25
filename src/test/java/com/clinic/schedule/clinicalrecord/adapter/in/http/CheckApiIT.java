@@ -213,4 +213,46 @@ class CheckApiIT {
                 """.formatted(patient))
                 .andExpect(status().isBadRequest());
     }
+
+    // --- addenda (D-58) -----------------------------------------------------------------
+
+    @Test
+    void aWrongResultIsCorrectedWithAnAddendumByWhoeverMayReadTheRecord() throws Exception {
+        String check = consultationWithAPendingCheck();
+        send(asArias, "/api/checks/" + check + "/result", """
+                {"text": "Resultado equivocado."}
+                """).andExpect(status().isOk());
+        CreatedPractitioner other = practitioners.workingEveryDay();
+        RequestPostProcessor asOther = users.userFor(other.id());
+        String body = """
+                {"id": "%s", "text": "El resultado corresponde a otro paciente."}
+                """.formatted(UUID.randomUUID());
+
+        send(asOther, "/api/checks/" + check + "/addenda", body).andExpect(status().isForbidden());
+
+        send(asArias, "/api/checks/" + check + "/addenda", body)
+                .andExpect(status().isCreated())
+                .andExpect(jsonPath("$.result.text").value("Resultado equivocado."))
+                .andExpect(jsonPath("$.addenda", hasSize(1)))
+                .andExpect(jsonPath("$.addenda[0].practitionerId").value(arias.id().toString()));
+        send(asArias, "/api/checks/" + check + "/addenda", body)
+                .andExpect(status().isCreated())
+                .andExpect(jsonPath("$.addenda", hasSize(1)));
+
+        readRecord(asArias)
+                .andExpect(jsonPath("$.consultations[0].checks[1].addenda[0].text")
+                        .value("El resultado corresponde a otro paciente."));
+    }
+
+    @Test
+    void anAddendumNeedsATextAndAnExistingCheck() throws Exception {
+        String check = consultationWithAPendingCheck();
+
+        send(asArias, "/api/checks/" + check + "/addenda", """
+                {"text": " "}
+                """).andExpect(status().isBadRequest());
+        send(asArias, "/api/checks/" + UUID.randomUUID() + "/addenda", """
+                {"text": "x"}
+                """).andExpect(status().isForbidden());
+    }
 }

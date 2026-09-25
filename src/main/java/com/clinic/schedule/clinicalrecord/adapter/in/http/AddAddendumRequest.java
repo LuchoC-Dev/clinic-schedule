@@ -11,8 +11,8 @@ import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Size;
 
 /**
- * The body of an addendum. {@code id} is optional and makes a retry safe (D-19); the author and
- * the time are whoever sends it, and now (D-52).
+ * The body of an addendum, to a consultation or a check. {@code id} is optional and makes a retry
+ * safe (D-19); the author and the time are whoever sends it, and now (D-52, D-58).
  */
 record AddAddendumRequest(
         UUID id,
