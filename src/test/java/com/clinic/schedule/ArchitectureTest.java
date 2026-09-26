@@ -26,7 +26,9 @@ import jakarta.persistence.Entity;
  *       and {@code user} — each layer is reached only by the one above it, so nothing but the
  *       service reads or writes storage;</li>
  *   <li>only the service changes an entity (D-17): presentation may read one, through its
- *       getters, and nothing more.</li>
+ *       getters, and nothing more;</li>
+ *   <li>in {@code arrival}, which keeps events (D-62), the domain knows no framework, and the reads
+ *       never touch the events: those are the commands'.</li>
  * </ul>
  *
  * <p>Only production classes are checked; tests reach wherever they need to.
@@ -40,7 +42,7 @@ class ArchitectureTest {
             .importPackages("com.clinic.schedule");
 
     @ParameterizedTest
-    @ValueSource(strings = {"appointment", "clinicalrecord", "patient", "practitioner", "security", "user"})
+    @ValueSource(strings = {"appointment", "arrival", "clinicalrecord", "patient", "practitioner", "security", "user"})
     void anotherModuleIsReachedOnlyThroughItsApi(String module) {
         noClasses().that().resideOutsideOfPackage(BASE + module + "..")
                 .should().dependOnClassesThat(resideInAPackage(BASE + module + "..")
@@ -82,6 +84,24 @@ class ArchitectureTest {
         noClasses().that().resideOutsideOfPackages("..service..", "..entity..")
                 .should().callMethodWhere(changesAnEntity)
                 .because("the service is the only way to change an entity (D-17)")
+                .check(CLASSES);
+    }
+
+    @org.junit.jupiter.api.Test
+    void theArrivalDomainKnowsNoFramework() {
+        noClasses().that().resideInAPackage(BASE + "arrival..domain..")
+                .should().dependOnClassesThat().resideInAnyPackage("org.springframework..", "jakarta.persistence..",
+                        "com.fasterxml.jackson..", BASE + "arrival.eventstore..")
+                .because("the domain decides; storing and wiring are someone else's (D-16, D-62)")
+                .check(CLASSES);
+    }
+
+    @org.junit.jupiter.api.Test
+    void theArrivalReadsNeverTouchTheEvents() {
+        noClasses().that().resideInAPackage(BASE + "arrival..query..")
+                .should().dependOnClassesThat().resideInAnyPackage(BASE + "arrival.eventstore..",
+                        BASE + "arrival..command..", BASE + "arrival..projection..")
+                .because("the reads come from the projections' tables; the events belong to the commands (D-62)")
                 .check(CLASSES);
     }
 }

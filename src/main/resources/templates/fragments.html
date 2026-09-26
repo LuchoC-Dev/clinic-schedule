@@ -64,6 +64,7 @@
     <a th:href="@{/orders/mine}" th:if="${readOnly}">Mis órdenes</a>
     <a th:href="@{/patients}" th:unless="${readOnly}">Pacientes</a>
     <a th:href="@{/practitioners}" th:unless="${readOnly}">Profesionales</a>
+    <a th:href="@{/queues}" th:unless="${readOnly}">Colas</a>
     <form class="inline" method="post" th:action="@{/logout}">
         <button type="submit">Salir</button>
     </form>

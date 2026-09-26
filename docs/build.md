@@ -671,6 +671,37 @@ booked; cancelling, checking in and warning it answered 409, and the old route 4
 the agenda showed "Ausente" with no buttons, today and yesterday. Dra. Arias read the record of a
 patient absent today, and could not record a consultation (403).
 
+#### Part 4 — Setting up queues `[x]`
+- [x] A new module, `arrival`, with its own architecture: event sourcing and CQRS, split by
+      subdomain — `eventstore/`, and `setup/` with `domain/`, `command/`, `query/`,
+      `projection/`, `http/` and `screen/` (D-62)
+- [x] `Queue` rebuilt from its events — created, renamed, a practitioner joined or left — and
+      `QueueSetupService`, the only way in: a name nobody else has whatever the case, a
+      practitioner serving one queue at most; a queue with nobody serving it stays
+- [x] `V19`: `arrival_event`, keyed by stream and version, with who and when; the projections
+      `arrival_queue` and `queue_membership`, written in the same transaction, whose keys guard
+      both rules when two writers race
+- [x] `POST`/`GET /api/queues`, `GET`/`PUT /api/queues/{id}`, `POST /api/queues/{id}/practitioners`,
+      `DELETE /api/queues/{id}/practitioners/{practitionerId}`; screens `/queues` and `/queues/{id}`,
+      for reception
+- [x] `ArchitectureTest`: `arrival` through its api like every module; its domain with no
+      framework; its reads never on the events
+- [x] 12 unit tests (9 on the domain, 3 architecture rules) and 19 integration tests. 260 unit and
+      302 integration tests, 562 in total
+
+**Verified with:** each of these failing its tests when broken on purpose — the service letting a
+practitioner into a second queue, the projection telling names apart by case, the commands not
+updating the projection, every event appended as the first, a replay accepting a practitioner
+twice, the reads going to the events; `mvnw verify` with the PostgreSQL tests running V19.
+
+**Verified with the application running** on a throwaway PostgreSQL: two queues set up, one
+without a room; "guardia" refused beside "Guardia"; Dra. Arias refused a second queue; a
+practitioner refused the routes (403). Two requests at once putting Dra. Arias into two queues
+got a 200 and a 409, and the refused one left no event behind. The events read back in order, each
+with its JSON and `recepcion`. In a browser, the queues screen listed each with who serves it, a
+queue was created and Dr. Benítez moved into it from another, which stayed with nobody serving it;
+a taken name was refused in Spanish.
+
 ---
 
 ## Explicitly postponed

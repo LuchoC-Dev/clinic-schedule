@@ -50,8 +50,9 @@ removes (D-34).
 week, of one practitioner or everyone — with the day's operations as buttons (*Llegó*,
 *Avisó demora*, *Mover*, *Cancelar*), a booking screen that suggests the free times, a patients
 screen — where a patient who gives no name is registered under an alias, and each patient's
-identity is corrected and verified, with its history — each patient's appointments, cancelled ones included, and a practitioners screen to set
-up their reasons and week and record their absences. A practitioner gets their own agenda,
+identity is corrected and verified, with its history — each patient's appointments, cancelled ones included, a practitioners screen to set
+up their reasons and week and record their absences, and a queues screen to set up the arrival
+queues and who serves each. A practitioner gets their own agenda,
 read-only, with today's patients linked to their clinical record and *Empezar consulta* once
 they arrived: a form beside the record, sent once and never changed, and completed afterwards
 with addenda. Under *Resultados pendientes* they find the checks waiting for a result, and ask
@@ -81,6 +82,10 @@ Spanish, for the staff.
 | `POST` | `/api/appointments/{id}/late-arrival-notice` | the patient warned they will be late |
 | `GET` | `/api/appointments?practitionerId=&date=` | a day's agenda — a practitioner may only ask for their own |
 | `POST` | `/api/time-off` | a practitioner's absence — whole days up to `untilDate`, or part of one — cancelling the appointments it hits |
+| `POST`, `GET` | `/api/queues` | set up a queue — a name nobody else has, an optional room — and list them with who serves each |
+| `GET`, `PUT` | `/api/queues/{id}` | read a queue, rename it or change its room |
+| `POST` | `/api/queues/{id}/practitioners` | a practitioner starts serving the queue; one queue at most each |
+| `DELETE` | `/api/queues/{id}/practitioners/{practitionerId}` | a practitioner stops serving it; the queue stays |
 | `POST` | `/api/consultations` | a practitioner records the consultation of a patient who arrived today — notes, prescriptions, the checks done and the orders issued |
 | `POST` | `/api/consultations/{id}/addenda` | an addendum to a consultation already sent, by any practitioner with access to the record |
 | `POST` | `/api/checks` | a check without a consultation — the emergency precaution — with its result or pending; it may fulfil an open order |

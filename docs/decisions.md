@@ -1985,3 +1985,77 @@ no row is changed.
 is what the patient warned about); hiding absent appointments like cancelled ones (whoever did not
 come is worth seeing); keeping the old route as an alias (no client outside the application uses
 it).
+
+---
+
+## D-62 — The arrival module keeps events, and the queues' setup is the first stream
+**Date:** 2026-09-26 · **Status:** accepted
+
+Every module is laid out by its own architecture. `arrival` — the queues — tries a third one,
+built on the domain rather than on layers or on a hexagon: **event sourcing, with the commands and
+the reads apart (CQRS)**. It fits what a queue is: a sequence of facts — who came, who was called,
+who was seen — which part 5 will record; the log of those facts is the traceability, and part 6's
+live screens will be fed by the same events.
+
+**The module is split by subdomain**, and each subdomain by what its parts do:
+
+```
+arrival/
+├── eventstore/        the event store, shared by the subdomains
+└── setup/             how the queues are set up                ← part 4
+    ├── domain/        Queue, its events, QueueSetupService, the refusals — no framework
+    ├── command/       one use case per change: read, decide, append, project
+    ├── query/         the reads, from the projection's tables
+    ├── projection/    the tables the events add up to
+    ├── http/  screen/
+```
+
+`session/`, each opening of a queue, arrives in part 5. The stream of a session is an opening — from
+when reception opens the queue until it closes — not a day: a queue left open past midnight is one
+session, and one reopened is a new one, which is why whoever was not seen does not come back.
+
+**The setup is events too**, not a table that changes. Serving a queue will let a practitioner
+read the records of the patients waiting in it, so who served which queue, and from when, is access
+to clinical content, and must be traceable like the readings (D-59). As events it is, by
+construction: `QueueCreated`, `QueueRenamed`, `PractitionerJoined`, `PractitionerLeft`.
+
+**The domain.** `Queue.replay` adds a queue's events up into the queue they describe, checking each
+one, so a queue read back obeys the same rules as one being set up. Deciding something answers with
+the event that says so and leaves the queue as it was; applying the event gives the new one (D-17).
+The decisions are package-private: the only way in is `QueueSetupService`, since two rules look
+beyond one queue — no two queues share a name, whatever the case, and a practitioner serves one
+queue at most. It is given the other queues' names and the practitioner's current queue, and reads
+nothing. A queue needs a name up to 60 characters; its consulting room is optional, up to 20. A
+queue left with nobody serving it stays; queues are never deleted.
+
+**The event store** (`V19`, `arrival_event`) keeps, per stream and version, the event's type, its
+payload as JSON text, and when and by whom it was recorded — the `Clock` and
+`CurrentUserReader.username()`. The type is a fixed name chosen by the stream's owner, never a
+class name, so renaming a class does not orphan what was stored. Two writers of one stream at once
+take the same version, and the primary key refuses the second: `StreamChangedException`, a 409.
+Plain JDBC over portable SQL, since an append-only table with a composite key gains nothing from
+JPA.
+
+**The projection guards what spans streams.** Each stream sees only itself, so the two rules across
+queues cannot be kept by the events alone. `QueueProjection` writes `arrival_queue` — with a unique
+key on the lower-case name — and `queue_membership` — keyed by the practitioner — in the same
+transaction as the events. The service checks the rules against it; what two commands at once still
+let through, the keys refuse, and the events of that transaction go with it. Being derived, both
+tables could be rebuilt from the events.
+
+**Commands and reads apart.** A command answers nothing of its own but the new queue's id; the
+API runs it and reads the queue back. The reads come from the projection, never from the events,
+which belong to the commands; `ArchitectureTest` checks it, and that the domain depends on no
+framework, JSON library or store.
+
+**API and screens**, for reception only: `POST /api/queues`, `GET /api/queues`, `GET` and `PUT
+/api/queues/{id}`, `POST /api/queues/{id}/practitioners` and `DELETE
+/api/queues/{id}/practitioners/{practitionerId}` — a `DELETE` because it takes someone out of the
+queue and nothing else, while the events still say they served it. The screens `/queues` and
+`/queues/{id}` offer to add only the practitioners who serve no queue yet. Nothing reads the events
+themselves yet; admins will.
+
+*Rejected:* a hexagon or layers again (the module was chosen to try something else); the setup as a
+table with a history beside it (two patterns in one module, and a history written as an extra step);
+the day as the stream of a queue (a queue may stay open past midnight); class names as event types
+(a rename would orphan the events); JPA for the event store (nothing for it to map).

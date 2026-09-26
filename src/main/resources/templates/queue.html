@@ -1,0 +1,53 @@
+<!DOCTYPE html>
+<html lang="es" xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{fragments :: head('Cola')}"></head>
+<body>
+<header th:replace="~{fragments :: header}"></header>
+<main>
+    <h1 th:text="${queue.name}">Guardia</h1>
+    <p class="muted" th:if="${queue.room}" th:text="'Consultorio ' + ${queue.room}">Consultorio 3</p>
+    <div th:replace="~{fragments :: messages}"></div>
+
+    <h2>Datos</h2>
+    <form class="card bar" method="post" th:action="@{/queues/{id}(id=${queue.id})}">
+        <label>Nombre
+            <input type="text" name="name" required maxlength="60" th:value="${queue.name}">
+        </label>
+        <label>Consultorio
+            <input type="text" name="room" maxlength="20" th:value="${queue.room}" placeholder="opcional">
+        </label>
+        <button type="submit" class="primary">Guardar</button>
+    </form>
+
+    <h2>Profesionales</h2>
+    <p th:if="${queue.practitioners.isEmpty()}" class="muted">Nadie atiende esta cola.</p>
+    <table th:unless="${queue.practitioners.isEmpty()}">
+        <tbody>
+        <tr th:each="p : ${queue.practitioners}">
+            <td th:text="${p.fullName}">Dra. Laura Arias</td>
+            <td class="actions">
+                <form class="inline" method="post"
+                      th:action="@{/queues/{id}/practitioners/{pid}/remove(id=${queue.id},pid=${p.id})}">
+                    <button type="submit" class="danger">Quitar</button>
+                </form>
+            </td>
+        </tr>
+        </tbody>
+    </table>
+
+    <!-- A practitioner serves one queue at most, so only who serves none is offered (D-62). -->
+    <form class="card bar" method="post" th:action="@{/queues/{id}/practitioners(id=${queue.id})}"
+          th:unless="${available.isEmpty()}">
+        <label>Agregar profesional
+            <select name="practitionerId" required>
+                <option th:each="p : ${available}" th:value="${p.id}" th:text="${p.fullName}"></option>
+            </select>
+        </label>
+        <button type="submit">Agregar</button>
+    </form>
+    <p class="muted" th:if="${available.isEmpty()}">Todos los profesionales ya atienden una cola.</p>
+
+    <p><a th:href="@{/queues}">Volver a las colas</a></p>
+</main>
+</body>
+</html>

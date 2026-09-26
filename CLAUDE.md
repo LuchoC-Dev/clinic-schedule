@@ -9,7 +9,7 @@ Read these before proposing design or code:
 
 - `docs/context.md` — what the application does, who uses it, the business rules and the
   planned evolution.
-- `docs/decisions.md` — technical decisions and their reasoning (D-01 … D-58).
+- `docs/decisions.md` — technical decisions and their reasoning (D-01 … D-62).
 - `docs/build.md` — the staged plan and the current progress.
 
 ## Stack
@@ -33,10 +33,11 @@ PostgreSQL 18 (docker-compose) · Thymeleaf. The integration tests run on H2 in 
 - **Undecided technical questions:** propose the simplest option and explain it before
   treating it as agreed. Once accepted, add it to `docs/decisions.md`.
 - **Module boundaries:** `patient/`, `practitioner/`, `appointment/`, `clinicalrecord/`,
-  `security/`, `user/`. A module only uses another module's `api/` package (interface plus
+  `arrival/`, `security/`, `user/`. A module only uses another module's `api/` package (interface plus
   DTOs); `ArchitectureTest` checks it. Never import entities or repositories from another
   module. Each module is laid out by its own architecture: `appointment` and `clinicalrecord` as
-  hexagons (D-41, D-47), the others by layer (D-42).
+  hexagons (D-41, D-47), `arrival` by subdomain with event sourcing and CQRS (D-62), the others
+  by layer (D-42).
 - **An appointment is only a booking.** What happens once the patient is at the practice —
   arrival, consultation, what comes after — belongs to other modules, and a consultation does
   not depend on an appointment (D-48). The check-in stays on the appointment only until the
