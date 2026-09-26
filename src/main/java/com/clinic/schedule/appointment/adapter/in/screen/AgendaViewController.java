@@ -32,7 +32,7 @@ import com.clinic.schedule.appointment.application.usecase.CheckInUseCase;
 import com.clinic.schedule.appointment.application.usecase.FindAppointmentUseCase;
 import com.clinic.schedule.appointment.application.usecase.RescheduleAppointmentUseCase;
 import com.clinic.schedule.appointment.application.usecase.SuggestSlotsUseCase;
-import com.clinic.schedule.appointment.application.usecase.SuspendAutoCancellationUseCase;
+import com.clinic.schedule.appointment.application.usecase.RecordLateArrivalNoticeUseCase;
 import com.clinic.schedule.appointment.application.usecase.ViewAgendaUseCase;
 import com.clinic.schedule.appointment.domain.Appointment;
 import com.clinic.schedule.appointment.domain.AppointmentId;
@@ -75,7 +75,7 @@ class AgendaViewController {
     private final RescheduleAppointmentUseCase reschedule;
     private final CancelAppointmentUseCase cancel;
     private final CheckInUseCase checkIn;
-    private final SuspendAutoCancellationUseCase suspendAutoCancellation;
+    private final RecordLateArrivalNoticeUseCase recordLateArrivalNotice;
     private final SuggestSlotsUseCase suggestSlots;
     private final PractitionerReader practitioners;
     private final PatientReader patients;
@@ -85,7 +85,7 @@ class AgendaViewController {
 
     AgendaViewController(ViewAgendaUseCase agenda, FindAppointmentUseCase findAppointment,
             BookAppointmentUseCase book, RescheduleAppointmentUseCase reschedule, CancelAppointmentUseCase cancel,
-            CheckInUseCase checkIn, SuspendAutoCancellationUseCase suspendAutoCancellation,
+            CheckInUseCase checkIn, RecordLateArrivalNoticeUseCase recordLateArrivalNotice,
             SuggestSlotsUseCase suggestSlots, PractitionerReader practitioners, PatientReader patients,
             PatientWriter newPatients, CurrentUserReader currentUser, Clock clock) {
         this.agenda = agenda;
@@ -94,7 +94,7 @@ class AgendaViewController {
         this.reschedule = reschedule;
         this.cancel = cancel;
         this.checkIn = checkIn;
-        this.suspendAutoCancellation = suspendAutoCancellation;
+        this.recordLateArrivalNotice = recordLateArrivalNotice;
         this.suggestSlots = suggestSlots;
         this.practitioners = practitioners;
         this.patients = patients;
@@ -195,7 +195,7 @@ class AgendaViewController {
     String lateNotice(@PathVariable UUID id, @RequestParam(required = false) UUID practitionerId,
             @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate date,
             @RequestParam(required = false) String view, RedirectAttributes flash) {
-        attempt(() -> suspendAutoCancellation.handle(new AppointmentId(id)),
+        attempt(() -> recordLateArrivalNotice.handle(new AppointmentId(id)),
                 "Anotado: se lo espera hasta 24 horas antes de cancelar.", flash);
         return redirectToAgenda(practitionerId, date, view);
     }

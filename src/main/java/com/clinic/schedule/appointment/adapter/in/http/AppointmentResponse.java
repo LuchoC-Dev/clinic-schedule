@@ -25,7 +25,7 @@ record AppointmentResponse(
         String note,
         AppointmentStatus status,
         LocalDateTime checkedInAt,
-        boolean autoCancellationSuspended) {
+        boolean lateArrivalNotice) {
 
     static AppointmentResponse of(Appointment appointment) {
         return new AppointmentResponse(
@@ -39,6 +39,6 @@ record AppointmentResponse(
                 appointment.note(),
                 appointment.status(),
                 appointment.checkedInAt(),
-                appointment.isAutoCancellationSuspended());
+                appointment.hasLateArrivalNotice());
     }
 }

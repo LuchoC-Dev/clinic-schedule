@@ -5,6 +5,7 @@ import java.time.LocalTime;
 import java.util.UUID;
 
 import com.clinic.schedule.appointment.domain.Appointment;
+import com.clinic.schedule.appointment.domain.AppointmentStatus;
 import com.clinic.schedule.patient.api.PatientSummary;
 
 /**
@@ -44,7 +45,7 @@ record AgendaRow(
                 appointment.note(),
                 appointment.isBooked(),
                 appointment.isCheckedIn(),
-                appointment.isAutoCancellationSuspended(),
+                appointment.hasLateArrivalNotice(),
                 stateOf(appointment));
     }
 
@@ -54,13 +55,16 @@ record AgendaRow(
     }
 
     private static String stateOf(Appointment appointment) {
+        if (appointment.status() == AppointmentStatus.ABSENT) {
+            return "Ausente";
+        }
         if (!appointment.isBooked()) {
             return "Cancelado";
         }
         if (appointment.isCheckedIn()) {
             return "Llegó a las " + appointment.checkedInAt().toLocalTime().withSecond(0).withNano(0);
         }
-        if (appointment.isAutoCancellationSuspended()) {
+        if (appointment.hasLateArrivalNotice()) {
             return "Avisó que llega tarde";
         }
         return "Reservado";

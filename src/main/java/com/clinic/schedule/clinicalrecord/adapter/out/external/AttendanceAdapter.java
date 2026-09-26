@@ -14,8 +14,9 @@ import com.clinic.schedule.clinicalrecord.domain.VisitToday;
 
 /**
  * Answers {@link AttendancePort} from the appointments, through the appointment module's api:
- * a booked appointment with the practitioner that day means the patient is expected, and one
- * with a check-in that they arrived.
+ * an appointment with the practitioner that day means the patient is expected, and one with a
+ * check-in that they arrived. An absent one still counts as expected: the practitioner may keep
+ * reading the record that day, though nobody arrived to record a consultation of (D-61).
  *
  * <p>The only class that knows the arrival is an appointment's check-in today. When the arrival
  * queue takes the arrival over, this is what changes (D-48).
@@ -31,7 +32,7 @@ class AttendanceAdapter implements AttendancePort {
 
     @Override
     public VisitToday visitOn(PractitionerId practitionerId, PatientId patientId, LocalDate day) {
-        List<AppointmentSummary> withThisPractitioner = appointments.findBookedForPatientOn(patientId.value(), day)
+        List<AppointmentSummary> withThisPractitioner = appointments.findNotCancelledForPatientOn(patientId.value(), day)
                 .stream()
                 .filter(appointment -> appointment.practitionerId().equals(practitionerId.value()))
                 .toList();

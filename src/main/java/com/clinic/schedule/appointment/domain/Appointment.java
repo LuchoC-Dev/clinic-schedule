@@ -19,7 +19,7 @@ import com.clinic.schedule.appointment.domain.exception.NotTheAppointmentDayExce
  * final.
  *
  * <p>What this class decides on its own is what depends on itself alone: its shape, what can
- * happen to it in each state, and when it is overdue. Whether a slot collides with somebody
+ * happen to it in each state, and when its patient is absent. Whether a slot collides with somebody
  * else's appointment needs the rest of the agenda, so it is decided by {@link BookingService}.
  *
  * <p>The reason is carried as text: a snapshot of what was booked, together with the
@@ -27,11 +27,11 @@ import com.clinic.schedule.appointment.domain.exception.NotTheAppointmentDayExce
  */
 public class Appointment {
 
-    /** Without a check-in, an appointment is cancelled this long after it should have started. */
+    /**
+     * Without a check-in, the patient is absent this long after the appointment should have
+     * started, unless reception was warned they would be late: then at the end of its day (D-61).
+     */
     static final Duration GRACE_PERIOD = Duration.ofMinutes(30);
-
-    /** The same, once reception was warned the patient would be late (D-06). */
-    static final Duration LATE_ARRIVAL_GRACE_PERIOD = Duration.ofHours(24);
 
     /** As long as the column that stores it (D-38). */
     static final int MAX_NOTE_LENGTH = 500;
@@ -44,11 +44,11 @@ public class Appointment {
     private final String note;
     private final AppointmentStatus status;
     private final LocalDateTime checkedInAt;
-    private final boolean autoCancellationSuspended;
+    private final boolean lateArrivalNotice;
 
     private Appointment(AppointmentId id, PatientId patientId, PractitionerId practitionerId, TimeSlot slot,
             String reason, String note, AppointmentStatus status, LocalDateTime checkedInAt,
-            boolean autoCancellationSuspended) {
+            boolean lateArrivalNotice) {
         this.id = id;
         this.patientId = patientId;
         this.practitionerId = practitionerId;
@@ -57,7 +57,7 @@ public class Appointment {
         this.note = note;
         this.status = status;
         this.checkedInAt = checkedInAt;
-        this.autoCancellationSuspended = autoCancellationSuspended;
+        this.lateArrivalNotice = lateArrivalNotice;
     }
 
     /**
@@ -90,13 +90,13 @@ public class Appointment {
      */
     public static Appointment restore(AppointmentId id, PatientId patientId, PractitionerId practitionerId,
             TimeSlot slot, String reason, String note, AppointmentStatus status, LocalDateTime checkedInAt,
-            boolean autoCancellationSuspended) {
+            boolean lateArrivalNotice) {
         requireInvariants(id, patientId, practitionerId, slot, reason, note);
         if (status == null) {
             throw new IllegalArgumentException("A stored appointment needs a status");
         }
         return new Appointment(id, patientId, practitionerId, slot, reason.strip(), note, status, checkedInAt,
-                autoCancellationSuspended);
+                lateArrivalNotice);
     }
 
     private static void requireInvariants(AppointmentId id, PatientId patientId, PractitionerId practitionerId,
@@ -123,7 +123,7 @@ public class Appointment {
     public Appointment cancelled() {
         requireBooked("cancelled");
         return new Appointment(id, patientId, practitionerId, slot, reason, note, AppointmentStatus.CANCELLED,
-                checkedInAt, autoCancellationSuspended);
+                checkedInAt, lateArrivalNotice);
     }
 
     /**
@@ -147,7 +147,7 @@ public class Appointment {
 
     /**
      * The same appointment, with the patient's arrival confirmed by reception. From then on it
-     * is never cancelled automatically.
+     * is never marked absent (D-61).
      *
      * <p>Only on the day of the appointment: an arrival on another day is a mistake, most likely
      * the wrong line of the agenda (D-38).
@@ -160,41 +160,59 @@ public class Appointment {
         }
         requireTheDayOfTheAppointment(at, "checked in");
         return new Appointment(id, patientId, practitionerId, slot, reason, note, status, at,
-                autoCancellationSuspended);
+                lateArrivalNotice);
     }
 
     /**
-     * The same appointment, after the patient warned they would be late: instead of 30
-     * minutes, it waits 24 hours before being cancelled automatically (D-06).
+     * The same appointment, after the patient warned they would be late: instead of 30 minutes,
+     * it waits until the end of its day before the patient is absent (D-06, D-61). It gives no
+     * priority: whoever warned is placed like any other late arrival.
      *
      * <p>Rejected once the patient arrived, since there is nothing left to wait for, and
      * rejected a second time like any other repeated operation. Only on the day of the
      * appointment, like the check-in it stands in for (D-38).
      */
-    public Appointment withAutoCancellationSuspended(LocalDateTime now) {
+    public Appointment withLateArrivalNotice(LocalDateTime now) {
         requireBooked("given more time");
         requireNotCheckedIn("given more time");
         requireTheDayOfTheAppointment(now, "given more time");
-        if (autoCancellationSuspended) {
-            throw new BookingRuleViolationException("The automatic cancellation of this appointment is already suspended");
+        if (lateArrivalNotice) {
+            throw new BookingRuleViolationException("Reception was already warned that this patient will be late");
         }
         return new Appointment(id, patientId, practitionerId, slot, reason, note, status, checkedInAt, true);
     }
 
     /**
-     * Whether the patient never arrived and the wait is over: 30 minutes after the start, or
-     * 24 hours after it when reception was warned. Never true once the patient checked in, nor
-     * for an appointment that is no longer booked.
-     *
-     * <p>The rule is provisional: when attendance is recorded, a no-show will be recorded
-     * instead of cancelling (see the context).
+     * Whether the patient never arrived and the wait is over: 30 minutes after the start, or at
+     * the midnight that ends its day when reception was warned. Never true once the patient
+     * checked in, nor for an appointment that is no longer booked.
      */
-    public boolean isDueForAutoCancellation(LocalDateTime now) {
+    public boolean isDueForAbsence(LocalDateTime now) {
         if (!isBooked() || isCheckedIn()) {
             return false;
         }
-        Duration wait = autoCancellationSuspended ? LATE_ARRIVAL_GRACE_PERIOD : GRACE_PERIOD;
-        return !now.isBefore(slot.startsAt().plus(wait));
+        LocalDateTime due = lateArrivalNotice
+                ? slot.startsAt().toLocalDate().plusDays(1).atStartOfDay()
+                : slot.startsAt().plus(GRACE_PERIOD);
+        return !now.isBefore(due);
+    }
+
+    /**
+     * The same appointment, with its patient absent: the record that they did not come, which
+     * replaces the automatic cancellation of v1 (D-61). It holds its slot no more, and nothing
+     * happens to it afterwards: a patient who comes after all is seen some other way.
+     *
+     * @throws BookingRuleViolationException when the wait is not over, the patient arrived, or
+     *         it is no longer booked
+     */
+    public Appointment markedAbsent(LocalDateTime now) {
+        requireBooked("marked absent");
+        requireNotCheckedIn("marked absent");
+        if (!isDueForAbsence(now)) {
+            throw new BookingRuleViolationException("The patient of this appointment may still come");
+        }
+        return new Appointment(id, patientId, practitionerId, slot, reason, note, AppointmentStatus.ABSENT,
+                checkedInAt, lateArrivalNotice);
     }
 
     private void requireTheDayOfTheAppointment(LocalDateTime now, String action) {
@@ -204,8 +222,11 @@ public class Appointment {
     }
 
     private void requireBooked(String action) {
-        if (status != AppointmentStatus.BOOKED) {
+        if (status == AppointmentStatus.CANCELLED) {
             throw new BookingRuleViolationException("A cancelled appointment cannot be " + action);
+        }
+        if (status == AppointmentStatus.ABSENT) {
+            throw new BookingRuleViolationException("An appointment whose patient was absent cannot be " + action);
         }
     }
 
@@ -262,7 +283,8 @@ public class Appointment {
         return checkedInAt;
     }
 
-    public boolean isAutoCancellationSuspended() {
-        return autoCancellationSuspended;
+    /** Whether reception was warned the patient would be late. */
+    public boolean hasLateArrivalNotice() {
+        return lateArrivalNotice;
     }
 }

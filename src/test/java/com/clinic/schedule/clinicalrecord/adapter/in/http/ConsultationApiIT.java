@@ -164,6 +164,16 @@ class ConsultationApiIT {
     }
 
     @Test
+    void anAbsentAppointmentTodayStillOpensTheRecordButRecordsNothing() throws Exception {
+        String appointment = book(arias, TODAY, "10:00:00");
+        // The fixed clock stands at midnight, before any of today's appointments could be absent.
+        jdbc.update("update appointment set status = 'ABSENT' where id = ?", UUID.fromString(appointment));
+
+        readRecord(asArias).andExpect(status().isOk());
+        send(asArias, consultation(patient, "Control.")).andExpect(status().isForbidden());
+    }
+
+    @Test
     void anotherPractitionerReadsTheWholeRecordOnlyWhenSeeingThePatient() throws Exception {
         arrivedToday();
         send(asArias, consultation(patient, "Control de hipertensión.")).andExpect(status().isCreated());

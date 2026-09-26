@@ -10,6 +10,7 @@ import java.util.Optional;
 import com.clinic.schedule.appointment.application.port.AppointmentRepository;
 import com.clinic.schedule.appointment.domain.Appointment;
 import com.clinic.schedule.appointment.domain.AppointmentId;
+import com.clinic.schedule.appointment.domain.AppointmentStatus;
 import com.clinic.schedule.appointment.domain.PatientId;
 import com.clinic.schedule.appointment.domain.PractitionerId;
 
@@ -57,19 +58,26 @@ class InMemoryAppointmentRepository implements AppointmentRepository {
     }
 
     @Override
-    public List<Appointment> findBookedForPractitionerBetween(PractitionerId practitionerId, LocalDate from,
+    public List<Appointment> findNotCancelledForPatientOn(PatientId patientId, LocalDate date) {
+        return findNotCancelledBetween(date, date).stream()
+                .filter(appointment -> appointment.patientId().equals(patientId))
+                .toList();
+    }
+
+    @Override
+    public List<Appointment> findNotCancelledForPractitionerBetween(PractitionerId practitionerId, LocalDate from,
             LocalDate to) {
-        return findBookedBetween(from, to).stream()
+        return findNotCancelledBetween(from, to).stream()
                 .filter(appointment -> appointment.practitionerId().equals(practitionerId))
                 .toList();
     }
 
     @Override
-    public List<Appointment> findBookedBetween(LocalDate from, LocalDate to) {
+    public List<Appointment> findNotCancelledBetween(LocalDate from, LocalDate to) {
         List<Appointment> found = new ArrayList<>();
         for (Appointment appointment : stored.values()) {
             LocalDate day = appointment.slot().startsAt().toLocalDate();
-            if (appointment.isBooked() && !day.isBefore(from) && !day.isAfter(to)) {
+            if (appointment.status() != AppointmentStatus.CANCELLED && !day.isBefore(from) && !day.isAfter(to)) {
                 found.add(appointment);
             }
         }

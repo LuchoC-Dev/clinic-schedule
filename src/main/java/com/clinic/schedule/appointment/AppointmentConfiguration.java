@@ -11,7 +11,7 @@ import com.clinic.schedule.appointment.domain.BookingService;
  * so the domain keeps no reference to Spring (D-16).
  *
  * <p>Scheduling is enabled here because this module is the one that needs it, for the
- * automatic cancellation (D-06).
+ * sweep that marks absent the patients who never came (D-06, D-61).
  */
 @Configuration
 @EnableScheduling

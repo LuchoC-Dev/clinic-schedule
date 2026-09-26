@@ -57,8 +57,9 @@ class AppointmentRow {
     @Column(name = "checked_in_at")
     private LocalDateTime checkedInAt;
 
+    /** The column keeps its v1 name: renaming a column is not portable SQL (D-61). */
     @Column(name = "auto_cancellation_suspended", nullable = false)
-    private boolean autoCancellationSuspended;
+    private boolean lateArrivalNotice;
 
     protected AppointmentRow() {
         // required by JPA
@@ -75,7 +76,7 @@ class AppointmentRow {
         row.note = appointment.note();
         row.status = appointment.status();
         row.checkedInAt = appointment.checkedInAt();
-        row.autoCancellationSuspended = appointment.isAutoCancellationSuspended();
+        row.lateArrivalNotice = appointment.hasLateArrivalNotice();
         return row;
     }
 
@@ -89,6 +90,6 @@ class AppointmentRow {
                 note,
                 status,
                 checkedInAt,
-                autoCancellationSuspended);
+                lateArrivalNotice);
     }
 }

@@ -1,10 +1,12 @@
 package com.clinic.schedule.appointment.domain;
 
 /**
- * The only two states of version 1. Cancelled appointments are kept as records, because the
- * patient file will show them.
+ * Where an appointment stands. Cancelled and absent appointments are kept as records: the first
+ * was called off, the second is the record that the patient did not come (D-61). Neither holds
+ * its slot any more.
  */
 public enum AppointmentStatus {
     BOOKED,
-    CANCELLED
+    CANCELLED,
+    ABSENT
 }

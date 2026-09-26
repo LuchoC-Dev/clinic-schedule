@@ -20,7 +20,7 @@ import com.clinic.schedule.appointment.application.usecase.BookAppointmentUseCas
 import com.clinic.schedule.appointment.application.usecase.CancelAppointmentUseCase;
 import com.clinic.schedule.appointment.application.usecase.CheckInUseCase;
 import com.clinic.schedule.appointment.application.usecase.RescheduleAppointmentUseCase;
-import com.clinic.schedule.appointment.application.usecase.SuspendAutoCancellationUseCase;
+import com.clinic.schedule.appointment.application.usecase.RecordLateArrivalNoticeUseCase;
 import com.clinic.schedule.appointment.application.usecase.ViewAgendaUseCase;
 import com.clinic.schedule.appointment.domain.Appointment;
 import com.clinic.schedule.appointment.domain.AppointmentId;
@@ -44,17 +44,17 @@ class AppointmentController {
     private final RescheduleAppointmentUseCase reschedule;
     private final CancelAppointmentUseCase cancel;
     private final CheckInUseCase checkIn;
-    private final SuspendAutoCancellationUseCase suspendAutoCancellation;
+    private final RecordLateArrivalNoticeUseCase recordLateArrivalNotice;
     private final ViewAgendaUseCase agenda;
 
     AppointmentController(BookAppointmentUseCase book, RescheduleAppointmentUseCase reschedule,
             CancelAppointmentUseCase cancel, CheckInUseCase checkIn,
-            SuspendAutoCancellationUseCase suspendAutoCancellation, ViewAgendaUseCase agenda) {
+            RecordLateArrivalNoticeUseCase recordLateArrivalNotice, ViewAgendaUseCase agenda) {
         this.book = book;
         this.reschedule = reschedule;
         this.cancel = cancel;
         this.checkIn = checkIn;
-        this.suspendAutoCancellation = suspendAutoCancellation;
+        this.recordLateArrivalNotice = recordLateArrivalNotice;
         this.agenda = agenda;
     }
 
@@ -88,10 +88,10 @@ class AppointmentController {
         return AppointmentResponse.of(checkIn.handle(new AppointmentId(id)));
     }
 
-    /** The patient warned they will be late: wait 24 hours instead of 30 minutes. */
-    @PostMapping("/{id}/suspend-auto-cancellation")
-    AppointmentResponse suspendAutoCancellation(@PathVariable UUID id) {
-        return AppointmentResponse.of(suspendAutoCancellation.handle(new AppointmentId(id)));
+    /** The patient warned they will be late: wait until the end of the day instead of 30 minutes (D-61). */
+    @PostMapping("/{id}/late-arrival-notice")
+    AppointmentResponse recordLateArrivalNotice(@PathVariable UUID id) {
+        return AppointmentResponse.of(recordLateArrivalNotice.handle(new AppointmentId(id)));
     }
 
     /**

@@ -128,7 +128,7 @@ class AppointmentJpaAdapterIT {
     @Test
     void storesTheCheckInAndTheLateArrivalNotice() {
         Appointment arrived = appointment(ana, arias, TEN, 30, null)
-                .withAutoCancellationSuspended(TEN)
+                .withLateArrivalNotice(TEN)
                 .checkedIn(TEN.plusMinutes(40));
 
         appointments.save(arrived);
@@ -136,7 +136,7 @@ class AppointmentJpaAdapterIT {
 
         Appointment found = appointments.findById(arrived.id()).orElseThrow();
         assertThat(found.checkedInAt()).isEqualTo(TEN.plusMinutes(40));
-        assertThat(found.isAutoCancellationSuspended()).isTrue();
+        assertThat(found.hasLateArrivalNotice()).isTrue();
     }
 
     @Test
@@ -179,7 +179,7 @@ class AppointmentJpaAdapterIT {
         appointments.save(appointment(ana, PractitionerId.newId(), TEN, 30, null));
         flush();
 
-        assertThat(appointments.findBookedForPractitionerBetween(arias, DAY, sunday))
+        assertThat(appointments.findNotCancelledForPractitionerBetween(arias, DAY, sunday))
                 .extracting(Appointment::id)
                 .containsExactlyInAnyOrder(first.id(), last.id());
     }
@@ -194,7 +194,7 @@ class AppointmentJpaAdapterIT {
         appointments.save(appointment(ana, arias, TEN.plusDays(1), 30, null));
         flush();
 
-        assertThat(appointments.findBookedBetween(DAY, DAY))
+        assertThat(appointments.findNotCancelledBetween(DAY, DAY))
                 .extracting(Appointment::id)
                 .containsExactlyInAnyOrder(ariasAtTen.id(), someoneElseAtTen.id());
     }

@@ -9,6 +9,7 @@ import org.springframework.stereotype.Component;
 import com.clinic.schedule.appointment.api.AppointmentReader;
 import com.clinic.schedule.appointment.api.AppointmentSummary;
 import com.clinic.schedule.appointment.application.usecase.FindPatientDayUseCase;
+import com.clinic.schedule.appointment.domain.AppointmentStatus;
 import com.clinic.schedule.appointment.domain.PatientId;
 
 /**
@@ -29,14 +30,15 @@ class AppointmentReaderAdapter implements AppointmentReader {
     }
 
     @Override
-    public List<AppointmentSummary> findBookedForPatientOn(UUID patientId, LocalDate date) {
+    public List<AppointmentSummary> findNotCancelledForPatientOn(UUID patientId, LocalDate date) {
         return patientDay.handle(new PatientId(patientId), date).stream()
                 .map(appointment -> new AppointmentSummary(
                         appointment.id().value(),
                         appointment.patientId().value(),
                         appointment.practitionerId().value(),
                         appointment.slot().startsAt(),
-                        appointment.isCheckedIn()))
+                        appointment.isCheckedIn(),
+                        appointment.status() == AppointmentStatus.ABSENT))
                 .toList();
     }
 }

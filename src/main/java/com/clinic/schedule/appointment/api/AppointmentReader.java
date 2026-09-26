@@ -13,6 +13,9 @@ import java.util.UUID;
  */
 public interface AppointmentReader {
 
-    /** The patient's booked appointments on that day, with any practitioner. Cancelled ones are left out. */
-    List<AppointmentSummary> findBookedForPatientOn(UUID patientId, LocalDate date);
+    /**
+     * The patient's appointments on that day, with any practitioner, booked or absent. Cancelled
+     * ones are left out (D-61).
+     */
+    List<AppointmentSummary> findNotCancelledForPatientOn(UUID patientId, LocalDate date);
 }

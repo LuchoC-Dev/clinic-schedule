@@ -87,6 +87,8 @@
                     </a>
                 </td>
                 <td class="actions" th:unless="${readOnly}">
+                    <!-- An absent appointment is a record: nothing more happens to it (D-61). -->
+                    <th:block th:if="${row.booked}">
                     <form class="inline" method="post" th:unless="${row.checkedIn}"
                           th:action="@{/agenda/appointments/{id}/check-in(id=${row.id})}">
                         <input type="hidden" name="practitionerId" th:value="${practitioner?.id}">
@@ -111,6 +113,7 @@
                         <input type="hidden" name="view" th:value="${view}">
                         <button type="submit" class="danger">Cancelar</button>
                     </form>
+                    </th:block>
                 </td>
             </tr>
             </tbody>

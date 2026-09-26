@@ -12,16 +12,17 @@ import com.clinic.schedule.appointment.domain.Appointment;
 import com.clinic.schedule.appointment.domain.AppointmentId;
 
 /**
- * The patient called to say they will be late: the appointment waits 24 hours instead of 30
- * minutes before being cancelled automatically (D-06). Only on the day of the appointment (D-38).
+ * The patient called to say they will be late: the appointment waits until the end of its day,
+ * instead of 30 minutes, before the patient is absent (D-06, D-61). Only on the day of the
+ * appointment (D-38).
  */
 @Service
-public class SuspendAutoCancellationUseCase {
+public class RecordLateArrivalNoticeUseCase {
 
     private final AppointmentRepository appointments;
     private final Clock clock;
 
-    public SuspendAutoCancellationUseCase(AppointmentRepository appointments, Clock clock) {
+    public RecordLateArrivalNoticeUseCase(AppointmentRepository appointments, Clock clock) {
         this.appointments = appointments;
         this.clock = clock;
     }
@@ -30,8 +31,8 @@ public class SuspendAutoCancellationUseCase {
     public Appointment handle(AppointmentId id) {
         Appointment appointment = appointments.findById(id).orElseThrow(() -> new AppointmentNotFoundException(id));
 
-        Appointment suspended = appointment.withAutoCancellationSuspended(LocalDateTime.now(clock));
-        appointments.save(suspended);
-        return suspended;
+        Appointment warned = appointment.withLateArrivalNotice(LocalDateTime.now(clock));
+        appointments.save(warned);
+        return warned;
     }
 }

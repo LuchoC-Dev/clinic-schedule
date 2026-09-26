@@ -28,18 +28,27 @@ public interface AppointmentRepository {
     /** Booked appointments of that patient on that day, with any practitioner. */
     List<Appointment> findBookedForPatientOn(PatientId patientId, LocalDate date);
 
-    /** Booked appointments of that practitioner from {@code from} to {@code to}, both days included. */
-    List<Appointment> findBookedForPractitionerBetween(PractitionerId practitionerId, LocalDate from, LocalDate to);
+    /**
+     * Appointments of that patient on that day, with any practitioner, booked or absent: every one
+     * that was not called off (D-61).
+     */
+    List<Appointment> findNotCancelledForPatientOn(PatientId patientId, LocalDate date);
 
-    /** Booked appointments of every practitioner from {@code from} to {@code to}, both days included. */
-    List<Appointment> findBookedBetween(LocalDate from, LocalDate to);
+    /**
+     * Appointments of that practitioner from {@code from} to {@code to}, both days included,
+     * booked or absent: what an agenda shows (D-61).
+     */
+    List<Appointment> findNotCancelledForPractitionerBetween(PractitionerId practitionerId, LocalDate from, LocalDate to);
+
+    /** The same, of every practitioner. */
+    List<Appointment> findNotCancelledBetween(LocalDate from, LocalDate to);
 
     /** Every appointment of that patient, cancelled ones included: their history. */
     List<Appointment> findAllForPatient(PatientId patientId);
 
     /**
      * Booked appointments whose patient has not checked in and that started at or before
-     * {@code instant}: the candidates for automatic cancellation. Which of them are actually
+     * {@code instant}: the candidates to be marked absent. Which of them are actually
      * due is the appointment's decision, not the query's (D-31).
      */
     List<Appointment> findBookedWithoutCheckInStartingBy(LocalDateTime instant);

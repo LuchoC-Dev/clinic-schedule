@@ -95,7 +95,7 @@ classic layers at the root (they fall apart once the patient file and the queue 
 ---
 
 ## D-06 — Automatic cancellation via `@Scheduled`, with the state persisted
-**Date:** 2026-09-22 · **Status:** applied on 2026-09-23 (see D-31)
+**Date:** 2026-09-22 · **Status:** applied on 2026-09-23 (see D-31); the cancellation became an absence in D-61
 
 A scheduled task sweeps overdue appointments every minute and cancels them, leaving the
 real state in the database. The two deadlines are told apart by two fields of the
@@ -773,7 +773,7 @@ the domain (the domain does not know patients, only their id).
 ---
 
 ## D-31 — Check-in and automatic cancellation
-**Date:** 2026-09-23 · **Status:** accepted; the check-in stays on the appointment only until the arrival queue (D-48)
+**Date:** 2026-09-23 · **Status:** accepted; the check-in stays on the appointment only until the arrival queue (D-48); the automatic cancellation is an absence since D-61
 
 Applies D-06 and D-07. The appointment gains `checkedInAt` and `autoCancellationSuspended`,
 added by `V4` with `ALTER TABLE` rather than by rewriting `V1`.
@@ -1939,3 +1939,49 @@ disappears when the name arrives (the notes written with it would lose the patie
 verification when the document changes (nobody saw the new one); merging two records of the same
 patient, for when someone registered as NN already had one — delicate, since a record is one per
 patient (Ley 26.529, art. 17), and left for later.
+
+---
+
+## D-61 — A patient who never came is absent, not cancelled
+**Date:** 2026-09-26 · **Status:** accepted; replaces the automatic cancellation of D-06 and D-31
+
+v1 cancelled an appointment whose patient never arrived, and said so as provisional: once
+attendance was recorded, a no-show would be recorded instead. Phase 2 records it, before the queue
+takes the arrival over, so the absence can be checked with the check-in it has always had.
+
+**`ABSENT` is a state of its own.** The same sweep, every minute, now marks absent what it used to
+cancel: `Appointment.markedAbsent(now)`, which refuses unless `isDueForAbsence(now)` — booked, no
+check-in, and 30 minutes past the start. A late-arrival notice no longer waits 24 hours but until
+the midnight that ends the appointment's day; it gives no priority. `MarkAbsentAppointmentsUseCase`
+replaces `CancelOverdueAppointmentsUseCase`, and `V18` widens the status check.
+
+**An absent appointment is a record.** It cannot be cancelled, moved, checked in or warned about:
+it is what says the patient did not come, and a mistake — the patient was in the waiting room and
+nobody marked the arrival — is not undone. A patient who comes after all is seen some other way:
+today, a same-day appointment; from part 5, the queue, without an appointment or as an emergency.
+
+**It frees its time**, as a cancelled one does. The overlap rules — the domain's and PostgreSQL's
+exclusion constraints — cover booked appointments only, so they need no change.
+
+**It is shown, not hidden.** The agendas and the API show absent appointments as "Ausente", with no
+buttons, so reception and the practitioner see who did not come; cancelled ones still leave the
+agenda. The repository's agenda reads became `findNotCancelled…`.
+
+**An absent appointment today still opens the record.** `AppointmentReader.findNotCancelledForPatientOn`
+answers booked and absent appointments, each saying whether it is absent, and the clinical record's
+`AttendanceAdapter` counts an absent one as expected: the practitioner reads the record that day,
+and records nothing, since nobody arrived.
+
+**The names follow.** "Suspending the automatic cancellation" said something no longer true: it is
+the late-arrival notice — `withLateArrivalNotice`, `RecordLateArrivalNoticeUseCase`,
+`POST /api/appointments/{id}/late-arrival-notice` and `lateArrivalNotice` in the answer, the old
+route gone. The column keeps its name, `auto_cancellation_suspended`: renaming a column is not
+portable SQL.
+
+**Before this, they stay cancelled.** Nothing tells an automatic cancellation from one by hand, so
+no row is changed.
+
+*Rejected:* undoing an absence (it is the record of what happened); keeping the 24 hours (the day
+is what the patient warned about); hiding absent appointments like cancelled ones (whoever did not
+come is worth seeing); keeping the old route as an alias (no client outside the application uses
+it).

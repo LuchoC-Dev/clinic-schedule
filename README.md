@@ -78,7 +78,7 @@ Spanish, for the staff.
 | `POST` | `/api/appointments/{id}/reschedule` | move it, keeping its duration |
 | `POST` | `/api/appointments/{id}/cancel` | cancel it, keeping the record |
 | `POST` | `/api/appointments/{id}/check-in` | the patient arrived |
-| `POST` | `/api/appointments/{id}/suspend-auto-cancellation` | the patient warned they will be late |
+| `POST` | `/api/appointments/{id}/late-arrival-notice` | the patient warned they will be late |
 | `GET` | `/api/appointments?practitionerId=&date=` | a day's agenda — a practitioner may only ask for their own |
 | `POST` | `/api/time-off` | a practitioner's absence — whole days up to `untilDate`, or part of one — cancelling the appointments it hits |
 | `POST` | `/api/consultations` | a practitioner records the consultation of a patient who arrived today — notes, prescriptions, the checks done and the orders issued |
@@ -94,8 +94,9 @@ Spanish, for the staff.
 | `POST` | `/api/checks/{id}/access-grants` | access to the record to report that pending check — granted at once, for now, and recorded |
 | `GET` | `/api/clinical-records/{patientId}` | a patient's consultations with their checks, and the checks done without one — for a practitioner who saw them within the access period or is seeing them today |
 
-A booking without a check-in is cancelled automatically 30 minutes after its start, or 24 hours
-after it when the patient warned they would be late. The consultation routes are the
+A booking without a check-in is marked absent 30 minutes after its start, or at the end of its
+day when the patient warned they would be late; an absent appointment is kept, shown on the agenda
+and changed no more. The consultation routes are the
 practitioners' only; anything a user may not see answers 403. The access period to a clinical
 record is `app.clinical-record.access-period`, a year by default.
 

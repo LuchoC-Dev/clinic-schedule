@@ -55,8 +55,8 @@ public class ViewAgendaUseCase {
         }
         Optional<PractitionerId> whose = restrictedTo.or(() -> requested);
         List<Appointment> found = whose
-                .map(practitionerId -> appointments.findBookedForPractitionerBetween(practitionerId, from, to))
-                .orElseGet(() -> appointments.findBookedBetween(from, to));
+                .map(practitionerId -> appointments.findNotCancelledForPractitionerBetween(practitionerId, from, to))
+                .orElseGet(() -> appointments.findNotCancelledBetween(from, to));
         return new Agenda(whose, found.stream()
                 .sorted(Comparator.comparing(appointment -> appointment.slot().startsAt()))
                 .toList());

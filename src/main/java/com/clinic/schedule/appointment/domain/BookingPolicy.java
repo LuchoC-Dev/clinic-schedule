@@ -13,7 +13,7 @@ import com.clinic.schedule.appointment.domain.exception.SlotTooFarAheadException
  * When an appointment may be booked, and the two collision rules of the agenda.
  *
  * <p>An appointment starts from now on, and no more than a year ahead: an earlier start is a
- * mistake the automatic cancellation would undo within the minute, and a later one is almost
+ * mistake the sweep would mark absent within the minute, and a later one is almost
  * certainly a mistyped year (D-38).
  *
  * <p>The collision rules:

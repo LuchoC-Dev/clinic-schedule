@@ -265,25 +265,25 @@ class AppointmentApiIT {
         JsonNode booked = bookSuccessfully(fixture.workingEveryDay(), TEN);
 
         org.assertj.core.api.Assertions.assertThat(booked.get("checkedInAt").isNull()).isTrue();
-        org.assertj.core.api.Assertions.assertThat(booked.get("autoCancellationSuspended").asBoolean()).isFalse();
+        org.assertj.core.api.Assertions.assertThat(booked.get("lateArrivalNotice").asBoolean()).isFalse();
     }
 
     @Test
-    void suspendingTheAutomaticCancellationIsRecorded() throws Exception {
+    void aLateArrivalNoticeIsRecorded() throws Exception {
         JsonNode booked = bookSuccessfully(fixture.workingEveryDay(), TEN);
 
-        mockMvc.perform(post("/api/appointments/" + booked.get("id").asText() + "/suspend-auto-cancellation"))
+        mockMvc.perform(post("/api/appointments/" + booked.get("id").asText() + "/late-arrival-notice"))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.autoCancellationSuspended").value(true));
+                .andExpect(jsonPath("$.lateArrivalNotice").value(true));
     }
 
     @Test
-    void suspendingAfterTheCheckInAnswers409() throws Exception {
+    void aLateArrivalNoticeAfterTheCheckInAnswers409() throws Exception {
         JsonNode booked = bookSuccessfully(fixture.workingEveryDay(), TEN);
         String id = booked.get("id").asText();
         mockMvc.perform(post("/api/appointments/" + id + "/check-in")).andExpect(status().isOk());
 
-        mockMvc.perform(post("/api/appointments/" + id + "/suspend-auto-cancellation"))
+        mockMvc.perform(post("/api/appointments/" + id + "/late-arrival-notice"))
                 .andExpect(status().isConflict());
     }
 
@@ -417,7 +417,7 @@ class AppointmentApiIT {
         CreatedPractitioner arias = fixture.workingEveryDay();
         String id = bookSuccessfully(arias, "2026-03-12T10:00:00").get("id").asText();
 
-        mockMvc.perform(post("/api/appointments/" + id + "/suspend-auto-cancellation"))
+        mockMvc.perform(post("/api/appointments/" + id + "/late-arrival-notice"))
                 .andExpect(status().isConflict())
                 .andExpect(jsonPath("$.message").value(containsString("on its own day")));
     }

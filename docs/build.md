@@ -645,6 +645,32 @@ documento", and the record stopped warning; the history showed the change by `re
 searching for NN-6951 found María Fernández; renaming her without ticking the box made her
 unverified again, a second entry; ticking it with no document was refused in Spanish.
 
+#### Part 3 — Absent instead of cancelled `[x]`
+- [x] `ABSENT`: 30 minutes without a check-in, or at the end of the day after a late-arrival
+      notice; the same sweep, `MarkAbsentAppointmentsUseCase` (D-61)
+- [x] An absent appointment is a record: not cancelled, moved, checked in nor warned about; it
+      frees its time
+- [x] Shown on the agendas and the API as absent, with no buttons
+- [x] It still opens the record that day, and records nothing: `AppointmentReader` answers what
+      was not cancelled
+- [x] The late-arrival notice named as such: `POST /api/appointments/{id}/late-arrival-notice`
+- [x] `V18`: the status check widened; automatic cancellations from before stay cancelled
+- [x] 3 unit and 6 integration tests, and the day-of-appointment tests brought to the new rule.
+      248 unit and 283 integration tests, 531 in total
+
+**Verified with:** each of these failing its tests when broken on purpose — the sweep cancelling
+again, the notice waiting 24 hours, the agenda or the api leaving absent appointments out, an
+absent appointment cancelled, the agenda offering its buttons; `mvnw verify` with the PostgreSQL
+tests running V18.
+
+**Verified with the application running** on a throwaway PostgreSQL, with the real job: of
+appointments moved back in time, the one without a check-in 40 minutes after its start and the one
+warned yesterday became absent; the one checked in and the one warned today stayed booked, a
+minute later too. Once absent, its slot took a new booking that PostgreSQL had refused while it was
+booked; cancelling, checking in and warning it answered 409, and the old route 404. In a browser,
+the agenda showed "Ausente" with no buttons, today and yesterday. Dra. Arias read the record of a
+patient absent today, and could not record a consultation (403).
+
 ---
 
 ## Explicitly postponed

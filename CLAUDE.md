@@ -83,7 +83,7 @@ PostgreSQL 18 (docker-compose) · Thymeleaf. The integration tests run on H2 in 
 
 ## Domain glossary
 
-patient · practitioner · appointment (`BOOKED`/`CANCELLED`) · reason · duration ·
+patient · practitioner · appointment (`BOOKED`/`CANCELLED`/`ABSENT`) · reason · duration ·
 weekly schedule · break · time off · check-in · reschedule · reception
 · consultation · item (prescription) · check · result · order · addendum · clinical record ·
 access period · access grant · attachment

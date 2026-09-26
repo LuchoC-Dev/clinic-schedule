@@ -49,16 +49,22 @@ class AppointmentJpaAdapter implements AppointmentRepository {
     }
 
     @Override
-    public List<Appointment> findBookedForPractitionerBetween(PractitionerId practitionerId, LocalDate from,
-            LocalDate to) {
-        return toAppointments(rows.findByPractitionerIdAndStatusAndStartsAtGreaterThanEqualAndStartsAtLessThan(
-                practitionerId.value(), AppointmentStatus.BOOKED, startOf(from), startOf(to.plusDays(1))));
+    public List<Appointment> findNotCancelledForPatientOn(PatientId patientId, LocalDate date) {
+        return toAppointments(rows.findByPatientIdAndStatusNotAndStartsAtGreaterThanEqualAndStartsAtLessThan(
+                patientId.value(), AppointmentStatus.CANCELLED, startOf(date), startOf(date.plusDays(1))));
     }
 
     @Override
-    public List<Appointment> findBookedBetween(LocalDate from, LocalDate to) {
-        return toAppointments(rows.findByStatusAndStartsAtGreaterThanEqualAndStartsAtLessThan(
-                AppointmentStatus.BOOKED, startOf(from), startOf(to.plusDays(1))));
+    public List<Appointment> findNotCancelledForPractitionerBetween(PractitionerId practitionerId, LocalDate from,
+            LocalDate to) {
+        return toAppointments(rows.findByPractitionerIdAndStatusNotAndStartsAtGreaterThanEqualAndStartsAtLessThan(
+                practitionerId.value(), AppointmentStatus.CANCELLED, startOf(from), startOf(to.plusDays(1))));
+    }
+
+    @Override
+    public List<Appointment> findNotCancelledBetween(LocalDate from, LocalDate to) {
+        return toAppointments(rows.findByStatusNotAndStartsAtGreaterThanEqualAndStartsAtLessThan(
+                AppointmentStatus.CANCELLED, startOf(from), startOf(to.plusDays(1))));
     }
 
     @Override

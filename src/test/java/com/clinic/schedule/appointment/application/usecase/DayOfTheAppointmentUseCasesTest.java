@@ -37,8 +37,8 @@ class DayOfTheAppointmentUseCasesTest {
                 TimeSlot.of(startsAt, 30), "consulta", null, AppointmentStatus.BOOKED, null, false);
     }
 
-    private CancelOverdueAppointmentsUseCase sweepAt(LocalDateTime now) {
-        return new CancelOverdueAppointmentsUseCase(appointments, at(now));
+    private MarkAbsentAppointmentsUseCase sweepAt(LocalDateTime now) {
+        return new MarkAbsentAppointmentsUseCase(appointments, at(now));
     }
 
     @Test
@@ -59,41 +59,42 @@ class DayOfTheAppointmentUseCasesTest {
     }
 
     @Test
-    void suspendingIsStored() {
+    void aLateArrivalNoticeIsStored() {
         Appointment appointment = stored(TEN);
         appointments.given(appointment);
 
-        new SuspendAutoCancellationUseCase(appointments, at(TEN.minusHours(1))).handle(appointment.id());
+        new RecordLateArrivalNoticeUseCase(appointments, at(TEN.minusHours(1))).handle(appointment.id());
 
-        assertThat(appointments.findById(appointment.id()).orElseThrow().isAutoCancellationSuspended()).isTrue();
+        assertThat(appointments.findById(appointment.id()).orElseThrow().hasLateArrivalNotice()).isTrue();
     }
 
     @Test
-    void theSweepCancelsOnlyWhatIsDue() {
+    void theSweepMarksAbsentOnlyWhatIsDue() {
         Appointment overdue = stored(TEN.minusMinutes(30));
         Appointment notYet = stored(TEN.minusMinutes(29));
         Appointment later = stored(TEN.plusHours(2));
         appointments.given(overdue, notYet, later);
 
-        var cancelled = sweepAt(TEN).handle();
+        var absent = sweepAt(TEN).handle();
 
-        assertThat(cancelled).extracting(Appointment::id).containsExactly(overdue.id());
-        assertThat(appointments.findById(overdue.id()).orElseThrow().status()).isEqualTo(AppointmentStatus.CANCELLED);
+        assertThat(absent).extracting(Appointment::id).containsExactly(overdue.id());
+        assertThat(appointments.findById(overdue.id()).orElseThrow().status()).isEqualTo(AppointmentStatus.ABSENT);
         assertThat(appointments.findById(notYet.id()).orElseThrow().isBooked()).isTrue();
         assertThat(appointments.findById(later.id()).orElseThrow().isBooked()).isTrue();
     }
 
     @Test
-    void theSweepLeavesALateArrivalAloneUntilTheNextDay() {
-        Appointment warned = stored(TEN).withAutoCancellationSuspended(TEN);
+    void theSweepLeavesALateArrivalAloneUntilItsDayIsOver() {
+        Appointment warned = stored(TEN).withLateArrivalNotice(TEN);
         appointments.given(warned);
+        LocalDateTime midnight = TEN.toLocalDate().plusDays(1).atStartOfDay();
 
-        assertThat(sweepAt(TEN.plusHours(3)).handle()).isEmpty();
-        assertThat(sweepAt(TEN.plusHours(24)).handle()).hasSize(1);
+        assertThat(sweepAt(midnight.minusMinutes(1)).handle()).isEmpty();
+        assertThat(sweepAt(midnight).handle()).hasSize(1);
     }
 
     @Test
-    void theSweepNeverCancelsAPatientWhoArrived() {
+    void theSweepNeverMarksAbsentAPatientWhoArrived() {
         Appointment arrived = stored(TEN).checkedIn(TEN.plusMinutes(5));
         appointments.given(arrived);
 

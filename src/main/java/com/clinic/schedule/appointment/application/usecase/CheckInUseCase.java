@@ -13,7 +13,7 @@ import com.clinic.schedule.appointment.domain.AppointmentId;
 
 /**
  * The patient stops at reception and their arrival is confirmed. From then on the appointment
- * is never cancelled automatically.
+ * is never marked absent (D-61).
  *
  * <p>The time of the check-in is the practice's clock, not something the caller sends, so it
  * cannot be backdated.
