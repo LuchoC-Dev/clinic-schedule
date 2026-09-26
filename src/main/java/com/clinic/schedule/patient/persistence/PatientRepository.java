@@ -17,11 +17,14 @@ public interface PatientRepository extends JpaRepository<Patient, UUID> {
     boolean existsByDocument(IdentityDocument document);
 
     /**
-     * One search box for reception: part of a name, or the document number. Ordered by name
-     * so repeated names stay together and the list does not jump around between calls.
+     * One search box for reception: part of a name, the document number, or the alias a patient
+     * went by before giving their name (D-60). Ordered by name so repeated names stay together and
+     * the list does not jump around between calls.
      */
-    List<Patient> findByFullNameContainingIgnoreCaseOrDocumentNumberContainingOrderByFullNameAsc(
-            String namePart, String documentNumberPart);
+    List<Patient> findByFullNameContainingIgnoreCaseOrDocumentNumberContainingOrAliasContainingIgnoreCaseOrderByFullNameAsc(
+            String namePart, String documentNumberPart, String aliasPart);
+
+    boolean existsByAlias(String alias);
 
     List<Patient> findAllByOrderByFullNameAsc();
 }

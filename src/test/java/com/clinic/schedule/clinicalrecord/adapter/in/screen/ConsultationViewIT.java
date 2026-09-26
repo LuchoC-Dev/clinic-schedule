@@ -7,6 +7,7 @@ import static org.springframework.security.test.web.servlet.request.SecurityMock
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.multipart;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.flash;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.redirectedUrl;
@@ -139,6 +140,25 @@ class ConsultationViewIT {
                 .andExpect(content().string(containsString("Orden:")))
                 .andExpect(content().string(containsString("Ecodoppler de vasos de cuello")))
                 .andExpect(content().string(containsString("Abierta")));
+    }
+
+    @Test
+    void theRecordWarnsWhileNobodyHasSeenThePatientsDocument() throws Exception {
+        arrivedToday();
+
+        mockMvc.perform(get("/clinical-records/" + patient).with(asArias))
+                .andExpect(content().string(containsString("Identidad no verificada")));
+
+        String dni = String.valueOf(50_000_000 + (int) (Math.random() * 40_000_000));
+        mockMvc.perform(put("/api/patients/" + patient)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {"fullName": "Paciente Verificada", "documentType": "DNI", "documentNumber": "%s", "documentSeen": true}
+                                """.formatted(dni)))
+                .andExpect(status().isOk());
+
+        mockMvc.perform(get("/clinical-records/" + patient).with(asArias))
+                .andExpect(content().string(not(containsString("Identidad no verificada"))));
     }
 
     @Test

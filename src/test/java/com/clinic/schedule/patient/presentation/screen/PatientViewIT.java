@@ -8,6 +8,7 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.flash;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.redirectedUrl;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.redirectedUrlPattern;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 import java.util.UUID;
@@ -22,7 +23,7 @@ import org.springframework.test.web.servlet.MockMvc;
 /** Reception's patient screen over the real stack. */
 @SpringBootTest
 @AutoConfigureMockMvc
-@WithMockUser(roles = "RECEPTION")
+@WithMockUser(username = "recepcion", roles = "RECEPTION")
 class PatientViewIT {
 
     @Autowired
@@ -46,6 +47,50 @@ class PatientViewIT {
                 .andExpect(status().isOk())
                 .andExpect(content().string(containsString(name)))
                 .andExpect(content().string(containsString("DNI 40111222")));
+    }
+
+    @Test
+    void aPatientWhoGivesNoNameIsRegisteredAndCompletedLaterWithTheirHistory() throws Exception {
+        String screen = mockMvc.perform(post("/patients/unidentified").with(csrf()))
+                .andExpect(redirectedUrlPattern("/patients/*"))
+                .andExpect(flash().attribute("message", startsWith("Paciente registrado sin datos: NN-")))
+                .andReturn().getResponse().getRedirectedUrl();
+
+        mockMvc.perform(get(screen))
+                .andExpect(status().isOk())
+                .andExpect(content().string(containsString("Identidad: <span>Sin datos</span>")))
+                .andExpect(content().string(containsString("Sin cambios desde que se registró.")));
+
+        String name = unique("Identificada");
+        mockMvc.perform(post(screen).with(csrf())
+                        .param("fullName", name)
+                        .param("documentType", "DNI")
+                        .param("documentNumber", "40999888")
+                        .param("documentSeen", "true"))
+                .andExpect(redirectedUrl(screen))
+                .andExpect(flash().attribute("message", "Datos guardados."));
+
+        mockMvc.perform(get(screen))
+                .andExpect(content().string(containsString("Identidad: <span>Verificada</span>")))
+                .andExpect(content().string(containsString("recepcion")))
+                .andExpect(content().string(containsString(name + ", DNI 40999888 — Verificada")));
+        mockMvc.perform(get("/patients").param("query", "NN-"))
+                .andExpect(content().string(containsString(name)));
+    }
+
+    @Test
+    void aDocumentSaidToBeSeenThatIsNotThereComesBackAsAMessage() throws Exception {
+        String screen = mockMvc.perform(post("/patients/unidentified").with(csrf()))
+                .andReturn().getResponse().getRedirectedUrl();
+
+        mockMvc.perform(post(screen).with(csrf()).param("fullName", unique("Sin Documento")).param("documentSeen", "true"))
+                .andExpect(redirectedUrl(screen))
+                .andExpect(flash().attribute("error", containsString("necesita su documento y su nombre real")));
+    }
+
+    @Test
+    void anUnknownPatientsScreenIsNotFound() throws Exception {
+        mockMvc.perform(get("/patients/" + UUID.randomUUID())).andExpect(status().isNotFound());
     }
 
     @Test

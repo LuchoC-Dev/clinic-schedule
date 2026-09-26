@@ -49,7 +49,8 @@ removes (D-34).
 **Screens** — open http://localhost:8080 and log in. Reception gets the agenda — a day or a
 week, of one practitioner or everyone — with the day's operations as buttons (*Llegó*,
 *Avisó demora*, *Mover*, *Cancelar*), a booking screen that suggests the free times, a patients
-screen, each patient's appointments, cancelled ones included, and a practitioners screen to set
+screen — where a patient who gives no name is registered under an alias, and each patient's
+identity is corrected and verified, with its history — each patient's appointments, cancelled ones included, and a practitioners screen to set
 up their reasons and week and record their absences. A practitioner gets their own agenda,
 read-only, with today's patients linked to their clinical record and *Empezar consulta* once
 they arrived: a form beside the record, sent once and never changed, and completed afterwards
@@ -62,9 +63,11 @@ Spanish, for the staff.
 
 | Method | Route | What it does |
 |---|---|---|
-| `POST` | `/api/patients` | register a patient, with an optional typed document |
-| `PUT` | `/api/patients/{id}` | correct a name, add or remove the document |
-| `GET` | `/api/patients/{id}`, `/api/patients?query=` | find patients by name or document |
+| `POST` | `/api/patients` | register a patient, with an optional typed document; `documentSeen` verifies it at once |
+| `POST` | `/api/patients/unidentified` | register a patient who gives no name, under an alias such as NN-4821 |
+| `PUT` | `/api/patients/{id}` | correct a name, add or remove the document; `documentSeen` verifies the identity |
+| `GET` | `/api/patients/{id}`, `/api/patients?query=` | find patients by name, document or alias |
+| `GET` | `/api/patients/{id}/identity-changes` | the history of a patient's identity: what changed, when and by whom |
 | `POST` | `/api/practitioners` | register a practitioner |
 | `PUT` | `/api/practitioners/{id}` | rename |
 | `GET` | `/api/practitioners`, `/api/practitioners/{id}` | with reasons, week and time off |

@@ -1,10 +1,13 @@
 package com.clinic.schedule.patient.service;
 
+import java.time.Clock;
+import java.time.LocalDateTime;
 import java.util.Collection;
 import java.util.List;
 import java.util.Arrays;
 import java.util.Objects;
 import java.util.UUID;
+import java.util.concurrent.ThreadLocalRandom;
 
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -16,9 +19,13 @@ import com.clinic.schedule.patient.api.PatientSummary;
 import com.clinic.schedule.patient.api.PatientWriter;
 import com.clinic.schedule.patient.entity.DocumentType;
 import com.clinic.schedule.patient.entity.IdentityDocument;
+import com.clinic.schedule.patient.entity.IdentityStatus;
 import com.clinic.schedule.patient.entity.IncompleteDocumentException;
 import com.clinic.schedule.patient.entity.Patient;
+import com.clinic.schedule.patient.entity.PatientIdentityChange;
+import com.clinic.schedule.patient.persistence.PatientIdentityChangeRepository;
 import com.clinic.schedule.patient.persistence.PatientRepository;
+import com.clinic.schedule.security.api.CurrentUserReader;
 
 /**
  * Registering and finding patients, and answering other modules through
@@ -32,20 +39,33 @@ import com.clinic.schedule.patient.persistence.PatientRepository;
  *
  * <p>Each method declares its own transaction and every write calls {@code save()}, even
  * where Hibernate would write the change by itself (D-27).
+ *
+ * <p>A change to a patient's identity is saved with its entry in the history, in the same
+ * transaction, stamped with the practice's clock and the user who made it (D-60).
  */
 @Service
 public class PatientService implements PatientReader, PatientWriter {
 
-    private final PatientRepository patients;
+    /** Tries before giving up on a free alias: with a few hundred patients, one is plenty. */
+    private static final int ALIAS_ATTEMPTS = 20;
 
-    PatientService(PatientRepository patients) {
+    private final PatientRepository patients;
+    private final PatientIdentityChangeRepository identityChanges;
+    private final CurrentUserReader currentUser;
+    private final Clock clock;
+
+    PatientService(PatientRepository patients, PatientIdentityChangeRepository identityChanges,
+            CurrentUserReader currentUser, Clock clock) {
         this.patients = patients;
+        this.identityChanges = identityChanges;
+        this.currentUser = currentUser;
+        this.clock = clock;
     }
 
     @Transactional
-    public Patient register(String fullName, IdentityDocument document) {
+    public Patient register(String fullName, IdentityDocument document, boolean documentSeen) {
         requireDocumentIsFree(document);
-        return patients.save(Patient.register(fullName, document));
+        return patients.save(Patient.register(fullName, document, documentSeen));
     }
 
     /**
@@ -58,7 +78,7 @@ public class PatientService implements PatientReader, PatientWriter {
         try {
             DocumentType type = documentType == null || documentType.isBlank()
                     ? null : DocumentType.valueOf(documentType);
-            return register(fullName, IdentityDocument.ofNullable(type, documentNumber)).getId();
+            return register(fullName, IdentityDocument.ofNullable(type, documentNumber), false).getId();
         } catch (DuplicateDocumentException e) {
             throw new PatientRegistrationRefusedException(Reason.DUPLICATE_DOCUMENT, e.getMessage());
         } catch (IncompleteDocumentException e) {
@@ -68,16 +88,44 @@ public class PatientService implements PatientReader, PatientWriter {
         }
     }
 
+    /**
+     * A patient who gives no name, under a random alias no other patient has, such as NN-4821.
+     * The unique constraint on the alias is what guarantees it; checking first only keeps a
+     * clash from being an error.
+     */
     @Transactional
-    public Patient update(UUID id, String fullName, IdentityDocument document) {
-        Patient patient = patients.findById(id).orElseThrow(() -> new PatientNotFoundException(id));
+    public Patient registerUnidentified() {
+        for (int attempt = 0; attempt < ALIAS_ATTEMPTS; attempt++) {
+            String alias = "NN-%04d".formatted(ThreadLocalRandom.current().nextInt(10_000));
+            if (!patients.existsByAlias(alias)) {
+                return patients.save(Patient.registerUnidentified(alias));
+            }
+        }
+        throw new IllegalStateException("No free alias was found for a patient without a name");
+    }
 
-        patient.rename(fullName);
+    /**
+     * Corrects who the patient is: their name, their document, and whether reception saw the
+     * document now. What changed goes to the history; nothing is recorded when nothing changed.
+     */
+    @Transactional
+    public Patient changeIdentity(UUID id, String fullName, IdentityDocument document, boolean documentSeen) {
+        Patient patient = patients.findById(id).orElseThrow(() -> new PatientNotFoundException(id));
         if (!Objects.equals(document, patient.getDocument())) {
             requireDocumentIsFree(document);
-            patient.setDocument(document);
         }
+        patient.changeIdentity(fullName, document, documentSeen, LocalDateTime.now(clock), currentUser.username())
+                .ifPresent(identityChanges::save);
         return patients.save(patient);
+    }
+
+    /** Every change to the patient's identity, the most recent first. */
+    @Transactional(readOnly = true)
+    public List<PatientIdentityChange> identityHistory(UUID id) {
+        if (!patients.existsById(id)) {
+            throw new PatientNotFoundException(id);
+        }
+        return identityChanges.findByPatientIdOrderByChangedAtDesc(id);
     }
 
     @Transactional(readOnly = true)
@@ -96,7 +144,8 @@ public class PatientService implements PatientReader, PatientWriter {
             return patients.findAllByOrderByFullNameAsc();
         }
         String term = query.strip();
-        return patients.findByFullNameContainingIgnoreCaseOrDocumentNumberContainingOrderByFullNameAsc(term, term);
+        return patients.findByFullNameContainingIgnoreCaseOrDocumentNumberContainingOrAliasContainingIgnoreCaseOrderByFullNameAsc(
+                term, term, term);
     }
 
     @Override
@@ -124,7 +173,8 @@ public class PatientService implements PatientReader, PatientWriter {
 
     private static List<PatientSummary> summaries(List<Patient> found) {
         return found.stream()
-                .map(patient -> new PatientSummary(patient.getId(), patient.getFullName(), label(patient.getDocument())))
+                .map(patient -> new PatientSummary(patient.getId(), patient.getFullName(), label(patient.getDocument()),
+                        patient.getIdentityStatus() == IdentityStatus.VERIFIED))
                 .toList();
     }
 

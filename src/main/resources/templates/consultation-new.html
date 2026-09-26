@@ -6,6 +6,8 @@
 <main class="wide">
     <h1 th:text="'Consulta de ' + ${patient.fullName}">Consulta de Ana Pérez</h1>
     <p class="muted" th:if="${patient.document}" th:text="${patient.document}">DNI 30111222</p>
+    <!-- Nobody saw this patient's document: who they are is what they said, or an alias (D-60). -->
+    <p class="error" th:unless="${patient.identityVerified}">Identidad no verificada</p>
     <div th:replace="~{fragments :: messages}"></div>
 
     <div class="columns">

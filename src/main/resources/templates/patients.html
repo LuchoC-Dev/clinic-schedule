@@ -9,19 +9,26 @@
 
     <form class="bar" method="get" th:action="@{/patients}">
         <label>Buscar
-            <input type="text" name="query" th:value="${query}" placeholder="nombre o documento">
+            <input type="text" name="query" th:value="${query}" placeholder="nombre, documento o NN">
         </label>
         <button type="submit">Buscar</button>
     </form>
 
     <p th:if="${patients.isEmpty()}" class="muted">No hay pacientes que coincidan.</p>
     <table th:unless="${patients.isEmpty()}">
-        <thead><tr><th>Nombre</th><th>Documento</th><th></th></tr></thead>
+        <thead><tr><th>Nombre</th><th>Documento</th><th>Identidad</th><th></th></tr></thead>
         <tbody>
         <tr th:each="p : ${patients}">
-            <td th:text="${p.fullName}">Ana Pérez</td>
+            <td>
+                <span th:text="${p.fullName}">Ana Pérez</span>
+                <span class="muted" th:if="${p.alias != null and p.alias != p.fullName}" th:text="'(' + ${p.alias} + ')'">(NN-4821)</span>
+            </td>
             <td th:text="${p.document} ?: '—'">DNI 30111222</td>
-            <td><a th:href="@{/agenda/patients/{id}(id=${p.id})}">Ver turnos</a></td>
+            <td th:text="${p.identity}" th:classappend="${p.verified} ? '' : 'muted'">Verificada</td>
+            <td class="actions">
+                <a th:href="@{/patients/{id}(id=${p.id})}">Datos</a> ·
+                <a th:href="@{/agenda/patients/{id}(id=${p.id})}">Ver turnos</a>
+            </td>
         </tr>
         </tbody>
     </table>
@@ -40,7 +47,14 @@
         <label>Número
             <input type="text" name="documentNumber" maxlength="20">
         </label>
+        <div class="choices"><label><input type="checkbox" name="documentSeen" value="true"> Vi el documento</label></div>
         <button type="submit" class="primary">Registrar</button>
+    </form>
+
+    <!-- Nobody is turned away for lack of a name (D-60). -->
+    <form class="card bar" method="post" th:action="@{/patients/unidentified}">
+        <span class="muted">Si el paciente no da su nombre, se lo registra con un alias y se completa después.</span>
+        <button type="submit">Registrar sin datos (NN)</button>
     </form>
 </main>
 </body>

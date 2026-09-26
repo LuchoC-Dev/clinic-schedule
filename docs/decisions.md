@@ -1883,3 +1883,59 @@ an event listener after the read (a reading could happen with no trace if it fai
 lists of pending checks and orders (no clinical content in them); showing the readings to the
 record's authors (it would show a practitioner what others do, and who reads the log is the
 admins').
+
+---
+
+## D-60 — Nobody is turned away for lack of an identity
+**Date:** 2026-09-26 · **Status:** accepted
+
+The right to be seen comes before the paperwork (Ley 26.529, art. 2): a patient who will not
+identify themselves is still seen, and their clinical record is still kept. The patient already
+could come without a document (D-09); now they may come without a name, and the practice says how
+far it knows who each patient is.
+
+**One state, not two flags.** `IdentityStatus` is `ALIAS` — no name given —, `DECLARED` — a name,
+maybe a document, that nobody saw — or `VERIFIED` — reception saw the document. A patient cannot be
+nameless and verified at once, which two booleans would allow. Every patient registered before
+this is `DECLARED` (`V17`); the column keeps that default for rows written outside the
+application, such as the development data, which cannot be edited once applied.
+
+**The alias** is `NN-` and four random digits, drawn until a free one comes up; a unique
+constraint is what guarantees it, as for the document. It stands as the patient's name until they
+give one, and is kept afterwards: a note that says NN-4821, written during an emergency, still
+finds the patient in the search. Reception registers such a patient from the patients screen or
+the API; the booking screen does not offer it, since whoever books ahead can give a name, and the
+arrival queue will.
+
+**One way to change who a patient is.** `Patient.changeIdentity(name, document, documentSeen, when,
+by)` replaces renaming and setting the document, and says what changed:
+
+- `documentSeen` verifies, and needs a document and a name other than the alias: a document is
+  checked against a name;
+- while the name is the alias, the patient goes by their alias;
+- a verified patient stays verified while name and document stay as they were, and is declared
+  again once either changes, unless the document is seen again in the same change: nobody saw the
+  new one. Saving an unchanged verified patient without ticking the box does not undo it.
+
+Registration may verify at once, since reception usually has the document in hand.
+
+**Every change is kept**, in `patient_identity_change`: before and after of the name, the document
+and the state, when by the `Clock`, and who — saved with the change, in the same transaction. A
+save that changes nothing leaves nothing. The patient stays the same one: the clinical record
+points at them by an id that never changes and copies no name, so no identity change touches
+anything clinical. Reception sees the history on the patient's screen and through
+`GET /api/patients/{id}/identity-changes`: it is not clinical content, and it tells why someone is
+on the books as NN.
+
+**Who is the username**, which `security/api/CurrentUserReader.username()` now gives. The user
+module has no id to offer other modules, and a username does not change while there is no user
+administration; when there is, this is reconsidered.
+
+**The warning is in the record.** The clinical record and the consultation form say "Identidad no
+verificada" while nobody has seen the patient's document, through `PatientSummary.identityVerified`.
+
+*Rejected:* a patient with no name at all (every screen and module shows one); an alias that
+disappears when the name arrives (the notes written with it would lose the patient); keeping the
+verification when the document changes (nobody saw the new one); merging two records of the same
+patient, for when someone registered as NN already had one — delicate, since a record is one per
+patient (Ley 26.529, art. 17), and left for later.

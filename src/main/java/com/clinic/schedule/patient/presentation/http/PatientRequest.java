@@ -12,6 +12,9 @@ import com.clinic.schedule.patient.entity.IdentityDocument;
  * <p>The document is optional, but it comes as a pair: both parts or neither. Sending only
  * one is answered with a 400, not silently ignored — a number without a type identifies
  * nobody.
+ *
+ * <p>{@code documentSeen} says reception saw the document now, which verifies the identity; left
+ * out, it is false (D-60).
  */
 record PatientRequest(
         @NotBlank(message = "the full name is required")
@@ -21,9 +24,15 @@ record PatientRequest(
         DocumentType documentType,
 
         @Size(max = 20, message = "the document number is at most 20 characters")
-        String documentNumber) {
+        String documentNumber,
+
+        Boolean documentSeen) {
 
     IdentityDocument toDocument() {
         return IdentityDocument.ofNullable(documentType, documentNumber);
+    }
+
+    boolean seen() {
+        return Boolean.TRUE.equals(documentSeen);
     }
 }

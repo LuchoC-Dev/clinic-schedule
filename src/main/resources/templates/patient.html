@@ -1,0 +1,51 @@
+<!DOCTYPE html>
+<html lang="es" xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{fragments :: head('Paciente')}"></head>
+<body>
+<header th:replace="~{fragments :: header}"></header>
+<main>
+    <h1 th:text="${patient.fullName}">Ana Pérez</h1>
+    <p class="muted">
+        Identidad: <span th:text="${patient.identity}">No verificada</span>
+        <span th:if="${patient.alias != null}" th:text="' · alias ' + ${patient.alias}"> · alias NN-4821</span>
+    </p>
+    <div th:replace="~{fragments :: messages}"></div>
+
+    <h2>Datos</h2>
+    <form class="card bar" method="post" th:action="@{/patients/{id}(id=${patient.id})}">
+        <label>Nombre completo
+            <input type="text" name="fullName" required maxlength="150" th:value="${patient.fullName}">
+        </label>
+        <label>Documento
+            <select name="documentType">
+                <option value="">— sin documento —</option>
+                <option th:each="t : ${documentTypes}" th:value="${t}" th:text="${t}"
+                        th:selected="${t == patient.documentType}"></option>
+            </select>
+        </label>
+        <label>Número
+            <input type="text" name="documentNumber" maxlength="20" th:value="${patient.documentNumber}">
+        </label>
+        <div class="choices"><label><input type="checkbox" name="documentSeen" value="true"> Vi el documento</label></div>
+        <button type="submit" class="primary">Guardar</button>
+    </form>
+    <p class="muted">Cambiar el nombre o el documento de una identidad verificada la deja sin verificar, salvo que marques que viste el documento.</p>
+
+    <h2>Cambios de identidad</h2>
+    <p th:if="${history.isEmpty()}" class="muted">Sin cambios desde que se registró.</p>
+    <table th:unless="${history.isEmpty()}">
+        <thead><tr><th>Cuándo</th><th>Quién</th><th>Antes</th><th>Después</th></tr></thead>
+        <tbody>
+        <tr th:each="c : ${history}">
+            <td th:text="${c.when}">vie 25/09/2026 10:00</td>
+            <td th:text="${c.by}">recepcion</td>
+            <td th:text="${c.before}">NN-4821, sin documento — Sin datos</td>
+            <td th:text="${c.after}">Ana Pérez, DNI 30111222 — Verificada</td>
+        </tr>
+        </tbody>
+    </table>
+
+    <p><a th:href="@{/patients}">Volver a pacientes</a></p>
+</main>
+</body>
+</html>

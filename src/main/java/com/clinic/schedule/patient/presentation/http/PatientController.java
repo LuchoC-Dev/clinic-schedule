@@ -41,15 +41,25 @@ class PatientController {
 
     @PostMapping
     ResponseEntity<PatientResponse> register(@Valid @RequestBody PatientRequest request) {
-        Patient registered = patients.register(request.fullName(), request.toDocument());
-        return ResponseEntity
-                .created(URI.create("/api/patients/" + registered.getId()))
-                .body(PatientResponse.of(registered));
+        return created(patients.register(request.fullName(), request.toDocument(), request.seen()));
     }
 
+    /** A patient who gives no name: registered under an alias the answer carries (D-60). */
+    @PostMapping("/unidentified")
+    ResponseEntity<PatientResponse> registerUnidentified() {
+        return created(patients.registerUnidentified());
+    }
+
+    /** Corrects who the patient is; the change goes to their identity history (D-60). */
     @PutMapping("/{id}")
     PatientResponse update(@PathVariable UUID id, @Valid @RequestBody PatientRequest request) {
-        return PatientResponse.of(patients.update(id, request.fullName(), request.toDocument()));
+        return PatientResponse.of(patients.changeIdentity(id, request.fullName(), request.toDocument(), request.seen()));
+    }
+
+    /** The history of the patient's identity, the most recent change first. */
+    @GetMapping("/{id}/identity-changes")
+    List<IdentityChangeResponse> identityChanges(@PathVariable UUID id) {
+        return patients.identityHistory(id).stream().map(IdentityChangeResponse::of).toList();
     }
 
     @GetMapping("/{id}")
@@ -57,9 +67,15 @@ class PatientController {
         return PatientResponse.of(patients.byId(id));
     }
 
-    /** Reception's search box: part of a name or the document number. No query lists everyone. */
+    /** Reception's search box: part of a name, the document number or an alias. No query lists everyone. */
     @GetMapping
     List<PatientResponse> search(@RequestParam(required = false) String query) {
         return patients.searchPatients(query).stream().map(PatientResponse::of).toList();
+    }
+
+    private static ResponseEntity<PatientResponse> created(Patient registered) {
+        return ResponseEntity
+                .created(URI.create("/api/patients/" + registered.getId()))
+                .body(PatientResponse.of(registered));
     }
 }

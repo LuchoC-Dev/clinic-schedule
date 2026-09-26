@@ -620,6 +620,31 @@ Benítez was refused both, which left nothing, then asked for access to the pend
 the record — `ACCESS_GRANT`; the pending list and "Mis órdenes" left nothing. In a browser, the
 record screen and the file downloaded from it added one reading each.
 
+#### Part 2 — Patient identity `[x]`
+- [x] `IdentityStatus`: `ALIAS`, `DECLARED`, `VERIFIED`; every existing patient `DECLARED` (D-60)
+- [x] A patient who gives no name, under a random alias such as NN-4821, unique, kept after they
+      give their name and still found by the search
+- [x] `Patient.changeIdentity`: the one way to change name and document; seeing the document
+      verifies, and a verified identity is declared again when its name or document changes
+- [x] `V17`: the state and the alias on `patient`, and `patient_identity_change`, with who and when
+- [x] `POST /api/patients/unidentified`, `documentSeen` on registering and correcting,
+      `GET /api/patients/{id}/identity-changes`
+- [x] Screens: "Registrar sin datos (NN)", each patient's screen to correct and verify their
+      identity with its history, and "Identidad no verificada" on the record and the consultation
+- [x] `CurrentUserReader.username()`, to say who changed it
+- [x] 12 unit and 13 integration tests. 245 unit and 277 integration tests, 522 in total
+
+**Verified with:** each of these failing its tests when broken on purpose — a verified identity
+kept whatever changes, a change not saved to the history, the alias not searched, the alias dropped
+once the name is given, the record not warning; `mvnw verify` with the PostgreSQL tests running V17.
+
+**Verified in a browser** against the application on a throwaway PostgreSQL: the two seeded patients
+came out of V17 declared; reception registered NN-6951 and Dra. Arias, seeing them that day, read
+"Identidad no verificada" on their record; reception gave the name and the DNI, ticked "Vi el
+documento", and the record stopped warning; the history showed the change by `recepcion`, and
+searching for NN-6951 found María Fernández; renaming her without ticking the box made her
+unverified again, a second entry; ticking it with no document was refused in Spanish.
+
 ---
 
 ## Explicitly postponed
@@ -638,6 +663,8 @@ From v2, phase 2:
 
 - Reading the read log of the clinical records, by the admins (see D-59).
 - Recording refused attempts to read a record, with the security stage (see D-59).
+- Merging two records of the same patient, for someone registered under an alias who already had
+  one (see D-60).
 
 From v1:
 

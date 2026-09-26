@@ -38,4 +38,13 @@ class CurrentUserService implements CurrentUserReader {
         }
         return Optional.empty();
     }
+
+    @Override
+    public String username() {
+        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+        if (authentication == null || authentication.getName() == null) {
+            throw new IllegalStateException("Nobody is logged in to say who did it");
+        }
+        return authentication.getName();
+    }
 }

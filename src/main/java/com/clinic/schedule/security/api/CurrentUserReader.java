@@ -17,4 +17,11 @@ public interface CurrentUserReader {
      * see every practitioner.
      */
     Optional<UUID> practitionerId();
+
+    /**
+     * The username of whoever is using the application, to record who did something (D-60).
+     *
+     * @throws IllegalStateException when nobody is logged in, which no route that writes allows
+     */
+    String username();
 }
