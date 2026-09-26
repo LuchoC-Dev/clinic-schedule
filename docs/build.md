@@ -594,6 +594,32 @@ results now or later, orders, access asked to report a check, the follow-up of o
 attached files, all usable from the screens and the API. What it left for later is listed below,
 under "Explicitly postponed".
 
+### Phase 2 — The arrival queue `[~]`
+
+Scope in `docs/context.md`, section "v2, phase 2 — the arrival queue". Delivered in parts; each
+one is usable on its own.
+
+#### Part 1 — The read log of the clinical record `[x]`
+- [x] `docs/context.md`: the scope of phase 2
+- [x] `RecordReading`: who read whose record, when, by which access, and which attached file (D-59)
+- [x] `ClinicalRecordAccessPolicy.readAccess`: by which access the record is open —
+      `VISIT_TODAY`, `ACCESS_GRANT`, `SEEN_WITHIN_PERIOD` — the first in the rule's order
+- [x] Recorded when the record is shown, through the API or on screen, and when a file is
+      downloaded; in the same transaction, so nothing is read without a trace
+- [x] `V16`: `record_reading`, only inserted, through `RecordReadingWriter`; nothing reads it yet
+- [x] Not recorded: refusals, the pending-results list and "Mis órdenes"
+- [x] 5 unit and 9 integration tests. 233 unit and 264 integration tests, 497 in total
+
+**Verified with:** each of these failing its tests when broken on purpose — a record read without
+saving the reading, a download recorded as a reading of the whole record, the rule's order swapped,
+a refused download recorded; `mvnw verify` with the PostgreSQL tests running V16.
+
+**Verified with the application running** on a throwaway PostgreSQL: Dra. Arias read the record of
+a patient who had arrived and downloaded its PDF — `VISIT_TODAY`, the second with the file; Dr.
+Benítez was refused both, which left nothing, then asked for access to the pending check and read
+the record — `ACCESS_GRANT`; the pending list and "Mis órdenes" left nothing. In a browser, the
+record screen and the file downloaded from it added one reading each.
+
 ---
 
 ## Explicitly postponed
@@ -607,6 +633,11 @@ From v2, phase 1:
   the anti-corruption layer (see D-55).
 - Files attached to the record as a whole, such as a report the patient brings (see D-57).
 - Moving the attached files to an object store, when they outgrow the database (see D-57).
+
+From v2, phase 2:
+
+- Reading the read log of the clinical records, by the admins (see D-59).
+- Recording refused attempts to read a record, with the security stage (see D-59).
 
 From v1:
 

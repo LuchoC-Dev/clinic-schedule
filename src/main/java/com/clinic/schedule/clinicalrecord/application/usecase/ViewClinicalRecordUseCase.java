@@ -2,6 +2,7 @@ package com.clinic.schedule.clinicalrecord.application.usecase;
 
 import java.time.Clock;
 import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.util.Comparator;
 import java.util.List;
 
@@ -15,6 +16,7 @@ import com.clinic.schedule.clinicalrecord.application.port.CheckOrderRepository;
 import com.clinic.schedule.clinicalrecord.application.port.CheckRepository;
 import com.clinic.schedule.clinicalrecord.application.port.ConsultationRepository;
 import com.clinic.schedule.clinicalrecord.application.port.CurrentPractitionerPort;
+import com.clinic.schedule.clinicalrecord.application.port.RecordReadingWriter;
 import com.clinic.schedule.clinicalrecord.domain.AccessGrant;
 import com.clinic.schedule.clinicalrecord.domain.Attachment;
 import com.clinic.schedule.clinicalrecord.domain.Check;
@@ -23,6 +25,8 @@ import com.clinic.schedule.clinicalrecord.domain.ClinicalRecordAccessPolicy;
 import com.clinic.schedule.clinicalrecord.domain.Consultation;
 import com.clinic.schedule.clinicalrecord.domain.PatientId;
 import com.clinic.schedule.clinicalrecord.domain.PractitionerId;
+import com.clinic.schedule.clinicalrecord.domain.ReadAccess;
+import com.clinic.schedule.clinicalrecord.domain.RecordReading;
 import com.clinic.schedule.clinicalrecord.domain.VisitToday;
 
 /**
@@ -33,6 +37,9 @@ import com.clinic.schedule.clinicalrecord.domain.VisitToday;
  * takes a practitioner. Which practitioner may read which patient is the rule of
  * {@link ClinicalRecordAccessPolicy}, and a refusal is a 403 — for a patient who does not exist
  * as well, so the answer never tells whether they do (D-49, D-50).
+ *
+ * <p>Every reading is recorded, with the access that allowed it, in the same transaction: a record
+ * that cannot be traced is not read (D-59). So this read writes.
  */
 @Service
 public class ViewClinicalRecordUseCase {
@@ -42,33 +49,37 @@ public class ViewClinicalRecordUseCase {
     private final AccessGrantRepository grants;
     private final CheckOrderRepository orders;
     private final AttachmentRepository attachments;
+    private final RecordReadingWriter readings;
     private final CurrentPractitionerPort currentPractitioner;
     private final ClinicalRecordAccessReader access;
     private final Clock clock;
 
     public ViewClinicalRecordUseCase(ConsultationRepository consultations, CheckRepository checks,
             AccessGrantRepository grants, CheckOrderRepository orders, AttachmentRepository attachments,
-            CurrentPractitionerPort currentPractitioner, ClinicalRecordAccessReader access, Clock clock) {
+            RecordReadingWriter readings, CurrentPractitionerPort currentPractitioner,
+            ClinicalRecordAccessReader access, Clock clock) {
         this.consultations = consultations;
         this.checks = checks;
         this.grants = grants;
         this.orders = orders;
         this.attachments = attachments;
+        this.readings = readings;
         this.currentPractitioner = currentPractitioner;
         this.access = access;
         this.clock = clock;
     }
 
     /** @throws ClinicalRecordAccessDeniedException when the user may not read this record */
-    @Transactional(readOnly = true)
+    @Transactional
     public ClinicalRecord handle(PatientId patientId) {
         PractitionerId practitionerId = currentPractitioner.practitionerId()
                 .orElseThrow(ClinicalRecordAccessDeniedException::toRead);
-        LocalDate today = LocalDate.now(clock);
+        LocalDateTime now = LocalDateTime.now(clock);
+        LocalDate today = now.toLocalDate();
         VisitToday visit = access.visitOn(practitionerId, patientId, today);
-        if (!access.mayRead(practitionerId, patientId, visit, today)) {
-            throw ClinicalRecordAccessDeniedException.toRead();
-        }
+        ReadAccess readAccess = access.readAccess(practitionerId, patientId, visit, today)
+                .orElseThrow(ClinicalRecordAccessDeniedException::toRead);
+        readings.save(RecordReading.ofRecord(practitionerId, patientId, now, readAccess));
         List<Consultation> foundConsultations = consultations.findAllForPatient(patientId).stream()
                 .sorted(Comparator.comparing(Consultation::recordedAt).reversed())
                 .toList();

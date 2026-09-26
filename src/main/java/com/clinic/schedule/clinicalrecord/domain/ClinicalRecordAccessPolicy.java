@@ -38,21 +38,30 @@ public class ClinicalRecordAccessPolicy {
     }
 
     /**
+     * By which access the practitioner may read the record, or empty when they may not. When more
+     * than one applies, the first in the order above: that is the one a reading records (D-59).
+     *
      * @param lastSeen when this practitioner last saw the patient, if ever
      * @param grants the access grants this practitioner holds for the patient, valid or not
      * @param today the practice's today
      */
-    public boolean mayRead(Optional<LocalDateTime> lastSeen, VisitToday visit, List<AccessGrant> grants,
-            LocalDate today) {
+    public Optional<ReadAccess> readAccess(Optional<LocalDateTime> lastSeen, VisitToday visit,
+            List<AccessGrant> grants, LocalDate today) {
         if (visit != VisitToday.NONE) {
-            return true;
+            return Optional.of(ReadAccess.VISIT_TODAY);
         }
         if (grants.stream().anyMatch(grant -> grant.isValidOn(today))) {
-            return true;
+            return Optional.of(ReadAccess.ACCESS_GRANT);
         }
         return lastSeen
-                .map(last -> !today.isAfter(last.toLocalDate().plus(accessPeriod)))
-                .orElse(false);
+                .filter(last -> !today.isAfter(last.toLocalDate().plus(accessPeriod)))
+                .map(last -> ReadAccess.SEEN_WITHIN_PERIOD);
+    }
+
+    /** Whether the practitioner may read the record at all, by any access. */
+    public boolean mayRead(Optional<LocalDateTime> lastSeen, VisitToday visit, List<AccessGrant> grants,
+            LocalDate today) {
+        return readAccess(lastSeen, visit, grants, today).isPresent();
     }
 
     public boolean mayRecord(VisitToday visit) {

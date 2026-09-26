@@ -1837,3 +1837,49 @@ write as `CheckChangedException` (409) whatever changed. The result's use case s
 *Rejected:* editing or deleting the result (the record only grows); addenda only through the
 consultation (a check without one would have nowhere to be corrected).
 
+
+---
+
+## D-59 — Every reading of a clinical record is recorded
+**Date:** 2026-09-26 · **Status:** accepted
+
+The law asks that access to a clinical record be traceable: every action on it tied to one person,
+leaving a trace (Ley 27.706; Ley 26.529, art. 2). Phase 1 recorded who wrote and who was granted
+access, not who read. Phase 2 opens the record in more ways — a patient waiting in a queue, an
+absent appointment — so the readings are recorded first, over today's access, before any of them
+arrives.
+
+**A reading is what hands clinical content to someone:** the record shown whole
+(`ViewClinicalRecordUseCase`, which serves the API and the screen, and the screen shows it again
+when a form comes back refused) and an attached file downloaded (`DownloadAttachmentUseCase`).
+"Resultados pendientes" and "Mis órdenes" are not readings: they show the patient, the check and
+where it stands, never its content, and they exist to be seen without access. Writing is not a
+reading either: whatever is written already records its author and time, and a writer read the
+record first, which is recorded.
+
+**What is kept:** `RecordReading` — who, whose record, when by the `Clock`, by which access, and the
+attachment when that is what was read — in `record_reading` (`V16`), only ever inserted.
+
+**The access comes from the rule itself.** `ClinicalRecordAccessPolicy.readAccess` answers by which
+access the record is open — `VISIT_TODAY`, `ACCESS_GRANT` or `SEEN_WITHIN_PERIOD` — or nothing;
+`mayRead` is that answer being present. When several apply, the first in the rule's order is the
+one recorded. No second place repeats the rule to find out why it said yes. The queue will add a
+way in phase 2's part 5.
+
+**A reading that cannot be traced does not happen.** The reading is saved in the same transaction
+as the read, so the two use cases become writes (`@Transactional`, D-27): if saving fails, the
+record is not shown.
+
+**Nobody reads it yet** — not on a screen, not through the API; admins will, when they exist. So
+it is written through `RecordReadingWriter` alone, with no reader, no endpoint and no index beyond
+the key (D-14, D-18): what reads it, and so what to index, is decided with the admins.
+
+**Refusals are not recorded.** A 403 hands nothing over, so it is not a reading. Recording the
+attempts, to notice someone probing records that are not theirs, is a security matter of its own and
+is left for a later stage.
+
+*Rejected:* recording in the controllers (the API and the screen would each have to remember it);
+an event listener after the read (a reading could happen with no trace if it failed); recording the
+lists of pending checks and orders (no clinical content in them); showing the readings to the
+record's authors (it would show a practitioner what others do, and who reads the log is the
+admins').

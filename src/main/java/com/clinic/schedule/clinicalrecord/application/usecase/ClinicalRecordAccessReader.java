@@ -14,6 +14,7 @@ import com.clinic.schedule.clinicalrecord.application.port.ConsultationRepositor
 import com.clinic.schedule.clinicalrecord.domain.ClinicalRecordAccessPolicy;
 import com.clinic.schedule.clinicalrecord.domain.PatientId;
 import com.clinic.schedule.clinicalrecord.domain.PractitionerId;
+import com.clinic.schedule.clinicalrecord.domain.ReadAccess;
 import com.clinic.schedule.clinicalrecord.domain.VisitToday;
 
 /**
@@ -49,9 +50,19 @@ class ClinicalRecordAccessReader {
         return attendance.visitOn(practitionerId, patientId, today);
     }
 
-    boolean mayRead(PractitionerId practitionerId, PatientId patientId, VisitToday visit, LocalDate today) {
-        return policy.mayRead(lastSeen(practitionerId, patientId), visit, grants.findFor(patientId, practitionerId),
+    /** By which access the practitioner may read the record, or empty when they may not (D-59). */
+    Optional<ReadAccess> readAccess(PractitionerId practitionerId, PatientId patientId, VisitToday visit,
+            LocalDate today) {
+        return policy.readAccess(lastSeen(practitionerId, patientId), visit, grants.findFor(patientId, practitionerId),
                 today);
+    }
+
+    Optional<ReadAccess> readAccess(PractitionerId practitionerId, PatientId patientId, LocalDate today) {
+        return readAccess(practitionerId, patientId, visitOn(practitionerId, patientId, today), today);
+    }
+
+    boolean mayRead(PractitionerId practitionerId, PatientId patientId, VisitToday visit, LocalDate today) {
+        return readAccess(practitionerId, patientId, visit, today).isPresent();
     }
 
     boolean mayRead(PractitionerId practitionerId, PatientId patientId, LocalDate today) {

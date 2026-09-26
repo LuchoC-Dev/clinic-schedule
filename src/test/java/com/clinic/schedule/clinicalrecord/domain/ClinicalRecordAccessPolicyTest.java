@@ -74,6 +74,32 @@ class ClinicalRecordAccessPolicyTest {
     }
 
     @Test
+    void itSaysByWhichAccessTheRecordIsOpen() {
+        AccessGrant valid = grantedOn(LocalDate.of(2027, 3, 1), LocalDate.of(2027, 3, 10));
+        Optional<LocalDateTime> lastMonth = lastSeenOn(LocalDate.of(2027, 2, 10));
+
+        assertThat(A_YEAR.readAccess(Optional.empty(), VisitToday.EXPECTED, NO_GRANTS, TODAY))
+                .contains(ReadAccess.VISIT_TODAY);
+        assertThat(A_YEAR.readAccess(Optional.empty(), VisitToday.NONE, List.of(valid), TODAY))
+                .contains(ReadAccess.ACCESS_GRANT);
+        assertThat(A_YEAR.readAccess(lastMonth, VisitToday.NONE, NO_GRANTS, TODAY))
+                .contains(ReadAccess.SEEN_WITHIN_PERIOD);
+        assertThat(A_YEAR.readAccess(lastSeenOn(LocalDate.of(2026, 3, 9)), VisitToday.NONE, NO_GRANTS, TODAY))
+                .isEmpty();
+    }
+
+    @Test
+    void whenSeveralAccessesApplyTheFirstInTheRulesOrderIsTheOne() {
+        AccessGrant valid = grantedOn(LocalDate.of(2027, 3, 1), LocalDate.of(2027, 3, 10));
+        Optional<LocalDateTime> lastMonth = lastSeenOn(LocalDate.of(2027, 2, 10));
+
+        assertThat(A_YEAR.readAccess(lastMonth, VisitToday.ARRIVED, List.of(valid), TODAY))
+                .contains(ReadAccess.VISIT_TODAY);
+        assertThat(A_YEAR.readAccess(lastMonth, VisitToday.NONE, List.of(valid), TODAY))
+                .contains(ReadAccess.ACCESS_GRANT);
+    }
+
+    @Test
     void thePeriodMustBeLongerThanNothing() {
         assertThatIllegalArgumentException().isThrownBy(() -> new ClinicalRecordAccessPolicy(Period.ZERO));
         assertThatIllegalArgumentException().isThrownBy(() -> new ClinicalRecordAccessPolicy(Period.ofDays(-1)));

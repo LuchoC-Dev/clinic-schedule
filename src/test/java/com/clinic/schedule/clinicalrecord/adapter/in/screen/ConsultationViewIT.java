@@ -142,6 +142,16 @@ class ConsultationViewIT {
     }
 
     @Test
+    void showingTheRecordOnScreenIsAReading() throws Exception {
+        arrivedToday();
+
+        mockMvc.perform(get("/clinical-records/" + patient).with(asArias)).andExpect(status().isOk());
+
+        assertThat(jdbc.queryForList("select access from record_reading where practitioner_id = ? and patient_id = ?",
+                String.class, arias.id(), patient)).containsExactly("VISIT_TODAY");
+    }
+
+    @Test
     void aHalfFilledRowIsRefusedKeepingWhatWasTyped() throws Exception {
         arrivedToday();
 
