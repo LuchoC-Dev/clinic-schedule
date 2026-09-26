@@ -9,6 +9,7 @@ import org.springframework.transaction.annotation.Transactional;
 import com.clinic.schedule.appointment.application.exception.AppointmentNotFoundException;
 import com.clinic.schedule.appointment.application.exception.OutsideWorkingHoursException;
 import com.clinic.schedule.appointment.application.port.AppointmentRepository;
+import com.clinic.schedule.appointment.application.port.ArrivalPort;
 import com.clinic.schedule.appointment.application.port.PractitionerSchedulePort;
 import com.clinic.schedule.appointment.domain.Appointment;
 import com.clinic.schedule.appointment.domain.AppointmentId;
@@ -32,14 +33,16 @@ public class RescheduleAppointmentUseCase {
     private final AppointmentRepository appointments;
     private final PractitionerSchedulePort practitioners;
     private final BookingService bookingService;
+    private final ArrivalPort arrivals;
     private final AgendaReader agenda;
     private final Clock clock;
 
     public RescheduleAppointmentUseCase(AppointmentRepository appointments, PractitionerSchedulePort practitioners,
-            BookingService bookingService, Clock clock) {
+            BookingService bookingService, ArrivalPort arrivals, Clock clock) {
         this.appointments = appointments;
         this.practitioners = practitioners;
         this.bookingService = bookingService;
+        this.arrivals = arrivals;
         this.agenda = new AgendaReader(appointments);
         this.clock = clock;
     }
@@ -55,7 +58,8 @@ public class RescheduleAppointmentUseCase {
         }
 
         Appointment moved = bookingService.reschedule(appointment, newSlot, LocalDateTime.now(clock),
-                agenda.around(newSlot, appointment.practitionerId(), appointment.patientId()));
+                agenda.around(newSlot, appointment.practitionerId(), appointment.patientId()),
+                arrivals.arrivalOf(appointment.id()));
 
         appointments.save(moved);
         return moved;

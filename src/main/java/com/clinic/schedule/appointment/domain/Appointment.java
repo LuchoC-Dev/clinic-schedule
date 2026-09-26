@@ -8,8 +8,8 @@ import com.clinic.schedule.appointment.domain.exception.NotTheAppointmentDayExce
 
 /**
  * An appointment in the agenda: a patient, a practitioner, the slot it takes up, the reason
- * it was requested and an optional note — plus what happens on the day: whether the patient
- * checked in, and whether reception was warned they would be late.
+ * it was requested and an optional note — plus whether reception was warned the patient would be
+ * late. Whether the patient arrived is not the booking's: the arrival queues keep it (D-65).
  *
  * <p>Plain domain object, with no persistence or framework annotations: the adapter that
  * stores it is the one that knows about JPA.
@@ -43,12 +43,10 @@ public class Appointment {
     private final String reason;
     private final String note;
     private final AppointmentStatus status;
-    private final LocalDateTime checkedInAt;
     private final boolean lateArrivalNotice;
 
     private Appointment(AppointmentId id, PatientId patientId, PractitionerId practitionerId, TimeSlot slot,
-            String reason, String note, AppointmentStatus status, LocalDateTime checkedInAt,
-            boolean lateArrivalNotice) {
+            String reason, String note, AppointmentStatus status, boolean lateArrivalNotice) {
         this.id = id;
         this.patientId = patientId;
         this.practitionerId = practitionerId;
@@ -56,7 +54,6 @@ public class Appointment {
         this.reason = reason;
         this.note = note;
         this.status = status;
-        this.checkedInAt = checkedInAt;
         this.lateArrivalNotice = lateArrivalNotice;
     }
 
@@ -71,7 +68,7 @@ public class Appointment {
             String reason, String note) {
         requireInvariants(id, patientId, practitionerId, slot, reason, note);
         return new Appointment(id, patientId, practitionerId, slot, reason.strip(), note, AppointmentStatus.BOOKED,
-                null, false);
+                false);
     }
 
     /**
@@ -89,14 +86,12 @@ public class Appointment {
      * deliberate, the same way writing raw SQL would be; see D-15.
      */
     public static Appointment restore(AppointmentId id, PatientId patientId, PractitionerId practitionerId,
-            TimeSlot slot, String reason, String note, AppointmentStatus status, LocalDateTime checkedInAt,
-            boolean lateArrivalNotice) {
+            TimeSlot slot, String reason, String note, AppointmentStatus status, boolean lateArrivalNotice) {
         requireInvariants(id, patientId, practitionerId, slot, reason, note);
         if (status == null) {
             throw new IllegalArgumentException("A stored appointment needs a status");
         }
-        return new Appointment(id, patientId, practitionerId, slot, reason.strip(), note, status, checkedInAt,
-                lateArrivalNotice);
+        return new Appointment(id, patientId, practitionerId, slot, reason.strip(), note, status, lateArrivalNotice);
     }
 
     private static void requireInvariants(AppointmentId id, PatientId patientId, PractitionerId practitionerId,
@@ -123,44 +118,25 @@ public class Appointment {
     public Appointment cancelled() {
         requireBooked("cancelled");
         return new Appointment(id, patientId, practitionerId, slot, reason, note, AppointmentStatus.CANCELLED,
-                checkedInAt, lateArrivalNotice);
+                lateArrivalNotice);
     }
 
     /**
      * The same appointment on another slot. Version 1 keeps no history of the previous date.
      *
      * <p>A notice that the patient would be late was about the old time, so it does not carry
-     * over. An appointment whose patient already arrived cannot be moved: the arrival belongs
-     * to this time, not to another.
+     * over. Whether the patient already arrived, which forbids the move, is known outside the
+     * appointment (D-65).
      *
      * <p>Restricted to the domain package like {@link #book}, because the new slot has to be
      * checked against the agenda: the way in is {@link BookingService#reschedule}.
      */
     Appointment movedTo(TimeSlot newSlot) {
         requireBooked("rescheduled");
-        requireNotCheckedIn("rescheduled");
         if (newSlot == null) {
             throw new IllegalArgumentException("An appointment needs a slot");
         }
-        return new Appointment(id, patientId, practitionerId, newSlot, reason, note, status, null, false);
-    }
-
-    /**
-     * The same appointment, with the patient's arrival confirmed by reception. From then on it
-     * is never marked absent (D-61).
-     *
-     * <p>Only on the day of the appointment: an arrival on another day is a mistake, most likely
-     * the wrong line of the agenda (D-38).
-     */
-    public Appointment checkedIn(LocalDateTime at) {
-        requireBooked("checked in");
-        requireNotCheckedIn("checked in");
-        if (at == null) {
-            throw new IllegalArgumentException("A check-in needs the time it happened");
-        }
-        requireTheDayOfTheAppointment(at, "checked in");
-        return new Appointment(id, patientId, practitionerId, slot, reason, note, status, at,
-                lateArrivalNotice);
+        return new Appointment(id, patientId, practitionerId, newSlot, reason, note, status, false);
     }
 
     /**
@@ -168,27 +144,26 @@ public class Appointment {
      * it waits until the end of its day before the patient is absent (D-06, D-61). It gives no
      * priority: whoever warned is placed like any other late arrival.
      *
-     * <p>Rejected once the patient arrived, since there is nothing left to wait for, and
-     * rejected a second time like any other repeated operation. Only on the day of the
-     * appointment, like the check-in it stands in for (D-38).
+     * <p>Rejected a second time like any other repeated operation, and only on the day of the
+     * appointment (D-38). Once the patient arrived there is nothing left to wait for: that is
+     * {@link AppointmentDayService}'s to say, since the arrival is kept outside (D-65).
      */
-    public Appointment withLateArrivalNotice(LocalDateTime now) {
+    Appointment withLateArrivalNotice(LocalDateTime now) {
         requireBooked("given more time");
-        requireNotCheckedIn("given more time");
         requireTheDayOfTheAppointment(now, "given more time");
         if (lateArrivalNotice) {
             throw new BookingRuleViolationException("Reception was already warned that this patient will be late");
         }
-        return new Appointment(id, patientId, practitionerId, slot, reason, note, status, checkedInAt, true);
+        return new Appointment(id, patientId, practitionerId, slot, reason, note, status, true);
     }
 
     /**
-     * Whether the patient never arrived and the wait is over: 30 minutes after the start, or at
-     * the midnight that ends its day when reception was warned. Never true once the patient
-     * checked in, nor for an appointment that is no longer booked.
+     * Whether the wait is over, for a patient who has not come: 30 minutes after the start, or at
+     * the midnight that ends its day when reception was warned. Never true for an appointment that
+     * is no longer booked. Whether the patient came is {@link AppointmentDayService}'s to add.
      */
-    public boolean isDueForAbsence(LocalDateTime now) {
-        if (!isBooked() || isCheckedIn()) {
+    boolean isOverdue(LocalDateTime now) {
+        if (!isBooked()) {
             return false;
         }
         LocalDateTime due = lateArrivalNotice
@@ -202,17 +177,15 @@ public class Appointment {
      * replaces the automatic cancellation of v1 (D-61). It holds its slot no more, and nothing
      * happens to it afterwards: a patient who comes after all is seen some other way.
      *
-     * @throws BookingRuleViolationException when the wait is not over, the patient arrived, or
-     *         it is no longer booked
+     * @throws BookingRuleViolationException when the wait is not over, or it is no longer booked
      */
-    public Appointment markedAbsent(LocalDateTime now) {
+    Appointment markedAbsent(LocalDateTime now) {
         requireBooked("marked absent");
-        requireNotCheckedIn("marked absent");
-        if (!isDueForAbsence(now)) {
+        if (!isOverdue(now)) {
             throw new BookingRuleViolationException("The patient of this appointment may still come");
         }
         return new Appointment(id, patientId, practitionerId, slot, reason, note, AppointmentStatus.ABSENT,
-                checkedInAt, lateArrivalNotice);
+                lateArrivalNotice);
     }
 
     private void requireTheDayOfTheAppointment(LocalDateTime now, String action) {
@@ -230,18 +203,8 @@ public class Appointment {
         }
     }
 
-    private void requireNotCheckedIn(String action) {
-        if (isCheckedIn()) {
-            throw new BookingRuleViolationException("An appointment whose patient already arrived cannot be " + action);
-        }
-    }
-
     public boolean isBooked() {
         return status == AppointmentStatus.BOOKED;
-    }
-
-    public boolean isCheckedIn() {
-        return checkedInAt != null;
     }
 
     /** True when both are the same appointment. Identity exists from creation, so this is
@@ -276,11 +239,6 @@ public class Appointment {
 
     public AppointmentStatus status() {
         return status;
-    }
-
-    /** When reception confirmed the arrival, or null if the patient has not arrived. */
-    public LocalDateTime checkedInAt() {
-        return checkedInAt;
     }
 
     /** Whether reception was warned the patient would be late. */

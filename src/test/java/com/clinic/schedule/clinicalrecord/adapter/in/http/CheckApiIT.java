@@ -25,6 +25,7 @@ import org.springframework.test.web.servlet.request.RequestPostProcessor;
 import com.clinic.schedule.appointment.PatientFixture;
 import com.clinic.schedule.appointment.PractitionerFixture;
 import com.clinic.schedule.appointment.PractitionerFixture.CreatedPractitioner;
+import com.clinic.schedule.arrival.ArrivalFixture;
 import com.clinic.schedule.clinicalrecord.PractitionerUserFixture;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
@@ -80,7 +81,7 @@ class CheckApiIT {
 
     private String arrivedToday() throws Exception {
         String appointment = book(arias, "10:00:00");
-        mockMvc.perform(post("/api/appointments/" + appointment + "/check-in")).andExpect(status().isOk());
+        new ArrivalFixture(mockMvc, jdbc).arrivedAndCalled(appointment, asArias);
         return appointment;
     }
 
@@ -161,7 +162,7 @@ class CheckApiIT {
 
         send(asArias, "/api/checks", body).andExpect(status().isForbidden());
 
-        mockMvc.perform(post("/api/appointments/" + appointment + "/check-in")).andExpect(status().isOk());
+        new ArrivalFixture(mockMvc, jdbc).arrivedAndCalled(appointment, asArias);
         send(asArias, "/api/checks", body)
                 .andExpect(status().isCreated())
                 .andExpect(jsonPath("$.consultationId").doesNotExist())
@@ -181,6 +182,7 @@ class CheckApiIT {
                 """.formatted(patient)).andExpect(status().isCreated());
 
         mockMvc.perform(post("/api/appointments/" + appointment + "/cancel")).andExpect(status().isOk());
+        new ArrivalFixture(mockMvc, jdbc).seenTheDayBefore(patient);
 
         readRecord(asArias).andExpect(status().isOk()).andExpect(jsonPath("$.checks", hasSize(1)));
     }

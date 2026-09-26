@@ -3,6 +3,7 @@ package com.clinic.schedule.appointment.adapter.in.screen;
 import java.time.Clock;
 import java.time.DayOfWeek;
 import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.time.LocalTime;
 import java.util.ArrayList;
 import java.util.List;
@@ -28,7 +29,7 @@ import org.springframework.web.util.UriComponentsBuilder;
 import com.clinic.schedule.appointment.application.exception.AgendaAccessDeniedException;
 import com.clinic.schedule.appointment.application.usecase.BookAppointmentUseCase;
 import com.clinic.schedule.appointment.application.usecase.CancelAppointmentUseCase;
-import com.clinic.schedule.appointment.application.usecase.CheckInUseCase;
+import com.clinic.schedule.appointment.application.usecase.FindArrivalsUseCase;
 import com.clinic.schedule.appointment.application.usecase.FindAppointmentUseCase;
 import com.clinic.schedule.appointment.application.usecase.RescheduleAppointmentUseCase;
 import com.clinic.schedule.appointment.application.usecase.SuggestSlotsUseCase;
@@ -49,7 +50,8 @@ import com.clinic.schedule.security.api.CurrentUserReader;
 
 /**
  * Reception's screens over the agenda: a day or a week, of one practitioner or all of them;
- * booking, moving, and what happens on the day — check-in, a late-arrival notice, cancelling.
+ * booking, moving, and what happens on the day — a late-arrival notice, cancelling. The arrival is
+ * the queues': "Llegó" posts to them (D-65).
  *
  * <p>Thin and throwaway, as D-02 requires: it calls the same use cases the REST controllers
  * call, never the REST controllers themselves, and holds no rule. When the single-page
@@ -74,7 +76,7 @@ class AgendaViewController {
     private final BookAppointmentUseCase book;
     private final RescheduleAppointmentUseCase reschedule;
     private final CancelAppointmentUseCase cancel;
-    private final CheckInUseCase checkIn;
+    private final FindArrivalsUseCase arrivals;
     private final RecordLateArrivalNoticeUseCase recordLateArrivalNotice;
     private final SuggestSlotsUseCase suggestSlots;
     private final PractitionerReader practitioners;
@@ -85,7 +87,7 @@ class AgendaViewController {
 
     AgendaViewController(ViewAgendaUseCase agenda, FindAppointmentUseCase findAppointment,
             BookAppointmentUseCase book, RescheduleAppointmentUseCase reschedule, CancelAppointmentUseCase cancel,
-            CheckInUseCase checkIn, RecordLateArrivalNoticeUseCase recordLateArrivalNotice,
+            FindArrivalsUseCase arrivals, RecordLateArrivalNoticeUseCase recordLateArrivalNotice,
             SuggestSlotsUseCase suggestSlots, PractitionerReader practitioners, PatientReader patients,
             PatientWriter newPatients, CurrentUserReader currentUser, Clock clock) {
         this.agenda = agenda;
@@ -93,7 +95,7 @@ class AgendaViewController {
         this.book = book;
         this.reschedule = reschedule;
         this.cancel = cancel;
-        this.checkIn = checkIn;
+        this.arrivals = arrivals;
         this.recordLateArrivalNotice = recordLateArrivalNotice;
         this.suggestSlots = suggestSlots;
         this.practitioners = practitioners;
@@ -176,27 +178,22 @@ class AgendaViewController {
                 .collect(Collectors.toMap(PatientSummary::id, Function.identity()));
         Map<UUID, String> practitionerNames = everyone.stream()
                 .collect(Collectors.toMap(PractitionerSummary::id, PractitionerSummary::fullName));
+        Map<AppointmentId, LocalDateTime> arrived = arrivals.handle(appointments.stream().map(Appointment::id).toList());
         return appointments.stream()
                 .map(appointment -> AgendaRow.of(appointment,
                         patientNames.get(appointment.patientId().value()),
-                        practitionerNames.get(appointment.practitionerId().value())))
+                        practitionerNames.get(appointment.practitionerId().value()),
+                        arrived.get(appointment.id())))
                 .toList();
     }
 
-    @PostMapping("/agenda/appointments/{id}/check-in")
-    String checkIn(@PathVariable UUID id, @RequestParam(required = false) UUID practitionerId,
-            @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate date,
-            @RequestParam(required = false) String view, RedirectAttributes flash) {
-        attempt(() -> checkIn.handle(new AppointmentId(id)), "Llegada confirmada.", flash);
-        return redirectToAgenda(practitionerId, date, view);
-    }
 
     @PostMapping("/agenda/appointments/{id}/late-notice")
     String lateNotice(@PathVariable UUID id, @RequestParam(required = false) UUID practitionerId,
             @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate date,
             @RequestParam(required = false) String view, RedirectAttributes flash) {
         attempt(() -> recordLateArrivalNotice.handle(new AppointmentId(id)),
-                "Anotado: se lo espera hasta 24 horas antes de cancelar.", flash);
+                "Anotado: se lo espera hasta el final del día.", flash);
         return redirectToAgenda(practitionerId, date, view);
     }
 
@@ -335,7 +332,8 @@ class AgendaViewController {
                 .map(PractitionerSummary::fullName)
                 .findFirst().orElse(null);
 
-        model.addAttribute("row", AgendaRow.of(appointment, patient, practitionerName));
+        model.addAttribute("row", AgendaRow.of(appointment, patient, practitionerName,
+                arrivals.handle(List.of(appointment.id())).get(appointment.id())));
         model.addAttribute("practitionerId", appointment.practitionerId().value());
         model.addAttribute("currentDate", appointment.slot().startsAt().toLocalDate());
         model.addAttribute("date", day);

@@ -79,7 +79,6 @@ Spanish, for the staff.
 | `POST` | `/api/appointments` | book; the duration follows from the reason |
 | `POST` | `/api/appointments/{id}/reschedule` | move it, keeping its duration |
 | `POST` | `/api/appointments/{id}/cancel` | cancel it, keeping the record |
-| `POST` | `/api/appointments/{id}/check-in` | the patient arrived |
 | `POST` | `/api/appointments/{id}/late-arrival-notice` | the patient warned they will be late |
 | `GET` | `/api/appointments?practitionerId=&date=` | a day's agenda — a practitioner may only ask for their own |
 | `POST` | `/api/time-off` | a practitioner's absence — whole days up to `untilDate`, or part of one — cancelling the appointments it hits |
@@ -91,7 +90,7 @@ Spanish, for the staff.
 | `GET` | `/api/queues/{id}/session` | the open session: who waits, in the order they will be called, who was called, who is done |
 | `POST` | `/api/queues/{id}/session/patients`, `/session/unidentified` | bring a patient in, or one who gives no name, as an emergency or not |
 | `POST` | `/api/queue-entries/{id}/emergency`, `/left` | make a waiting patient an emergency, or say they left |
-| `POST` | `/api/appointment-arrivals` | a patient with an appointment today arrives: into their practitioner's queue, kept for them |
+| `POST` | `/api/appointment-arrivals` | a patient with an appointment today arrives: into their practitioner's queue, kept for them; the appointment answers when, as `arrivedAt` |
 | `POST` | `/api/queue-entries/{id}/reassign`, `/lift-reservation` | give a waiting patient to another practitioner of the queue, or to anyone |
 | `GET` | `/api/my-queue` | a practitioner's own queue |
 | `POST` | `/api/my-queue/call-next`, `/finish`, `/did-not-come-in` | call the next patient, finish with them, or say they did not come in |
@@ -108,7 +107,7 @@ Spanish, for the staff.
 | `POST` | `/api/checks/{id}/access-grants` | access to the record to report that pending check — granted at once, for now, and recorded |
 | `GET` | `/api/clinical-records/{patientId}` | a patient's consultations with their checks, and the checks done without one — for a practitioner who saw them within the access period or is seeing them today |
 
-A booking without a check-in is marked absent 30 minutes after its start, or at the end of its
+A booking whose patient did not arrive — into their practitioner's queue — is marked absent 30 minutes after its start, or at the end of its
 day when the patient warned they would be late; an absent appointment is kept, shown on the agenda
 and changed no more. The consultation routes are the
 practitioners' only; anything a user may not see answers 403. The access period to a clinical

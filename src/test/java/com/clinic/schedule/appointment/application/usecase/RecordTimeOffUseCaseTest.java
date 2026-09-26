@@ -40,7 +40,7 @@ class RecordTimeOffUseCaseTest {
 
     private static Appointment booked(PractitionerId practitioner, LocalDateTime startsAt) {
         return Appointment.restore(AppointmentId.newId(), PatientId.newId(), practitioner,
-                TimeSlot.of(startsAt, 30), "consulta", null, AppointmentStatus.BOOKED, null, false);
+                TimeSlot.of(startsAt, 30), "consulta", null, AppointmentStatus.BOOKED, false);
     }
 
     private static TimeSlot wholeDay() {
@@ -88,7 +88,8 @@ class RecordTimeOffUseCaseTest {
 
     @Test
     void anAppointmentWhosePatientArrivedIsReportedAndNotCancelled() {
-        Appointment arrived = booked(ARIAS, DAY.atTime(9, 0)).checkedIn(DAY.atTime(8, 55));
+        Appointment arrived = booked(ARIAS, DAY.atTime(9, 0));
+        arrivals.arrived(arrived.id(), DAY.atTime(8, 55));
         Appointment notYet = booked(ARIAS, DAY.atTime(10, 0));
         appointments.given(arrived, notYet);
 

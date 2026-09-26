@@ -59,7 +59,6 @@ class AppointmentReaderAdapter implements AppointmentReader {
                 appointment.patientId().value(),
                 appointment.practitionerId().value(),
                 appointment.slot().startsAt(),
-                appointment.isCheckedIn(),
                 appointment.status() == AppointmentStatus.ABSENT);
     }
 }

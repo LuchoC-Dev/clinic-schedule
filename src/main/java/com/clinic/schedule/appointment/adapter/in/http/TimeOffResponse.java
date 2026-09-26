@@ -23,7 +23,9 @@ record TimeOffResponse(
                 request.practitionerId(),
                 command.span().startsAt(),
                 command.span().endsAt(),
-                result.cancelled().stream().map(AppointmentResponse::of).toList(),
-                result.needsManualHandling().stream().map(AppointmentResponse::of).toList());
+                result.cancelled().stream().map(appointment -> AppointmentResponse.of(appointment, null)).toList(),
+                result.needsManualHandling().stream()
+                        .map(appointment -> AppointmentResponse.of(appointment, result.arrivals().get(appointment.id())))
+                        .toList());
     }
 }

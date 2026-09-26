@@ -20,14 +20,14 @@ import com.clinic.schedule.clinicalrecord.domain.VisitToday;
  *
  * <ul>
  *   <li><b>Arrived</b> — the record may be written — when the practitioner called the patient from
- *       a queue that day, or saw them, or when the patient checked in on an appointment with them.
- *       Whoever was called and did not come in is not theirs.</li>
+ *       a queue that day, or saw them. Whoever was called and did not come in is not theirs.</li>
  *   <li><b>Expected</b> — the record may be read — when the patient waits in a queue the
  *       practitioner serves and may call them — a patient kept for another practitioner is read by
  *       that one only (D-64) — or has an appointment with them that day, even an absent one (D-61).</li>
  * </ul>
  *
- * <p>The check-in on the appointment goes when the queue takes the arrival over, in part 5b.
+ * <p>An appointment's own check-in is gone: the queue took the arrival over (D-65), so writing
+ * always follows a call.
  */
 @Component
 class AttendanceAdapter implements AttendancePort {
@@ -47,8 +47,7 @@ class AttendanceAdapter implements AttendancePort {
                 .filter(appointment -> appointment.practitionerId().equals(practitionerId.value()))
                 .toList();
         List<QueueArrival> inQueues = arrivals.findForPatientOn(patientId.value(), day);
-        if (withThisPractitioner.stream().anyMatch(AppointmentSummary::checkedIn)
-                || inQueues.stream().anyMatch(arrival -> practitionerId.value().equals(arrival.withPractitioner()))) {
+        if (inQueues.stream().anyMatch(arrival -> practitionerId.value().equals(arrival.withPractitioner()))) {
             return VisitToday.ARRIVED;
         }
         if (!withThisPractitioner.isEmpty() || inQueues.stream()

@@ -18,10 +18,12 @@ import org.springframework.security.test.context.support.WithMockUser;
 import org.springframework.http.MediaType;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.MvcResult;
+import org.springframework.jdbc.core.JdbcTemplate;
 
 import com.clinic.schedule.appointment.PatientFixture;
 import com.clinic.schedule.appointment.PractitionerFixture.CreatedPractitioner;
 import com.clinic.schedule.appointment.PractitionerFixture;
+import com.clinic.schedule.arrival.ArrivalFixture;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
@@ -39,6 +41,9 @@ class TimeOffApiIT {
 
     @Autowired
     private MockMvc mockMvc;
+
+    @Autowired
+    private JdbcTemplate jdbc;
 
     @Autowired
     private ObjectMapper json;
@@ -75,7 +80,7 @@ class TimeOffApiIT {
         CreatedPractitioner arias = practitioners.workingEveryDay();
         String arrived = book(arias, "09:00:00");
         String notYet = book(arias, "11:00:00");
-        mockMvc.perform(post("/api/appointments/" + arrived + "/check-in")).andExpect(status().isOk());
+        new ArrivalFixture(mockMvc, jdbc).arrived(arrived);
 
         JsonNode result = recordTimeOff("""
                 {"practitionerId": "%s", "date": "%s"}

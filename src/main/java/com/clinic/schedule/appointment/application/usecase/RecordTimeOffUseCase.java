@@ -7,6 +7,7 @@ import java.time.LocalDateTime;
 import java.time.LocalTime;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -17,6 +18,7 @@ import com.clinic.schedule.appointment.application.port.AppointmentRepository;
 import com.clinic.schedule.appointment.application.port.ArrivalPort;
 import com.clinic.schedule.appointment.application.port.PractitionerSchedulePort;
 import com.clinic.schedule.appointment.domain.Appointment;
+import com.clinic.schedule.appointment.domain.AppointmentId;
 import com.clinic.schedule.appointment.domain.PractitionerId;
 import com.clinic.schedule.appointment.domain.TimeSlot;
 
@@ -68,17 +70,20 @@ public class RecordTimeOffUseCase {
         }
 
         List<Appointment> hit = bookedDuring(command.practitionerId(), command.span());
+        Map<AppointmentId, LocalDateTime> arrived = arrivals.arrivalsOf(hit.stream().map(Appointment::id).toList());
 
         List<Appointment> cancelled = hit.stream()
-                .filter(appointment -> !appointment.isCheckedIn())
+                .filter(appointment -> !arrived.containsKey(appointment.id()))
                 .map(Appointment::cancelled)
                 .toList();
         cancelled.forEach(appointments::save);
         cancelled.forEach(appointment -> arrivals.appointmentCancelled(appointment.id()));
 
-        List<Appointment> needsManualHandling = hit.stream().filter(Appointment::isCheckedIn).toList();
+        List<Appointment> needsManualHandling = hit.stream()
+                .filter(appointment -> arrived.containsKey(appointment.id()))
+                .toList();
 
-        return new Result(cancelled, needsManualHandling);
+        return new Result(cancelled, needsManualHandling, arrived);
     }
 
     /** Every day the span touches is read whole, and the overlap decided on each appointment. */
@@ -133,7 +138,10 @@ public class RecordTimeOffUseCase {
     /**
      * What the absence did: the appointments it cancelled, and the ones it could not because
      * the patient is already there.
+     *
+     * @param arrivals when the patient of each appointment needing manual handling arrived (D-65)
      */
-    public record Result(List<Appointment> cancelled, List<Appointment> needsManualHandling) {
+    public record Result(List<Appointment> cancelled, List<Appointment> needsManualHandling,
+            Map<AppointmentId, LocalDateTime> arrivals) {
     }
 }

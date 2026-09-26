@@ -733,7 +733,7 @@ call went to Beto, and the one after back to Ana. Reception saw who was called b
 seen, and closed the queue: NN-8177, still waiting, was not seen. The session's thirteen events read
 back in order, each by `recepcion` or `arias`.
 
-#### Part 5b — Patients with an appointment, and the arrival leaves the appointment `[~]`
+#### Part 5b — Patients with an appointment, and the arrival leaves the appointment `[x]`
 
 Step 1 — into the queue:
 
@@ -758,6 +758,32 @@ name, came in with "Llegó con turno 20:00", kept for Dra. Arias and ahead of Be
 appointment; Dra. Arias left the Guardia and the screen said nobody could call Ana; "Dar a" gave her
 to Dr. Benítez in the same place; her appointment cancelled, she stayed first, waiting for nobody. The
 session's events read back as `AppointmentArrived`, `PatientReassigned`, `ReservationLifted`.
+
+Step 2 — the arrival leaves the appointment:
+
+- [x] "Llegó" on the agenda brings the patient into their practitioner's queue; the check-in of the
+      appointment is gone, `CheckInUseCase` and its route with it (D-65)
+- [x] `AppointmentArrivals` answers when each appointment's patient arrived; `AppointmentDayService`
+      and `BookingService` are given it — no notice, no absence, no move once the patient came
+- [x] The sweep, the time-off cascade, the agendas and the API ask the queues; `arrivedAt` in the API
+- [x] `V22`: the check-ins recorded so far move to `appointment_check_in`, and `checked_in_at` leaves
+      the appointment; `V101`: a queue for each seeded practitioner, out of the way of queues already
+      there
+- [x] Writing a record always follows a call now: the tests of the clinical record bring their
+      patients in through `ArrivalFixture`
+- [x] 283 unit and 330 integration tests, 613 in total; the check-in's own tests went with it
+
+**Verified with:** each of these failing its tests when broken on purpose — the sweep marking absent
+whoever arrived, the time-off cascade cancelling them, an arrived patient's appointment moved, a late
+notice accepted after the arrival, the check-ins from before the queues forgotten, the arrivals
+through the queues forgotten; `mvnw verify` with the PostgreSQL tests running V22.
+
+**Verified with the application running** on a throwaway PostgreSQL: taken up to V21, given an
+appointment checked in the old way, and started: V22 moved that check-in alone and dropped the
+column. Given a queue of its own for Dra. Arias, V101 left it and set up Dr. Benítez's alone. In a
+browser, reception pressed "Llegó" on Dr. Benítez's agenda for Carla Suárez: back on the same agenda,
+"Llegó a las 19:33" with only "Cancelar" left. Dr. Benítez's agenda said "En tu cola"; from his queue
+he called her, started her consultation and recorded it.
 
 ---
 

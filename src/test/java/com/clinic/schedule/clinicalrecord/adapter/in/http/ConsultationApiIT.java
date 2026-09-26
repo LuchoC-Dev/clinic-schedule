@@ -26,6 +26,7 @@ import org.springframework.test.web.servlet.request.RequestPostProcessor;
 import com.clinic.schedule.appointment.PatientFixture;
 import com.clinic.schedule.appointment.PractitionerFixture;
 import com.clinic.schedule.appointment.PractitionerFixture.CreatedPractitioner;
+import com.clinic.schedule.arrival.ArrivalFixture;
 import com.clinic.schedule.clinicalrecord.PractitionerUserFixture;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
@@ -84,7 +85,7 @@ class ConsultationApiIT {
     }
 
     private void checkIn(String appointmentId) throws Exception {
-        mockMvc.perform(post("/api/appointments/" + appointmentId + "/check-in")).andExpect(status().isOk());
+        new ArrivalFixture(mockMvc, jdbc).arrivedAndCalled(appointmentId, asArias);
     }
 
     private String arrivedToday() throws Exception {
@@ -194,8 +195,9 @@ class ConsultationApiIT {
         String appointment = arrivedToday();
         send(asArias, consultation(patient, "Control.")).andExpect(status().isCreated());
 
-        // The appointment cancelled by hand leaves no visit today: the consultation alone keeps the record open.
+        // The appointment cancelled, and the call a day old: no visit today, the consultation alone keeps it open.
         mockMvc.perform(post("/api/appointments/" + appointment + "/cancel")).andExpect(status().isOk());
+        new ArrivalFixture(mockMvc, jdbc).seenTheDayBefore(patient);
 
         readRecord(asArias).andExpect(status().isOk()).andExpect(jsonPath("$.consultations", hasSize(1)));
     }

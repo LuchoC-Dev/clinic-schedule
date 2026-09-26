@@ -773,7 +773,7 @@ the domain (the domain does not know patients, only their id).
 ---
 
 ## D-31 — Check-in and automatic cancellation
-**Date:** 2026-09-23 · **Status:** accepted; the check-in stays on the appointment only until the arrival queue (D-48); the automatic cancellation is an absence since D-61
+**Date:** 2026-09-23 · **Status:** accepted; the automatic cancellation is an absence since D-61; the check-in left the appointment for the queues in D-65
 
 Applies D-06 and D-07. The appointment gains `checkedInAt` and `autoCancellationSuspended`,
 added by `V4` with `ALTER TABLE` rather than by rewriting `V1`.
@@ -1454,7 +1454,7 @@ layout (the rules are worth a pure domain).
 ---
 
 ## D-48 — "Is the practitioner seeing this patient today?" is a port of `consultation`
-**Date:** 2026-09-24 · **Status:** accepted
+**Date:** 2026-09-24 · **Status:** accepted; the port is answered by the queues too since D-63, and the check-in left the appointment in D-65
 
 The check-in has lived on the appointment since v1 (D-31), though the arrival is not the
 booking's business. It stays there until the arrival queue, which brings a second way of
@@ -2173,3 +2173,50 @@ reserva".
 reception lifts that when needed); the appointment module calling the queues' api (a cycle between
 modules); pulling each appointment's state when the queue is ordered (the cancellation is a fact of its
 own, and kept as an event).
+
+---
+
+## D-65 — The arrival leaves the appointment
+**Date:** 2026-09-26 · **Status:** accepted
+
+Since v1 the check-in had lived on the appointment, and D-48 said it would stay only until the queue.
+With patients with an appointment coming into the queue (D-64), the queue is where arrivals happen,
+so the appointment keeps none any more: an appointment is only a booking.
+
+**"Llegó" brings the patient into their practitioner's queue.** The agenda's button posts to the
+arrival module, which brings them in and sends reception back to the agenda it was on. The queue has
+to be open, and the practitioner has to serve one: the practice sets its queues up before it takes
+arrivals. `POST /api/appointments/{id}/check-in` and `CheckInUseCase` are gone.
+
+**The appointment asks the queues who came.** `appointment/api/AppointmentArrivals` — the interface
+of D-64 — now also answers when the patient of each appointment arrived, and `ArrivalPort` is how
+the use cases ask it. The dependency stays one way. The arrival is the first time the patient came
+into a queue with the appointment, or the check-in recorded before the queues existed.
+
+**The rules that needed the check-in are given the arrival.** `Appointment` does not know whether
+its patient came, so the rules of its day that depend on it are `AppointmentDayService`'s, given the
+arrival as context (D-17): a late-arrival notice makes no sense once the patient arrived, and whoever
+arrived is never absent. `BookingService.reschedule` refuses to move an appointment whose patient
+arrived. The appointment's own operations — the notice, being marked absent — are reached through
+that service alone. The sweep reads the booked appointments that started at least 30 minutes ago,
+asks the queues which of them arrived, and marks absent the rest that are due. The time-off cascade
+cancels those whose patient did not arrive and reports the rest for manual handling, as before.
+Cancelling by hand is untouched: the appointment does not even know the patient came.
+
+**The agenda and the API show the arrival.** The agenda says "Llegó a las 10:05", without "Llegó",
+"Avisó demora" or "Mover" for a patient who arrived; a practitioner's agenda points to "En tu cola",
+where the consultation starts, since only whoever called the patient writes their record (D-63). The
+API answers `arrivedAt` in place of `checkedInAt`.
+
+**The check-ins already recorded move** (`V22`): into `appointment_check_in`, a table of the arrival
+module, which answers them with the rest; `checked_in_at` leaves `appointment`. No queue session is
+made up for them.
+
+**Development data gets its queues** (`V101`, in `db/seed`): one for each seeded practitioner, set up
+as the application would, with their events and projection. A database already in use may have
+queues of its own, so a queue is only added for a practitioner who serves none, under a name nobody
+has taken.
+
+*Rejected:* the arrival module writing the check-in onto the appointment (the appointment would keep
+the arrival, which is what this removes); the appointment calling the queues' api (a cycle between
+modules); making up past sessions for the old check-ins (a queue history nobody lived).

@@ -19,10 +19,12 @@ import org.springframework.security.test.context.support.WithMockUser;
 import org.springframework.http.MediaType;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.MvcResult;
+import org.springframework.jdbc.core.JdbcTemplate;
 
 import com.clinic.schedule.appointment.PatientFixture;
 import com.clinic.schedule.appointment.PractitionerFixture.CreatedPractitioner;
 import com.clinic.schedule.appointment.PractitionerFixture;
+import com.clinic.schedule.arrival.ArrivalFixture;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
@@ -44,6 +46,9 @@ class AppointmentApiIT {
 
     @Autowired
     private MockMvc mockMvc;
+
+    @Autowired
+    private JdbcTemplate jdbc;
 
     @Autowired
     private ObjectMapper json;
@@ -242,29 +247,31 @@ class AppointmentApiIT {
     }
 
     @Test
-    void checkingInRecordsTheArrival() throws Exception {
-        JsonNode booked = bookSuccessfully(fixture.workingEveryDay(), TEN);
+    void theAgendaSaysWhenThePatientArrived() throws Exception {
+        CreatedPractitioner arias = fixture.workingEveryDay();
+        JsonNode booked = bookSuccessfully(arias, TEN);
 
-        mockMvc.perform(post("/api/appointments/" + booked.get("id").asText() + "/check-in"))
-                .andExpect(status().isOk())
-                .andExpect(jsonPath("$.checkedInAt").exists())
-                .andExpect(jsonPath("$.status").value("BOOKED"));
+        // The arrival is the queues' (D-65): the appointment only shows it.
+        new ArrivalFixture(mockMvc, jdbc).arrived(booked.get("id").asText());
+
+        mockMvc.perform(get("/api/appointments").param("practitionerId", arias.id().toString()).param("date", "2026-03-10"))
+                .andExpect(jsonPath("$[0].arrivedAt").value("2026-03-10T00:00:00"))
+                .andExpect(jsonPath("$[0].status").value("BOOKED"));
     }
 
     @Test
-    void checkingInTwiceAnswers409() throws Exception {
+    void theCheckInOfTheAppointmentIsGone() throws Exception {
         JsonNode booked = bookSuccessfully(fixture.workingEveryDay(), TEN);
-        String url = "/api/appointments/" + booked.get("id").asText() + "/check-in";
 
-        mockMvc.perform(post(url)).andExpect(status().isOk());
-        mockMvc.perform(post(url)).andExpect(status().isConflict());
+        mockMvc.perform(post("/api/appointments/" + booked.get("id").asText() + "/check-in"))
+                .andExpect(status().isNotFound());
     }
 
     @Test
     void aNewAppointmentHasNoCheckInAndNoNotice() throws Exception {
         JsonNode booked = bookSuccessfully(fixture.workingEveryDay(), TEN);
 
-        org.assertj.core.api.Assertions.assertThat(booked.get("checkedInAt").isNull()).isTrue();
+        org.assertj.core.api.Assertions.assertThat(booked.get("arrivedAt").isNull()).isTrue();
         org.assertj.core.api.Assertions.assertThat(booked.get("lateArrivalNotice").asBoolean()).isFalse();
     }
 
@@ -278,20 +285,20 @@ class AppointmentApiIT {
     }
 
     @Test
-    void aLateArrivalNoticeAfterTheCheckInAnswers409() throws Exception {
+    void aLateArrivalNoticeAfterTheArrivalAnswers409() throws Exception {
         JsonNode booked = bookSuccessfully(fixture.workingEveryDay(), TEN);
         String id = booked.get("id").asText();
-        mockMvc.perform(post("/api/appointments/" + id + "/check-in")).andExpect(status().isOk());
+        new ArrivalFixture(mockMvc, jdbc).arrived(id);
 
         mockMvc.perform(post("/api/appointments/" + id + "/late-arrival-notice"))
                 .andExpect(status().isConflict());
     }
 
     @Test
-    void reschedulingAfterTheCheckInAnswers409() throws Exception {
+    void reschedulingAfterTheArrivalAnswers409() throws Exception {
         JsonNode booked = bookSuccessfully(fixture.workingEveryDay(), TEN);
         String id = booked.get("id").asText();
-        mockMvc.perform(post("/api/appointments/" + id + "/check-in")).andExpect(status().isOk());
+        new ArrivalFixture(mockMvc, jdbc).arrived(id);
 
         mockMvc.perform(post("/api/appointments/" + id + "/reschedule")
                         .contentType(MediaType.APPLICATION_JSON)
@@ -372,16 +379,6 @@ class AppointmentApiIT {
                                 """.formatted(patients.newPatient(), arias.id(), arias.consulta(), TEN, "x".repeat(501))))
                 .andExpect(status().isBadRequest())
                 .andExpect(jsonPath("$.fields.note").exists());
-    }
-
-    @Test
-    void checkingInOnAnotherDayAnswers409() throws Exception {
-        CreatedPractitioner arias = fixture.workingEveryDay();
-        String id = bookSuccessfully(arias, "2026-03-12T10:00:00").get("id").asText();
-
-        mockMvc.perform(post("/api/appointments/" + id + "/check-in"))
-                .andExpect(status().isConflict())
-                .andExpect(jsonPath("$.message").value(containsString("on its own day")));
     }
 
     @Test

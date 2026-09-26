@@ -24,10 +24,10 @@ record AppointmentResponse(
         String reason,
         String note,
         AppointmentStatus status,
-        LocalDateTime checkedInAt,
+        LocalDateTime arrivedAt,
         boolean lateArrivalNotice) {
 
-    static AppointmentResponse of(Appointment appointment) {
+    static AppointmentResponse of(Appointment appointment, LocalDateTime arrivedAt) {
         return new AppointmentResponse(
                 appointment.id().value(),
                 appointment.patientId().value(),
@@ -38,7 +38,7 @@ record AppointmentResponse(
                 appointment.reason(),
                 appointment.note(),
                 appointment.status(),
-                appointment.checkedInAt(),
+                arrivedAt,
                 appointment.hasLateArrivalNotice());
     }
 }

@@ -1,6 +1,7 @@
 package com.clinic.schedule.appointment.adapter.in.screen;
 
 import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.time.LocalTime;
 import java.util.UUID;
 
@@ -24,11 +25,12 @@ record AgendaRow(
         String reason,
         String note,
         boolean booked,
-        boolean checkedIn,
+        boolean arrived,
         boolean lateNotice,
         String state) {
 
-    static AgendaRow of(Appointment appointment, PatientSummary patient, String practitioner) {
+    /** @param arrivedAt when the patient arrived, if they did — the queues say it (D-65) */
+    static AgendaRow of(Appointment appointment, PatientSummary patient, String practitioner, LocalDateTime arrivedAt) {
         String patientLabel = patient == null ? "(paciente desconocido)"
                 : patient.document() == null ? patient.fullName()
                 : patient.fullName() + " — " + patient.document();
@@ -44,9 +46,9 @@ record AgendaRow(
                 appointment.reason(),
                 appointment.note(),
                 appointment.isBooked(),
-                appointment.isCheckedIn(),
+                arrivedAt != null,
                 appointment.hasLateArrivalNotice(),
-                stateOf(appointment));
+                stateOf(appointment, arrivedAt));
     }
 
     /** The day with its year, for lists that span more than a week. Public so the template can call it. */
@@ -54,15 +56,15 @@ record AgendaRow(
         return AgendaDay.labelWithYear(date);
     }
 
-    private static String stateOf(Appointment appointment) {
+    private static String stateOf(Appointment appointment, LocalDateTime arrivedAt) {
         if (appointment.status() == AppointmentStatus.ABSENT) {
             return "Ausente";
         }
         if (!appointment.isBooked()) {
             return "Cancelado";
         }
-        if (appointment.isCheckedIn()) {
-            return "Llegó a las " + appointment.checkedInAt().toLocalTime().withSecond(0).withNano(0);
+        if (arrivedAt != null) {
+            return "Llegó a las " + arrivedAt.toLocalTime().withSecond(0).withNano(0);
         }
         if (appointment.hasLateArrivalNotice()) {
             return "Avisó que llega tarde";

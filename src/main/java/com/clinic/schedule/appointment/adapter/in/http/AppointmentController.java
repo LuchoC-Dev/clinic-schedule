@@ -4,6 +4,8 @@ import java.net.URI;
 import java.time.LocalDate;
 import java.util.List;
 import java.util.Optional;
+import java.time.LocalDateTime;
+import java.util.Map;
 import java.util.UUID;
 
 import org.springframework.format.annotation.DateTimeFormat;
@@ -18,7 +20,7 @@ import org.springframework.web.bind.annotation.RestController;
 
 import com.clinic.schedule.appointment.application.usecase.BookAppointmentUseCase;
 import com.clinic.schedule.appointment.application.usecase.CancelAppointmentUseCase;
-import com.clinic.schedule.appointment.application.usecase.CheckInUseCase;
+import com.clinic.schedule.appointment.application.usecase.FindArrivalsUseCase;
 import com.clinic.schedule.appointment.application.usecase.RescheduleAppointmentUseCase;
 import com.clinic.schedule.appointment.application.usecase.RecordLateArrivalNoticeUseCase;
 import com.clinic.schedule.appointment.application.usecase.ViewAgendaUseCase;
@@ -43,17 +45,17 @@ class AppointmentController {
     private final BookAppointmentUseCase book;
     private final RescheduleAppointmentUseCase reschedule;
     private final CancelAppointmentUseCase cancel;
-    private final CheckInUseCase checkIn;
+    private final FindArrivalsUseCase arrivals;
     private final RecordLateArrivalNoticeUseCase recordLateArrivalNotice;
     private final ViewAgendaUseCase agenda;
 
     AppointmentController(BookAppointmentUseCase book, RescheduleAppointmentUseCase reschedule,
-            CancelAppointmentUseCase cancel, CheckInUseCase checkIn,
+            CancelAppointmentUseCase cancel, FindArrivalsUseCase arrivals,
             RecordLateArrivalNoticeUseCase recordLateArrivalNotice, ViewAgendaUseCase agenda) {
         this.book = book;
         this.reschedule = reschedule;
         this.cancel = cancel;
-        this.checkIn = checkIn;
+        this.arrivals = arrivals;
         this.recordLateArrivalNotice = recordLateArrivalNotice;
         this.agenda = agenda;
     }
@@ -68,30 +70,26 @@ class AppointmentController {
         Appointment booked = book.handle(request.toCommand());
         return ResponseEntity
                 .created(URI.create("/api/appointments/" + booked.id().value()))
-                .body(AppointmentResponse.of(booked));
+                .body(respond(booked));
     }
 
     @PostMapping("/{id}/reschedule")
     AppointmentResponse reschedule(@PathVariable UUID id,
             @Valid @RequestBody RescheduleAppointmentRequest request) {
-        return AppointmentResponse.of(reschedule.handle(request.toCommand(id)));
+        return respond(reschedule.handle(request.toCommand(id)));
     }
 
     @PostMapping("/{id}/cancel")
     AppointmentResponse cancel(@PathVariable UUID id) {
-        return AppointmentResponse.of(cancel.handle(new AppointmentId(id)));
+        return respond(cancel.handle(new AppointmentId(id)));
     }
 
     /** The patient arrived. The time is the practice's clock, not something the client sends. */
-    @PostMapping("/{id}/check-in")
-    AppointmentResponse checkIn(@PathVariable UUID id) {
-        return AppointmentResponse.of(checkIn.handle(new AppointmentId(id)));
-    }
 
     /** The patient warned they will be late: wait until the end of the day instead of 30 minutes (D-61). */
     @PostMapping("/{id}/late-arrival-notice")
     AppointmentResponse recordLateArrivalNotice(@PathVariable UUID id) {
-        return AppointmentResponse.of(recordLateArrivalNotice.handle(new AppointmentId(id)));
+        return respond(recordLateArrivalNotice.handle(new AppointmentId(id)));
     }
 
     /**
@@ -101,8 +99,15 @@ class AppointmentController {
     @GetMapping
     List<AppointmentResponse> dayAgenda(@RequestParam UUID practitionerId,
             @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate date) {
-        return agenda.handle(Optional.of(new PractitionerId(practitionerId)), date, date).appointments().stream()
-                .map(AppointmentResponse::of)
+        List<Appointment> found = agenda.handle(Optional.of(new PractitionerId(practitionerId)), date, date).appointments();
+        Map<AppointmentId, LocalDateTime> arrived = arrivals.handle(found.stream().map(Appointment::id).toList());
+        return found.stream()
+                .map(appointment -> AppointmentResponse.of(appointment, arrived.get(appointment.id())))
                 .toList();
+    }
+
+    /** The appointment as it is now, with when its patient arrived, if they did (D-65). */
+    private AppointmentResponse respond(Appointment appointment) {
+        return AppointmentResponse.of(appointment, arrivals.handle(List.of(appointment.id())).get(appointment.id()));
     }
 }

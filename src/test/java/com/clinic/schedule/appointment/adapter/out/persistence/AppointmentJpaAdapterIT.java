@@ -4,6 +4,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.util.Optional;
 
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -13,6 +14,7 @@ import org.springframework.context.annotation.Import;
 
 import com.clinic.schedule.appointment.application.port.AppointmentRepository;
 import com.clinic.schedule.appointment.domain.Appointment;
+import com.clinic.schedule.appointment.domain.AppointmentDayService;
 import com.clinic.schedule.appointment.domain.AppointmentId;
 import com.clinic.schedule.appointment.domain.AppointmentStatus;
 import com.clinic.schedule.appointment.domain.PatientId;
@@ -42,7 +44,7 @@ class AppointmentJpaAdapterIT {
     private Appointment appointment(PatientId patient, PractitionerId practitioner, LocalDateTime startsAt,
             int minutes, String note) {
         return Appointment.restore(AppointmentId.newId(), patient, practitioner,
-                TimeSlot.of(startsAt, minutes), "consulta", note, AppointmentStatus.BOOKED, null, false);
+                TimeSlot.of(startsAt, minutes), "consulta", note, AppointmentStatus.BOOKED, false);
     }
 
     /** Sends everything to the database and empties the context, so reads are real queries. */
@@ -126,33 +128,29 @@ class AppointmentJpaAdapterIT {
     }
 
     @Test
-    void storesTheCheckInAndTheLateArrivalNotice() {
-        Appointment arrived = appointment(ana, arias, TEN, 30, null)
-                .withLateArrivalNotice(TEN)
-                .checkedIn(TEN.plusMinutes(40));
+    void storesTheLateArrivalNotice() {
+        Appointment warned = new AppointmentDayService().lateArrivalNotice(appointment(ana, arias, TEN, 30, null), TEN,
+                Optional.empty());
 
-        appointments.save(arrived);
+        appointments.save(warned);
         flush();
 
-        Appointment found = appointments.findById(arrived.id()).orElseThrow();
-        assertThat(found.checkedInAt()).isEqualTo(TEN.plusMinutes(40));
-        assertThat(found.hasLateArrivalNotice()).isTrue();
+        assertThat(appointments.findById(warned.id()).orElseThrow().hasLateArrivalNotice()).isTrue();
     }
 
     @Test
-    void readsTheCandidatesForAutomaticCancellation() {
+    void readsTheCandidatesToBeMarkedAbsent() {
         Appointment startedEarlier = appointment(ana, arias, TEN.minusHours(1), 30, null);
         Appointment startsExactlyThen = appointment(PatientId.newId(), arias, TEN, 30, null);
         Appointment startsLater = appointment(PatientId.newId(), arias, TEN.plusMinutes(1), 30, null);
-        Appointment arrived = appointment(PatientId.newId(), arias, TEN.minusHours(2), 30, null)
-                .checkedIn(TEN.minusHours(2));
         Appointment cancelled = appointment(PatientId.newId(), arias, TEN.minusHours(3), 30, null).cancelled();
-        for (Appointment appointment : new Appointment[] {startedEarlier, startsExactlyThen, startsLater, arrived, cancelled}) {
+        for (Appointment appointment : new Appointment[] {startedEarlier, startsExactlyThen, startsLater, cancelled}) {
             appointments.save(appointment);
         }
         flush();
 
-        assertThat(appointments.findBookedWithoutCheckInStartingBy(TEN))
+        // Whose patient arrived is the arrivals' to say, not the query's (D-65).
+        assertThat(appointments.findBookedStartingBy(TEN))
                 .extracting(Appointment::id)
                 .containsExactlyInAnyOrder(startedEarlier.id(), startsExactlyThen.id());
     }

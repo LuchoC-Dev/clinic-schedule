@@ -73,8 +73,8 @@ class AppointmentJpaAdapter implements AppointmentRepository {
     }
 
     @Override
-    public List<Appointment> findBookedWithoutCheckInStartingBy(LocalDateTime instant) {
-        return toAppointments(rows.findByStatusAndCheckedInAtIsNullAndStartsAtLessThanEqual(
+    public List<Appointment> findBookedStartingBy(LocalDateTime instant) {
+        return toAppointments(rows.findByStatusAndStartsAtLessThanEqual(
                 AppointmentStatus.BOOKED, instant));
     }
 

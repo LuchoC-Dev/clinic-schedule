@@ -20,10 +20,12 @@ import org.springframework.http.MediaType;
 import org.springframework.security.test.context.support.WithMockUser;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.MvcResult;
+import org.springframework.jdbc.core.JdbcTemplate;
 
 import com.clinic.schedule.appointment.PatientFixture;
 import com.clinic.schedule.appointment.PractitionerFixture;
 import com.clinic.schedule.appointment.PractitionerFixture.CreatedPractitioner;
+import com.clinic.schedule.arrival.ArrivalFixture;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
 /**
@@ -40,6 +42,9 @@ class TimeOffViewIT {
 
     @Autowired
     private MockMvc mockMvc;
+
+    @Autowired
+    private JdbcTemplate jdbc;
 
     @Autowired
     private ObjectMapper json;
@@ -87,7 +92,7 @@ class TimeOffViewIT {
     void aPatientAlreadyThereIsReportedForReceptionToHandle() throws Exception {
         CreatedPractitioner arias = practitioners.workingEveryDay();
         String arrived = book(arias, DAY, "11:00:00");
-        mockMvc.perform(post("/api/appointments/" + arrived + "/check-in")).andExpect(status().isOk());
+        new ArrivalFixture(mockMvc, jdbc).arrived(arrived);
 
         mockMvc.perform(post("/time-off").with(csrf())
                         .param("practitionerId", arias.id().toString())

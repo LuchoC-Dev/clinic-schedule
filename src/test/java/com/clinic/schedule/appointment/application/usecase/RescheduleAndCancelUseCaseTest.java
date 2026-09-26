@@ -30,6 +30,7 @@ class RescheduleAndCancelUseCaseTest {
 
     private final InMemoryAppointmentRepository appointments = new InMemoryAppointmentRepository();
     private final FakePractitionerSchedule practitioners = new FakePractitionerSchedule();
+    private final FakeArrivals arrivals = new FakeArrivals();
 
     /** The practice's clock, stopped at the start of the day these tests book on. */
     private static final Clock CLOCK = Clock.fixed(
@@ -37,13 +38,12 @@ class RescheduleAndCancelUseCaseTest {
             ZoneId.of("America/Argentina/Buenos_Aires"));
 
     private final RescheduleAppointmentUseCase reschedule =
-            new RescheduleAppointmentUseCase(appointments, practitioners, new BookingService(), CLOCK);
-    private final FakeArrivals arrivals = new FakeArrivals();
+            new RescheduleAppointmentUseCase(appointments, practitioners, new BookingService(), arrivals, CLOCK);
     private final CancelAppointmentUseCase cancel = new CancelAppointmentUseCase(appointments, arrivals);
 
     private Appointment stored(PatientId patient, int atMinute, int minutes) {
         return Appointment.restore(AppointmentId.newId(), patient, ARIAS,
-                TimeSlot.of(TEN.plusMinutes(atMinute), minutes), "consulta", null, AppointmentStatus.BOOKED, null, false);
+                TimeSlot.of(TEN.plusMinutes(atMinute), minutes), "consulta", null, AppointmentStatus.BOOKED, false);
     }
 
     private RescheduleAppointmentUseCase.Command moveTo(Appointment appointment, LocalDateTime startsAt) {
@@ -60,6 +60,17 @@ class RescheduleAndCancelUseCaseTest {
         assertThat(moved.slot()).isEqualTo(TimeSlot.of(TEN.plusHours(3), 45));
         assertThat(appointments.findById(original.id())).contains(moved);
         assertThat(appointments.storedCount()).isEqualTo(1);
+    }
+
+    @Test
+    void anAppointmentWhosePatientArrivedIsNotMoved() {
+        Appointment original = stored(ANA, 0, 30);
+        appointments.given(original);
+        arrivals.arrived(original.id(), TEN.minusMinutes(5));
+
+        assertThatThrownBy(() -> reschedule.handle(moveTo(original, TEN.plusHours(3))))
+                .isInstanceOf(BookingRuleViolationException.class);
+        assertThat(appointments.findById(original.id())).contains(original);
     }
 
     @Test

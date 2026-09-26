@@ -109,21 +109,21 @@ class AppointmentTest {
     void aRestoredAppointmentIsCheckedLikeANewOne() {
         // The aggregate does not trust the persistence adapter either.
         assertThatIllegalArgumentException().isThrownBy(() -> Appointment.restore(
-                ID, null, PRACTITIONER, TEN_THIRTY, "consulta", null, AppointmentStatus.BOOKED, null, false));
+                ID, null, PRACTITIONER, TEN_THIRTY, "consulta", null, AppointmentStatus.BOOKED, false));
         assertThatIllegalArgumentException().isThrownBy(() -> Appointment.restore(
-                ID, PATIENT, PRACTITIONER, TEN_THIRTY, "  ", null, AppointmentStatus.BOOKED, null, false));
+                ID, PATIENT, PRACTITIONER, TEN_THIRTY, "  ", null, AppointmentStatus.BOOKED, false));
         assertThatIllegalArgumentException().isThrownBy(() -> Appointment.restore(
-                null, PATIENT, PRACTITIONER, TEN_THIRTY, "consulta", null, AppointmentStatus.BOOKED, null, false));
+                null, PATIENT, PRACTITIONER, TEN_THIRTY, "consulta", null, AppointmentStatus.BOOKED, false));
         assertThatIllegalArgumentException().isThrownBy(() -> Appointment.restore(
-                ID, PATIENT, PRACTITIONER, TEN_THIRTY, "consulta", null, null, null, false));
+                ID, PATIENT, PRACTITIONER, TEN_THIRTY, "consulta", null, null, false));
     }
 
     @Test
     void appointmentsAreTheSameOnlyWhenTheirIdMatches() {
         Appointment stored = Appointment.restore(ID, PATIENT, PRACTITIONER, TEN_THIRTY, "consulta", null,
-                AppointmentStatus.BOOKED, null, false);
+                AppointmentStatus.BOOKED, false);
         Appointment other = Appointment.restore(AppointmentId.newId(), PATIENT, PRACTITIONER, TEN_THIRTY,
-                "consulta", null, AppointmentStatus.BOOKED, null, false);
+                "consulta", null, AppointmentStatus.BOOKED, false);
 
         // Identity exists from creation, so this is always answerable.
         assertThat(stored.isSameAs(booked())).isTrue();
@@ -144,7 +144,7 @@ class AppointmentTest {
 
         assertThatIllegalArgumentException().isThrownBy(() -> Appointment.restore(AppointmentId.newId(),
                         PatientId.newId(), PractitionerId.newId(), slot, "consulta", "x".repeat(501),
-                        AppointmentStatus.BOOKED, null, false))
+                        AppointmentStatus.BOOKED, false))
                 .withMessageContaining("at most 500");
     }
 }

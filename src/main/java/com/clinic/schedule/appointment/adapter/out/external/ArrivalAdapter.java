@@ -1,5 +1,10 @@
 package com.clinic.schedule.appointment.adapter.out.external;
 
+import java.time.LocalDateTime;
+import java.util.Collection;
+import java.util.Map;
+import java.util.stream.Collectors;
+
 import org.springframework.stereotype.Component;
 
 import com.clinic.schedule.appointment.api.AppointmentArrivals;
@@ -23,5 +28,14 @@ class ArrivalAdapter implements ArrivalPort {
     @Override
     public void appointmentCancelled(AppointmentId id) {
         arrivals.appointmentCancelled(id.value());
+    }
+
+    @Override
+    public Map<AppointmentId, LocalDateTime> arrivalsOf(Collection<AppointmentId> ids) {
+        if (ids.isEmpty()) {
+            return Map.of();
+        }
+        return arrivals.arrivalsOf(ids.stream().map(AppointmentId::value).toList()).entrySet().stream()
+                .collect(Collectors.toMap(entry -> new AppointmentId(entry.getKey()), Map.Entry::getValue));
     }
 }

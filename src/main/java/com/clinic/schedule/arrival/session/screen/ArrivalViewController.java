@@ -19,6 +19,7 @@ import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.servlet.mvc.support.RedirectAttributes;
+import org.springframework.web.util.UriComponentsBuilder;
 
 import com.clinic.schedule.arrival.session.command.AddPatientUseCase;
 import com.clinic.schedule.appointment.api.AppointmentReader;
@@ -168,6 +169,33 @@ class ArrivalViewController {
             RedirectAttributes flash) {
         return attempt(queueId, flash, "Paciente sin datos registrado y sumado a la cola.",
                 () -> addUnidentified.handle(new AddUnidentifiedPatientUseCase.Command(queueId, emergency)));
+    }
+
+    /**
+     * "Llegó" on the agenda: the patient comes into their practitioner's queue, and reception goes
+     * back to the agenda it was on (D-65).
+     */
+    @PostMapping("/arrivals/appointment-arrivals/{appointmentId}")
+    String appointmentArrivesFromTheAgenda(@PathVariable UUID appointmentId,
+            @RequestParam(required = false) UUID practitionerId, @RequestParam(required = false) String date,
+            @RequestParam(required = false) String view, RedirectAttributes flash) {
+        try {
+            appointmentArrives.handle(new AppointmentArrivesUseCase.Command(appointmentId));
+            flash.addFlashAttribute("message", "Llegó: está en la cola de su profesional.");
+        } catch (RuntimeException e) {
+            flash.addFlashAttribute("error", ScreenRefusals.of(e));
+        }
+        UriComponentsBuilder agenda = UriComponentsBuilder.fromPath("/agenda");
+        if (practitionerId != null) {
+            agenda.queryParam("practitionerId", practitionerId);
+        }
+        if (date != null && !date.isBlank()) {
+            agenda.queryParam("date", date);
+        }
+        if (view != null && !view.isBlank()) {
+            agenda.queryParam("view", view);
+        }
+        return "redirect:" + agenda.toUriString();
     }
 
     @PostMapping("/arrivals/{queueId}/appointments/{appointmentId}")

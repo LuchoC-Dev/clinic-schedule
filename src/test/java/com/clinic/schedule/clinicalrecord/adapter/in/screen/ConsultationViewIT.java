@@ -34,6 +34,7 @@ import org.springframework.test.web.servlet.request.RequestPostProcessor;
 import com.clinic.schedule.appointment.PatientFixture;
 import com.clinic.schedule.appointment.PractitionerFixture;
 import com.clinic.schedule.appointment.PractitionerFixture.CreatedPractitioner;
+import com.clinic.schedule.arrival.ArrivalFixture;
 import com.clinic.schedule.clinicalrecord.PractitionerUserFixture;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
@@ -84,7 +85,7 @@ class ConsultationViewIT {
 
     private void arrivedToday() throws Exception {
         String appointment = bookToday("10:00:00");
-        mockMvc.perform(post("/api/appointments/" + appointment + "/check-in")).andExpect(status().isOk());
+        new ArrivalFixture(mockMvc, jdbc).arrivedAndCalled(appointment, asArias);
     }
 
     /** The form as a practitioner sends it: five rows of items, some of them empty. */
@@ -101,20 +102,21 @@ class ConsultationViewIT {
     }
 
     @Test
-    void theAgendaOffersTheConsultationOnceThePatientArrived() throws Exception {
+    void theAgendaPointsToTheQueueOnceThePatientArrived() throws Exception {
         bookToday("10:00:00");
 
         mockMvc.perform(get("/agenda").with(asArias).param("date", TODAY))
                 .andExpect(status().isOk())
                 .andExpect(content().string(containsString("/clinical-records/" + patient)))
-                .andExpect(content().string(not(containsString("Empezar consulta"))));
+                .andExpect(content().string(not(containsString("En tu cola"))));
 
+        // The consultation starts from the queue, when the patient is called (D-65).
         String appointment = bookToday("11:00:00");
-        mockMvc.perform(post("/api/appointments/" + appointment + "/check-in")).andExpect(status().isOk());
+        new ArrivalFixture(mockMvc, jdbc).arrived(appointment);
 
         mockMvc.perform(get("/agenda").with(asArias).param("date", TODAY))
-                .andExpect(content().string(containsString("Empezar consulta")))
-                .andExpect(content().string(containsString("/consultations/new?patientId=" + patient)));
+                .andExpect(content().string(containsString("En tu cola")))
+                .andExpect(content().string(containsString("href=\"/my-queue\"")));
     }
 
     @Test

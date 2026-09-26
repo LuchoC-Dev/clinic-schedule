@@ -47,11 +47,11 @@ public interface AppointmentRepository {
     List<Appointment> findAllForPatient(PatientId patientId);
 
     /**
-     * Booked appointments whose patient has not checked in and that started at or before
-     * {@code instant}: the candidates to be marked absent. Which of them are actually
-     * due is the appointment's decision, not the query's (D-31).
+     * Booked appointments that started at or before {@code instant}: the candidates to be marked
+     * absent. Which of them are actually due — the patient did not come, and the wait is over — is
+     * the domain's decision, not the query's (D-31, D-65).
      */
-    List<Appointment> findBookedWithoutCheckInStartingBy(LocalDateTime instant);
+    List<Appointment> findBookedStartingBy(LocalDateTime instant);
 
     /** Stores a new appointment or the new state of an existing one. */
     void save(Appointment appointment);

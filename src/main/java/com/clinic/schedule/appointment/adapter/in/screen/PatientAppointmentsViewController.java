@@ -1,5 +1,6 @@
 package com.clinic.schedule.appointment.adapter.in.screen;
 
+import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
@@ -11,7 +12,10 @@ import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 
+import com.clinic.schedule.appointment.application.usecase.FindArrivalsUseCase;
 import com.clinic.schedule.appointment.application.usecase.ViewPatientAppointmentsUseCase;
+import com.clinic.schedule.appointment.domain.Appointment;
+import com.clinic.schedule.appointment.domain.AppointmentId;
 import com.clinic.schedule.appointment.domain.PatientId;
 import com.clinic.schedule.patient.api.PatientReader;
 import com.clinic.schedule.patient.api.PatientSummary;
@@ -29,12 +33,14 @@ import com.clinic.schedule.practitioner.api.PractitionerSummary;
 class PatientAppointmentsViewController {
 
     private final ViewPatientAppointmentsUseCase patientAppointments;
+    private final FindArrivalsUseCase arrivals;
     private final PatientReader patients;
     private final PractitionerReader practitioners;
 
-    PatientAppointmentsViewController(ViewPatientAppointmentsUseCase patientAppointments, PatientReader patients,
-            PractitionerReader practitioners) {
+    PatientAppointmentsViewController(ViewPatientAppointmentsUseCase patientAppointments, FindArrivalsUseCase arrivals,
+            PatientReader patients, PractitionerReader practitioners) {
         this.patientAppointments = patientAppointments;
+        this.arrivals = arrivals;
         this.patients = patients;
         this.practitioners = practitioners;
     }
@@ -48,9 +54,11 @@ class PatientAppointmentsViewController {
         }
         Map<UUID, String> practitionerNames = practitioners.findAll().stream()
                 .collect(Collectors.toMap(PractitionerSummary::id, PractitionerSummary::fullName));
-        List<AgendaRow> rows = patientAppointments.handle(new PatientId(id)).stream()
+        List<Appointment> found = patientAppointments.handle(new PatientId(id));
+        Map<AppointmentId, LocalDateTime> arrived = arrivals.handle(found.stream().map(Appointment::id).toList());
+        List<AgendaRow> rows = found.stream()
                 .map(appointment -> AgendaRow.of(appointment, patient,
-                        practitionerNames.get(appointment.practitionerId().value())))
+                        practitionerNames.get(appointment.practitionerId().value()), arrived.get(appointment.id())))
                 .toList();
 
         model.addAttribute("patient", patient);

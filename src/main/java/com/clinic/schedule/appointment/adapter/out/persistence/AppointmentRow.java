@@ -54,8 +54,6 @@ class AppointmentRow {
     @Column(nullable = false)
     private AppointmentStatus status;
 
-    @Column(name = "checked_in_at")
-    private LocalDateTime checkedInAt;
 
     /** The column keeps its v1 name: renaming a column is not portable SQL (D-61). */
     @Column(name = "auto_cancellation_suspended", nullable = false)
@@ -75,7 +73,6 @@ class AppointmentRow {
         row.reason = appointment.reason();
         row.note = appointment.note();
         row.status = appointment.status();
-        row.checkedInAt = appointment.checkedInAt();
         row.lateArrivalNotice = appointment.hasLateArrivalNotice();
         return row;
     }
@@ -89,7 +86,6 @@ class AppointmentRow {
                 reason,
                 note,
                 status,
-                checkedInAt,
                 lateArrivalNotice);
     }
 }

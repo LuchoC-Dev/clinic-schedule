@@ -37,6 +37,6 @@ interface AppointmentRowRepository extends JpaRepository<AppointmentRow, UUID> {
 
     List<AppointmentRow> findByPatientId(UUID patientId);
 
-    List<AppointmentRow> findByStatusAndCheckedInAtIsNullAndStartsAtLessThanEqual(
+    List<AppointmentRow> findByStatusAndStartsAtLessThanEqual(
             AppointmentStatus status, LocalDateTime instant);
 }

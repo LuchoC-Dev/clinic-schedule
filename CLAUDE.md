@@ -9,7 +9,7 @@ Read these before proposing design or code:
 
 - `docs/context.md` — what the application does, who uses it, the business rules and the
   planned evolution.
-- `docs/decisions.md` — technical decisions and their reasoning (D-01 … D-64).
+- `docs/decisions.md` — technical decisions and their reasoning (D-01 … D-65).
 - `docs/build.md` — the staged plan and the current progress.
 
 ## Stack
@@ -40,8 +40,8 @@ PostgreSQL 18 (docker-compose) · Thymeleaf. The integration tests run on H2 in 
   by layer (D-42).
 - **An appointment is only a booking.** What happens once the patient is at the practice —
   arrival, consultation, what comes after — belongs to other modules, and a consultation does
-  not depend on an appointment (D-48). The check-in stays on the appointment only until the
-  arrival queue.
+  not depend on an appointment (D-48). The arrival is the queues': a patient with an appointment
+  arrives into their practitioner's queue, and the appointment asks the queues who came (D-65).
 - **The booking domain works with a start time and a duration** and knows nothing about
   what the appointment reason means. The duration is resolved by the application layer,
   which asks `practitioner`.
@@ -85,6 +85,6 @@ PostgreSQL 18 (docker-compose) · Thymeleaf. The integration tests run on H2 in 
 ## Domain glossary
 
 patient · practitioner · appointment (`BOOKED`/`CANCELLED`/`ABSENT`) · reason · duration ·
-weekly schedule · break · time off · check-in · reschedule · reception
+weekly schedule · break · time off · arrival · queue · session · reschedule · reception
 · consultation · item (prescription) · check · result · order · addendum · clinical record ·
 access period · access grant · attachment

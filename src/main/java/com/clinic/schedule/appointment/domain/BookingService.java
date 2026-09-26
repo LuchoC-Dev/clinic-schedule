@@ -2,6 +2,7 @@ package com.clinic.schedule.appointment.domain;
 
 import java.time.LocalDateTime;
 import java.util.Collection;
+import java.util.Optional;
 
 import com.clinic.schedule.appointment.domain.exception.PatientAlreadyBookedException;
 import com.clinic.schedule.appointment.domain.exception.PractitionerAlreadyBookedException;
@@ -47,12 +48,15 @@ public final class BookingService {
      * rejected move leaves the original appointment untouched.
      *
      * <p>The appointment itself and cancelled ones are ignored when looking for collisions,
-     * so a small move does not clash with the slot being left behind.
+     * so a small move does not clash with the slot being left behind. An appointment whose patient
+     * already arrived is not moved: the arrival belongs to this time, not to another (D-31, D-65).
      *
+     * @param arrivedAt when the patient arrived, if they did
      * @return the appointment on its new slot, which is what has to be stored
      */
     public Appointment reschedule(Appointment appointment, TimeSlot newSlot, LocalDateTime now,
-            Collection<Appointment> agenda) {
+            Collection<Appointment> agenda, Optional<LocalDateTime> arrivedAt) {
+        AppointmentDayService.requireNotArrived(arrivedAt, "rescheduled");
         Appointment moved = appointment.movedTo(newSlot);
         policy.checkWhen(newSlot, now);
         policy.check(moved, agenda);

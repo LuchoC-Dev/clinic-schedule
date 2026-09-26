@@ -6,16 +6,19 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import java.time.Clock;
 import java.time.LocalDateTime;
 import java.time.ZoneId;
+import java.util.Optional;
 
 import org.junit.jupiter.api.Test;
 
 import com.clinic.schedule.appointment.application.exception.AppointmentNotFoundException;
 import com.clinic.schedule.appointment.domain.Appointment;
 import com.clinic.schedule.appointment.domain.AppointmentId;
+import com.clinic.schedule.appointment.domain.AppointmentDayService;
 import com.clinic.schedule.appointment.domain.AppointmentStatus;
 import com.clinic.schedule.appointment.domain.PatientId;
 import com.clinic.schedule.appointment.domain.PractitionerId;
 import com.clinic.schedule.appointment.domain.TimeSlot;
+import com.clinic.schedule.appointment.domain.exception.BookingRuleViolationException;
 
 /**
  * Check-in, the late-arrival notice and the sweep of overdue appointments, with the clock
@@ -34,28 +37,30 @@ class DayOfTheAppointmentUseCasesTest {
 
     private Appointment stored(LocalDateTime startsAt) {
         return Appointment.restore(AppointmentId.newId(), PatientId.newId(), PractitionerId.newId(),
-                TimeSlot.of(startsAt, 30), "consulta", null, AppointmentStatus.BOOKED, null, false);
+                TimeSlot.of(startsAt, 30), "consulta", null, AppointmentStatus.BOOKED, false);
     }
+
+    private final FakeArrivals arrivals = new FakeArrivals();
+    private static final AppointmentDayService DAY = new AppointmentDayService();
 
     private MarkAbsentAppointmentsUseCase sweepAt(LocalDateTime now) {
-        return new MarkAbsentAppointmentsUseCase(appointments, at(now));
+        return new MarkAbsentAppointmentsUseCase(appointments, arrivals, DAY, at(now));
     }
 
     @Test
-    void checkingInStoresTheTimeFromTheClock() {
+    void aLateArrivalNoticeIsRefusedOnceThePatientArrived() {
         Appointment appointment = stored(TEN);
         appointments.given(appointment);
+        arrivals.arrived(appointment.id(), TEN.minusMinutes(5));
 
-        new CheckInUseCase(appointments, at(TEN.minusMinutes(7))).handle(appointment.id());
-
-        assertThat(appointments.findById(appointment.id()).orElseThrow().checkedInAt())
-                .isEqualTo(TEN.minusMinutes(7));
+        assertThatThrownBy(() -> new RecordLateArrivalNoticeUseCase(appointments, arrivals, DAY, at(TEN))
+                .handle(appointment.id())).isInstanceOf(BookingRuleViolationException.class);
     }
 
     @Test
-    void checkingInAnUnknownAppointmentFails() {
-        assertThatThrownBy(() -> new CheckInUseCase(appointments, at(TEN)).handle(AppointmentId.newId()))
-                .isInstanceOf(AppointmentNotFoundException.class);
+    void aLateArrivalNoticeOnAnUnknownAppointmentFails() {
+        assertThatThrownBy(() -> new RecordLateArrivalNoticeUseCase(appointments, arrivals, DAY, at(TEN))
+                .handle(AppointmentId.newId())).isInstanceOf(AppointmentNotFoundException.class);
     }
 
     @Test
@@ -63,7 +68,7 @@ class DayOfTheAppointmentUseCasesTest {
         Appointment appointment = stored(TEN);
         appointments.given(appointment);
 
-        new RecordLateArrivalNoticeUseCase(appointments, at(TEN.minusHours(1))).handle(appointment.id());
+        new RecordLateArrivalNoticeUseCase(appointments, arrivals, DAY, at(TEN.minusHours(1))).handle(appointment.id());
 
         assertThat(appointments.findById(appointment.id()).orElseThrow().hasLateArrivalNotice()).isTrue();
     }
@@ -85,7 +90,7 @@ class DayOfTheAppointmentUseCasesTest {
 
     @Test
     void theSweepLeavesALateArrivalAloneUntilItsDayIsOver() {
-        Appointment warned = stored(TEN).withLateArrivalNotice(TEN);
+        Appointment warned = DAY.lateArrivalNotice(stored(TEN), TEN, Optional.empty());
         appointments.given(warned);
         LocalDateTime midnight = TEN.toLocalDate().plusDays(1).atStartOfDay();
 
@@ -95,8 +100,9 @@ class DayOfTheAppointmentUseCasesTest {
 
     @Test
     void theSweepNeverMarksAbsentAPatientWhoArrived() {
-        Appointment arrived = stored(TEN).checkedIn(TEN.plusMinutes(5));
+        Appointment arrived = stored(TEN);
         appointments.given(arrived);
+        arrivals.arrived(arrived.id(), TEN.plusMinutes(5));
 
         assertThat(sweepAt(TEN.plusDays(2)).handle()).isEmpty();
         assertThat(appointments.findById(arrived.id()).orElseThrow().isBooked()).isTrue();

@@ -83,8 +83,9 @@ class AbsentAppointmentIT {
     void aPatientWhoNeverCameIsAbsent() throws Exception {
         String absent = bookedYesterdayEvening();
         String arrived = bookedYesterdayEvening();
-        jdbc.update("update appointment set checked_in_at = ? where id = ?",
-                Timestamp.valueOf(YESTERDAY_EVENING.plusMinutes(5)), UUID.fromString(arrived));
+        // Arrived before the queues took the arrival over: the check-in they kept (D-65).
+        jdbc.update("insert into appointment_check_in (appointment_id, checked_in_at) values (?, ?)",
+                UUID.fromString(arrived), Timestamp.valueOf(YESTERDAY_EVENING.plusMinutes(5)));
 
         assertThat(markAbsent.handle()).extracting(appointment -> appointment.id().value().toString())
                 .contains(absent)
@@ -109,7 +110,7 @@ class AbsentAppointmentIT {
         String absent = bookedYesterdayEvening();
         markAbsent.handle();
 
-        for (String operation : new String[] {"cancel", "check-in", "late-arrival-notice"}) {
+        for (String operation : new String[] {"cancel", "late-arrival-notice"}) {
             mockMvc.perform(post("/api/appointments/" + absent + "/" + operation))
                     .andExpect(status().isConflict())
                     .andExpect(jsonPath("$.message").value(containsString("absent")));

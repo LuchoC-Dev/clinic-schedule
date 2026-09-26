@@ -44,7 +44,7 @@ class SuggestSlotsUseCaseTest {
 
     private static Appointment booked(LocalTime at, int minutes) {
         return Appointment.restore(AppointmentId.newId(), PatientId.newId(), ARIAS, TimeSlot.of(DAY.atTime(at), minutes),
-                "consulta", null, AppointmentStatus.BOOKED, null, false);
+                "consulta", null, AppointmentStatus.BOOKED, false);
     }
 
     private static List<LocalTime> times(String... values) {

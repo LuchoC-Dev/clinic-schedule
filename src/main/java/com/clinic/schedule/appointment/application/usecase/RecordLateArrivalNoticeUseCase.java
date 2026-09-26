@@ -8,6 +8,8 @@ import org.springframework.transaction.annotation.Transactional;
 
 import com.clinic.schedule.appointment.application.exception.AppointmentNotFoundException;
 import com.clinic.schedule.appointment.application.port.AppointmentRepository;
+import com.clinic.schedule.appointment.application.port.ArrivalPort;
+import com.clinic.schedule.appointment.domain.AppointmentDayService;
 import com.clinic.schedule.appointment.domain.Appointment;
 import com.clinic.schedule.appointment.domain.AppointmentId;
 
@@ -20,10 +22,15 @@ import com.clinic.schedule.appointment.domain.AppointmentId;
 public class RecordLateArrivalNoticeUseCase {
 
     private final AppointmentRepository appointments;
+    private final ArrivalPort arrivals;
+    private final AppointmentDayService day;
     private final Clock clock;
 
-    public RecordLateArrivalNoticeUseCase(AppointmentRepository appointments, Clock clock) {
+    public RecordLateArrivalNoticeUseCase(AppointmentRepository appointments, ArrivalPort arrivals,
+            AppointmentDayService day, Clock clock) {
         this.appointments = appointments;
+        this.arrivals = arrivals;
+        this.day = day;
         this.clock = clock;
     }
 
@@ -31,7 +38,7 @@ public class RecordLateArrivalNoticeUseCase {
     public Appointment handle(AppointmentId id) {
         Appointment appointment = appointments.findById(id).orElseThrow(() -> new AppointmentNotFoundException(id));
 
-        Appointment warned = appointment.withLateArrivalNotice(LocalDateTime.now(clock));
+        Appointment warned = day.lateArrivalNotice(appointment, LocalDateTime.now(clock), arrivals.arrivalOf(id));
         appointments.save(warned);
         return warned;
     }

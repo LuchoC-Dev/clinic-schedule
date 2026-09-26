@@ -5,11 +5,16 @@ import java.sql.SQLException;
 import java.sql.Timestamp;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.util.Collection;
+import java.util.Collections;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
 
 import org.springframework.jdbc.core.JdbcTemplate;
+import org.springframework.jdbc.core.RowCallbackHandler;
 import org.springframework.stereotype.Repository;
 
 import com.clinic.schedule.arrival.api.QueueArrival;
@@ -51,6 +56,23 @@ class SessionViewReader {
                             row.getObject("reserved_for", UUID.class), row.getObject("with_practitioner", UUID.class));
                 },
                 patientId, Timestamp.valueOf(day.atStartOfDay()), Timestamp.valueOf(day.plusDays(1).atStartOfDay()));
+    }
+
+    /** The first arrival with each appointment, from the queues or from before them (D-65). */
+    Map<UUID, LocalDateTime> appointmentArrivals(Collection<UUID> appointmentIds) {
+        Map<UUID, LocalDateTime> arrivals = new HashMap<>();
+        if (appointmentIds.isEmpty()) {
+            return arrivals;
+        }
+        String ids = String.join(", ", Collections.nCopies(appointmentIds.size(), "?"));
+        Object[] arguments = appointmentIds.toArray();
+        RowCallbackHandler keepFirst = row -> arrivals.merge(row.getObject("appointment_id", UUID.class),
+                row.getTimestamp("arrived_at").toLocalDateTime(), (one, other) -> one.isBefore(other) ? one : other);
+        jdbc.query("select appointment_id, arrived_at from session_entry where appointment_id in (" + ids + ")",
+                keepFirst, arguments);
+        jdbc.query("select appointment_id, checked_in_at as arrived_at from appointment_check_in "
+                + "where appointment_id in (" + ids + ")", keepFirst, arguments);
+        return arrivals;
     }
 
     List<UUID> servedBy(UUID queueId) {

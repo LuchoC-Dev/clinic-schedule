@@ -25,6 +25,7 @@ import org.springframework.test.web.servlet.request.RequestPostProcessor;
 import com.clinic.schedule.appointment.PatientFixture;
 import com.clinic.schedule.appointment.PractitionerFixture;
 import com.clinic.schedule.appointment.PractitionerFixture.CreatedPractitioner;
+import com.clinic.schedule.arrival.ArrivalFixture;
 import com.clinic.schedule.clinicalrecord.PractitionerUserFixture;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
@@ -65,8 +66,8 @@ class MyOrdersViewIT {
                                 """.formatted(patient, arias.id(), arias.consulta())))
                 .andExpect(status().isCreated())
                 .andReturn();
-        mockMvc.perform(post("/api/appointments/" + json.readTree(booked.getResponse().getContentAsString())
-                .get("id").asText() + "/check-in")).andExpect(status().isOk());
+        new ArrivalFixture(mockMvc, jdbc).arrivedAndCalled(
+                json.readTree(booked.getResponse().getContentAsString()).get("id").asText(), asArias);
     }
 
     @Test

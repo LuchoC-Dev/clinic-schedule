@@ -4,6 +4,7 @@ import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.scheduling.annotation.EnableScheduling;
 
+import com.clinic.schedule.appointment.domain.AppointmentDayService;
 import com.clinic.schedule.appointment.domain.BookingService;
 
 /**
@@ -20,5 +21,11 @@ class AppointmentConfiguration {
     @Bean
     BookingService bookingService() {
         return new BookingService();
+    }
+
+    /** The rules of an appointment's day that need to know whether its patient arrived (D-65). */
+    @Bean
+    AppointmentDayService appointmentDayService() {
+        return new AppointmentDayService();
     }
 }

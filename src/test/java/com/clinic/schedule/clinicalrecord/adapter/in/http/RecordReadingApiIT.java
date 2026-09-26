@@ -31,6 +31,7 @@ import org.springframework.test.web.servlet.request.RequestPostProcessor;
 import com.clinic.schedule.appointment.PatientFixture;
 import com.clinic.schedule.appointment.PractitionerFixture;
 import com.clinic.schedule.appointment.PractitionerFixture.CreatedPractitioner;
+import com.clinic.schedule.arrival.ArrivalFixture;
 import com.clinic.schedule.clinicalrecord.PractitionerUserFixture;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
@@ -82,7 +83,7 @@ class RecordReadingApiIT {
                                 """.formatted(patient, arias.id(), arias.consulta())))
                 .andExpect(status().isCreated())
                 .andReturn());
-        mockMvc.perform(post("/api/appointments/" + appointment + "/check-in")).andExpect(status().isOk());
+        new ArrivalFixture(mockMvc, jdbc).arrivedAndCalled(appointment, asArias);
     }
 
     private String idOf(MvcResult result) throws Exception {
@@ -150,8 +151,9 @@ class RecordReadingApiIT {
         send(asArias, "/api/consultations", """
                 {"patientId": "%s", "notes": "Control."}
                 """.formatted(patient)).andExpect(status().isCreated());
-        // Cancelled by hand, the appointment leaves no visit today: only having seen the patient remains.
+        // The appointment cancelled, and the call a day old: only having seen the patient remains.
         mockMvc.perform(post("/api/appointments/" + appointment + "/cancel")).andExpect(status().isOk());
+        new ArrivalFixture(mockMvc, jdbc).seenTheDayBefore(patient);
 
         mockMvc.perform(get("/api/clinical-records/" + patient).with(asArias)).andExpect(status().isOk());
 

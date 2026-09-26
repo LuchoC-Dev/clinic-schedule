@@ -23,10 +23,12 @@ import org.springframework.security.test.context.support.WithMockUser;
 import org.springframework.http.MediaType;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.MvcResult;
+import org.springframework.jdbc.core.JdbcTemplate;
 
 import com.clinic.schedule.appointment.PatientFixture;
 import com.clinic.schedule.appointment.PractitionerFixture.CreatedPractitioner;
 import com.clinic.schedule.appointment.PractitionerFixture;
+import com.clinic.schedule.arrival.ArrivalFixture;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
 /**
@@ -43,6 +45,9 @@ class AgendaViewIT {
 
     @Autowired
     private MockMvc mockMvc;
+
+    @Autowired
+    private JdbcTemplate jdbc;
 
     @Autowired
     private ObjectMapper json;
@@ -102,14 +107,16 @@ class AgendaViewIT {
     }
 
     @Test
-    void checkingInFromTheAgendaMarksTheArrival() throws Exception {
+    void arrivingFromTheAgendaBringsThePatientIntoTheQueue() throws Exception {
         CreatedPractitioner arias = practitioners.workingEveryDay();
         String id = bookThroughTheApi(arias, patients.newPatient(), "10:00:00");
+        new ArrivalFixture(mockMvc, jdbc).openQueueFor(arias.id());
 
-        mockMvc.perform(post("/agenda/appointments/" + id + "/check-in").with(csrf())
+        // "Llegó" is the queues' (D-65): back to the same agenda, with the patient in the queue.
+        mockMvc.perform(post("/arrivals/appointment-arrivals/" + id).with(csrf())
                         .param("practitionerId", arias.id().toString()).param("date", DAY))
                 .andExpect(redirectedUrlPattern("/agenda?*"))
-                .andExpect(flash().attribute("message", "Llegada confirmada."));
+                .andExpect(flash().attribute("message", "Llegó: está en la cola de su profesional."));
 
         mockMvc.perform(get("/agenda").param("practitionerId", arias.id().toString()).param("date", DAY))
                 .andExpect(content().string(containsString("Llegó a las")));
