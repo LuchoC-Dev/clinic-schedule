@@ -702,6 +702,37 @@ with its JSON and `recepcion`. In a browser, the queues screen listed each with 
 queue was created and Dr. Benítez moved into it from another, which stayed with nobody serving it;
 a taken name was refused in Spanish.
 
+#### Part 5a — Queues at work, without appointments `[x]`
+- [x] `session/`: each opening of a queue is a stream of events, from its opening to its closing
+      (D-63); `QueueSession`, its `Entry`s, `QueueSessionService`, the only way in
+- [x] `CallOrder`: emergencies by when they were declared, then everyone by arrival
+- [x] Opening, closing, reopening — a new session —, closing by itself at the end of the day unless
+      reception keeps it open; a job every minute, recorded as `system`
+- [x] Reception brings patients in — found, or registered without a name —, as emergencies or not;
+      makes a waiting one an emergency; says one left
+- [x] The practitioner: "Llamar siguiente", "Terminar", "No ingresó" — passed over once, out after
+      the third call, `app.arrival.calls-before-no-show`
+- [x] `V20`: the session's projection, with the key that keeps one session open per queue
+- [x] `arrival/api/ArrivalReader`, and `AttendanceAdapter` answering from the queue too: the
+      practitioners of a queue read the record of whoever waits in it, and only whoever called them
+      writes it that day
+- [x] API and screens: `/arrivals` for reception, `/my-queue` for the practitioner
+- [x] 18 unit and 20 integration tests. 278 unit and 322 integration tests, 600 in total
+
+**Verified with:** each of these failing its tests when broken on purpose — emergencies not first,
+whoever did not come in not passed over, one call more before a no-show, closing that leaves the
+waiting ones waiting, a queue kept open that closes by itself, a practitioner with two patients
+called, waiting in a queue that opens no record, anyone in the queue able to write it, a closed
+session left as the open one; `mvnw verify` with the PostgreSQL tests running V20.
+
+**Verified in a browser** against the application on a throwaway PostgreSQL: reception opened
+Dra. Arias's queue and brought in Ana and Beto, Carla as an emergency, and a patient without a name,
+NN-8177 — Carla first, then the others by arrival. Dra. Arias called Carla, started her
+consultation from her queue and recorded it; finished; called Ana, who did not come in; the next
+call went to Beto, and the one after back to Ana. Reception saw who was called by whom and who was
+seen, and closed the queue: NN-8177, still waiting, was not seen. The session's thirteen events read
+back in order, each by `recepcion` or `arias`.
+
 ---
 
 ## Explicitly postponed

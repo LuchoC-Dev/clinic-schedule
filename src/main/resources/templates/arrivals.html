@@ -1,0 +1,130 @@
+<!DOCTYPE html>
+<html lang="es" xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{fragments :: head('Llegadas')}"></head>
+<body>
+<header th:replace="~{fragments :: header}"></header>
+<main>
+    <h1>Llegadas</h1>
+    <div th:replace="~{fragments :: messages}"></div>
+
+    <p th:if="${queues.isEmpty()}" class="muted">
+        Todavía no hay colas: <a th:href="@{/queues}">creá una</a>.
+    </p>
+
+    <th:block th:if="${queue}">
+    <form class="bar" method="get" th:action="@{/arrivals}">
+        <label>Cola
+            <select name="queueId" data-refresh>
+                <option th:each="q : ${queues}" th:value="${q.id}" th:text="${q.name}"
+                        th:selected="${q.id == queue.id}"></option>
+            </select>
+        </label>
+        <button type="submit" data-refresh-button>Ver</button>
+    </form>
+
+    <div class="card bar">
+        <strong th:text="${open} ? 'Abierta' : 'Cerrada'">Abierta</strong>
+        <span class="muted" th:if="${open and closesByItself}">Se cierra sola al terminar el día.</span>
+        <span class="muted" th:if="${open and !closesByItself}">Queda abierta hasta que la cierres.</span>
+        <form class="inline" method="post" th:unless="${open}" th:action="@{/arrivals/{id}/open(id=${queue.id})}">
+            <button type="submit" class="primary">Abrir</button>
+        </form>
+        <form class="inline" method="post" th:if="${open and closesByItself}"
+              th:action="@{/arrivals/{id}/auto-close-off(id=${queue.id})}">
+            <button type="submit">No cerrar al terminar el día</button>
+        </form>
+        <form class="inline" method="post" th:if="${open}" th:action="@{/arrivals/{id}/close(id=${queue.id})}">
+            <button type="submit" class="danger">Cerrar</button>
+        </form>
+    </div>
+
+    <th:block th:if="${open}">
+    <h2>Esperando</h2>
+    <p th:if="${waiting.isEmpty()}" class="muted">Nadie espera.</p>
+    <table th:unless="${waiting.isEmpty()}">
+        <thead><tr><th>#</th><th>Paciente</th><th>Llegó</th><th></th><th></th></tr></thead>
+        <tbody>
+        <tr th:each="line, it : ${waiting}">
+            <td th:text="${it.count}">1</td>
+            <td th:text="${line.patient}">Ana Pérez</td>
+            <td th:text="${line.arrivedAt}">09:10</td>
+            <td>
+                <strong th:if="${line.emergency}">Urgencia</strong>
+                <span class="muted" th:if="${line.timesCalled > 0}"
+                      th:text="'Llamado ' + ${line.timesCalled} + (${line.timesCalled == 1} ? ' vez' : ' veces')">Llamado 1 vez</span>
+            </td>
+            <td class="actions">
+                <form class="inline" method="post" th:unless="${line.emergency}"
+                      th:action="@{/arrivals/{q}/entries/{e}/emergency(q=${queue.id},e=${line.entryId})}">
+                    <button type="submit">Urgencia</button>
+                </form>
+                <form class="inline" method="post"
+                      th:action="@{/arrivals/{q}/entries/{e}/left(q=${queue.id},e=${line.entryId})}">
+                    <button type="submit" class="danger">Se fue</button>
+                </form>
+            </td>
+        </tr>
+        </tbody>
+    </table>
+
+    <h2>Llamados</h2>
+    <p th:if="${called.isEmpty()}" class="muted">Nadie está siendo atendido.</p>
+    <table th:unless="${called.isEmpty()}">
+        <tbody>
+        <tr th:each="line : ${called}">
+            <td th:text="${line.patient}">Ana Pérez</td>
+            <td th:text="${line.practitioner}">Dra. Laura Arias</td>
+        </tr>
+        </tbody>
+    </table>
+
+    <h2>Sumar a la cola</h2>
+    <form class="bar" method="get" th:action="@{/arrivals}">
+        <input type="hidden" name="queueId" th:value="${queue.id}">
+        <label>Buscar paciente
+            <input type="text" name="query" th:value="${query}" placeholder="nombre, documento o NN">
+        </label>
+        <button type="submit">Buscar</button>
+    </form>
+    <table th:if="${found != null and !found.isEmpty()}">
+        <tbody>
+        <tr th:each="p : ${found}">
+            <td th:text="${p.document} ? ${p.fullName} + ' — ' + ${p.document} : ${p.fullName}">Ana Pérez</td>
+            <td class="actions">
+                <form class="inline" method="post" th:action="@{/arrivals/{id}/patients(id=${queue.id})}">
+                    <input type="hidden" name="patientId" th:value="${p.id}">
+                    <button type="submit" class="primary">Sumar</button>
+                </form>
+                <form class="inline" method="post" th:action="@{/arrivals/{id}/patients(id=${queue.id})}">
+                    <input type="hidden" name="patientId" th:value="${p.id}">
+                    <input type="hidden" name="emergency" value="true">
+                    <button type="submit">Sumar como urgencia</button>
+                </form>
+            </td>
+        </tr>
+        </tbody>
+    </table>
+    <p th:if="${found != null and found.isEmpty()}" class="muted">No hay pacientes que coincidan.</p>
+    <!-- Nobody is turned away for lack of a name (D-60). -->
+    <form class="card bar" method="post" th:action="@{/arrivals/{id}/unidentified(id=${queue.id})}">
+        <span class="muted">Si el paciente no da su nombre, se lo registra con un alias.</span>
+        <div class="choices"><label><input type="checkbox" name="emergency" value="true"> Urgencia</label></div>
+        <button type="submit">Registrar sin datos (NN) y sumar</button>
+    </form>
+
+    <h2 th:unless="${done.isEmpty()}">Ya no esperan</h2>
+    <table th:unless="${done.isEmpty()}">
+        <tbody>
+        <tr th:each="line : ${done}">
+            <td th:text="${line.patient}">Ana Pérez</td>
+            <td th:text="${line.state}">Atendido</td>
+            <td th:text="${line.practitioner} ?: ''">Dra. Laura Arias</td>
+        </tr>
+        </tbody>
+    </table>
+    </th:block>
+    </th:block>
+</main>
+<script th:replace="~{fragments :: refresh}"></script>
+</body>
+</html>

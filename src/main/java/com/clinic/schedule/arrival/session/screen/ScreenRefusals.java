@@ -1,0 +1,38 @@
+package com.clinic.schedule.arrival.session.screen;
+
+import com.clinic.schedule.arrival.eventstore.StreamChangedException;
+import com.clinic.schedule.arrival.session.command.EntryNotFoundException;
+import com.clinic.schedule.arrival.session.command.NoQueueServedException;
+import com.clinic.schedule.arrival.session.command.QueueNotOpenException;
+import com.clinic.schedule.arrival.session.command.UnknownPatientException;
+import com.clinic.schedule.arrival.session.domain.exception.SessionRuleViolationException;
+
+/** The refusals of a queue at work, as the staff reads them; the API says them in English (D-13). */
+final class ScreenRefusals {
+
+    private ScreenRefusals() {
+    }
+
+    /** What to say, or the exception again when it is not a refusal. */
+    static String of(RuntimeException e) {
+        return switch (e) {
+            case SessionRuleViolationException rule -> switch (rule.reason()) {
+                case QUEUE_ALREADY_OPEN -> "La cola ya está abierta.";
+                case NOT_SERVING -> "No atendés esta cola.";
+                case ALREADY_WAITING -> "Ese paciente ya está esperando en esta cola.";
+                case ALREADY_EMERGENCY -> "Ese paciente ya es una urgencia.";
+                case NOT_WAITING -> "Ese paciente ya no está esperando.";
+                case NOBODY_WAITING -> "No hay nadie esperando.";
+                case NOBODY_CALLED -> "No tenés ningún paciente llamado.";
+                case STILL_CALLED -> "Terminá con el paciente llamado, o indicá que no ingresó, antes de llamar al siguiente.";
+                case AUTO_CLOSE_ALREADY_OFF -> "La cola ya no se cierra sola.";
+            };
+            case QueueNotOpenException closed -> "La cola está cerrada: abrila primero.";
+            case NoQueueServedException none -> "No atendés ninguna cola.";
+            case EntryNotFoundException missing -> "Ese paciente no está en la cola.";
+            case UnknownPatientException unknown -> "Ese paciente no existe.";
+            case StreamChangedException changed -> "La cola cambió mientras tanto. Revisala y probá de nuevo.";
+            default -> throw e;
+        };
+    }
+}

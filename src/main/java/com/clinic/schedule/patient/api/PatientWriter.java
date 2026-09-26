@@ -19,4 +19,12 @@ public interface PatientWriter {
      *         incomplete, malformed or already someone else's; nothing is registered then
      */
     UUID register(String fullName, String documentType, String documentNumber);
+
+    /**
+     * A patient who gives no name, under a new alias such as NN-4821 (D-60). Its caller is the
+     * arrival queue, where such a patient comes in (D-63).
+     *
+     * @return the new patient's id
+     */
+    UUID registerUnidentified();
 }

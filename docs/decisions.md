@@ -2059,3 +2059,75 @@ themselves yet; admins will.
 table with a history beside it (two patterns in one module, and a history written as an extra step);
 the day as the stream of a queue (a queue may stay open past midnight); class names as event types
 (a rename would orphan the events); JPA for the event store (nothing for it to map).
+
+---
+
+## D-63 — A queue at work is a session of events
+**Date:** 2026-09-26 · **Status:** accepted; the patients with an appointment join it in part 5b
+
+Part 5a puts the queues to work for the patients without an appointment, and leaves the
+appointment untouched: patients with one, and the arrival leaving the appointment, are part 5b.
+
+**A session is one opening of a queue** — from when reception opens it until it closes, by hand or
+at the end of its day — and it is a stream of its own in the event store (D-62): `SessionOpened`,
+`PatientArrived`, `EmergencyDeclared`, `PatientCalled`, `PatientSeen`, `PatientDidNotComeIn`,
+`PatientDidNotShowUp`, `PatientLeft`, `AutoCloseTurnedOff`, `SessionClosed`. The events the order
+depends on carry their time, so the domain needs nothing but the events. `QueueSession.replay` adds
+them up into each patient's `Entry` — when they came, whether they are an emergency and since when,
+where they stand, how often they were called, who has them — and the decisions answer with events,
+through `QueueSessionService`, the only way in (D-17). It is given what a session cannot know: the
+queue's open session, who serves the queue, and how many calls a patient gets.
+
+**The order is one rule, `CallOrder`.** Emergencies first, in the order they were declared — when
+they came in or while they waited — then everyone else by arrival; two at the same time keep the
+order they came in. "Llamar siguiente" calls the first of that order; the practitioner never
+chooses.
+
+**Calling.** A practitioner has one patient called at a time. "Terminar" says they were seen.
+"No ingresó" says they did not come in: they wait again, keep their place, and are passed over at
+the next call only — unless nobody else waits. After their last call without coming in — three in
+all, `app.arrival.calls-before-no-show` — they are out, as having not shown up. In a shared queue,
+whoever of its practitioners calls next may call them again.
+
+**Where a patient stands:** waiting, called, seen, left — said by reception —, not seen — still
+waiting when the queue closed — or did not show up. Whoever was called when the queue closed stays
+called: nobody waits any more, and their practitioner may still write their consultation that day.
+Reopening starts a new session, so nobody comes back by themselves. A patient may wait in several
+queues at once — queues know nothing of each other — but in each once.
+
+**Closing by itself.** A job every minute closes the open sessions that close by themselves and
+were opened on an earlier day; the events say `system` did it. Reception turns that off for the
+session, for a queue that stays open past midnight.
+
+**The projection is the session as it stands.** `SessionProjection` writes `queue_session`,
+`open_queue_session` — keyed by queue, so a second opening that two requests at once could let
+through is refused — and `session_entry`, in the same transaction as the events. A session is a few
+dozen rows, so it is written whole after each change rather than event by event, and cannot drift
+from what the events say. The reads come from it, and order the waiting ones with `CallOrder`, so
+the rule stays in one place.
+
+**The clinical record learns who a practitioner is seeing from the queue too.** `arrival/api/ArrivalReader`
+answers facts — the queues a patient waits in and who serves them, and who called or saw them that
+day — and `AttendanceAdapter` decides what they mean: *arrived*, so the record may be written, when
+the practitioner called or saw the patient that day, or when the patient checked in on an
+appointment with them; *expected*, so it may be read, when the patient waits in a queue they serve,
+or has an appointment with them that day. Whoever did not come in is nobody's to write. A reading
+through the queue is recorded as `VISIT_TODAY`, like one through an appointment (D-59). The
+check-in on the appointment goes in part 5b.
+
+**A patient who gives no name comes in through the queue**: `AddUnidentifiedPatientUseCase`
+registers them under an alias (D-60), through the new `PatientWriter.registerUnidentified`, and
+brings them in, in one transaction, so a closed queue leaves no nameless patient behind.
+
+**API and screens.** Reception: `POST /api/queues/{id}/open`, `/close`, `/auto-close-off`, `GET
+/api/queues/{id}/session`, `POST /api/queues/{id}/session/patients` and `/session/unidentified`,
+`POST /api/queue-entries/{id}/emergency` and `/left`; the screen `/arrivals`. The practitioner:
+`GET /api/my-queue`, `POST /api/my-queue/call-next`, `/finish` and `/did-not-come-in`; the screen
+`/my-queue`, which opens the consultation of the patient called. The session's refusals carry a
+reason, so the screens say them in Spanish without reading the English message.
+
+*Rejected:* a day as a session (a queue may stay open past midnight); calling the next patient to
+finish the one called (a practitioner finishes explicitly, for now); a patient who did not come in
+sent to the end (they keep their place); projecting event by event (a session rewritten whole is
+simpler and cannot drift); a new kind of access for the queue in the read log (it is a visit today,
+like an appointment).

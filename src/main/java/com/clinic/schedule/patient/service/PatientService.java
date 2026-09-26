@@ -93,8 +93,14 @@ public class PatientService implements PatientReader, PatientWriter {
      * The unique constraint on the alias is what guarantees it; checking first only keeps a
      * clash from being an error.
      */
+    @Override
     @Transactional
-    public Patient registerUnidentified() {
+    public UUID registerUnidentified() {
+        return registerUnidentifiedPatient().getId();
+    }
+
+    @Transactional
+    public Patient registerUnidentifiedPatient() {
         for (int attempt = 0; attempt < ALIAS_ATTEMPTS; attempt++) {
             String alias = "NN-%04d".formatted(ThreadLocalRandom.current().nextInt(10_000));
             if (!patients.existsByAlias(alias)) {

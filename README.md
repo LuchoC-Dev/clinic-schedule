@@ -51,11 +51,12 @@ week, of one practitioner or everyone — with the day's operations as buttons (
 *Avisó demora*, *Mover*, *Cancelar*), a booking screen that suggests the free times, a patients
 screen — where a patient who gives no name is registered under an alias, and each patient's
 identity is corrected and verified, with its history — each patient's appointments, cancelled ones included, a practitioners screen to set
-up their reasons and week and record their absences, and a queues screen to set up the arrival
-queues and who serves each. A practitioner gets their own agenda,
+up their reasons and week and record their absences, a queues screen to set up the arrival
+queues and who serves each, and the arrivals screen, where queues are opened and closed and
+patients brought in. A practitioner gets their own agenda,
 read-only, with today's patients linked to their clinical record and *Empezar consulta* once
 they arrived: a form beside the record, sent once and never changed, and completed afterwards
-with addenda. Under *Resultados pendientes* they find the checks waiting for a result, and ask
+with addenda. Under *Mi cola* they call the next patient of their queue and start their consultation. Under *Resultados pendientes* they find the checks waiting for a result, and ask
 for access to a record to report one; under *Mis órdenes*, they follow up the orders they issued. The screens are in
 Spanish, for the staff.
 
@@ -86,6 +87,12 @@ Spanish, for the staff.
 | `GET`, `PUT` | `/api/queues/{id}` | read a queue, rename it or change its room |
 | `POST` | `/api/queues/{id}/practitioners` | a practitioner starts serving the queue; one queue at most each |
 | `DELETE` | `/api/queues/{id}/practitioners/{practitionerId}` | a practitioner stops serving it; the queue stays |
+| `POST` | `/api/queues/{id}/open`, `/close`, `/auto-close-off` | open a queue — a new session —, close it, keep it open past its day |
+| `GET` | `/api/queues/{id}/session` | the open session: who waits, in the order they will be called, who was called, who is done |
+| `POST` | `/api/queues/{id}/session/patients`, `/session/unidentified` | bring a patient in, or one who gives no name, as an emergency or not |
+| `POST` | `/api/queue-entries/{id}/emergency`, `/left` | make a waiting patient an emergency, or say they left |
+| `GET` | `/api/my-queue` | a practitioner's own queue |
+| `POST` | `/api/my-queue/call-next`, `/finish`, `/did-not-come-in` | call the next patient, finish with them, or say they did not come in |
 | `POST` | `/api/consultations` | a practitioner records the consultation of a patient who arrived today — notes, prescriptions, the checks done and the orders issued |
 | `POST` | `/api/consultations/{id}/addenda` | an addendum to a consultation already sent, by any practitioner with access to the record |
 | `POST` | `/api/checks` | a check without a consultation — the emergency precaution — with its result or pending; it may fulfil an open order |

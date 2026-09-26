@@ -47,7 +47,7 @@ class PatientController {
     /** A patient who gives no name: registered under an alias the answer carries (D-60). */
     @PostMapping("/unidentified")
     ResponseEntity<PatientResponse> registerUnidentified() {
-        return created(patients.registerUnidentified());
+        return created(patients.registerUnidentifiedPatient());
     }
 
     /** Corrects who the patient is; the change goes to their identity history (D-60). */

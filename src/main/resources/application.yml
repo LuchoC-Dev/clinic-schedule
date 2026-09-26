@@ -34,9 +34,14 @@ spring:
 app:
   # The practice's fixed time zone (D-10).
   time-zone: America/Argentina/Buenos_Aires
-  # The job that cancels overdue appointments every minute (D-06). The tests turn it off.
+  # The jobs that run every minute: marking absent the appointments whose patient never came
+  # (D-06, D-61) and closing the queues at the end of their day (D-63). The tests turn them off.
   scheduling:
     enabled: true
+  # A called patient who does not come in is passed over once and called again, this many calls in
+  # all; after the last one they are taken out of the queue as not having shown up (D-63).
+  arrival:
+    calls-before-no-show: 3
   # How long after they last saw a patient - a consultation, or a check - a practitioner may still
   # read the patient's clinical record: an ISO-8601 period (D-49, D-53).
   clinical-record:

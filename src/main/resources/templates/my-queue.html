@@ -1,0 +1,53 @@
+<!DOCTYPE html>
+<html lang="es" xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{fragments :: head('Mi cola')}"></head>
+<body>
+<header th:replace="~{fragments :: header}"></header>
+<main>
+    <h1 th:text="${serves} ? 'Mi cola: ' + ${queue.name} : 'Mi cola'">Mi cola: Consultorio 3</h1>
+    <div th:replace="~{fragments :: messages}"></div>
+
+    <p th:unless="${serves}" class="muted">No atendés ninguna cola. Recepción las arma.</p>
+    <p th:if="${serves and !open}" class="muted">La cola está cerrada.</p>
+
+    <th:block th:if="${serves and open}">
+    <div class="card" th:if="${called}">
+        <p>Llamaste a <strong th:text="${called.patient}">Ana Pérez</strong>
+            <span class="error" th:unless="${called.identityVerified}">Identidad no verificada</span></p>
+        <div class="bar">
+            <a th:href="@{/consultations/new(patientId=${called.patientId})}">
+                <button type="button" class="primary">Empezar consulta</button>
+            </a>
+            <a th:href="@{/clinical-records/{id}(id=${called.patientId})}">Ver historia</a>
+        </div>
+        <div class="bar">
+            <form class="inline" method="post" th:action="@{/my-queue/finish}">
+                <button type="submit">Terminar</button>
+            </form>
+            <form class="inline" method="post" th:action="@{/my-queue/did-not-come-in}">
+                <button type="submit" class="danger">No ingresó</button>
+            </form>
+        </div>
+    </div>
+    <form class="bar" method="post" th:action="@{/my-queue/call-next}" th:unless="${called}">
+        <button type="submit" class="primary" th:disabled="${waiting.isEmpty()}">Llamar siguiente</button>
+    </form>
+
+    <h2>Esperando</h2>
+    <p th:if="${waiting.isEmpty()}" class="muted">Nadie espera.</p>
+    <table th:unless="${waiting.isEmpty()}">
+        <thead><tr><th>#</th><th>Paciente</th><th>Llegó</th><th></th><th></th></tr></thead>
+        <tbody>
+        <tr th:each="line, it : ${waiting}">
+            <td th:text="${it.count}">1</td>
+            <td th:text="${line.patient}">Ana Pérez</td>
+            <td th:text="${line.arrivedAt}">09:10</td>
+            <td><strong th:if="${line.emergency}">Urgencia</strong></td>
+            <td class="actions"><a th:href="@{/clinical-records/{id}(id=${line.patientId})}">Ver historia</a></td>
+        </tr>
+        </tbody>
+    </table>
+    </th:block>
+</main>
+</body>
+</html>

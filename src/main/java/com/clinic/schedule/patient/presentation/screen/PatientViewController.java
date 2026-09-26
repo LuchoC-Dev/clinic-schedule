@@ -71,7 +71,7 @@ class PatientViewController {
     /** Nobody is turned away for lack of a name: the patient gets an alias, shown at once (D-60). */
     @PostMapping("/patients/unidentified")
     String registerUnidentified(RedirectAttributes flash) {
-        Patient registered = patients.registerUnidentified();
+        Patient registered = patients.registerUnidentifiedPatient();
         flash.addFlashAttribute("message", "Paciente registrado sin datos: " + registered.getAlias() + ".");
         return "redirect:/patients/" + registered.getId();
     }

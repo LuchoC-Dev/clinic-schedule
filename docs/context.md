@@ -229,16 +229,25 @@ the records of the patients they may call.
   come in with that appointment.
 - A patient without an appointment goes into the queue reception chooses. There is no limit to how
   many may wait.
-- Reception may mark a patient as an **emergency**.
+- Reception may mark a patient as an **emergency**, when they come in or while they wait.
+- A patient may wait in more than one queue at once: queues know nothing of each other, and being
+  called in one changes nothing in another.
 - The order is decided by one rule, which knows nothing about screens or modules:
   - emergencies first, then patients with an appointment, then patients without one;
-  - emergencies, and patients without an appointment, in the order they arrived;
+  - emergencies in the order they were marked as such, and patients without an appointment in the
+    order they arrived;
   - patients with an appointment by the later of their appointment's time and the time they
     arrived: whoever comes early waits for their time, and whoever comes late is placed by the
     time they came, behind appointments earlier than that, not by the time they had.
 - "Llamar siguiente" calls the first patient in that order that the practitioner may call. The
   practitioner never chooses: choosing is the order's job. Calling opens the consultation, which is
   sent whole when it is finished, as before.
+- A practitioner has one patient called at a time. "Terminar" says that patient was seen; only
+  then, or after "No ingresó", may they call the next.
+- "No ingresó" says the called patient did not come in. They are passed over at the next call only,
+  and keep their place for the ones after. After the second time they are called again without
+  coming in — three calls in all, a setting — they are taken out of the queue as **did not show
+  up**. In a shared queue, whoever of its practitioners may call them calls them again.
 - In a queue: **waiting → called → seen**. Reception marks a patient who **left without being seen**.
   Whoever is still waiting when the queue closes is **not seen**; a reason may come later. Reopening
   a queue does not bring them back: reception puts them in again if needed.
@@ -271,7 +280,7 @@ On top of the access of phase 1:
   kept for another practitioner is read only by that one.
 - An appointment today, even an absent one, still lets its practitioner read the record.
 - Only the practitioner who called the patient records that patient's consultations and checks
-  that day.
+  that day, also once they were seen: a consultation is often written at the end of the day.
 - **Every reading of a clinical record is recorded**: who read it, whose it is, when, and by which
   access. Nobody reads that log in this phase — not on a screen, not through the API. Admins will,
   when they exist.
@@ -292,8 +301,14 @@ They update themselves as things happen, without reloading.
 2. Patient identity: the alias, whether it is verified, and the history of its changes.
 3. Absent instead of cancelled, with the check-in still on the appointment.
 4. Setting up queues: their shape and their practitioners.
-5. Queues at work: bringing patients in, the order, calling, closing; the arrival leaves the
-   appointment, and the clinical record learns who a practitioner is seeing from the queue.
+5. Queues at work, in two steps:
+   - **5a** — sessions: opening, closing, reopening and closing by itself; patients without an
+     appointment and emergencies; calling, "Terminar" and "No ingresó"; the screens of reception
+     and of the practitioner; the clinical record learns who a practitioner is seeing from the
+     queue as well.
+   - **5b** — patients with an appointment: into their practitioner's queue, kept for them and
+     placed by the time; giving them to another practitioner; the arrival leaves the appointment,
+     and the absences and the time-off cascade learn who arrived from the queue.
 6. Screens that update themselves, and the waiting-room screen.
 
 Not in this phase: merging two records of the same patient, a reason for "not seen", reading the
