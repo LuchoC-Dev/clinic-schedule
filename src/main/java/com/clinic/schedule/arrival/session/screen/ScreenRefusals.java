@@ -1,6 +1,7 @@
 package com.clinic.schedule.arrival.session.screen;
 
 import com.clinic.schedule.arrival.eventstore.StreamChangedException;
+import com.clinic.schedule.arrival.session.command.AppointmentArrivalRefusedException;
 import com.clinic.schedule.arrival.session.command.EntryNotFoundException;
 import com.clinic.schedule.arrival.session.command.NoQueueServedException;
 import com.clinic.schedule.arrival.session.command.QueueNotOpenException;
@@ -20,12 +21,20 @@ final class ScreenRefusals {
                 case QUEUE_ALREADY_OPEN -> "La cola ya está abierta.";
                 case NOT_SERVING -> "No atendés esta cola.";
                 case ALREADY_WAITING -> "Ese paciente ya está esperando en esta cola.";
+                case ALREADY_ARRIVED -> "El paciente de ese turno ya llegó.";
+                case ALREADY_KEPT_FOR_THEM -> "Ese paciente ya espera a ese profesional.";
+                case NOT_KEPT -> "Ese paciente no espera a nadie en particular.";
                 case ALREADY_EMERGENCY -> "Ese paciente ya es una urgencia.";
                 case NOT_WAITING -> "Ese paciente ya no está esperando.";
                 case NOBODY_WAITING -> "No hay nadie esperando.";
                 case NOBODY_CALLED -> "No tenés ningún paciente llamado.";
                 case STILL_CALLED -> "Terminá con el paciente llamado, o indicá que no ingresó, antes de llamar al siguiente.";
                 case AUTO_CLOSE_ALREADY_OFF -> "La cola ya no se cierra sola.";
+            };
+            case AppointmentArrivalRefusedException refused -> switch (refused.reason()) {
+                case NOT_BOOKED -> "Ese turno no está reservado: fue cancelado o el paciente estuvo ausente.";
+                case NOT_TODAY -> "Con un turno se llega el día del turno.";
+                case NO_QUEUE -> "El profesional de ese turno no atiende ninguna cola.";
             };
             case QueueNotOpenException closed -> "La cola está cerrada: abrila primero.";
             case NoQueueServedException none -> "No atendés ninguna cola.";

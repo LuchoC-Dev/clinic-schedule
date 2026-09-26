@@ -1,26 +1,29 @@
 package com.clinic.schedule.arrival.session.domain;
 
+import java.util.Collection;
 import java.util.Comparator;
 import java.util.List;
 import java.util.Optional;
+import java.util.UUID;
 
 /**
- * Who is called next (D-63): the one rule of the order, which knows nothing of screens or modules.
+ * Who is called next (D-63, D-64): the one rule of the order, which knows nothing of screens or
+ * modules.
  *
  * <ul>
- *   <li>Emergencies first, in the order they were declared; then everyone else, in the order they
- *       arrived. Two at the same time are told apart by the order they came in.</li>
+ *   <li>Emergencies first, from when they were declared; then patients with an appointment, by the
+ *       later of its time and their arrival; then everyone else, by arrival. Two at the same time
+ *       keep the order they came in.</li>
+ *   <li>A patient kept for a practitioner is called by that one only.</li>
  *   <li>Whoever did not come in when called is passed over at the next call only, unless nobody
- *       else is waiting.</li>
+ *       else that practitioner may call is waiting.</li>
  * </ul>
- *
- * <p>The patients with an appointment, placed by the time, join the order in part 5b.
  */
 public final class CallOrder {
 
     private static final Comparator<Entry> ORDER = Comparator
-            .comparing((Entry entry) -> !entry.isEmergency())
-            .thenComparing(entry -> entry.isEmergency() ? entry.emergencySince() : entry.arrivedAt())
+            .comparingInt(CallOrder::tier)
+            .thenComparing(Entry::placedAt)
             .thenComparingInt(Entry::sequence);
 
     private CallOrder() {
@@ -31,12 +34,26 @@ public final class CallOrder {
         return entries.stream().filter(Entry::isWaiting).sorted(ORDER).toList();
     }
 
-    /** Who the given call of the session goes to, if anyone is waiting. */
-    public static Optional<Entry> next(List<Entry> entries, int call) {
-        List<Entry> waiting = of(entries);
-        return waiting.stream()
+    /** Who the given call of the session goes to, when that practitioner calls, if anyone. */
+    public static Optional<Entry> next(List<Entry> entries, int call, UUID practitionerId) {
+        List<Entry> callable = of(entries).stream().filter(entry -> entry.isCallableBy(practitionerId)).toList();
+        return callable.stream()
                 .filter(entry -> entry.passedOverAtCall() != call)
                 .findFirst()
-                .or(() -> waiting.stream().findFirst());
+                .or(() -> callable.stream().findFirst());
+    }
+
+    /** The waiting entries nobody may call: kept for a practitioner who no longer serves the queue. */
+    public static List<Entry> uncallable(List<Entry> entries, Collection<UUID> servedBy) {
+        return of(entries).stream()
+                .filter(entry -> entry.reservedFor() != null && !servedBy.contains(entry.reservedFor()))
+                .toList();
+    }
+
+    private static int tier(Entry entry) {
+        if (entry.isEmergency()) {
+            return 0;
+        }
+        return entry.hasAppointment() ? 1 : 2;
     }
 }

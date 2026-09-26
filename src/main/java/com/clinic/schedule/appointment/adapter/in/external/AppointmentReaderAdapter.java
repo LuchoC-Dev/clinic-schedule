@@ -2,6 +2,7 @@ package com.clinic.schedule.appointment.adapter.in.external;
 
 import java.time.LocalDate;
 import java.util.List;
+import java.util.Optional;
 import java.util.UUID;
 
 import org.springframework.stereotype.Component;
@@ -9,6 +10,10 @@ import org.springframework.stereotype.Component;
 import com.clinic.schedule.appointment.api.AppointmentReader;
 import com.clinic.schedule.appointment.api.AppointmentSummary;
 import com.clinic.schedule.appointment.application.usecase.FindPatientDayUseCase;
+import com.clinic.schedule.appointment.application.exception.AppointmentNotFoundException;
+import com.clinic.schedule.appointment.application.usecase.FindAppointmentUseCase;
+import com.clinic.schedule.appointment.domain.Appointment;
+import com.clinic.schedule.appointment.domain.AppointmentId;
 import com.clinic.schedule.appointment.domain.AppointmentStatus;
 import com.clinic.schedule.appointment.domain.PatientId;
 
@@ -24,21 +29,37 @@ import com.clinic.schedule.appointment.domain.PatientId;
 class AppointmentReaderAdapter implements AppointmentReader {
 
     private final FindPatientDayUseCase patientDay;
+    private final FindAppointmentUseCase appointment;
 
-    AppointmentReaderAdapter(FindPatientDayUseCase patientDay) {
+    AppointmentReaderAdapter(FindPatientDayUseCase patientDay, FindAppointmentUseCase appointment) {
         this.patientDay = patientDay;
+        this.appointment = appointment;
+    }
+
+    @Override
+    public Optional<AppointmentSummary> findBooked(UUID appointmentId) {
+        try {
+            Appointment found = appointment.handle(new AppointmentId(appointmentId));
+            return found.isBooked() ? Optional.of(summary(found)) : Optional.empty();
+        } catch (AppointmentNotFoundException e) {
+            return Optional.empty();
+        }
     }
 
     @Override
     public List<AppointmentSummary> findNotCancelledForPatientOn(UUID patientId, LocalDate date) {
         return patientDay.handle(new PatientId(patientId), date).stream()
-                .map(appointment -> new AppointmentSummary(
-                        appointment.id().value(),
-                        appointment.patientId().value(),
-                        appointment.practitionerId().value(),
-                        appointment.slot().startsAt(),
-                        appointment.isCheckedIn(),
-                        appointment.status() == AppointmentStatus.ABSENT))
+                .map(AppointmentReaderAdapter::summary)
                 .toList();
+    }
+
+    private static AppointmentSummary summary(Appointment appointment) {
+        return new AppointmentSummary(
+                appointment.id().value(),
+                appointment.patientId().value(),
+                appointment.practitionerId().value(),
+                appointment.slot().startsAt(),
+                appointment.isCheckedIn(),
+                appointment.status() == AppointmentStatus.ABSENT);
     }
 }

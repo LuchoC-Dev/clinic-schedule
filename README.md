@@ -91,6 +91,8 @@ Spanish, for the staff.
 | `GET` | `/api/queues/{id}/session` | the open session: who waits, in the order they will be called, who was called, who is done |
 | `POST` | `/api/queues/{id}/session/patients`, `/session/unidentified` | bring a patient in, or one who gives no name, as an emergency or not |
 | `POST` | `/api/queue-entries/{id}/emergency`, `/left` | make a waiting patient an emergency, or say they left |
+| `POST` | `/api/appointment-arrivals` | a patient with an appointment today arrives: into their practitioner's queue, kept for them |
+| `POST` | `/api/queue-entries/{id}/reassign`, `/lift-reservation` | give a waiting patient to another practitioner of the queue, or to anyone |
 | `GET` | `/api/my-queue` | a practitioner's own queue |
 | `POST` | `/api/my-queue/call-next`, `/finish`, `/did-not-come-in` | call the next patient, finish with them, or say they did not come in |
 | `POST` | `/api/consultations` | a practitioner records the consultation of a patient who arrived today — notes, prescriptions, the checks done and the orders issued |

@@ -6,6 +6,7 @@ import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 
 import com.clinic.schedule.arrival.eventstore.StreamChangedException;
+import com.clinic.schedule.arrival.session.command.AppointmentArrivalRefusedException;
 import com.clinic.schedule.arrival.session.command.EntryNotFoundException;
 import com.clinic.schedule.arrival.session.command.NoQueueServedException;
 import com.clinic.schedule.arrival.session.command.QueueNotOpenException;
@@ -28,7 +29,7 @@ class SessionExceptionHandler {
     }
 
     @ExceptionHandler({SessionRuleViolationException.class, QueueNotOpenException.class, NoQueueServedException.class,
-            StreamChangedException.class})
+            AppointmentArrivalRefusedException.class, StreamChangedException.class})
     ResponseEntity<ErrorResponse> conflict(RuntimeException e) {
         return ResponseEntity.status(HttpStatus.CONFLICT).body(ErrorResponse.of(409, "Conflict", e.getMessage()));
     }

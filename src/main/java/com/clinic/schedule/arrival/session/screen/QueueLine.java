@@ -8,9 +8,13 @@ import com.clinic.schedule.arrival.session.domain.Entry;
 import com.clinic.schedule.arrival.session.domain.EntryState;
 import com.clinic.schedule.patient.api.PatientSummary;
 
-/** One patient of a queue as its screens show them, with names instead of ids and their state in Spanish (D-63). */
+/**
+ * One patient of a queue as its screens show them, with names instead of ids and their state in
+ * Spanish (D-63): their appointment's time and whom they are kept for, when they came with one (D-64).
+ */
 record QueueLine(UUID entryId, UUID patientId, String patient, boolean identityVerified, String arrivedAt,
-        boolean emergency, String state, int timesCalled, String practitioner) {
+        boolean emergency, String appointmentAt, UUID reservedForId, String reservedFor, String state,
+        int timesCalled, String practitioner) {
 
     private static final DateTimeFormatter TIME = DateTimeFormatter.ofPattern("HH:mm");
 
@@ -19,7 +23,11 @@ record QueueLine(UUID entryId, UUID patientId, String patient, boolean identityV
         String label = patient == null ? "(paciente desconocido)"
                 : patient.document() == null ? patient.fullName() : patient.fullName() + " — " + patient.document();
         return new QueueLine(entry.id().value(), entry.patientId(), label, patient != null && patient.identityVerified(),
-                TIME.format(entry.arrivedAt()), entry.isEmergency(), state(entry.state()), entry.timesCalled(),
+                TIME.format(entry.arrivedAt()), entry.isEmergency(),
+                entry.appointmentAt() == null ? null : TIME.format(entry.appointmentAt()), entry.reservedFor(),
+                entry.reservedFor() == null ? null
+                        : practitioners.getOrDefault(entry.reservedFor(), "(profesional desconocido)"),
+                state(entry.state()), entry.timesCalled(),
                 entry.withPractitioner() == null ? null
                         : practitioners.getOrDefault(entry.withPractitioner(), "(profesional desconocido)"));
     }

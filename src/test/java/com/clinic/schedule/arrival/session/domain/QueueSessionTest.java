@@ -250,4 +250,105 @@ class QueueSessionTest {
     private EntryId entryOf(UUID patient) {
         return entry(patient).id();
     }
+
+    // --- patients with an appointment (D-64) -----------------------------------------------------
+
+    private UUID withAppointment(String name, UUID practitioner, int appointmentMinutes, int arrivalMinutes) {
+        UUID patient = UUID.nameUUIDFromBytes(name.getBytes());
+        record(SESSIONS.arriveWithAppointment(session, patient, UUID.nameUUIDFromBytes(("turno " + name).getBytes()),
+                practitioner, NINE.plusMinutes(appointmentMinutes), NINE.plusMinutes(arrivalMinutes)));
+        return patient;
+    }
+
+    @Test
+    void appointmentsComeBetweenEmergenciesAndEveryoneElse() {
+        UUID walkIn = arrives("Ana", false, 0);
+        UUID booked = withAppointment("Beto", ARIAS, 30, 20);
+        UUID emergency = arrives("Carla", true, 40);
+
+        assertThat(CallOrder.of(session.entries())).extracting(Entry::patientId)
+                .containsExactly(emergency, booked, walkIn);
+    }
+
+    @Test
+    void whoComesEarlyWaitsForTheirTimeAndWhoComesLateIsPlacedByWhenTheyCame() {
+        UUID early = withAppointment("Ana", ARIAS, 60, 0);
+        UUID late = withAppointment("Beto", ARIAS, 10, 50);
+        UUID onTime = withAppointment("Carla", ARIAS, 40, 40);
+
+        assertThat(CallOrder.of(session.entries())).extracting(Entry::patientId).containsExactly(onTime, late, early);
+    }
+
+    @Test
+    void aPatientWithAnAppointmentIsCalledByTheirPractitionerOnly() {
+        UUID booked = withAppointment("Ana", ARIAS, 0, 0);
+        UUID walkIn = arrives("Beto", false, 5);
+
+        assertThat(called(BENITEZ)).isEqualTo(walkIn);
+        assertThat(called(ARIAS)).isEqualTo(booked);
+    }
+
+    @Test
+    void anEmergencyWithAnAppointmentStaysKeptForTheirPractitioner() {
+        UUID booked = withAppointment("Ana", ARIAS, 0, 0);
+        record(SESSIONS.declareEmergency(session, entryOf(booked), NINE.plusMinutes(10)));
+
+        assertThatThrownBy(() -> called(BENITEZ)).isInstanceOf(SessionRuleViolationException.class);
+        assertThat(called(ARIAS)).isEqualTo(booked);
+    }
+
+    @Test
+    void givenToAnotherPractitionerTheyKeepTheirPlace() {
+        UUID booked = withAppointment("Ana", ARIAS, 0, 0);
+        arrives("Beto", false, 5);
+
+        record(SESSIONS.reassign(session, entryOf(booked), BENITEZ, SERVED_BY));
+
+        assertThat(CallOrder.of(session.entries()).get(0).patientId()).isEqualTo(booked);
+        assertThat(called(BENITEZ)).isEqualTo(booked);
+        assertThatThrownBy(() -> SESSIONS.reassign(session, entryOf(arrives("Carla", false, 9)), UUID.randomUUID(),
+                SERVED_BY)).isInstanceOf(NotServingThisQueueException.class);
+    }
+
+    @Test
+    void liftingTheReservationLetsAnyoneOfTheQueueCall() {
+        UUID booked = withAppointment("Ana", ARIAS, 0, 0);
+        record(SESSIONS.liftReservation(session, entryOf(booked)));
+
+        assertThat(called(BENITEZ)).isEqualTo(booked);
+        assertThatThrownBy(() -> SESSIONS.liftReservation(session, entryOf(booked)))
+                .isInstanceOf(SessionRuleViolationException.class);
+    }
+
+    @Test
+    void anAppointmentBringsItsPatientInOnce() {
+        withAppointment("Ana", ARIAS, 0, 0);
+        called(ARIAS);
+        record(SESSIONS.finish(session, ARIAS));
+
+        assertThatThrownBy(() -> withAppointment("Ana", ARIAS, 0, 30)).isInstanceOf(SessionRuleViolationException.class);
+    }
+
+    @Test
+    void aCancelledAppointmentLeavesItsPatientWaitingForAnyone() {
+        UUID booked = withAppointment("Ana", ARIAS, 0, 0);
+        UUID appointment = entry(booked).appointmentId();
+
+        List<SessionEvent> lifted = SESSIONS.appointmentCancelled(session, appointment);
+        lifted.forEach(this::record);
+
+        assertThat(entry(booked).isWaiting()).isTrue();
+        assertThat(entry(booked).reservedFor()).isNull();
+        assertThat(SESSIONS.appointmentCancelled(session, appointment)).isEmpty();
+        assertThat(SESSIONS.appointmentCancelled(session, UUID.randomUUID())).isEmpty();
+    }
+
+    @Test
+    void nobodyCallsWhoIsKeptForAPractitionerNoLongerInTheQueue() {
+        UUID booked = withAppointment("Ana", ARIAS, 0, 0);
+
+        assertThat(CallOrder.uncallable(session.entries(), List.of(BENITEZ))).extracting(Entry::patientId)
+                .containsExactly(booked);
+        assertThat(CallOrder.uncallable(session.entries(), SERVED_BY)).isEmpty();
+    }
 }

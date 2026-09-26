@@ -7,6 +7,7 @@ import java.util.Optional;
 import java.util.UUID;
 import java.util.function.UnaryOperator;
 
+import com.clinic.schedule.arrival.session.domain.SessionEvent.AppointmentArrived;
 import com.clinic.schedule.arrival.session.domain.SessionEvent.AutoCloseTurnedOff;
 import com.clinic.schedule.arrival.session.domain.SessionEvent.EmergencyDeclared;
 import com.clinic.schedule.arrival.session.domain.SessionEvent.PatientArrived;
@@ -14,7 +15,9 @@ import com.clinic.schedule.arrival.session.domain.SessionEvent.PatientCalled;
 import com.clinic.schedule.arrival.session.domain.SessionEvent.PatientDidNotComeIn;
 import com.clinic.schedule.arrival.session.domain.SessionEvent.PatientDidNotShowUp;
 import com.clinic.schedule.arrival.session.domain.SessionEvent.PatientLeft;
+import com.clinic.schedule.arrival.session.domain.SessionEvent.PatientReassigned;
 import com.clinic.schedule.arrival.session.domain.SessionEvent.PatientSeen;
+import com.clinic.schedule.arrival.session.domain.SessionEvent.ReservationLifted;
 import com.clinic.schedule.arrival.session.domain.SessionEvent.SessionClosed;
 import com.clinic.schedule.arrival.session.domain.SessionEvent.SessionOpened;
 import com.clinic.schedule.arrival.session.domain.exception.SessionRuleViolationException;
@@ -80,6 +83,16 @@ public final class QueueSession {
                         arrived.emergency(), arrived.at()));
                 yield with(after, calls);
             }
+            case AppointmentArrived arrived -> {
+                List<Entry> after = new ArrayList<>(entries);
+                after.add(Entry.arrivedWithAppointment(new EntryId(arrived.entryId()), arrived.patientId(),
+                        entries.size() + 1, arrived.appointmentId(), arrived.practitionerId(), arrived.appointmentAt(),
+                        arrived.at()));
+                yield with(after, calls);
+            }
+            case PatientReassigned reassigned ->
+                    changing(reassigned.entryId(), entry -> entry.reservedFor(reassigned.practitionerId()), calls);
+            case ReservationLifted lifted -> changing(lifted.entryId(), entry -> entry.reservedFor(null), calls);
             case EmergencyDeclared declared -> changing(declared.entryId(), entry -> entry.asEmergency(declared.at()), calls);
             case PatientCalled called ->
                     changing(called.entryId(), entry -> entry.calledBy(called.practitionerId(), called.at()), calls + 1);
@@ -107,6 +120,41 @@ public final class QueueSession {
         return new PatientArrived(EntryId.newId().value(), patientId, emergency, at);
     }
 
+    AppointmentArrived arriveWithAppointment(UUID patientId, UUID appointmentId, UUID practitionerId,
+            LocalDateTime appointmentAt, LocalDateTime at) {
+        if (patientId == null || appointmentId == null || practitionerId == null || appointmentAt == null) {
+            throw new IllegalArgumentException("A patient with an appointment comes in with the appointment");
+        }
+        if (entries.stream().anyMatch(entry -> appointmentId.equals(entry.appointmentId()))) {
+            throw new SessionRuleViolationException(Reason.ALREADY_ARRIVED);
+        }
+        if (entries.stream().anyMatch(entry -> entry.isWaiting() && entry.patientId().equals(patientId))) {
+            throw new SessionRuleViolationException(Reason.ALREADY_WAITING);
+        }
+        return new AppointmentArrived(EntryId.newId().value(), patientId, appointmentId, practitionerId, appointmentAt,
+                at);
+    }
+
+    PatientReassigned reassign(EntryId entryId, UUID practitionerId) {
+        Entry entry = waiting(entryId);
+        if (practitionerId.equals(entry.reservedFor())) {
+            throw new SessionRuleViolationException(Reason.ALREADY_KEPT_FOR_THEM);
+        }
+        return new PatientReassigned(entryId.value(), practitionerId);
+    }
+
+    ReservationLifted liftReservation(EntryId entryId) {
+        if (waiting(entryId).reservedFor() == null) {
+            throw new SessionRuleViolationException(Reason.NOT_KEPT);
+        }
+        return new ReservationLifted(entryId.value());
+    }
+
+    /** The entry of that appointment, if its patient came in. */
+    public Optional<Entry> entryOf(UUID appointmentId) {
+        return entries.stream().filter(entry -> appointmentId.equals(entry.appointmentId())).findFirst();
+    }
+
     EmergencyDeclared declareEmergency(EntryId entryId, LocalDateTime at) {
         Entry entry = waiting(entryId);
         if (entry.isEmergency()) {
@@ -125,7 +173,7 @@ public final class QueueSession {
         if (calledBy(practitionerId).isPresent()) {
             throw new SessionRuleViolationException(Reason.STILL_CALLED);
         }
-        Entry next = CallOrder.next(entries, calls + 1)
+        Entry next = CallOrder.next(entries, calls + 1, practitionerId)
                 .orElseThrow(() -> new SessionRuleViolationException(Reason.NOBODY_WAITING));
         return new PatientCalled(next.id().value(), practitionerId, at);
     }

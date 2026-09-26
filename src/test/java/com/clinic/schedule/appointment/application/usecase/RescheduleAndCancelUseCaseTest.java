@@ -38,7 +38,8 @@ class RescheduleAndCancelUseCaseTest {
 
     private final RescheduleAppointmentUseCase reschedule =
             new RescheduleAppointmentUseCase(appointments, practitioners, new BookingService(), CLOCK);
-    private final CancelAppointmentUseCase cancel = new CancelAppointmentUseCase(appointments);
+    private final FakeArrivals arrivals = new FakeArrivals();
+    private final CancelAppointmentUseCase cancel = new CancelAppointmentUseCase(appointments, arrivals);
 
     private Appointment stored(PatientId patient, int atMinute, int minutes) {
         return Appointment.restore(AppointmentId.newId(), patient, ARIAS,
@@ -59,6 +60,16 @@ class RescheduleAndCancelUseCaseTest {
         assertThat(moved.slot()).isEqualTo(TimeSlot.of(TEN.plusHours(3), 45));
         assertThat(appointments.findById(original.id())).contains(moved);
         assertThat(appointments.storedCount()).isEqualTo(1);
+    }
+
+    @Test
+    void cancellingTellsTheArrivals() {
+        Appointment original = stored(ANA, 0, 30);
+        appointments.given(original);
+
+        cancel.handle(original.id());
+
+        assertThat(arrivals.cancelled()).containsExactly(original.id());
     }
 
     @Test

@@ -2,6 +2,7 @@ package com.clinic.schedule.appointment.api;
 
 import java.time.LocalDate;
 import java.util.List;
+import java.util.Optional;
 import java.util.UUID;
 
 /**
@@ -18,4 +19,7 @@ public interface AppointmentReader {
      * ones are left out (D-61).
      */
     List<AppointmentSummary> findNotCancelledForPatientOn(UUID patientId, LocalDate date);
+
+    /** The appointment, if it is still booked: neither cancelled nor absent (D-64). */
+    Optional<AppointmentSummary> findBooked(UUID appointmentId);
 }

@@ -6,12 +6,15 @@ import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 
+import com.clinic.schedule.arrival.session.domain.SessionEvent.AppointmentArrived;
 import com.clinic.schedule.arrival.session.domain.SessionEvent.AutoCloseTurnedOff;
 import com.clinic.schedule.arrival.session.domain.SessionEvent.EmergencyDeclared;
 import com.clinic.schedule.arrival.session.domain.SessionEvent.PatientArrived;
 import com.clinic.schedule.arrival.session.domain.SessionEvent.PatientCalled;
 import com.clinic.schedule.arrival.session.domain.SessionEvent.PatientLeft;
+import com.clinic.schedule.arrival.session.domain.SessionEvent.PatientReassigned;
 import com.clinic.schedule.arrival.session.domain.SessionEvent.PatientSeen;
+import com.clinic.schedule.arrival.session.domain.SessionEvent.ReservationLifted;
 import com.clinic.schedule.arrival.session.domain.SessionEvent.SessionClosed;
 import com.clinic.schedule.arrival.session.domain.SessionEvent.SessionOpened;
 import com.clinic.schedule.arrival.session.domain.exception.NotServingThisQueueException;
@@ -46,6 +49,34 @@ public class QueueSessionService {
 
     public PatientArrived arrive(QueueSession session, UUID patientId, boolean emergency, LocalDateTime at) {
         return session.arrive(patientId, emergency, at);
+    }
+
+    /** A patient with an appointment today, kept for its practitioner (D-64). */
+    public AppointmentArrived arriveWithAppointment(QueueSession session, UUID patientId, UUID appointmentId,
+            UUID practitionerId, LocalDateTime appointmentAt, LocalDateTime at) {
+        return session.arriveWithAppointment(patientId, appointmentId, practitionerId, appointmentAt, at);
+    }
+
+    /** @param servedBy who serves the queue now: only one of them may take the patient */
+    public PatientReassigned reassign(QueueSession session, EntryId entryId, UUID practitionerId,
+            Collection<UUID> servedBy) {
+        requireServing(practitionerId, servedBy);
+        return session.reassign(entryId, practitionerId);
+    }
+
+    public ReservationLifted liftReservation(QueueSession session, EntryId entryId) {
+        return session.liftReservation(entryId);
+    }
+
+    /**
+     * What an appointment cancelled while its patient waits leaves in the queue: the patient in their
+     * place, kept for nobody (D-64). Nothing, when they are not waiting or are kept for nobody already.
+     */
+    public List<SessionEvent> appointmentCancelled(QueueSession session, UUID appointmentId) {
+        return session.entryOf(appointmentId)
+                .filter(entry -> entry.isWaiting() && entry.reservedFor() != null)
+                .<List<SessionEvent>>map(entry -> List.of(session.liftReservation(entry.id())))
+                .orElse(List.of());
     }
 
     public EmergencyDeclared declareEmergency(QueueSession session, EntryId entryId, LocalDateTime at) {

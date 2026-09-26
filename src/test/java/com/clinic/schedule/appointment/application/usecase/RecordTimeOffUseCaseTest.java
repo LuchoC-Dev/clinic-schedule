@@ -35,7 +35,8 @@ class RecordTimeOffUseCaseTest {
             LocalDateTime.of(2026, 3, 10, 0, 0).atZone(ZoneId.of("America/Argentina/Buenos_Aires")).toInstant(),
             ZoneId.of("America/Argentina/Buenos_Aires"));
 
-    private final RecordTimeOffUseCase recordTimeOff = new RecordTimeOffUseCase(appointments, practitioners, CLOCK);
+    private final FakeArrivals arrivals = new FakeArrivals();
+    private final RecordTimeOffUseCase recordTimeOff = new RecordTimeOffUseCase(appointments, practitioners, arrivals, CLOCK);
 
     private static Appointment booked(PractitionerId practitioner, LocalDateTime startsAt) {
         return Appointment.restore(AppointmentId.newId(), PatientId.newId(), practitioner,
@@ -67,6 +68,7 @@ class RecordTimeOffUseCaseTest {
         assertThat(statusOf(morning)).isEqualTo(AppointmentStatus.CANCELLED);
         assertThat(statusOf(afternoon)).isEqualTo(AppointmentStatus.CANCELLED);
         assertThat(practitioners.recordedTimeOff()).containsExactly(wholeDay());
+        assertThat(arrivals.cancelled()).containsExactlyInAnyOrder(morning.id(), afternoon.id());
     }
 
     @Test
@@ -149,7 +151,7 @@ class RecordTimeOffUseCaseTest {
         Appointment afternoon = booked(ARIAS, DAY.atTime(15, 0));
         appointments.given(afternoon);
 
-        RecordTimeOffUseCase.Result result = new RecordTimeOffUseCase(appointments, practitioners, atNoon)
+        RecordTimeOffUseCase.Result result = new RecordTimeOffUseCase(appointments, practitioners, arrivals, atNoon)
                 .handle(new RecordTimeOffUseCase.Command(ARIAS, wholeDay()));
 
         assertThat(result.cancelled()).extracting(Appointment::id).containsExactly(afternoon.id());

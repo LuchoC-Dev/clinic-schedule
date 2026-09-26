@@ -25,17 +25,20 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 @Repository
 class SessionEventRepository {
 
-    private static final Map<String, Class<? extends SessionEvent>> TYPES = Map.of(
-            "SessionOpened", SessionEvent.SessionOpened.class,
-            "PatientArrived", SessionEvent.PatientArrived.class,
-            "EmergencyDeclared", SessionEvent.EmergencyDeclared.class,
-            "PatientCalled", SessionEvent.PatientCalled.class,
-            "PatientSeen", SessionEvent.PatientSeen.class,
-            "PatientDidNotComeIn", SessionEvent.PatientDidNotComeIn.class,
-            "PatientDidNotShowUp", SessionEvent.PatientDidNotShowUp.class,
-            "PatientLeft", SessionEvent.PatientLeft.class,
-            "AutoCloseTurnedOff", SessionEvent.AutoCloseTurnedOff.class,
-            "SessionClosed", SessionEvent.SessionClosed.class);
+    private static final Map<String, Class<? extends SessionEvent>> TYPES = Map.ofEntries(
+            Map.entry("SessionOpened", SessionEvent.SessionOpened.class),
+            Map.entry("PatientArrived", SessionEvent.PatientArrived.class),
+            Map.entry("AppointmentArrived", SessionEvent.AppointmentArrived.class),
+            Map.entry("PatientReassigned", SessionEvent.PatientReassigned.class),
+            Map.entry("ReservationLifted", SessionEvent.ReservationLifted.class),
+            Map.entry("EmergencyDeclared", SessionEvent.EmergencyDeclared.class),
+            Map.entry("PatientCalled", SessionEvent.PatientCalled.class),
+            Map.entry("PatientSeen", SessionEvent.PatientSeen.class),
+            Map.entry("PatientDidNotComeIn", SessionEvent.PatientDidNotComeIn.class),
+            Map.entry("PatientDidNotShowUp", SessionEvent.PatientDidNotShowUp.class),
+            Map.entry("PatientLeft", SessionEvent.PatientLeft.class),
+            Map.entry("AutoCloseTurnedOff", SessionEvent.AutoCloseTurnedOff.class),
+            Map.entry("SessionClosed", SessionEvent.SessionClosed.class));
 
     private static final Map<Class<? extends SessionEvent>, String> NAMES = TYPES.entrySet().stream()
             .collect(Collectors.toMap(Map.Entry::getValue, Map.Entry::getKey));

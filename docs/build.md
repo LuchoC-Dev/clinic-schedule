@@ -733,6 +733,32 @@ call went to Beto, and the one after back to Ana. Reception saw who was called b
 seen, and closed the queue: NN-8177, still waiting, was not seen. The session's thirteen events read
 back in order, each by `recepcion` or `arias`.
 
+#### Part 5b — Patients with an appointment, and the arrival leaves the appointment `[~]`
+
+Step 1 — into the queue:
+
+- [x] `AppointmentArrived`: into the queue of the appointment's practitioner, kept for them, on its
+      day, while booked, the queue open (D-64)
+- [x] `CallOrder`: emergencies, then appointments by the later of their time and the arrival, then
+      everyone else; a patient kept for a practitioner is called and read by that one only
+- [x] Reception gives a waiting patient to another practitioner, keeping their place, or lifts the
+      reservation; the screen warns of whoever nobody can call
+- [x] A cancelled appointment leaves its patient in the queue for anyone:
+      `appointment/api/AppointmentArrivals`, implemented by the queues, told in the same transaction
+- [x] `V21`: the appointment, its time and the reservation on each entry
+- [x] 11 unit and 9 integration tests. 288 unit and 331 integration tests, 619 in total
+
+**Verified with:** each of these failing its tests when broken on purpose — appointments after who
+came without one, an appointment placed by its time alone, anyone calling a patient kept for someone,
+a cancellation telling nobody, a patient kept for someone read by all the queue, nobody ever
+uncallable, a patient given to someone outside the queue.
+
+**Verified in a browser** against the application on a throwaway PostgreSQL: Ana Torres, found by her
+name, came in with "Llegó con turno 20:00", kept for Dra. Arias and ahead of Beto, who came without an
+appointment; Dra. Arias left the Guardia and the screen said nobody could call Ana; "Dar a" gave her
+to Dr. Benítez in the same place; her appointment cancelled, she stayed first, waiting for nobody. The
+session's events read back as `AppointmentArrived`, `PatientReassigned`, `ReservationLifted`.
+
 ---
 
 ## Explicitly postponed

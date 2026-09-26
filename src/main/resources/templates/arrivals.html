@@ -39,6 +39,14 @@
     </div>
 
     <th:block th:if="${open}">
+    <!-- Kept for a practitioner who no longer serves the queue, so nobody calls them (D-64). -->
+    <div class="error" th:unless="${uncallable.isEmpty()}">
+        Nadie puede llamar a
+        <span th:each="line, it : ${uncallable}"
+              th:text="${line.patient} + ' (espera a ' + ${line.reservedFor} + ')' + (${it.last} ? '' : ', ')">Ana Pérez</span>:
+        su profesional ya no atiende esta cola. Dáselo a otro o quitale la reserva.
+    </div>
+
     <h2>Esperando</h2>
     <p th:if="${waiting.isEmpty()}" class="muted">Nadie espera.</p>
     <table th:unless="${waiting.isEmpty()}">
@@ -50,6 +58,8 @@
             <td th:text="${line.arrivedAt}">09:10</td>
             <td>
                 <strong th:if="${line.emergency}">Urgencia</strong>
+                <span th:if="${line.appointmentAt}" th:text="'Turno ' + ${line.appointmentAt}">Turno 10:00</span>
+                <span class="muted" th:if="${line.reservedFor}" th:text="'· espera a ' + ${line.reservedFor}">· espera a Dra. Arias</span>
                 <span class="muted" th:if="${line.timesCalled > 0}"
                       th:text="'Llamado ' + ${line.timesCalled} + (${line.timesCalled == 1} ? ' vez' : ' veces')">Llamado 1 vez</span>
             </td>
@@ -57,6 +67,19 @@
                 <form class="inline" method="post" th:unless="${line.emergency}"
                       th:action="@{/arrivals/{q}/entries/{e}/emergency(q=${queue.id},e=${line.entryId})}">
                     <button type="submit">Urgencia</button>
+                </form>
+                <th:block th:with="options=${givable.get(line.entryId)}">
+                <form class="inline" method="post" th:unless="${options.isEmpty()}"
+                      th:action="@{/arrivals/{q}/entries/{e}/reassign(q=${queue.id},e=${line.entryId})}">
+                    <select name="practitionerId">
+                        <option th:each="p : ${options}" th:value="${p.id}" th:text="${p.label}"></option>
+                    </select>
+                    <button type="submit">Dar a</button>
+                </form>
+                </th:block>
+                <form class="inline" method="post" th:if="${line.reservedFor}"
+                      th:action="@{/arrivals/{q}/entries/{e}/lift-reservation(q=${queue.id},e=${line.entryId})}">
+                    <button type="submit">Quitar reserva</button>
                 </form>
                 <form class="inline" method="post"
                       th:action="@{/arrivals/{q}/entries/{e}/left(q=${queue.id},e=${line.entryId})}">
@@ -88,12 +111,18 @@
     </form>
     <table th:if="${found != null and !found.isEmpty()}">
         <tbody>
-        <tr th:each="p : ${found}">
+        <tr th:each="f : ${found}" th:with="p=${f.patient}">
             <td th:text="${p.document} ? ${p.fullName} + ' — ' + ${p.document} : ${p.fullName}">Ana Pérez</td>
             <td class="actions">
+                <!-- With an appointment today, they come in with it: kept for its practitioner (D-64). -->
+                <form class="inline" method="post" th:each="a : ${f.appointmentsToday}"
+                      th:action="@{/arrivals/{q}/appointments/{a}(q=${queue.id},a=${a.id})}">
+                    <button type="submit" class="primary" th:text="'Llegó con turno ' + ${a.label}">Llegó con turno 10:00</button>
+                </form>
                 <form class="inline" method="post" th:action="@{/arrivals/{id}/patients(id=${queue.id})}">
                     <input type="hidden" name="patientId" th:value="${p.id}">
-                    <button type="submit" class="primary">Sumar</button>
+                    <button type="submit" th:classappend="${f.appointmentsToday.isEmpty()} ? 'primary' : ''"
+                            th:text="${f.appointmentsToday.isEmpty()} ? 'Sumar' : 'Sumar sin turno'">Sumar</button>
                 </form>
                 <form class="inline" method="post" th:action="@{/arrivals/{id}/patients(id=${queue.id})}">
                     <input type="hidden" name="patientId" th:value="${p.id}">

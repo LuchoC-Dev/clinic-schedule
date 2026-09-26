@@ -173,7 +173,7 @@ class BookAppointmentUseCaseTest {
     void aCancelledAppointmentDoesNotBlockItsSlot() {
         AppointmentId first = AppointmentId.newId();
         useCase.handle(command(first, LUIS, ARIAS, ariasConsulta, 0));
-        new CancelAppointmentUseCase(appointments).handle(first);
+        new CancelAppointmentUseCase(appointments, new FakeArrivals()).handle(first);
 
         Appointment second = useCase.handle(withArias(ANA, 0));
 

@@ -14,6 +14,7 @@ import org.springframework.transaction.annotation.Transactional;
 import com.clinic.schedule.appointment.application.exception.TimeOffInThePastException;
 import com.clinic.schedule.appointment.application.exception.UnknownPractitionerException;
 import com.clinic.schedule.appointment.application.port.AppointmentRepository;
+import com.clinic.schedule.appointment.application.port.ArrivalPort;
 import com.clinic.schedule.appointment.application.port.PractitionerSchedulePort;
 import com.clinic.schedule.appointment.domain.Appointment;
 import com.clinic.schedule.appointment.domain.PractitionerId;
@@ -41,12 +42,14 @@ public class RecordTimeOffUseCase {
 
     private final AppointmentRepository appointments;
     private final PractitionerSchedulePort practitioners;
+    private final ArrivalPort arrivals;
     private final Clock clock;
 
     public RecordTimeOffUseCase(AppointmentRepository appointments, PractitionerSchedulePort practitioners,
-            Clock clock) {
+            ArrivalPort arrivals, Clock clock) {
         this.appointments = appointments;
         this.practitioners = practitioners;
+        this.arrivals = arrivals;
         this.clock = clock;
     }
 
@@ -71,6 +74,7 @@ public class RecordTimeOffUseCase {
                 .map(Appointment::cancelled)
                 .toList();
         cancelled.forEach(appointments::save);
+        cancelled.forEach(appointment -> arrivals.appointmentCancelled(appointment.id()));
 
         List<Appointment> needsManualHandling = hit.stream().filter(Appointment::isCheckedIn).toList();
 

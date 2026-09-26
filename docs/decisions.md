@@ -2131,3 +2131,45 @@ finish the one called (a practitioner finishes explicitly, for now); a patient w
 sent to the end (they keep their place); projecting event by event (a session rewritten whole is
 simpler and cannot drift); a new kind of access for the queue in the read log (it is a visit today,
 like an appointment).
+
+---
+
+## D-64 — Patients with an appointment join the queue, kept for their practitioner
+**Date:** 2026-09-26 · **Status:** accepted; the arrival leaves the appointment in the next step of part 5b
+
+**They come into the queue of their appointment's practitioner** — the one queue that practitioner
+serves — when reception says they arrived, on the appointment's day, while it is booked and the queue
+is open. `AppointmentArrived` records the appointment, its time and the practitioner they are
+**kept for**: only that one calls them, as an emergency too. Reception may give them to another
+practitioner of the queue (`PatientReassigned`) without their place changing, or lift the
+reservation (`ReservationLifted`), and then whoever serves the queue may call them. The reception
+screen warns of whoever nobody can call, because their practitioner no longer serves the queue.
+The events of 5a are unchanged; these are three more.
+
+**The order has its middle tier.** `CallOrder` puts emergencies first, then patients with an
+appointment, then everyone else. A patient with an appointment is placed by the later of its time and
+their arrival: whoever comes early waits for their time, and whoever comes late is placed by when they
+came, behind the appointments earlier than that. "Llamar siguiente" skips whoever is kept for another
+practitioner. A patient kept for a practitioner is read by that practitioner only; who is kept for
+nobody, by whoever serves the queue.
+
+**A cancelled appointment leaves its patient in the queue**, in their place and kept for nobody: they
+did arrive, and taking them out is reception's call. The appointment module must say so without
+knowing the queues exist, so it declares what it tells — `appointment/api/AppointmentArrivals` — and
+the arrival module implements it; `appointment` reaches it through its own `ArrivalPort`, like any
+other port. The dependency stays one way, from the queues to the appointments, as D-48 asked. The
+cancellation and the lifted reservation are kept in the same transaction.
+
+**The late-arrival notice stays on the appointment.** It is part of the rule of absence (D-61): the
+queue does not know who is coming late.
+
+**API and screens.** `POST /api/appointment-arrivals`, `POST /api/queue-entries/{id}/reassign` and
+`/lift-reservation`; a session answers who of its waiting patients nobody may call. Reception finds a
+patient and, when they have an appointment today with a practitioner of the queue, "Llegó con turno";
+each waiting patient shows their appointment and whom they wait for, with "Dar a" and "Quitar
+reserva".
+
+*Rejected:* an emergency with an appointment called by anyone (it stays with its practitioner, and
+reception lifts that when needed); the appointment module calling the queues' api (a cycle between
+modules); pulling each appointment's state when the queue is ordered (the cancellation is a fact of its
+own, and kept as an event).

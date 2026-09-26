@@ -5,6 +5,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import com.clinic.schedule.appointment.application.exception.AppointmentNotFoundException;
 import com.clinic.schedule.appointment.application.port.AppointmentRepository;
+import com.clinic.schedule.appointment.application.port.ArrivalPort;
 import com.clinic.schedule.appointment.domain.Appointment;
 import com.clinic.schedule.appointment.domain.AppointmentId;
 
@@ -16,15 +17,20 @@ import com.clinic.schedule.appointment.domain.AppointmentId;
  * nothing to check against. The appointment guards the rest by itself — a cancelled one
  * cannot be cancelled again.
  *
+ * <p>A patient who already came into a queue with it stays there, kept for nobody: the arrivals
+ * are told, in the same transaction (D-64).
+ *
  * <p>It takes the id directly instead of a {@code Command}: a single value needs no wrapper.
  */
 @Service
 public class CancelAppointmentUseCase {
 
     private final AppointmentRepository appointments;
+    private final ArrivalPort arrivals;
 
-    public CancelAppointmentUseCase(AppointmentRepository appointments) {
+    public CancelAppointmentUseCase(AppointmentRepository appointments, ArrivalPort arrivals) {
         this.appointments = appointments;
+        this.arrivals = arrivals;
     }
 
     @Transactional
@@ -34,6 +40,7 @@ public class CancelAppointmentUseCase {
 
         Appointment cancelled = appointment.cancelled();
         appointments.save(cancelled);
+        arrivals.appointmentCancelled(id);
         return cancelled;
     }
 }

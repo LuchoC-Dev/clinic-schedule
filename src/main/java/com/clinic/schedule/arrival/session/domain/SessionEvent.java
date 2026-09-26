@@ -18,6 +18,22 @@ public sealed interface SessionEvent {
     record PatientArrived(UUID entryId, UUID patientId, boolean emergency, LocalDateTime at) implements SessionEvent {
     }
 
+    /**
+     * Reception brought in a patient with an appointment today: kept for the appointment's
+     * practitioner, and placed by the later of the appointment's time and their arrival (D-64).
+     */
+    record AppointmentArrived(UUID entryId, UUID patientId, UUID appointmentId, UUID practitionerId,
+            LocalDateTime appointmentAt, LocalDateTime at) implements SessionEvent {
+    }
+
+    /** Reception gave a waiting patient to another practitioner of the queue, in the same place. */
+    record PatientReassigned(UUID entryId, UUID practitionerId) implements SessionEvent {
+    }
+
+    /** A waiting patient is kept for nobody any more: whoever serves the queue may call them. */
+    record ReservationLifted(UUID entryId) implements SessionEvent {
+    }
+
     /** Reception made a waiting patient an emergency. */
     record EmergencyDeclared(UUID entryId, LocalDateTime at) implements SessionEvent {
     }

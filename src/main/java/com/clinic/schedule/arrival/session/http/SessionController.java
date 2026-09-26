@@ -14,6 +14,9 @@ import org.springframework.web.bind.annotation.RestController;
 
 import com.clinic.schedule.arrival.session.command.AddPatientUseCase;
 import com.clinic.schedule.arrival.session.command.AddUnidentifiedPatientUseCase;
+import com.clinic.schedule.arrival.session.command.AppointmentArrivesUseCase;
+import com.clinic.schedule.arrival.session.command.LiftReservationUseCase;
+import com.clinic.schedule.arrival.session.command.ReassignUseCase;
 import com.clinic.schedule.arrival.session.command.CloseQueueUseCase;
 import com.clinic.schedule.arrival.session.command.DeclareEmergencyUseCase;
 import com.clinic.schedule.arrival.session.command.MarkLeftUseCase;
@@ -37,11 +40,15 @@ class SessionController {
     private final DeclareEmergencyUseCase declareEmergency;
     private final MarkLeftUseCase markLeft;
     private final AddUnidentifiedPatientUseCase addUnidentified;
+    private final AppointmentArrivesUseCase appointmentArrives;
+    private final ReassignUseCase reassign;
+    private final LiftReservationUseCase liftReservation;
     private final ViewQueueSessionUseCase view;
 
     SessionController(OpenQueueUseCase open, CloseQueueUseCase close, TurnOffAutoCloseUseCase turnOffAutoClose,
             AddPatientUseCase addPatient, DeclareEmergencyUseCase declareEmergency, MarkLeftUseCase markLeft,
-            AddUnidentifiedPatientUseCase addUnidentified, ViewQueueSessionUseCase view) {
+            AddUnidentifiedPatientUseCase addUnidentified, AppointmentArrivesUseCase appointmentArrives,
+            ReassignUseCase reassign, LiftReservationUseCase liftReservation, ViewQueueSessionUseCase view) {
         this.open = open;
         this.close = close;
         this.turnOffAutoClose = turnOffAutoClose;
@@ -49,6 +56,9 @@ class SessionController {
         this.declareEmergency = declareEmergency;
         this.markLeft = markLeft;
         this.addUnidentified = addUnidentified;
+        this.appointmentArrives = appointmentArrives;
+        this.reassign = reassign;
+        this.liftReservation = liftReservation;
         this.view = view;
     }
 
@@ -88,6 +98,24 @@ class SessionController {
     SessionResponse addUnidentified(@PathVariable UUID id, @RequestBody(required = false) AddUnidentifiedRequest request) {
         addUnidentified.handle(new AddUnidentifiedPatientUseCase.Command(id, request != null && request.isEmergency()));
         return session(id);
+    }
+
+    /** A patient with an appointment today arrives: into their practitioner's queue, kept for them (D-64). */
+    @PostMapping("/api/appointment-arrivals")
+    @ResponseStatus(HttpStatus.CREATED)
+    SessionResponse appointmentArrives(@Valid @RequestBody AppointmentArrivalRequest request) {
+        UUID queue = appointmentArrives.handle(new AppointmentArrivesUseCase.Command(request.appointmentId()));
+        return session(queue);
+    }
+
+    @PostMapping("/api/queue-entries/{id}/reassign")
+    void reassign(@PathVariable UUID id, @Valid @RequestBody ReassignRequest request) {
+        reassign.handle(new ReassignUseCase.Command(new EntryId(id), request.practitionerId()));
+    }
+
+    @PostMapping("/api/queue-entries/{id}/lift-reservation")
+    void liftReservation(@PathVariable UUID id) {
+        liftReservation.handle(new LiftReservationUseCase.Command(new EntryId(id)));
     }
 
     @PostMapping("/api/queue-entries/{id}/emergency")

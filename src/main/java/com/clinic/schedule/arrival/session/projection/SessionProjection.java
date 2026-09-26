@@ -57,11 +57,12 @@ public class SessionProjection {
         jdbc.update("delete from session_entry where session_id = ?", id);
         for (Entry entry : session.entries()) {
             jdbc.update("insert into session_entry (id, session_id, sequence, patient_id, arrived_at, emergency_since, "
-                            + "state, times_called, with_practitioner, last_called_at, passed_over_at_call) "
-                            + "values (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+                            + "appointment_id, appointment_at, reserved_for, state, times_called, with_practitioner, "
+                            + "last_called_at, passed_over_at_call) values (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
                     entry.id().value(), id, entry.sequence(), entry.patientId(), Timestamp.valueOf(entry.arrivedAt()),
-                    timestamp(entry.emergencySince()), entry.state().name(), entry.timesCalled(),
-                    entry.withPractitioner(), timestamp(entry.lastCalledAt()), entry.passedOverAtCall());
+                    timestamp(entry.emergencySince()), entry.appointmentId(), timestamp(entry.appointmentAt()),
+                    entry.reservedFor(), entry.state().name(), entry.timesCalled(), entry.withPractitioner(),
+                    timestamp(entry.lastCalledAt()), entry.passedOverAtCall());
         }
     }
 
@@ -74,6 +75,13 @@ public class SessionProjection {
     /** The session the entry belongs to, if the entry exists. */
     public Optional<SessionId> sessionOf(EntryId entryId) {
         return jdbc.queryForList("select session_id from session_entry where id = ?", UUID.class, entryId.value())
+                .stream().findFirst().map(SessionId::new);
+    }
+
+    /** The open session where that appointment's patient came in, if any. */
+    public Optional<SessionId> openSessionWith(UUID appointmentId) {
+        return jdbc.queryForList("select e.session_id from session_entry e join open_queue_session o "
+                        + "on o.session_id = e.session_id where e.appointment_id = ?", UUID.class, appointmentId)
                 .stream().findFirst().map(SessionId::new);
     }
 

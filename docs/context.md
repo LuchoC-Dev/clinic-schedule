@@ -254,6 +254,10 @@ the records of the patients they may call.
 - When the practitioner of an appointment leaves the queue, reception may give the patient to
   another practitioner without losing their place. Doing so does not change the appointment. The
   reception screen shows every waiting patient that nobody can call, and why.
+- A patient with an appointment stays kept for their practitioner, as an emergency too; reception
+  may lift that, and then whoever serves the queue may call them.
+- An appointment cancelled while its patient waits in the queue leaves them there, in their place
+  and kept for nobody: they did arrive, and taking them out is reception's call.
 - A practitioner's time off does not close their queue. The practitioner lets reception know,
   reception tells the waiting room — outside the application — and closes the queue when it sees
   fit.
@@ -264,7 +268,8 @@ the records of the patients they may call.
   cancelled.
 - A late-arrival notice keeps the appointment from becoming absent until the end of the day, when
   it becomes absent if the patient still has not come. It gives no priority: a patient who warned
-  is placed like any other late arrival.
+  is placed like any other late arrival. It stays on the appointment: the queue does not know who
+  is coming late.
 - An absent appointment stays absent: it is the record that the patient did not come. Reception
   may still put the patient into a queue, without an appointment or as an emergency.
 - Appointments cancelled automatically before this phase stay cancelled: nothing told them apart

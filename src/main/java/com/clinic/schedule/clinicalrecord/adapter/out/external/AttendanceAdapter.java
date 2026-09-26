@@ -23,7 +23,8 @@ import com.clinic.schedule.clinicalrecord.domain.VisitToday;
  *       a queue that day, or saw them, or when the patient checked in on an appointment with them.
  *       Whoever was called and did not come in is not theirs.</li>
  *   <li><b>Expected</b> — the record may be read — when the patient waits in a queue the
- *       practitioner serves, or has an appointment with them that day, even an absent one (D-61).</li>
+ *       practitioner serves and may call them — a patient kept for another practitioner is read by
+ *       that one only (D-64) — or has an appointment with them that day, even an absent one (D-61).</li>
  * </ul>
  *
  * <p>The check-in on the appointment goes when the queue takes the arrival over, in part 5b.
@@ -51,9 +52,15 @@ class AttendanceAdapter implements AttendancePort {
             return VisitToday.ARRIVED;
         }
         if (!withThisPractitioner.isEmpty() || inQueues.stream()
-                .anyMatch(arrival -> arrival.waiting() && arrival.servedBy().contains(practitionerId.value()))) {
+                .anyMatch(arrival -> arrival.waiting() && mayCall(arrival, practitionerId))) {
             return VisitToday.EXPECTED;
         }
         return VisitToday.NONE;
+    }
+
+    private static boolean mayCall(QueueArrival arrival, PractitionerId practitionerId) {
+        return arrival.reservedFor() != null
+                ? arrival.reservedFor().equals(practitionerId.value())
+                : arrival.servedBy().contains(practitionerId.value());
     }
 }

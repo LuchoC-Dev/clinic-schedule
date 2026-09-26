@@ -42,7 +42,11 @@
             <td th:text="${it.count}">1</td>
             <td th:text="${line.patient}">Ana Pérez</td>
             <td th:text="${line.arrivedAt}">09:10</td>
-            <td><strong th:if="${line.emergency}">Urgencia</strong></td>
+            <td>
+                <strong th:if="${line.emergency}">Urgencia</strong>
+                <span th:if="${line.appointmentAt}" th:text="'Turno ' + ${line.appointmentAt}">Turno 10:00</span>
+                <span class="muted" th:if="${line.reservedFor}" th:text="'· espera a ' + ${line.reservedFor}">· espera a Dra. Arias</span>
+            </td>
             <td class="actions"><a th:href="@{/clinical-records/{id}(id=${line.patientId})}">Ver historia</a></td>
         </tr>
         </tbody>

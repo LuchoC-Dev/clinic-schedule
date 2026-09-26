@@ -1,5 +1,8 @@
 package com.clinic.schedule.arrival.session.screen;
 
+import java.time.Clock;
+import java.time.LocalDate;
+import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
@@ -18,7 +21,11 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 
 import com.clinic.schedule.arrival.session.command.AddPatientUseCase;
+import com.clinic.schedule.appointment.api.AppointmentReader;
 import com.clinic.schedule.arrival.session.command.AddUnidentifiedPatientUseCase;
+import com.clinic.schedule.arrival.session.command.AppointmentArrivesUseCase;
+import com.clinic.schedule.arrival.session.command.LiftReservationUseCase;
+import com.clinic.schedule.arrival.session.command.ReassignUseCase;
 import com.clinic.schedule.arrival.session.command.CloseQueueUseCase;
 import com.clinic.schedule.arrival.session.command.DeclareEmergencyUseCase;
 import com.clinic.schedule.arrival.session.command.MarkLeftUseCase;
@@ -53,13 +60,20 @@ class ArrivalViewController {
     private final DeclareEmergencyUseCase declareEmergency;
     private final MarkLeftUseCase markLeft;
     private final AddUnidentifiedPatientUseCase addUnidentified;
+    private final AppointmentArrivesUseCase appointmentArrives;
+    private final ReassignUseCase reassign;
+    private final LiftReservationUseCase liftReservation;
     private final PatientReader patients;
     private final PractitionerReader practitioners;
+    private final AppointmentReader appointments;
+    private final Clock clock;
 
     ArrivalViewController(ListQueuesUseCase queues, ViewQueueSessionUseCase sessions, OpenQueueUseCase open,
             CloseQueueUseCase close, TurnOffAutoCloseUseCase turnOffAutoClose, AddPatientUseCase addPatient,
             DeclareEmergencyUseCase declareEmergency, MarkLeftUseCase markLeft,
-            AddUnidentifiedPatientUseCase addUnidentified, PatientReader patients, PractitionerReader practitioners) {
+            AddUnidentifiedPatientUseCase addUnidentified, AppointmentArrivesUseCase appointmentArrives,
+            ReassignUseCase reassign, LiftReservationUseCase liftReservation, PatientReader patients,
+            PractitionerReader practitioners, AppointmentReader appointments, Clock clock) {
         this.queues = queues;
         this.sessions = sessions;
         this.open = open;
@@ -69,8 +83,13 @@ class ArrivalViewController {
         this.declareEmergency = declareEmergency;
         this.markLeft = markLeft;
         this.addUnidentified = addUnidentified;
+        this.appointmentArrives = appointmentArrives;
+        this.reassign = reassign;
+        this.liftReservation = liftReservation;
         this.patients = patients;
         this.practitioners = practitioners;
+        this.appointments = appointments;
+        this.clock = clock;
     }
 
     @GetMapping("/arrivals")
@@ -96,12 +115,26 @@ class ArrivalViewController {
                     entries -> entries.stream().map(entry -> QueueLine.of(entry, names, practitionerNames)).toList();
             model.addAttribute("closesByItself", open.closesByItself());
             model.addAttribute("waiting", lines.apply(open.waiting()));
+            model.addAttribute("uncallable", lines.apply(open.uncallable()));
+            List<Named> serving = queue.get().practitioners().stream()
+                    .map(id -> new Named(id, practitionerNames.getOrDefault(id, "(profesional desconocido)")))
+                    .toList();
+            // Whom each waiting patient may be given to: whoever serves the queue, but the one they wait for.
+            model.addAttribute("givable", open.waiting().stream().collect(Collectors.toMap(entry -> entry.id().value(),
+                    entry -> serving.stream().filter(named -> !named.id().equals(entry.reservedFor())).toList())));
             model.addAttribute("called", lines.apply(open.called()));
             model.addAttribute("done", lines.apply(open.done()));
         });
         model.addAttribute("query", query);
         if (query != null && !query.isBlank()) {
-            model.addAttribute("found", patients.search(query));
+            LocalDate today = LocalDate.now(clock);
+            List<UUID> serving = queue.get().practitioners();
+            model.addAttribute("found", patients.search(query).stream()
+                    .map(found -> new Found(found, appointments.findNotCancelledForPatientOn(found.id(), today).stream()
+                            .filter(appointment -> !appointment.absent() && serving.contains(appointment.practitionerId()))
+                            .map(appointment -> new Named(appointment.id(), TIME.format(appointment.startsAt())))
+                            .toList()))
+                    .toList());
         }
         return "arrivals";
     }
@@ -137,6 +170,25 @@ class ArrivalViewController {
                 () -> addUnidentified.handle(new AddUnidentifiedPatientUseCase.Command(queueId, emergency)));
     }
 
+    @PostMapping("/arrivals/{queueId}/appointments/{appointmentId}")
+    String appointmentArrives(@PathVariable UUID queueId, @PathVariable UUID appointmentId, RedirectAttributes flash) {
+        return attempt(queueId, flash, "Paciente con turno sumado a la cola de su profesional.",
+                () -> appointmentArrives.handle(new AppointmentArrivesUseCase.Command(appointmentId)));
+    }
+
+    @PostMapping("/arrivals/{queueId}/entries/{entryId}/reassign")
+    String reassign(@PathVariable UUID queueId, @PathVariable UUID entryId, @RequestParam UUID practitionerId,
+            RedirectAttributes flash) {
+        return attempt(queueId, flash, "Paciente asignado a otro profesional, en el mismo lugar.",
+                () -> reassign.handle(new ReassignUseCase.Command(new EntryId(entryId), practitionerId)));
+    }
+
+    @PostMapping("/arrivals/{queueId}/entries/{entryId}/lift-reservation")
+    String liftReservation(@PathVariable UUID queueId, @PathVariable UUID entryId, RedirectAttributes flash) {
+        return attempt(queueId, flash, "Cualquier profesional de la cola puede llamarlo.",
+                () -> liftReservation.handle(new LiftReservationUseCase.Command(new EntryId(entryId))));
+    }
+
     @PostMapping("/arrivals/{queueId}/entries/{entryId}/emergency")
     String declareEmergency(@PathVariable UUID queueId, @PathVariable UUID entryId, RedirectAttributes flash) {
         return attempt(queueId, flash, "Marcado como urgencia.",
@@ -147,6 +199,16 @@ class ArrivalViewController {
     String markLeft(@PathVariable UUID queueId, @PathVariable UUID entryId, RedirectAttributes flash) {
         return attempt(queueId, flash, "Marcado como que se fue sin ser atendido.",
                 () -> markLeft.handle(new MarkLeftUseCase.Command(new EntryId(entryId))));
+    }
+
+    private static final DateTimeFormatter TIME = DateTimeFormatter.ofPattern("HH:mm");
+
+    /** Something to choose from a list: its id and what the screen says. */
+    record Named(UUID id, String label) {
+    }
+
+    /** A patient found by the search, with their appointments today in this queue. */
+    record Found(PatientSummary patient, List<Named> appointmentsToday) {
     }
 
     private Map<UUID, PatientSummary> patientsOf(SessionView session) {

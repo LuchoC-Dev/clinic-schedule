@@ -87,6 +87,11 @@ class SessionCommands {
         return queues.queueServedBy(practitionerId).map(QueueId::value).orElseThrow(NoQueueServedException::new);
     }
 
+    /** The queue the practitioner serves, if any. */
+    Optional<UUID> queueOf(UUID practitionerId) {
+        return queues.queueServedBy(practitionerId).map(QueueId::value);
+    }
+
     /** Who serves the queue now. */
     List<UUID> servedBy(UUID queueId) {
         return findQueue.handle(new QueueId(queueId)).practitioners();
@@ -94,6 +99,11 @@ class SessionCommands {
 
     void record(QueueSession session, SessionEvent event) {
         record(session, List.of(event), currentUser.username());
+    }
+
+    /** Records the events, by whoever is using the application; nothing when there are none. */
+    void recordAll(QueueSession session, List<SessionEvent> recorded) {
+        record(session, recorded, currentUser.username());
     }
 
     void recordAsSystem(QueueSession session, List<SessionEvent> recorded) {
