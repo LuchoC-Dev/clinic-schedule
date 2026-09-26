@@ -78,8 +78,8 @@ The minimum record needed to book an appointment:
 ## v2
 
 v2 is built in phases, each one scoped here before it starts and closed on its own. The first,
-the clinical record, is closed. The next is chosen from the planned evolution below, and its scope
-is written here before any code.
+the clinical record, is closed. The second, the arrival queue, is being built. Each next one is
+chosen from the planned evolution below, and its scope is written here before any code.
 
 ## v2, phase 1 — the clinical record (closed)
 
@@ -184,16 +184,129 @@ Not in this phase: an admin role (it arrives with user administration), structur
 of item, printing prescriptions and orders, extra patient data, marking results as reviewed,
 orders and files coming from elsewhere.
 
+## v2, phase 2 — the arrival queue
+
+### What changes
+
+Until now a patient was seen only with an appointment, and the arrival was a check-in on it. From
+this phase on the patient arrives into a **queue**, with an appointment or without one, and the
+queue — not the appointment — knows who arrived, who is waiting and who was seen. The appointment
+goes back to being only a booking: it is kept, cancelled, or the patient was absent.
+
+### Nobody is turned away for lack of an identity
+
+The right to be seen comes before the paperwork: a patient who will not identify themselves is
+still seen, and their clinical record is still kept.
+
+- A patient who gives no name is registered under a random alias, such as `NN-4821`, that no
+  other patient has. Reception replaces it with the real name and document when the patient gives
+  them.
+- Every patient carries whether their identity is **verified**: reception marks it once it has
+  seen a document. Existing patients start unverified.
+- Every change to a patient's identity is recorded — what it was, what it became, who changed it
+  and when. The patient is always the same one: the clinical record points at them by an internal
+  key that never changes, so changing the identity touches nothing clinical.
+
+### Queues
+
+- A queue is set up once and kept: a name, a consulting-room number, and the practitioners who
+  serve it — one, for a practitioner's own room, or several, for a shared queue such as an
+  emergency desk. What is kept is its shape; who is in it is each day's business.
+- A practitioner serves **one queue at most**. Reception adds and removes practitioners without
+  deleting the queue. A queue left with no practitioner stays open, until reception adds one or
+  closes it.
+- Reception opens and closes queues, and may reopen a closed one.
+- A queue still open at the end of the day closes itself, unless reception turned that off for as
+  long as the queue stays open.
+
+### Getting into a queue, and being called
+
+**Only reception puts patients into a queue.** A practitioner only calls the next patient and reads
+the records of the patients they may call.
+
+- A patient with an appointment today goes into the queue of that appointment's practitioner, and
+  only that practitioner may call them. When the practitioner serves no queue, the patient cannot
+  come in with that appointment.
+- A patient without an appointment goes into the queue reception chooses. There is no limit to how
+  many may wait.
+- Reception may mark a patient as an **emergency**.
+- The order is decided by one rule, which knows nothing about screens or modules:
+  - emergencies first, then patients with an appointment, then patients without one;
+  - emergencies, and patients without an appointment, in the order they arrived;
+  - patients with an appointment by the later of their appointment's time and the time they
+    arrived: whoever comes early waits for their time, and whoever comes late is placed by the
+    time they came, behind appointments earlier than that, not by the time they had.
+- "Llamar siguiente" calls the first patient in that order that the practitioner may call. The
+  practitioner never chooses: choosing is the order's job. Calling opens the consultation, which is
+  sent whole when it is finished, as before.
+- In a queue: **waiting → called → seen**. Reception marks a patient who **left without being seen**.
+  Whoever is still waiting when the queue closes is **not seen**; a reason may come later. Reopening
+  a queue does not bring them back: reception puts them in again if needed.
+- When the practitioner of an appointment leaves the queue, reception may give the patient to
+  another practitioner without losing their place. Doing so does not change the appointment. The
+  reception screen shows every waiting patient that nobody can call, and why.
+- A practitioner's time off does not close their queue. The practitioner lets reception know,
+  reception tells the waiting room — outside the application — and closes the queue when it sees
+  fit.
+
+### Absent instead of cancelled
+
+- An appointment whose patient has not arrived 30 minutes after its start is **absent**, no longer
+  cancelled.
+- A late-arrival notice keeps the appointment from becoming absent until the end of the day, when
+  it becomes absent if the patient still has not come. It gives no priority: a patient who warned
+  is placed like any other late arrival.
+- An absent appointment stays absent: it is the record that the patient did not come. Reception
+  may still put the patient into a queue, without an appointment or as an emergency.
+- Appointments cancelled automatically before this phase stay cancelled: nothing told them apart
+  from those cancelled by hand. The check-ins already recorded move into the queue's records.
+- The time-off cascade keeps its rule: it cancels the appointments whose patient has not arrived,
+  and reports the rest for manual handling. It now learns who arrived from the queue.
+
+### Who reads and writes the clinical record
+
+On top of the access of phase 1:
+
+- The practitioners of a queue read the record of every waiting patient they may call. A patient
+  kept for another practitioner is read only by that one.
+- An appointment today, even an absent one, still lets its practitioner read the record.
+- Only the practitioner who called the patient records that patient's consultations and checks
+  that day.
+- **Every reading of a clinical record is recorded**: who read it, whose it is, when, and by which
+  access. Nobody reads that log in this phase — not on a screen, not through the API. Admins will,
+  when they exist.
+
+### Screens
+
+They update themselves as things happen, without reloading.
+
+- **Reception:** every queue — setting them up, opening and closing them, bringing patients in with
+  or without an appointment, marking emergencies and patients who left, giving a patient to
+  another practitioner, and the warning about patients nobody can call.
+- **Practitioner:** their queue and "Llamar siguiente".
+- **Waiting room:** shows the queues, without patients' names. It will grow later.
+
+### Delivered in parts
+
+1. The read log of the clinical record, which already applies to today's access.
+2. Patient identity: the alias, whether it is verified, and the history of its changes.
+3. Absent instead of cancelled, with the check-in still on the appointment.
+4. Setting up queues: their shape and their practitioners.
+5. Queues at work: bringing patients in, the order, calling, closing; the arrival leaves the
+   appointment, and the clinical record learns who a practitioner is seeing from the queue.
+6. Screens that update themselves, and the waiting-room screen.
+
+Not in this phase: merging two records of the same patient, a reason for "not seen", reading the
+read log, consulting rooms as something more than a number, a waiting room that calls patients by
+name, warnings about coverage or electronic prescriptions for unverified patients, and consent to
+be seen privately.
+
 ## Planned evolution (DO NOT implement yet)
 
 Documented so today's decisions do not close doors, not to bring code forward. The next phases of
 v2 are chosen from here.
 
-1. **Arrival queue** per consulting room/practitioner: accepts walk-in patients and gives
-   priority to those with an appointment. It absorbs the difference between the reserved
-   time and the real pace of the practice, and it takes the arrival — check-in, late-arrival
-   notice — over from the appointment. Until it exists, reception registers a walk-in by
-   creating a same-day appointment.
+1. **Arrival queue**: being built as v2, phase 2, above.
 2. **Later on**: attendance with more states, reminders or a cancellation log, extra patient
    data (phone, health insurance), structured clinical items, printing, and web booking.
 3. **Web booking**: an account with login, linked to the patient's record. It requires an
