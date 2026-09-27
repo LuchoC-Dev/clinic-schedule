@@ -2260,3 +2260,25 @@ waiting room by reception.
 the queue's content on the stream (the stream would need its own rules of who reads what); reloading
 the whole page (what reception is typing would be lost); a public waiting room (a route without a
 login, for now).
+
+---
+
+## D-67 — Schema migrations apply to a database that already has the seed
+**Date:** 2026-09-27 · **Status:** accepted
+
+The development data in `db/seed` is numbered from `V100`, so it stays apart from the schema's
+migrations (D-34). A database started before a new schema migration existed already has `V100`
+applied, and Flyway refuses by default a migration numbered below the last one applied: the
+application did not start on the database in use until it was told to apply them out of order. It
+was not caught earlier because every verification started from an empty database, where everything
+applies in order.
+
+**`spring.flyway.out-of-order: true`**, in `application.yml`, with the reason next to it. The seed
+depends on the schema, never the other way round, so a schema migration applied after it gives the
+same database as one applied before. A real deployment drops `db/seed` and this setting with it:
+without the seed, the migrations always apply in order.
+
+*Rejected:* making the seed a repeatable migration (`R__`), which Flyway runs last — tidier, but the
+seed would have to be rewritten to run again and again without duplicating its rows, and a database
+that has `V100` applied would need a transition; numbering the seed below the schema (the seed would
+run before the tables it fills).
