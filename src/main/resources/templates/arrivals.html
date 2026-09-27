@@ -22,6 +22,8 @@
         <button type="submit" data-refresh-button>Ver</button>
     </form>
 
+    <!-- Shown again whenever the queue changes, from any screen (D-66); the search stays put. -->
+    <div id="live" th:attr="data-queue=${queue.id}">
     <div class="card bar">
         <strong th:text="${open} ? 'Abierta' : 'Cerrada'">Abierta</strong>
         <span class="muted" th:if="${open and closesByItself}">Se cierra sola al terminar el día.</span>
@@ -101,6 +103,20 @@
         </tbody>
     </table>
 
+    <h2 th:unless="${done.isEmpty()}">Ya no esperan</h2>
+    <table th:unless="${done.isEmpty()}">
+        <tbody>
+        <tr th:each="line : ${done}">
+            <td th:text="${line.patient}">Ana Pérez</td>
+            <td th:text="${line.state}">Atendido</td>
+            <td th:text="${line.practitioner} ?: ''">Dra. Laura Arias</td>
+        </tr>
+        </tbody>
+    </table>
+    </th:block>
+    </div>
+
+    <th:block th:if="${open}">
     <h2>Sumar a la cola</h2>
     <form class="bar" method="get" th:action="@{/arrivals}">
         <input type="hidden" name="queueId" th:value="${queue.id}">
@@ -141,19 +157,10 @@
         <button type="submit">Registrar sin datos (NN) y sumar</button>
     </form>
 
-    <h2 th:unless="${done.isEmpty()}">Ya no esperan</h2>
-    <table th:unless="${done.isEmpty()}">
-        <tbody>
-        <tr th:each="line : ${done}">
-            <td th:text="${line.patient}">Ana Pérez</td>
-            <td th:text="${line.state}">Atendido</td>
-            <td th:text="${line.practitioner} ?: ''">Dra. Laura Arias</td>
-        </tr>
-        </tbody>
-    </table>
     </th:block>
     </th:block>
 </main>
 <script th:replace="~{fragments :: refresh}"></script>
+<script th:replace="~{fragments :: live}"></script>
 </body>
 </html>

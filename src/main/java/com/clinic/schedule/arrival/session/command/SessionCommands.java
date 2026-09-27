@@ -6,8 +6,10 @@ import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Component;
 
+import com.clinic.schedule.arrival.live.QueueChanged;
 import com.clinic.schedule.arrival.session.domain.EntryId;
 import com.clinic.schedule.arrival.session.domain.QueueSession;
 import com.clinic.schedule.arrival.session.domain.SessionEvent;
@@ -21,8 +23,9 @@ import com.clinic.schedule.security.api.CurrentUserReader;
 /**
  * What every command on a session shares (D-63): finding the session — a queue's open one, an
  * entry's, a practitioner's — and, once decided, appending the events stamped with the clock and
- * who did it, and bringing the projection up to date, in the caller's transaction. Package-private:
- * a detail of the commands.
+ * who did it, and bringing the projection up to date, in the caller's transaction, and saying the
+ * queue changed, which the screens hear once it commits (D-66). Package-private: a detail of the
+ * commands.
  */
 @Component
 class SessionCommands {
@@ -35,15 +38,17 @@ class SessionCommands {
     private final QueueProjection queues;
     private final FindQueueUseCase findQueue;
     private final CurrentUserReader currentUser;
+    private final ApplicationEventPublisher publisher;
     private final Clock clock;
 
     SessionCommands(SessionEventRepository events, SessionProjection projection, QueueProjection queues,
-            FindQueueUseCase findQueue, CurrentUserReader currentUser, Clock clock) {
+            FindQueueUseCase findQueue, CurrentUserReader currentUser, ApplicationEventPublisher publisher, Clock clock) {
         this.events = events;
         this.projection = projection;
         this.queues = queues;
         this.findQueue = findQueue;
         this.currentUser = currentUser;
+        this.publisher = publisher;
         this.clock = clock;
     }
 
@@ -115,6 +120,7 @@ class SessionCommands {
         SessionId id = SessionId.newId();
         events.append(id, 0, List.of(opened), now(), currentUser.username());
         projection.save(QueueSession.replay(id, List.of(opened)), true);
+        publisher.publishEvent(new QueueChanged(opened.queueId()));
         return id;
     }
 
@@ -128,5 +134,6 @@ class SessionCommands {
             after = after.apply(event);
         }
         projection.save(after, false);
+        publisher.publishEvent(new QueueChanged(session.queueId()));
     }
 }

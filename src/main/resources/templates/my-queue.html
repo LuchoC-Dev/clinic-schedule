@@ -8,9 +8,11 @@
     <div th:replace="~{fragments :: messages}"></div>
 
     <p th:unless="${serves}" class="muted">No atendés ninguna cola. Recepción las arma.</p>
-    <p th:if="${serves and !open}" class="muted">La cola está cerrada.</p>
+    <!-- Shown again whenever the queue changes (D-66). -->
+    <div id="live" th:if="${serves}" th:attr="data-queue=${queue.id}">
+    <p th:unless="${open}" class="muted">La cola está cerrada.</p>
 
-    <th:block th:if="${serves and open}">
+    <th:block th:if="${open}">
     <div class="card" th:if="${called}">
         <p>Llamaste a <strong th:text="${called.patient}">Ana Pérez</strong>
             <span class="error" th:unless="${called.identityVerified}">Identidad no verificada</span></p>
@@ -52,6 +54,8 @@
         </tbody>
     </table>
     </th:block>
+    </div>
 </main>
+<script th:replace="~{fragments :: live}"></script>
 </body>
 </html>

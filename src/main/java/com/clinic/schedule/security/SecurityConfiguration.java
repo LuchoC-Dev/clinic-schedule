@@ -57,7 +57,7 @@ class SecurityConfiguration {
         return http
                 .authorizeHttpRequests(routes -> routes
                         .requestMatchers("/login", "/error").permitAll()
-                        .requestMatchers(HttpMethod.GET, "/", "/agenda").hasAnyRole(RECEPTION, PRACTITIONER)
+                        .requestMatchers(HttpMethod.GET, "/", "/agenda", "/queue-events").hasAnyRole(RECEPTION, PRACTITIONER)
                         .requestMatchers("/consultations/**", "/checks/**", "/orders/**", "/attachments/**",
                                 "/clinical-records/**", "/my-queue/**").hasRole(PRACTITIONER)
                         .anyRequest().hasRole(RECEPTION))
