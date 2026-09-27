@@ -52,8 +52,9 @@ week, of one practitioner or everyone — with the day's operations as buttons (
 screen — where a patient who gives no name is registered under an alias, and each patient's
 identity is corrected and verified, with its history — each patient's appointments, cancelled ones included, a practitioners screen to set
 up their reasons and week and record their absences, a queues screen to set up the arrival
-queues and who serves each, and the arrivals screen, where queues are opened and closed and
-patients brought in. A practitioner gets their own agenda,
+queues and who serves each, the arrivals screen, where queues are opened and closed and patients
+brought in, and the waiting-room screen, which names nobody. The queue screens show each change as
+it happens. A practitioner gets their own agenda,
 read-only, with today's patients linked to their clinical record and *Empezar consulta* once
 they arrived: a form beside the record, sent once and never changed, and completed afterwards
 with addenda. Under *Mi cola* they call the next patient of their queue and start their consultation. Under *Resultados pendientes* they find the checks waiting for a result, and ask

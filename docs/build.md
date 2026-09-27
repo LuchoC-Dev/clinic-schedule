@@ -594,7 +594,7 @@ results now or later, orders, access asked to report a check, the follow-up of o
 attached files, all usable from the screens and the API. What it left for later is listed below,
 under "Explicitly postponed".
 
-### Phase 2 — The arrival queue `[~]`
+### Phase 2 — The arrival queue `[x]`
 
 Scope in `docs/context.md`, section "v2, phase 2 — the arrival queue". Delivered in parts; each
 one is usable on its own.
@@ -787,6 +787,31 @@ he called her, started her consultation and recorded it.
 
 ---
 
+#### Part 6 — Screens that show themselves again, and the waiting room `[x]`
+- [x] `QueueChanged`, published by every command of the queues and their sessions, and sent by
+      `LiveQueues` over Server-Sent Events once the transaction commits (D-66)
+- [x] `/queue-events`, for reception and the practitioners; `fragments :: live` swaps the region
+      marked `id="live"` of reception's arrivals, the practitioner's queue and the waiting room
+- [x] `/waiting-room`: every queue, whether it is open, how many wait and are being seen, no patient
+      by name; reception's for now
+- [x] 6 integration tests. 283 unit and 336 integration tests, 619 in total
+
+**Verified with:** each of these failing its tests when broken on purpose — the screens told before
+the change commits, the sessions telling nobody.
+
+**Verified in two browsers at once** against the application on a throwaway PostgreSQL: Dra. Arias's
+queue and the waiting room were open while her queue was opened and two patients brought in from
+another desk; both showed each change without being reloaded, and the waiting room never named a
+patient. On reception's arrivals, a search half-typed stayed while the list below it changed.
+
+**Phase 2 of v2, the arrival queue, is closed.** Every reading of a clinical record is recorded;
+patients who give no name are seen under an alias; an appointment whose patient never came is absent;
+queues are set up and put to work, for patients with an appointment and without one, called in the
+order one rule decides; the arrival left the appointment for the queues; and the screens follow the
+queues as they change. What it left for later is listed below, under "Explicitly postponed".
+
+---
+
 ## Explicitly postponed
 
 These are not oversights: they are decided and waiting for their moment.
@@ -800,6 +825,10 @@ From v2, phase 1:
 - Moving the attached files to an object store, when they outgrow the database (see D-57).
 
 From v2, phase 2:
+
+- A user of its own for the waiting-room screen, who may see it and nothing else; it comes with user
+  administration (see D-66).
+- A waiting room that calls patients by name or number, and a reason for "not seen" (see the context).
 
 - Reading the read log of the clinical records, by the admins (see D-59).
 - Recording refused attempts to read a record, with the security stage (see D-59).

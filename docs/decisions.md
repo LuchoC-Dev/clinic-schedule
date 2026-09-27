@@ -2220,3 +2220,43 @@ has taken.
 *Rejected:* the arrival module writing the check-in onto the appointment (the appointment would keep
 the arrival, which is what this removes); the appointment calling the queues' api (a cycle between
 modules); making up past sessions for the old check-ins (a queue history nobody lived).
+
+---
+
+## D-66 — The queue screens show themselves again as the queues change
+**Date:** 2026-09-26 · **Status:** accepted
+
+A queue changes at one desk and is seen at others: reception brings a patient in and the
+practitioner's screen should show them; a practitioner calls one and the waiting room should count
+one fewer. The screens show the change as it happens, without anyone reloading.
+
+**Server-Sent Events, from the server to the browser.** A screen only listens, so a one-way stream is
+all it needs: `SseEmitter`, in Spring Web already, and a few lines of `EventSource` in the browser,
+which opens the stream again by itself when it closes. WebSocket would be two ways for a screen that
+only listens; asking every few seconds would not be as it happens.
+
+**It says which queue changed, and nothing more.** The commands of both subdomains publish
+`QueueChanged(queueId)`, an application event of the module, and `LiveQueues` sends it to every open
+stream as an event named `queue` — **once the transaction commits**, with
+`@TransactionalEventListener(AFTER_COMMIT)`, so a refused command tells nobody. No patient, no state:
+a screen that hears it asks for itself again, through its own route and its own rules, so the stream
+opens nothing a user could not already read. The streams live in memory, since the application runs
+as one instance, and last half an hour before the browser opens a new one.
+
+**A screen swaps one region.** The part that changes is marked `id="live"`, with the queue it shows in
+`data-queue`; the shared `fragments :: live` script fetches the page again and swaps that region alone,
+so a search reception is typing, outside it, is kept. Reception's arrivals, the practitioner's queue
+and the waiting room use it. Without JavaScript, reloading does the same.
+
+**The waiting room** (`/waiting-room`) shows every queue, its room, whether it is open, and how many
+wait and are being seen — no patient by name, since anyone in the room sees it. It has no header, for a
+screen on the wall. For now it is opened with reception's session on that screen; a user of its own,
+who may see that screen and nothing else, comes with user administration.
+
+**Routes.** `/queue-events` is reached by reception and the practitioners, like the agenda; the
+waiting room by reception.
+
+*Rejected:* WebSocket (two ways for a screen that only listens); polling (not as it happens); sending
+the queue's content on the stream (the stream would need its own rules of who reads what); reloading
+the whole page (what reception is typing would be lost); a public waiting room (a route without a
+login, for now).

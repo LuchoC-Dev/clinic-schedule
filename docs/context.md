@@ -78,7 +78,7 @@ The minimum record needed to book an appointment:
 ## v2
 
 v2 is built in phases, each one scoped here before it starts and closed on its own. The first,
-the clinical record, is closed. The second, the arrival queue, is being built. Each next one is
+the clinical record, is closed, and so is the second, the arrival queue. Each next one is
 chosen from the planned evolution below, and its scope is written here before any code.
 
 ## v2, phase 1 — the clinical record (closed)
@@ -184,7 +184,7 @@ Not in this phase: an admin role (it arrives with user administration), structur
 of item, printing prescriptions and orders, extra patient data, marking results as reviewed,
 orders and files coming from elsewhere.
 
-## v2, phase 2 — the arrival queue
+## v2, phase 2 — the arrival queue (closed)
 
 ### What changes
 
@@ -326,7 +326,7 @@ be seen privately.
 Documented so today's decisions do not close doors, not to bring code forward. The next phases of
 v2 are chosen from here.
 
-1. **Arrival queue**: being built as v2, phase 2, above.
+1. **Arrival queue**: v2, phase 2, above — closed.
 2. **Later on**: attendance with more states, reminders or a cancellation log, extra patient
    data (phone, health insurance), structured clinical items, printing, and web booking.
 3. **Web booking**: an account with login, linked to the patient's record. It requires an
