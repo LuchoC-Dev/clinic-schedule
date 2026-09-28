@@ -54,6 +54,9 @@
 <body>
 <header th:fragment="header">
     <strong>Consultorio</strong>
+    <!-- admin is set on the admins' screens, who administer the users and reach nothing else (D-68). -->
+    <a th:href="@{/users}" th:if="${admin}">Usuarios</a>
+    <th:block th:unless="${admin}">
     <a th:href="@{/agenda}">Agenda</a>
     <!--
       readOnly is set on a practitioner's screens: they read their agenda (D-34) and work with
@@ -68,6 +71,7 @@
     <a th:href="@{/arrivals}" th:unless="${readOnly}">Llegadas</a>
     <a th:href="@{/waiting-room}" th:unless="${readOnly}" target="_blank">Sala de espera</a>
     <a th:href="@{/queues}" th:unless="${readOnly}">Colas</a>
+    </th:block>
     <form class="inline" method="post" th:action="@{/logout}">
         <button type="submit">Salir</button>
     </form>

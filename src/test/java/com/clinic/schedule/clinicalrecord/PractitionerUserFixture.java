@@ -13,8 +13,8 @@ import org.springframework.test.web.servlet.request.RequestPostProcessor;
  *
  * <p>The seeded practitioners are shared by every test, and a consultation needs a patient who
  * arrived today — a day other tests book on. So each test makes its own practitioner through the
- * endpoints, and here a user for them. There is no endpoint to create users yet (user
- * administration is postponed), so the row is inserted directly, the way {@code SecurityIT} does.
+ * endpoints, and here a user for them. The row is inserted directly, the way {@code SecurityIT}
+ * does, rather than through the admins' endpoint: these tests are about the record, not the users.
  * The user is then loaded as the application would load it at login.
  */
 public final class PractitionerUserFixture {

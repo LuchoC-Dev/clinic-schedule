@@ -1,0 +1,48 @@
+<!DOCTYPE html>
+<html lang="es" xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{fragments :: head('Usuarios')}"></head>
+<body>
+<header th:replace="~{fragments :: header}"></header>
+<main>
+    <h1>Usuarios</h1>
+    <div th:replace="~{fragments :: messages}"></div>
+
+    <h2>Nuevo usuario</h2>
+    <form class="card bar" method="post" th:action="@{/users}">
+        <label>Usuario
+            <input type="text" name="username" required maxlength="50" autocomplete="off" th:value="${username}">
+        </label>
+        <label>Rol
+            <select name="role" required>
+                <option value="">— elegí —</option>
+                <option th:each="r : ${roles}" th:value="${r.key}" th:text="${r.value}"></option>
+            </select>
+        </label>
+        <label>Profesional (solo para el rol Profesional)
+            <select name="practitionerId">
+                <option value="">—</option>
+                <option th:each="p : ${freePractitioners}" th:value="${p.id}" th:text="${p.fullName}"></option>
+            </select>
+        </label>
+        <label><span th:text="'Contraseña (' + ${minLength} + ' caracteres o más)'">Contraseña</span>
+            <input type="password" name="password" required autocomplete="new-password">
+        </label>
+        <button type="submit" class="primary">Crear</button>
+    </form>
+    <p class="muted">Un nombre de usuario no se puede cambiar ni volver a usar. Un profesional tiene un solo usuario activo.</p>
+
+    <h2>Todos</h2>
+    <table>
+        <thead><tr><th>Usuario</th><th>Rol</th><th>Profesional</th><th>Estado</th></tr></thead>
+        <tbody>
+        <tr th:each="u : ${users}">
+            <td><a th:href="@{/users/{id}(id=${u.id})}" th:text="${u.username}">recepcion</a></td>
+            <td th:text="${u.role}">Recepción</td>
+            <td th:text="${u.practitioner} ?: '—'">—</td>
+            <td th:text="${u.active} ? 'Activo' : 'Desactivado'">Activo</td>
+        </tr>
+        </tbody>
+    </table>
+</main>
+</body>
+</html>

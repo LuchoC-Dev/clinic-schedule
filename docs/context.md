@@ -78,8 +78,9 @@ The minimum record needed to book an appointment:
 ## v2
 
 v2 is built in phases, each one scoped here before it starts and closed on its own. The first,
-the clinical record, is closed, and so is the second, the arrival queue. Each next one is
-chosen from the planned evolution below, and its scope is written here before any code.
+the clinical record, is closed, and so is the second, the arrival queue; the third, users and
+security, is under way. Each next one is chosen from the planned evolution below, and its scope is
+written here before any code.
 
 ## v2, phase 1 — the clinical record (closed)
 
@@ -320,6 +321,84 @@ Not in this phase: merging two records of the same patient, a reason for "not se
 read log, consulting rooms as something more than a number, a waiting room that calls patients by
 name, warnings about coverage or electronic prescriptions for unverified patients, and consent to
 be seen privately.
+
+## v2, phase 3 — users and security
+
+### What changes
+
+Until now the users came from the development data, and the whole of reception shared one. From
+this phase on every person who works at the practice has a user of their own, created by an
+**admin**, so that whatever is recorded under a username is one person's doing. The admins also
+read who read which clinical record, and who tried to reach one and was refused.
+
+### Roles
+
+- **Reception**, **practitioner**, **admin** and **waiting room**. A user has **one role**; a person
+  who needs two — the owner who also sees patients — has two users.
+- The **admin** administers users and reads the logs below, and nothing else: they do not do
+  reception's work, and they read no clinical content. Clinical content is still written and read by
+  practitioners only.
+- The **waiting room** is the screen on the wall: it sees the waiting-room screen and nothing else,
+  and goes straight to it on logging in.
+- A user's role never changes. A user who needs another role is deactivated, and a new one created.
+
+### Users
+
+- The admin creates users: a username, a role, a password, and — for a practitioner — the
+  practitioner they stand for, chosen among those with no active user. A practitioner has one active
+  user at most, and a user's practitioner never changes. Practitioners themselves are still
+  registered by reception.
+- A user is **never deleted**: what they did is recorded under their username. The admin deactivates
+  and reactivates them. A username never changes and is never used again.
+- A deactivated user loses access **at once**, their open sessions included. Nothing they did or read
+  is changed: the logs keep it as it was. Deactivating a practitioner's user changes nothing about the
+  practitioner — their agenda, their appointments, the queues they serve.
+- Every action of an admin on a user — created, deactivated, reactivated, password reset — is
+  recorded, with who and when, and the admins read it.
+
+### Passwords
+
+- The admin sets a **temporary** password when creating a user or resetting theirs; the user must
+  change it the next time they log in, before doing anything else.
+- Anyone changes their own password by giving the current one.
+- From 10 to 72 characters, with no rules about what they must contain.
+- No email or reset link: the practice has no email for its staff in the application.
+
+### The logs the admins read
+
+- **Readings of the clinical records:** who read — the practitioner and their user —, whose record —
+  the patient's name and document —, when, by which access, and which attached file. Never what was
+  read. Filtered by patient, by practitioner and by dates. Readings recorded before this phase show
+  the practitioner alone, since their user was not recorded.
+- **Refused attempts:** a practitioner refused a record or an attached file they may not read — who,
+  which patient, when, what —, and anyone refused a clinical route by their role — who, which route,
+  when. Recorded even though nothing was handed over, to notice someone probing records that are not
+  theirs.
+- Seeing who read a patient's record says something about the patient; that is why only the admins
+  read these logs.
+
+### Development data
+
+The users of the development data stay as they are, and an admin (`admin`) and a waiting-room user
+(`sala`) are added; none of them has to change their password. How the first admin of a real
+deployment is created is left for when there is one.
+
+### Screens and API
+
+Everything the admin does has a screen and a route in the API, as in the rest of the application.
+
+### Delivered in parts
+
+1. The admin and the users: creating, listing, deactivating and reactivating, resetting a password,
+   each action recorded; the sessions of a deactivated user cut at once.
+2. Passwords: changing one's own, and the change a temporary password forces.
+3. The waiting-room user.
+4. The admins read the readings of the clinical records.
+5. Refused attempts, recorded and read by the admins.
+
+Not in this phase: patients' accounts (web booking), several roles per user, a restricted reception
+role, two-factor authentication, locking a user after failed logins, recording failed logins,
+resetting a password by email, the first admin of a real deployment.
 
 ## Planned evolution (DO NOT implement yet)
 

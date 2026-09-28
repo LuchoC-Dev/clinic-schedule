@@ -2282,3 +2282,73 @@ without the seed, the migrations always apply in order.
 seed would have to be rewritten to run again and again without duplicating its rows, and a database
 that has `V100` applied would need a transition; numbering the seed below the schema (the seed would
 run before the tables it fills).
+
+---
+
+## D-68 — An admin administers the users, and nothing else
+**Date:** 2026-09-28 · **Status:** accepted
+
+Until now every user came from the development data, and the whole of reception shared one: what was
+recorded under `recepcion` was nobody in particular. Every person now has a user of their own,
+created by an admin. It applies D-04's postponed administration screen, in the module D-43 made for
+it.
+
+**A fourth role, `ADMIN`, with one role per user.** A user has one role and it never changes; a
+person who needs two — the owner who also sees patients — has two users. By route the admin reaches
+`/api/users/**` and `/users/**` and nothing else: not reception's work, and no clinical content,
+which is still the practitioners' alone (D-51). On logging in each role lands on its own screen: the
+admin on the users, everyone else on the agenda. The admins' screens show a header of their own.
+
+**A user is never deleted, and a username never changes nor is used again.** What is recorded across
+the application — the queues' events, the patients' identity history, the admins' own actions — names
+a user by their username; deleting one, or giving their name to someone else, would put their acts
+under another person. So users are deactivated and reactivated, and the username is checked against
+every user there ever was.
+
+**The user guards itself; the service guards what needs the others.** `AppUser` refuses a malformed
+username — 3 to 50 lower-case letters, digits, dots, hyphens or underscores, what is typed at the
+login and read in the records — and a practitioner that does not fit the role, and every change it
+makes returns the entry that records it, so none can be made without one. `UserAdministrationService`
+checks that the username was never used, that the practitioner exists and has no other active user —
+also when reactivating —, and that an admin does not deactivate themselves, which could leave the
+practice with none.
+
+**A practitioner has one active user at most, and a user's practitioner never changes.** The admin
+chooses among the practitioners with no active user. The service checks it for a clear 409; a partial
+unique index in `db/vendor/postgresql` holds it when two admins pass the check at once, since only
+PostgreSQL expresses "unique among the active ones" (D-44). The unique username already holds in both
+engines.
+
+**Passwords.** From 10 to 72 characters, with no rule about what they contain (`PasswordPolicy`):
+length is what makes a password hard to guess. 72 is where BCrypt stops reading, counted in bytes, so
+a longer one is refused rather than cut short in silence. The admin sets it when creating the user or
+resetting theirs; passwords arrive in plain text and leave hashed, and no answer carries the hash.
+
+**Every action of an admin is recorded** — created, deactivated, reactivated, password reset — with
+who and when, in `app_user_change`, in the same transaction, as a patient's identity changes are
+(D-60). The admins read it on each user's screen and through the API.
+
+**A deactivated user loses access at once.** The API needs nothing: it authenticates every request,
+and an inactive user is as good as unknown. The screens keep the user in the session, so every
+session is registered in Spring Security's `SessionRegistry`, and the service publishes
+`UserDeactivated`, an event of `user/api`, which `security` hears once the transaction commits and
+answers by ending that user's sessions: their next request goes to the login form, which says why. An
+event rather than a call because `security` already depends on `user/api`; `user` calling it back
+would close a cycle. The registry lives in memory, since the application runs as one instance (D-66).
+
+**Routes.** `GET` and `POST /api/users`; `GET /api/users/{id}`; `POST /api/users/{id}/deactivate`,
+`/reactivate` and `/password-reset`, business operations on a sub-path (D-23); `GET
+/api/users/{id}/changes`. A username taken, a practitioner taken, a self-deactivation or a user already
+in that state is a 409; malformed data or an unknown practitioner a 400; an unknown user a 404 — not
+the 403 of the clinical record (D-49), since the admins may see every user. The screens are `/users`
+and `/users/{id}`.
+
+**`admin` / `admin123`** is added to the development data (`V102`). How the first admin of a real
+deployment is created is left for when there is one (D-34).
+
+*Rejected:* several roles per user (the owner's two users keep what they do as admin apart from what
+they do as a practitioner); deleting a user who never did anything (every username would have to be
+checked against every record first, and nothing needs the row gone); changing a user's role or
+practitioner (the records under their name would change meaning); rules about the password's
+characters; checking on every request whether the user is still active (a query more on every
+request, where ending the sessions once is enough); `admin` reaching reception's routes.

@@ -11,8 +11,8 @@ import com.clinic.schedule.user.entity.AppUser;
 import com.clinic.schedule.user.persistence.AppUserRepository;
 
 /**
- * Answers other modules about users through {@link UserAccountReader}. Read-only: in v1 users
- * come from the seed and nothing creates or changes one (D-04).
+ * Answers other modules about users through {@link UserAccountReader}. Read-only: users are
+ * created and changed by an admin, through {@link UserAdministrationService} (D-68).
  */
 @Service
 class UserAccountService implements UserAccountReader {

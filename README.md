@@ -40,9 +40,10 @@ reasons and weeks, two patients, and these users.
 | `recepcion` | `recepcion123` | Reception: everything                      |
 | `arias`     | `arias123`     | Practitioner: Dra. Arias's agenda and consultations |
 | `benitez`   | `benitez123`   | Practitioner: Dr. Benítez's agenda and consultations |
+| `admin`     | `admin123`     | Admin: the users, and nothing else         |
 
 They live in `src/main/resources/db/seed`, a Flyway location of its own that a real deployment
-removes (D-34).
+removes (D-34). The admin creates everyone else's users, one per person, at `/users` (D-68).
 
 ## Using it
 
@@ -149,7 +150,7 @@ without Spring. The whole repository is in English; on-screen text is in Spanish
 
 ## Deliberately postponed
 
-User administration; registering a new patient and booking them in one transaction; from the
+Registering a new patient and booking them in one transaction; from the
 clinical record, marking results as reviewed, orders and files coming from elsewhere, and moving
 the files to an object store. The next phases — the arrival queue, web booking and the rest — are
 in the context's planned evolution.

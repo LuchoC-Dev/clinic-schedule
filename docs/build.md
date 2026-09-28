@@ -810,6 +810,68 @@ queues are set up and put to work, for patients with an appointment and without 
 order one rule decides; the arrival left the appointment for the queues; and the screens follow the
 queues as they change. What it left for later is listed below, under "Explicitly postponed".
 
+### Phase 3 — Users and security `[~]`
+
+Scope in `docs/context.md`, section "v2, phase 3 — users and security". Delivered in parts; each
+one is usable on its own.
+
+#### Part 1 — The admin and the users `[x]`
+- [x] `docs/context.md`: the scope of phase 3
+- [x] The `ADMIN` role, which reaches `/api/users/**` and `/users/**` alone; each role lands on its
+      own screen, and the admins' screens have a header of their own (D-68)
+- [x] `AppUser.create`: a username of 3 to 50 lower-case letters, digits, dots, hyphens or
+      underscores; the practitioner for a practitioner's user alone; `PasswordPolicy`, 10 to 72
+      characters counted in bytes
+- [x] `UserAdministrationService`: a username never used twice, a practitioner with one active user
+      at most, also on reactivating; an admin does not deactivate themselves
+- [x] Deactivating and reactivating, never deleting; resetting a password
+- [x] `app_user_change`: every admin action, with who and when, in the same transaction; shown on
+      each user's screen and through the API
+- [x] `UserDeactivated`, heard by `security` after the commit: the user's sessions end at once,
+      through the `SessionRegistry`; the login form says why
+- [x] `V23`: the role check widened, `app_user_change`; `db/vendor/postgresql/V24`: one active user per
+      practitioner, a partial unique index; `V102`: `admin` in the development data
+- [x] `GET`/`POST /api/users`, `GET /api/users/{id}`, `POST /api/users/{id}/deactivate`,
+      `/reactivate`, `/password-reset`, `GET /api/users/{id}/changes`; screens `/users`, `/users/{id}`
+- [x] `ArchitectureTest` takes `isX` for a getter, as `getX`
+- [x] 20 unit and 22 integration tests. 303 unit and 358 integration tests, 661 in total
+
+**Verified with:** every new test failing when the code it covers was broken on purpose — 34
+breakages in all, among them the username's form, its length and its reuse, the practitioner of the
+role, a new user inactive, a reactivation that did not reactivate, a reset that kept the old
+password, the history not saved, the sessions not ended, reception reaching the users and the admin
+reaching reception's routes and screens, the admin landing on the agenda, the hash in the answer, the
+password counted in characters, and the partial index made plain or dropped; `mvnw verify` with the
+PostgreSQL tests running V23, V24 and V102.
+
+**Verified with the application running** on a throwaway PostgreSQL: taken to V101 by the previous
+commit's build, given a patient, and started: V23 and V24 applied out of order, then V102, with the
+existing users kept. Through the API the admin created `recepcion.b`, who read the patients; was
+refused a second user for Dra. Arias (409), a short password (400) and deactivating themselves
+(409); deactivated `recepcion.b`, who was then refused (401), could not give the name again (409),
+and reactivated them with a new password. The admin was refused the patients and a clinical record,
+and reception the users (403). In two browsers the admin landed on "Usuarios", created `gomez` for a
+new practitioner and deactivated them while `gomez` had the agenda open: `gomez`'s next click went to
+the login form, "Tu sesión se cerró: tu usuario fue desactivado", and logging in again was refused.
+
+#### Part 2 — Passwords `[ ]`
+- [ ] Changing one's own password, giving the current one; 10 to 72 characters
+- [ ] A temporary password forces the change at the next login, before anything else
+
+#### Part 3 — The waiting-room user `[ ]`
+- [ ] The `WAITING_ROOM` role: the waiting-room screen and its stream, nothing else; straight there
+      on logging in
+- [ ] `sala` in the development data
+
+#### Part 4 — The admins read the readings of the clinical records `[ ]`
+- [ ] The user recorded with each reading from now on
+- [ ] Who, whose record, when, by which access, which file — never what was read; filtered by
+      patient, practitioner and dates
+
+#### Part 5 — Refused attempts `[ ]`
+- [ ] A record or file refused to a practitioner, and a clinical route refused to a role, recorded
+- [ ] Read by the admins
+
 ---
 
 ## Explicitly postponed
@@ -837,7 +899,6 @@ From v2, phase 2:
 
 From v1:
 
-- A user administration screen (see D-04); it has a module to land in since D-43.
 - Registering a new patient and booking them in **one transaction** from the booking screen;
   today they are two, and a refused booking leaves the patient registered (see D-37).
 

@@ -75,9 +75,10 @@ class ArchitectureTest {
                 "a method of an @Entity of a layered module other than a getter") {
             @Override
             public boolean test(JavaMethodCall call) {
+                // A getter is getX, or isX for a boolean, such as a user's isActive.
                 return call.getTargetOwner().isAnnotatedWith(Entity.class)
                         && call.getTargetOwner().getPackageName().endsWith(".entity")
-                        && !call.getName().startsWith("get");
+                        && !call.getName().startsWith("get") && !call.getName().startsWith("is");
             }
         };
 
