@@ -20,4 +20,7 @@ public interface PatientReader {
 
     /** The kinds of document a patient may identify with, such as "DNI", for a screen to offer. */
     List<String> documentTypes();
+
+    /** Who the owner of a phone or an email may be to the patient, such as "MOTHER", for a screen to offer. */
+    List<String> relations();
 }

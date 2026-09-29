@@ -13,20 +13,26 @@ import java.util.concurrent.ThreadLocalRandom;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import com.clinic.schedule.patient.api.NewPatient;
 import com.clinic.schedule.patient.api.PatientReader;
 import com.clinic.schedule.patient.api.PatientRegistrationRefusedException.Reason;
 import com.clinic.schedule.patient.api.PatientRegistrationRefusedException;
 import com.clinic.schedule.patient.api.PatientSummary;
 import com.clinic.schedule.patient.api.PatientWriter;
 import com.clinic.schedule.patient.entity.DocumentType;
+import com.clinic.schedule.patient.entity.Email;
 import com.clinic.schedule.patient.entity.HealthInsurance;
 import com.clinic.schedule.patient.entity.IdentityDocument;
 import com.clinic.schedule.patient.entity.IdentityStatus;
 import com.clinic.schedule.patient.entity.IncompleteDocumentException;
+import com.clinic.schedule.patient.entity.InvalidPatientDetailsException;
 import com.clinic.schedule.patient.entity.Patient;
 import com.clinic.schedule.patient.entity.PatientDetails;
 import com.clinic.schedule.patient.entity.PatientDetailsChange;
 import com.clinic.schedule.patient.entity.PatientIdentityChange;
+import com.clinic.schedule.patient.entity.Phone;
+import com.clinic.schedule.patient.entity.Relation;
+import com.clinic.schedule.patient.entity.Responsible;
 import com.clinic.schedule.patient.persistence.PatientDetailsChangeRepository;
 import com.clinic.schedule.patient.persistence.PatientIdentityChangeRepository;
 import com.clinic.schedule.patient.persistence.PatientRepository;
@@ -83,23 +89,42 @@ public class PatientService implements PatientReader, PatientWriter {
     }
 
     /**
-     * Registration as other modules ask for it, in plain values. This module's own refusals are
-     * translated into the one the api declares, so the caller need not know them.
+     * Registration as other modules ask for it, in plain values, with the phone and the email (D-75).
+     * This module's own refusals are translated into the one the api declares, so the caller need not
+     * know them. It joins the caller's transaction, so a caller that fails afterwards takes the
+     * patient back with it.
      */
     @Override
     @Transactional
-    public UUID register(String fullName, String documentType, String documentNumber) {
+    public UUID register(NewPatient patient) {
         try {
-            DocumentType type = documentType == null || documentType.isBlank()
-                    ? null : DocumentType.valueOf(documentType);
-            return register(fullName, IdentityDocument.ofNullable(type, documentNumber), false).getId();
+            DocumentType type = blankToNull(patient.documentType()) == null
+                    ? null : DocumentType.valueOf(patient.documentType());
+            PatientDetails details = new PatientDetails(null,
+                    Phone.ofNullable(patient.phoneNumber(),
+                            Responsible.ofNullable(patient.phoneOwnerName(), relation(patient.phoneOwnerRelation()))),
+                    Email.ofNullable(patient.emailAddress(),
+                            Responsible.ofNullable(patient.emailOwnerName(), relation(patient.emailOwnerRelation()))),
+                    null);
+            return register(patient.fullName(), IdentityDocument.ofNullable(type, patient.documentNumber()), false,
+                    details).getId();
         } catch (DuplicateDocumentException e) {
             throw new PatientRegistrationRefusedException(Reason.DUPLICATE_DOCUMENT, e.getMessage());
         } catch (IncompleteDocumentException e) {
             throw new PatientRegistrationRefusedException(Reason.INCOMPLETE_DOCUMENT, e.getMessage());
+        } catch (InvalidPatientDetailsException e) {
+            throw new PatientRegistrationRefusedException(Reason.INVALID_DETAILS, e.getMessage());
         } catch (IllegalArgumentException e) {
             throw new PatientRegistrationRefusedException(Reason.INVALID_DATA, e.getMessage());
         }
+    }
+
+    private static Relation relation(String name) {
+        return blankToNull(name) == null ? null : Relation.valueOf(name);
+    }
+
+    private static String blankToNull(String text) {
+        return text == null || text.isBlank() ? null : text;
     }
 
     /**
@@ -210,6 +235,11 @@ public class PatientService implements PatientReader, PatientWriter {
     @Override
     public List<String> documentTypes() {
         return Arrays.stream(DocumentType.values()).map(DocumentType::name).toList();
+    }
+
+    @Override
+    public List<String> relations() {
+        return Arrays.stream(Relation.values()).map(Relation::name).toList();
     }
 
     private static List<PatientSummary> summaries(List<Patient> found) {

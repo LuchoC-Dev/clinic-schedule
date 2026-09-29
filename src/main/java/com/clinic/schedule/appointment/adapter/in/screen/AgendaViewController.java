@@ -28,6 +28,7 @@ import org.springframework.web.util.UriComponentsBuilder;
 
 import com.clinic.schedule.appointment.application.exception.AgendaAccessDeniedException;
 import com.clinic.schedule.appointment.application.usecase.BookAppointmentUseCase;
+import com.clinic.schedule.appointment.application.usecase.BookNewPatientUseCase;
 import com.clinic.schedule.appointment.application.usecase.CancelAppointmentUseCase;
 import com.clinic.schedule.appointment.application.usecase.FindArrivalsUseCase;
 import com.clinic.schedule.appointment.application.usecase.FindAppointmentUseCase;
@@ -42,7 +43,6 @@ import com.clinic.schedule.appointment.domain.PractitionerId;
 import com.clinic.schedule.patient.api.PatientReader;
 import com.clinic.schedule.patient.api.PatientRegistrationRefusedException;
 import com.clinic.schedule.patient.api.PatientSummary;
-import com.clinic.schedule.patient.api.PatientWriter;
 import com.clinic.schedule.practitioner.api.PractitionerReader;
 import com.clinic.schedule.practitioner.api.PractitionerSummary;
 import com.clinic.schedule.practitioner.api.ReasonDetails;
@@ -57,9 +57,9 @@ import com.clinic.schedule.security.api.CurrentUserReader;
  * call, never the REST controllers themselves, and holds no rule. When the single-page
  * applications arrive, this class and its templates are deleted and nothing else changes.
  *
- * <p>It reads names from the patient and practitioner modules, registers the new patients a
- * booking brings (D-37), and asks the security module who is looking, all through their
- * {@code api/}.
+ * <p>It reads names from the patient and practitioner modules, books the new patients a
+ * booking brings through the use case that registers them (D-37, D-75), and asks the security
+ * module who is looking, all through their {@code api/}.
  * The use cases do not need names, only the screens do, so the screen asks directly instead of
  * widening the application's ports (D-33).
  *
@@ -81,7 +81,7 @@ class AgendaViewController {
     private final SuggestSlotsUseCase suggestSlots;
     private final PractitionerReader practitioners;
     private final PatientReader patients;
-    private final PatientWriter newPatients;
+    private final BookNewPatientUseCase bookNewPatient;
     private final CurrentUserReader currentUser;
     private final Clock clock;
 
@@ -89,7 +89,7 @@ class AgendaViewController {
             BookAppointmentUseCase book, RescheduleAppointmentUseCase reschedule, CancelAppointmentUseCase cancel,
             FindArrivalsUseCase arrivals, RecordLateArrivalNoticeUseCase recordLateArrivalNotice,
             SuggestSlotsUseCase suggestSlots, PractitionerReader practitioners, PatientReader patients,
-            PatientWriter newPatients, CurrentUserReader currentUser, Clock clock) {
+            BookNewPatientUseCase bookNewPatient, CurrentUserReader currentUser, Clock clock) {
         this.agenda = agenda;
         this.findAppointment = findAppointment;
         this.book = book;
@@ -100,7 +100,7 @@ class AgendaViewController {
         this.suggestSlots = suggestSlots;
         this.practitioners = practitioners;
         this.patients = patients;
-        this.newPatients = newPatients;
+        this.bookNewPatient = bookNewPatient;
         this.currentUser = currentUser;
         this.clock = clock;
     }
@@ -241,15 +241,20 @@ class AgendaViewController {
         if (form.patientId() != null && found.stream().noneMatch(patient -> patient.id().equals(form.patientId()))) {
             shown.addAll(0, patients.findAll(List.of(form.patientId())));
         }
+        // The new patient typed so far comes back from the session, never from the address (D-75).
+        NewPatientForm newPatient = model.getAttribute("newPatient") instanceof NewPatientForm typed
+                ? typed : NewPatientForm.NONE;
         UUID chosenPatient = form.patientId() != null ? form.patientId()
-                : !form.hasNewPatient() && shown.size() == 1 ? shown.getFirst().id() : null;
+                : !newPatient.given() && shown.size() == 1 ? shown.getFirst().id() : null;
 
         model.addAttribute("practitioners", everyone);
         model.addAttribute("practitioner", practitioner);
         model.addAttribute("reasonId", reasonId);
         model.addAttribute("patients", shown);
         model.addAttribute("chosenPatient", chosenPatient);
+        model.addAttribute("newPatient", newPatient);
         model.addAttribute("documentTypes", patients.documentTypes());
+        model.addAttribute("relations", NewPatientForm.relations(patients.relations()));
         model.addAttribute("suggestions", reasonId != null
                 ? suggestSlots.forReason(new PractitionerId(practitioner.id()), reasonId, form.date())
                 : null);
@@ -260,9 +265,9 @@ class AgendaViewController {
      * The booking form has two buttons. "Actualizar" only carries the form back to the screen,
      * so a search never loses what was chosen; "Reservar" books.
      *
-     * <p>A new patient is registered first and booked afterwards, two operations with a
-     * transaction each (D-37). If the booking is then refused, the patient stays registered and
-     * comes back as the chosen one, so trying another time does not register them twice.
+     * <p>A new patient is registered and booked in one transaction (D-37, D-75): if the booking is
+     * refused, nobody is registered, and the screen comes back with the patient still typed in, to try
+     * another time.
      */
     @PostMapping("/agenda/new")
     String book(@ModelAttribute BookingScreenRequest form, @RequestParam(defaultValue = "book") String action,
@@ -271,41 +276,42 @@ class AgendaViewController {
             return "redirect:/agenda";
         }
         if ("refresh".equals(action)) {
-            return "redirect:" + form.toScreenUrl();
+            return backToScreen(form, flash);
         }
         String missing = form.missing();
         if (missing != null) {
             flash.addFlashAttribute("error", missing);
-            return "redirect:" + form.toScreenUrl();
+            return backToScreen(form, flash);
         }
         if (form.hasTwoPatients()) {
             flash.addFlashAttribute("error", "Elegiste un paciente y también cargaste uno nuevo: dejá solo uno.");
-            return "redirect:" + form.toScreenUrl();
+            return backToScreen(form, flash);
         }
 
-        BookingScreenRequest booking = form;
+        boolean booked;
         if (form.hasNewPatient()) {
-            try {
-                booking = form.withPatient(newPatients.register(form.newPatientName(),
-                        form.newPatientDocumentType(), form.newPatientDocumentNumber()));
-            } catch (PatientRegistrationRefusedException e) {
-                flash.addFlashAttribute("error", ScreenMessages.of(e));
-                return "redirect:" + form.toScreenUrl();
-            }
+            booked = attempt(() -> bookNewPatient.handle(new BookNewPatientUseCase.Command(AppointmentId.newId(),
+                            form.newPatient().toPatient(), new PractitionerId(form.practitionerId()),
+                            form.reasonId(), form.date().atTime(form.chosenTime()), form.cleanNote())),
+                    "Paciente registrado y turno reservado.", flash);
+        } else {
+            booked = attempt(() -> book.handle(new BookAppointmentUseCase.Command(AppointmentId.newId(),
+                            new PatientId(form.patientId()), new PractitionerId(form.practitionerId()),
+                            form.reasonId(), form.date().atTime(form.chosenTime()), form.cleanNote())),
+                    "Turno reservado.", flash);
         }
-
-        BookingScreenRequest chosen = booking;
-        boolean booked = attempt(() -> book.handle(new BookAppointmentUseCase.Command(AppointmentId.newId(),
-                        new PatientId(chosen.patientId()), new PractitionerId(chosen.practitionerId()),
-                        chosen.reasonId(), chosen.date().atTime(chosen.chosenTime()), chosen.cleanNote())),
-                form.hasNewPatient() ? "Paciente registrado y turno reservado." : "Turno reservado.", flash);
         if (!booked) {
-            if (form.hasNewPatient()) {
-                flash.addFlashAttribute("message", "El paciente quedó registrado y elegido; falta el turno.");
-            }
-            return "redirect:" + chosen.toScreenUrl();
+            return backToScreen(form, flash);
         }
-        return redirectToAgenda(chosen.practitionerId(), chosen.date(), null);
+        return redirectToAgenda(form.practitionerId(), form.date(), null);
+    }
+
+    /** The booking screen again, with the new patient typed so far kept in the session, not the address (D-75). */
+    private static String backToScreen(BookingScreenRequest form, RedirectAttributes flash) {
+        if (form.hasNewPatient()) {
+            flash.addFlashAttribute("newPatient", form.newPatient());
+        }
+        return "redirect:" + form.toScreenUrl();
     }
 
     // --- moving -------------------------------------------------------------------------
@@ -374,6 +380,9 @@ class AgendaViewController {
             operation.run();
             flash.addFlashAttribute("message", success);
             return true;
+        } catch (PatientRegistrationRefusedException e) {
+            flash.addFlashAttribute("error", ScreenMessages.of(e));
+            return false;
         } catch (RuntimeException e) {
             if (!ScreenMessages.isExpected(e)) {
                 throw e;

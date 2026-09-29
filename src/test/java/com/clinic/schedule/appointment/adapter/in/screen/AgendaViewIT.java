@@ -1,12 +1,16 @@
 package com.clinic.schedule.appointment.adapter.in.screen;
 
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.csrf;
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.hamcrest.Matchers.containsString;
+import static org.hamcrest.Matchers.hasSize;
+import static org.hamcrest.Matchers.startsWith;
 import static org.hamcrest.Matchers.not;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.flash;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.redirectedUrl;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.redirectedUrlPattern;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
@@ -307,7 +311,9 @@ class AgendaViewIT {
                         .param("newPatientDocumentType", "DNI")
                         .param("newPatientDocumentNumber", dni)
                         .param("time", "12:30"))
-                .andExpect(redirectedUrlPattern("/agenda/new?*newPatientName=Otro%20Nombre*"))
+                .andExpect(result -> assertThat(result.getResponse().getRedirectedUrl()).doesNotContain("Otro"))
+                .andExpect(result -> assertThat(((NewPatientForm) result.getFlashMap().get("newPatient")).name())
+                        .isEqualTo("Otro Nombre"))
                 .andExpect(flash().attribute("error", containsString("ya pertenece a otro paciente")));
 
         mockMvc.perform(get("/api/appointments").param("practitionerId", arias.id().toString()).param("date", DAY))
@@ -330,7 +336,7 @@ class AgendaViewIT {
     }
 
     @Test
-    void whenTheBookingIsRefusedTheNewPatientStaysRegisteredAndChosen() throws Exception {
+    void whenTheBookingIsRefusedNobodyIsRegisteredAndTheNewPatientStaysTypedIn() throws Exception {
         CreatedPractitioner arias = practitioners.workingEveryDay();
         bookThroughTheApi(arias, patients.newPatient(), "16:00:00");
         String name = "Sin Lugar " + UUID.randomUUID().toString().substring(0, 8);
@@ -340,15 +346,92 @@ class AgendaViewIT {
                         .param("date", DAY)
                         .param("reasonId", arias.consulta().toString())
                         .param("newPatientName", name)
+                        .param("newPatientPhoneNumber", "1145556666")
                         .param("time", "16:00"))
-                .andExpect(redirectedUrlPattern("/agenda/new?*patientId=*"))
+                .andExpect(result -> assertThat(result.getResponse().getRedirectedUrl())
+                        .doesNotContain("patientId").doesNotContain("Lugar").doesNotContain("1145556666"))
                 .andExpect(flash().attribute("error", "El profesional ya tiene un turno en ese horario."))
-                .andExpect(flash().attribute("message", "El paciente quedó registrado y elegido; falta el turno."))
                 .andReturn();
 
-        mockMvc.perform(get(URI.create(refused.getResponse().getRedirectedUrl())))
-                .andExpect(content().string(containsString(name)))
-                .andExpect(content().string(containsString("checked=\"checked\"")));
+        mockMvc.perform(get("/api/patients").param("query", name)).andExpect(jsonPath("$", hasSize(0)));
+        mockMvc.perform(get(URI.create(refused.getResponse().getRedirectedUrl()))
+                        .flashAttrs(refused.getFlashMap()))
+                .andExpect(content().string(containsString("value=\"" + name + "\"")))
+                .andExpect(content().string(containsString("value=\"1145556666\"")));
+    }
+
+    @Test
+    void refreshingKeepsTheNewPatientTypedInOutOfTheAddress() throws Exception {
+        CreatedPractitioner arias = practitioners.workingEveryDay();
+
+        mockMvc.perform(post("/agenda/new").with(csrf())
+                        .param("action", "refresh")
+                        .param("practitionerId", arias.id().toString())
+                        .param("date", DAY)
+                        .param("newPatientName", "Todavia Eligiendo")
+                        .param("newPatientEmailAddress", "eligiendo@mail.com"))
+                .andExpect(result -> assertThat(result.getResponse().getRedirectedUrl())
+                        .doesNotContain("Eligiendo").doesNotContain("eligiendo"))
+                .andExpect(result -> assertThat((NewPatientForm) result.getFlashMap().get("newPatient"))
+                        .extracting(NewPatientForm::name, NewPatientForm::emailAddress)
+                        .containsExactly("Todavia Eligiendo", "eligiendo@mail.com"));
+    }
+
+    @Test
+    void aNewPatientIsBookedWithTheirPhoneAndEmailEachWithItsOwner() throws Exception {
+        CreatedPractitioner arias = practitioners.workingEveryDay();
+        String name = "Con Contacto " + UUID.randomUUID().toString().substring(0, 8);
+
+        mockMvc.perform(post("/agenda/new").with(csrf())
+                        .param("practitionerId", arias.id().toString())
+                        .param("date", DAY)
+                        .param("reasonId", arias.consulta().toString())
+                        .param("newPatientName", name)
+                        .param("newPatientPhoneNumber", "11 4555-6666")
+                        .param("newPatientPhoneOwnerRelation", "MOTHER")
+                        .param("newPatientPhoneOwnerName", "Ana Perez")
+                        .param("newPatientEmailAddress", "Nene@Mail.com")
+                        .param("time", "12:00"))
+                .andExpect(redirectedUrlPattern("/agenda?*"))
+                .andExpect(flash().attribute("message", "Paciente registrado y turno reservado."));
+
+        mockMvc.perform(get("/api/patients").param("query", name))
+                .andExpect(jsonPath("$[0].phone.number").value("1145556666"))
+                .andExpect(jsonPath("$[0].phone.owner.relation").value("MOTHER"))
+                .andExpect(jsonPath("$[0].email.address").value("nene@mail.com"))
+                .andExpect(jsonPath("$[0].email.owner").isEmpty());
+    }
+
+    @Test
+    void aPhoneTypedWithoutANameIsANewPatientWithoutAName() throws Exception {
+        CreatedPractitioner arias = practitioners.workingEveryDay();
+
+        mockMvc.perform(post("/agenda/new").with(csrf())
+                        .param("practitionerId", arias.id().toString())
+                        .param("date", DAY)
+                        .param("reasonId", arias.consulta().toString())
+                        .param("newPatientPhoneNumber", "1145556666")
+                        .param("time", "12:00"))
+                .andExpect(flash().attribute("error", startsWith("Revisá el paciente nuevo: el nombre")));
+    }
+
+    @Test
+    void aNewPatientWithAWrongPhoneIsNeitherRegisteredNorBooked() throws Exception {
+        CreatedPractitioner arias = practitioners.workingEveryDay();
+        String name = "Mal Telefono " + UUID.randomUUID().toString().substring(0, 8);
+
+        mockMvc.perform(post("/agenda/new").with(csrf())
+                        .param("practitionerId", arias.id().toString())
+                        .param("date", DAY)
+                        .param("reasonId", arias.consulta().toString())
+                        .param("newPatientName", name)
+                        .param("newPatientPhoneNumber", "123")
+                        .param("time", "12:00"))
+                .andExpect(flash().attribute("error", startsWith("Revisá el contacto del paciente nuevo")));
+
+        mockMvc.perform(get("/api/patients").param("query", name)).andExpect(jsonPath("$", hasSize(0)));
+        mockMvc.perform(get("/api/appointments").param("practitionerId", arias.id().toString()).param("date", DAY))
+                .andExpect(content().string(not(containsString(DAY + "T12:00:00"))));
     }
 
     @Test

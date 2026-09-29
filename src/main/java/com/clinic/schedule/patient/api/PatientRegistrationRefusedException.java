@@ -12,7 +12,9 @@ public class PatientRegistrationRefusedException extends RuntimeException {
         /** A document type without a number, or a number without a type. */
         INCOMPLETE_DOCUMENT,
         /** No name, an unknown document type, or a number that type does not allow. */
-        INVALID_DATA
+        INVALID_DATA,
+        /** A phone or an email that cannot be right, or its owner without a name or a relation (D-73). */
+        INVALID_DETAILS
     }
 
     private final Reason reason;

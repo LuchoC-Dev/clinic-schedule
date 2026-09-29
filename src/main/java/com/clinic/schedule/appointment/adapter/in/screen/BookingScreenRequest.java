@@ -16,7 +16,8 @@ import org.springframework.web.util.UriComponentsBuilder;
  * time or the patient already chosen: a refresh sends it all and it all comes back (D-35).
  *
  * <p>The patient is either one already registered, {@code patientId}, or a new one typed in the
- * {@code newPatient…} fields, registered when booking (D-37).
+ * {@code newPatient…} fields, registered and booked at once (D-37, D-75). Those fields are personal
+ * data, so the screen's address never carries them: they come back through {@link NewPatientForm}.
  */
 record BookingScreenRequest(
         UUID practitionerId,
@@ -27,6 +28,12 @@ record BookingScreenRequest(
         String newPatientName,
         String newPatientDocumentType,
         String newPatientDocumentNumber,
+        String newPatientPhoneNumber,
+        String newPatientPhoneOwnerRelation,
+        String newPatientPhoneOwnerName,
+        String newPatientEmailAddress,
+        String newPatientEmailOwnerRelation,
+        String newPatientEmailOwnerName,
         @DateTimeFormat(iso = DateTimeFormat.ISO.TIME) LocalTime time,
         @DateTimeFormat(iso = DateTimeFormat.ISO.TIME) LocalTime otherTime,
         String note) {
@@ -40,21 +47,21 @@ record BookingScreenRequest(
         return blankToNull(note);
     }
 
+    NewPatientForm newPatient() {
+        return new NewPatientForm(blankToNull(newPatientName), blankToNull(newPatientDocumentType),
+                blankToNull(newPatientDocumentNumber), blankToNull(newPatientPhoneNumber),
+                blankToNull(newPatientPhoneOwnerRelation), blankToNull(newPatientPhoneOwnerName),
+                blankToNull(newPatientEmailAddress), blankToNull(newPatientEmailOwnerRelation),
+                blankToNull(newPatientEmailOwnerName));
+    }
+
     boolean hasNewPatient() {
-        return blankToNull(newPatientName) != null
-                || blankToNull(newPatientDocumentType) != null
-                || blankToNull(newPatientDocumentNumber) != null;
+        return newPatient().given();
     }
 
     /** A patient picked from the search and a new one typed in: which one was meant is unclear. */
     boolean hasTwoPatients() {
         return patientId != null && hasNewPatient();
-    }
-
-    /** The same screen once the new patient is registered: now they are simply the chosen one. */
-    BookingScreenRequest withPatient(UUID registered) {
-        return new BookingScreenRequest(practitionerId, date, reasonId, patientQuery, registered,
-                null, null, null, time, otherTime, note);
     }
 
     /** What is still to be chosen before booking, in Spanish, or null when nothing is. */
@@ -79,7 +86,10 @@ record BookingScreenRequest(
         return "Elegí " + (missing.isEmpty() ? last : String.join(", ", missing) + " y " + last) + ".";
     }
 
-    /** The booking screen again, holding everything chosen so far. */
+    /**
+     * The booking screen again, holding everything chosen so far but the new patient, whose data never
+     * goes in an address (D-75).
+     */
     String toScreenUrl() {
         UriComponentsBuilder url = UriComponentsBuilder.fromPath("/agenda/new");
         addIfPresent(url, "practitionerId", practitionerId);
@@ -87,9 +97,6 @@ record BookingScreenRequest(
         addIfPresent(url, "reasonId", reasonId);
         addIfPresent(url, "patientQuery", blankToNull(patientQuery));
         addIfPresent(url, "patientId", patientId);
-        addIfPresent(url, "newPatientName", blankToNull(newPatientName));
-        addIfPresent(url, "newPatientDocumentType", blankToNull(newPatientDocumentType));
-        addIfPresent(url, "newPatientDocumentNumber", blankToNull(newPatientDocumentNumber));
         addIfPresent(url, "time", time);
         addIfPresent(url, "otherTime", otherTime);
         addIfPresent(url, "note", cleanNote());

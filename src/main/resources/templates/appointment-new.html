@@ -47,21 +47,57 @@
                     <span th:text="${p.document == null} ? ${p.fullName} : ${p.fullName} + ' — ' + ${p.document}"></span>
                 </label>
             </div>
+            <!--
+              A new patient is registered and booked at once: a refused booking registers nobody (D-75).
+              What is typed here never goes in the address; it comes back from the session.
+            -->
             <p class="muted">…o paciente nuevo, que se registra al reservar:</p>
             <div class="bar">
                 <label>Nombre completo
-                    <input type="text" name="newPatientName" maxlength="150" th:value="${form.newPatientName}">
+                    <input type="text" name="newPatientName" maxlength="150" th:value="${newPatient.name}">
                 </label>
                 <label>Documento
                     <select name="newPatientDocumentType">
                         <option value="">— sin documento —</option>
                         <option th:each="t : ${documentTypes}" th:value="${t}" th:text="${t}"
-                                th:selected="${t == form.newPatientDocumentType}"></option>
+                                th:selected="${t == newPatient.documentType}"></option>
                     </select>
                 </label>
                 <label>Número
                     <input type="text" name="newPatientDocumentNumber" maxlength="20"
-                           th:value="${form.newPatientDocumentNumber}">
+                           th:value="${newPatient.documentNumber}">
+                </label>
+            </div>
+            <div class="bar">
+                <label>Teléfono
+                    <input type="tel" name="newPatientPhoneNumber" maxlength="30" th:value="${newPatient.phoneNumber}">
+                </label>
+                <label>De quién es
+                    <select name="newPatientPhoneOwnerRelation">
+                        <option value="">Del paciente</option>
+                        <option th:each="r : ${relations}" th:value="${r.key}" th:text="${r.value}"
+                                th:selected="${r.key == newPatient.phoneOwnerRelation}"></option>
+                    </select>
+                </label>
+                <label>Nombre de esa persona
+                    <input type="text" name="newPatientPhoneOwnerName" maxlength="150"
+                           th:value="${newPatient.phoneOwnerName}">
+                </label>
+            </div>
+            <div class="bar">
+                <label>Email
+                    <input type="email" name="newPatientEmailAddress" maxlength="254" th:value="${newPatient.emailAddress}">
+                </label>
+                <label>De quién es
+                    <select name="newPatientEmailOwnerRelation">
+                        <option value="">Del paciente</option>
+                        <option th:each="r : ${relations}" th:value="${r.key}" th:text="${r.value}"
+                                th:selected="${r.key == newPatient.emailOwnerRelation}"></option>
+                    </select>
+                </label>
+                <label>Nombre de esa persona
+                    <input type="text" name="newPatientEmailOwnerName" maxlength="150"
+                           th:value="${newPatient.emailOwnerName}">
                 </label>
             </div>
 

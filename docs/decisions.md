@@ -1013,7 +1013,7 @@ more than the problem asks for); no JavaScript at all (the reported problem stay
 ---
 
 ## D-37 — Booking a new patient from the booking screen
-**Date:** 2026-09-23 · **Status:** accepted
+**Date:** 2026-09-23 · **Status:** accepted; the two transactions made one by D-75
 
 A walk-in who has never been to the practice had to be registered on the patients screen first,
 then searched on the booking screen. The booking screen now takes a new patient's name and
@@ -2612,3 +2612,48 @@ Only reception writes it; the admins read none of it.
 insurer); more than one insurance (the cash desk will say which paid each visit); a mark for a private
 patient (it would say the same as nothing for everyone never asked); the three parts joined in one
 text in the history (it would no longer say which part changed); keeping the token.
+
+---
+
+## D-75 — A new patient is registered and booked in one transaction, and their data stays out of the address
+**Date:** 2026-09-29 · **Status:** accepted
+
+v2, phase 4, part 3: the half of D-37 that was postponed. Booking a new patient from the booking screen
+registered them in one transaction and booked them in another, so a refused booking — the time was
+taken — left a patient registered with no appointment.
+
+**One use case, one transaction.** `BookNewPatientUseCase`, in `appointment`, registers the patient
+through a new port, `PatientRegistrationPort`, and books them through `BookAppointmentUseCase`, which
+joins its transaction: the rules of booking are the same for a new patient as for anyone. A refused
+booking rolls the patient back with it, and a patient the patient module refuses books nothing.
+`PatientRegistrationAdapter` answers the port with `PatientWriter`, as `PatientRegistryAdapter` answers
+the one that asks whether a patient exists (D-29). The arrival queue already did the same for a
+patient with no name (D-63). Its only caller, the booking screen, gives each attempt a new id, so it
+does not guard against a retried id as the API's booking does (D-19): nothing could reach that path.
+
+**The patient comes with their contact.** `PatientWriter.register` takes a `NewPatient` of the api, in
+plain values: the name, the document, and a phone and an email, each with whose it is (D-73). The date
+of birth and the health insurance are left to the patient's screen, so booking stays short. A phone or an
+email that cannot be right is refused as `INVALID_DETAILS`, a new reason of
+`PatientRegistrationRefusedException`, so the screen says what to fix in the contact; `PatientReader`
+offers the relations as it offers the document types. The booking screen is the only way in: the API
+books patients already registered, as since D-37.
+
+**The new patient's data stays out of the address.** The booking screen keeps what was chosen in its
+address between steps (D-35), and carried the new patient's name and document there too; with a phone
+and an email that would put more personal data in the browser's history and any log of requests. Now
+every step that comes back to the screen — "Actualizar", something missing, a refusal — hands the typed
+patient on in a flash attribute, which lives in the session for the next request only, and the screen
+fills the fields from it. The address keeps the practitioner, the day, the reason, the time and the
+search.
+
+**What the screen says changes.** A refused booking now comes back with the patient still typed in and
+nobody registered, instead of "El paciente quedó registrado y elegido; falta el turno.".
+
+*Rejected:* registering in the screen and deleting the patient if the booking fails (a patient is never
+deleted, and a failure between the two would still leave one); a flag on `BookAppointmentUseCase`'s
+command for a new patient (one use case with two ways in, where one calls the other); the date of birth
+and the insurance on the booking screen (they can wait for the patient's screen); an API route for it
+(nothing but the booking screen asks yet); keeping the new patient in the address (personal data in the
+browser's history), or in a session attribute of its own (state to clear by hand, where a flash
+attribute lasts one request).

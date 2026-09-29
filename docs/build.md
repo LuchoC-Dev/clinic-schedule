@@ -1075,9 +1075,33 @@ plan: the history read "PAMI · afiliado 15012345678900 → PAMI · plan Básico
 afiliado 15012345678900" beside the age on the record, and not the phone; a record she has no access to
 was still refused.
 
-#### Part 3 — Registering and booking in one transaction `[ ]`
-- [ ] The booking screen registers a new patient, with their contact, and books them in one
-      transaction: a refused booking leaves no patient behind (D-37)
+#### Part 3 — Registering and booking in one transaction `[x]`
+- [x] `BookNewPatientUseCase`: registers through `PatientRegistrationPort` and books through
+      `BookAppointmentUseCase`, in one transaction: a refused booking leaves no patient behind, and a
+      refused patient books nothing (D-75)
+- [x] `PatientWriter.register(NewPatient)`: the name, the document, and a phone and an email each with
+      its owner; `INVALID_DETAILS` for a contact that cannot be right; `PatientReader.relations()`
+- [x] The booking screen takes the new patient's phone and email; the date of birth and the insurance
+      are left to the patient's screen
+- [x] The new patient's data never goes in the booking screen's address: it comes back through a flash
+      attribute, on "Actualizar" and on every refusal
+- [x] 5 integration tests, 2 of them rewritten from D-37's. 342 unit and 422 integration tests, 764 in
+      total
+
+**Verified with:** every new test failing when the code it covers was broken on purpose — 12
+breakages: the use case in two transactions, the contact dropped by the service or its phone's owner,
+the email dropped by the adapter, a wrong contact taken for wrong data, the new patient put back in the
+address, not handed on or not shown, the phone's owner not sent, a phone typed alone not taken for a new
+patient, and the contact's message. One more, a retry with an id already booked, was not caught by any
+test: the booking screen, the use case's only caller, gives each attempt a new id, so the guard could
+not be reached, and it was removed rather than tested (D-14). `mvnw verify`.
+
+**Verified with the application running** on a throwaway PostgreSQL, with no new migration: in the
+browser reception typed a boy with his mother's phone and email and a time already taken; the booking
+was refused, the screen came back with everything typed and an address holding only the practitioner,
+the day, the reason and the time, and nobody was registered. Another time booked him, with his phone
+and email kept clean and his mother's; a three-digit phone came back as the contact's message, and
+registered nobody.
 
 ---
 
@@ -1103,12 +1127,6 @@ From v2, phase 2:
 
 - Merging two records of the same patient, for someone registered under an alias who already had
   one (see D-60).
-
-From v1:
-
-- Registering a new patient and booking them in **one transaction** from the booking screen;
-  today they are two, and a refused booking leaves the patient registered (see D-37). Planned as
-  part 3 of v2, phase 4.
 
 ## Out of scope for v1
 

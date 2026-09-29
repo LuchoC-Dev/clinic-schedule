@@ -51,7 +51,8 @@ password each one changes at `/password` on logging in (D-69).
 
 **Screens** — open http://localhost:8080 and log in. Reception gets the agenda — a day or a
 week, of one practitioner or everyone — with the day's operations as buttons (*Llegó*,
-*Avisó demora*, *Mover*, *Cancelar*), a booking screen that suggests the free times, a patients
+*Avisó demora*, *Mover*, *Cancelar*), a booking screen that suggests the free times and registers
+and books a new patient at once, with their phone and email, a patients
 screen — where a patient who gives no name is registered under an alias, and each patient's
 identity is corrected and verified, with its history, and their date of birth, phone and email
 recorded, each saying whose it is, and their health insurance, with a history of their own — each patient's appointments, cancelled ones included, a practitioners screen to set
@@ -155,7 +156,6 @@ without Spring. The whole repository is in English; on-screen text is in Spanish
 
 ## Deliberately postponed
 
-Registering a new patient and booking them in one transaction; from the
-clinical record, marking results as reviewed, orders and files coming from elsewhere, and moving
+From the clinical record, marking results as reviewed, orders and files coming from elsewhere, and moving
 the files to an object store. The next phases — the arrival queue, web booking and the rest — are
 in the context's planned evolution.

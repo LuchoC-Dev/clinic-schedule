@@ -76,6 +76,7 @@ final class ScreenMessages {
             case DUPLICATE_DOCUMENT -> "Ese documento ya pertenece a otro paciente: buscalo arriba y elegilo.";
             case INCOMPLETE_DOCUMENT -> "El documento del paciente nuevo necesita tipo y número, o ninguno de los dos.";
             case INVALID_DATA -> "Revisá el paciente nuevo: el nombre lleva letras y hasta 150 caracteres; el DNI, 7 u 8 dígitos; LE y LC, de 6 a 8 dígitos; CI y pasaporte, solo letras y números.";
+            case INVALID_DETAILS -> "Revisá el contacto del paciente nuevo: el teléfono lleva de 8 a 15 dígitos; el email, la forma nombre@dominio.com; y si son de otra persona, van con su nombre y su vínculo.";
         };
     }
 }
