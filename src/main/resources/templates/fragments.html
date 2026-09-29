@@ -96,6 +96,10 @@
   any queue when it names none: the server says so through Server-Sent Events, and the page asks for
   itself again and swaps that region alone, so whatever is typed outside it stays (D-66). The browser
   opens the stream again by itself when it closes. Without JavaScript, reloading does the same.
+
+  A screen never goes on showing what it no longer knows: when the page asked for is not this screen —
+  the session ran out and the login came back, or an error page — or the stream fails for good, the
+  whole page is loaded again, and shows whatever the answer is.
 -->
 <script th:fragment="live">
     (() => {
@@ -105,7 +109,13 @@
         }
         const queue = region.dataset.queue;
         let refreshing = false;
-        new EventSource('/queue-events').addEventListener('queue', event => {
+        const stream = new EventSource('/queue-events');
+        stream.addEventListener('error', () => {
+            if (stream.readyState === EventSource.CLOSED) {
+                location.reload();
+            }
+        });
+        stream.addEventListener('queue', event => {
             if ((queue && event.data !== queue) || refreshing) {
                 return;
             }
@@ -116,6 +126,8 @@
                     const fresh = new DOMParser().parseFromString(html, 'text/html').getElementById('live');
                     if (fresh) {
                         region.innerHTML = fresh.innerHTML;
+                    } else {
+                        location.reload();
                     }
                 })
                 .finally(() => refreshing = false);

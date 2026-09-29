@@ -891,6 +891,23 @@ reset and "Cambió su contraseña" by `recepcion.b`.
   the planted-failure run with `V25` broken on purpose, and restoring the source does not rebuild it.
   Rebuilt clean and checked again on a new database; the jar is now rebuilt after every such run.
 
+#### Fix — a live screen never shows what it no longer knows `[x]`
+- [x] Found checking the waiting room before part 3: an open stream is not activity for the session,
+      so after half an hour with no queue changing the session ran out, and the next change left the
+      old region on screen, with nothing saying so
+- [x] `fragments :: live`: when the page asked for has no `id="live"` region, or the stream fails for
+      good, the whole page is loaded again (D-66, amended)
+- [x] No test added: the script runs in the browser alone, where it was checked. 305 unit and 367
+      integration tests, 672 in total
+
+**Verified in browsers** against the application on a throwaway PostgreSQL, with sessions of one
+minute. Before the fix, the waiting room left Dr. Benítez's queue shown closed after it was opened
+once the session had run out. After it, the waiting room went to the login form on the next change;
+reception's arrivals, showing Dra. Arias's queue, stayed as they were while only Dr. Benítez's queue
+changed, which was still true, and went to the login form on the next change to hers. With the waiting
+room open, restarting the application — which loses the sessions — brought the screen to the login form
+within seconds.
+
 #### Part 3 — The waiting-room user `[ ]`
 - [ ] The `WAITING_ROOM` role: the waiting-room screen and its stream, nothing else; straight there
       on logging in

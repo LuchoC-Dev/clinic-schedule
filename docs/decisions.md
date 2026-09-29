@@ -2224,7 +2224,7 @@ modules); making up past sessions for the old check-ins (a queue history nobody 
 ---
 
 ## D-66 — The queue screens show themselves again as the queues change
-**Date:** 2026-09-26 · **Status:** accepted
+**Date:** 2026-09-26 · **Status:** accepted; amended on 2026-09-28 (a screen whose session ran out)
 
 A queue changes at one desk and is seen at others: reception brings a patient in and the
 practitioner's screen should show them; a practitioner calls one and the waiting room should count
@@ -2255,6 +2255,14 @@ who may see that screen and nothing else, comes with user administration.
 
 **Routes.** `/queue-events` is reached by reception and the practitioners, like the agenda; the
 waiting room by reception.
+
+**Amended on 2026-09-28: a screen never goes on showing what it no longer knows.** An open stream is
+not activity for the session: after half an hour with no queue changing, the session ran out while the
+screen stayed open, and the next change asked the page again, got the login form, found no region to
+swap and left the old one on screen, with nothing saying so — a queue shown closed that was open. Now,
+when the page asked for has no `id="live"` region — the login, an error page — or the stream fails for
+good, the script loads the whole page again, and the screen shows whatever that is: a login form
+rather than an old queue. Found checking that the waiting room would stay open on its own, before giving it a user.
 
 *Rejected:* WebSocket (two ways for a screen that only listens); polling (not as it happens); sending
 the queue's content on the stream (the stream would need its own rules of who reads what); reloading
