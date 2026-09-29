@@ -810,7 +810,7 @@ queues are set up and put to work, for patients with an appointment and without 
 order one rule decides; the arrival left the appointment for the queues; and the screens follow the
 queues as they change. What it left for later is listed below, under "Explicitly postponed".
 
-### Phase 3 — Users and security `[~]`
+### Phase 3 — Users and security `[x]`
 
 Scope in `docs/context.md`, section "v2, phase 3 — users and security". Delivered in parts; each
 one is usable on its own.
@@ -987,6 +987,13 @@ reception refused her record through the API and on the screen, and the admin re
 consultations: six refusals, each with whose record when known. Reception refused its practitioner's
 queue and an anonymous request left none. The admin saw them all on "Rechazos", and reception's two by
 searching the user.
+
+**Phase 3 of v2, users and security, is closed.** Every person at the practice has a user of their
+own, created by an admin, who reaches nothing else and never clinical content; users are deactivated,
+never deleted, and lose access at once; a password an admin sets is temporary until its user changes
+it; the waiting room's screen logs in as a user that sees it and nothing else, and the live screens no
+longer show a queue they no longer know; and the admins read who read which clinical record and who
+was refused one. What it left for later is listed below, under "Explicitly postponed".
 
 ---
 
