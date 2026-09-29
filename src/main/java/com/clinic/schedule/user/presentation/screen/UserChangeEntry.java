@@ -17,6 +17,7 @@ record UserChangeEntry(String when, String by, String action) {
             case DEACTIVATED -> "Lo desactivó";
             case REACTIVATED -> "Lo reactivó";
             case PASSWORD_RESET -> "Blanqueó la contraseña";
+            case PASSWORD_CHANGED -> "Cambió su contraseña";
         };
         return new UserChangeEntry(WHEN.format(change.getChangedAt()), change.getChangedBy(), action);
     }

@@ -6,6 +6,7 @@
     <h1>Consultorio</h1>
     <p class="error" th:if="${param.error}">Usuario o contraseña incorrectos.</p>
     <p class="ok" th:if="${param.logout}">Sesión cerrada.</p>
+    <p class="ok" th:if="${param.changed}">Contraseña cambiada: ingresá con la nueva.</p>
     <p class="error" th:if="${param.expired}">Tu sesión se cerró: tu usuario fue desactivado.</p>
     <form class="card" method="post" th:action="@{/login}">
         <p><label>Usuario

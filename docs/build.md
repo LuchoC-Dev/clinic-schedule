@@ -854,9 +854,42 @@ and reception the users (403). In two browsers the admin landed on "Usuarios", c
 new practitioner and deactivated them while `gomez` had the agenda open: `gomez`'s next click went to
 the login form, "Tu sesión se cerró: tu usuario fue desactivado", and logging in again was refused.
 
-#### Part 2 — Passwords `[ ]`
-- [ ] Changing one's own password, giving the current one; 10 to 72 characters
-- [ ] A temporary password forces the change at the next login, before anything else
+#### Part 2 — Passwords `[x]`
+- [x] `V25`: `app_user.must_change_password`, false for the users already there; `PASSWORD_CHANGED`
+      in the history (D-69)
+- [x] A password an admin sets — creating or resetting — is temporary; `AppUser.changePassword`
+      makes it the user's own, recorded by the user
+- [x] `PasswordChangeService`: the current password, a new one that follows `PasswordPolicy` and is
+      not the same
+- [x] `POST /api/password` and `/password`, for every role, linked from every header; the screen
+      asks for the new one twice, and ends the session once it is changed
+- [x] `TemporaryPasswordFilter`: a user with the `TEMPORARY_PASSWORD` authority lands on `/password`
+      and is kept there; on the API everything else is a 403 that says why
+- [x] 2 unit and 9 integration tests; the tests that log in as a user an admin created change the
+      temporary password first. 305 unit and 367 integration tests, 672 in total
+
+**Verified with:** every new test failing when the code it covers was broken on purpose — 18
+breakages: a new or reset password not temporary, a change that kept it temporary or was recorded as
+the admin's or not at all, the current password not checked, the same one or a short one accepted,
+the filter letting the API or the screens through, the login not landing on the change, no
+temporary authority, the repetition not compared, the session kept after the change, the header link
+gone, the screen or the API closed to some role, and the existing users made temporary by `V25`;
+`mvnw verify` with the PostgreSQL tests running V25.
+
+**Verified with the application running** on a throwaway PostgreSQL: taken to V102 by part 1's
+commit, given `recepcion.b`, and started: V25 applied out of order and every user already there kept
+their password. Through the API `recepcion.c`, just created, was refused the patients with the reason
+(403), a wrong current password (400), changed it (204), and read the patients with the new one while
+the temporary one no longer worked (401). In two browsers the admin reset `recepcion.b`'s password;
+logging in with it landed on "Tu contraseña es temporal", "Llegadas" sent back there, a repetition
+that did not match was refused in Spanish, and the change ended the session: "Contraseña cambiada:
+ingresá con la nueva". Logging in again led to the agenda, and the user's history showed the admin's
+reset and "Cambió su contraseña" by `recepcion.b`.
+
+**Stage notes:**
+- The first try of the live check found every user temporary: the jar in `target/` had been built by
+  the planted-failure run with `V25` broken on purpose, and restoring the source does not rebuild it.
+  Rebuilt clean and checked again on a new database; the jar is now rebuilt after every such run.
 
 #### Part 3 — The waiting-room user `[ ]`
 - [ ] The `WAITING_ROOM` role: the waiting-room screen and its stream, nothing else; straight there

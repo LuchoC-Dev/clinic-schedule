@@ -43,7 +43,8 @@ reasons and weeks, two patients, and these users.
 | `admin`     | `admin123`     | Admin: the users, and nothing else         |
 
 They live in `src/main/resources/db/seed`, a Flyway location of its own that a real deployment
-removes (D-34). The admin creates everyone else's users, one per person, at `/users` (D-68).
+removes (D-34). The admin creates everyone else's users, one per person, at `/users` (D-68), with a temporary
+password each one changes at `/password` on logging in (D-69).
 
 ## Using it
 

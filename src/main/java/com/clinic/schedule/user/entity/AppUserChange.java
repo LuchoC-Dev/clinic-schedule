@@ -11,8 +11,8 @@ import jakarta.persistence.Id;
 import jakarta.persistence.Table;
 
 /**
- * What an admin did to a user, by whom and when (D-68). Only {@link AppUser} makes one, and nothing
- * changes one once made.
+ * What an admin did to a user, or the user to their own password, by whom and when (D-68, D-69).
+ * Only {@link AppUser} makes one, and nothing changes one once made.
  */
 @Entity
 @Table(name = "app_user_change")

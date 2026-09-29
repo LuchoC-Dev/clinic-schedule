@@ -12,10 +12,13 @@ import org.springframework.security.core.session.SessionRegistryImpl;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.web.SecurityFilterChain;
+import org.springframework.security.web.access.intercept.AuthorizationFilter;
 import org.springframework.security.web.authentication.AuthenticationSuccessHandler;
 import org.springframework.security.web.session.HttpSessionEventPublisher;
 
+import com.clinic.schedule.security.presentation.TemporaryPasswordFilter;
 import com.clinic.schedule.security.presentation.http.ApiSecurityErrorHandler;
+import com.clinic.schedule.security.service.AppUserDetails;
 import com.clinic.schedule.user.api.Role;
 
 /**
@@ -29,7 +32,8 @@ import com.clinic.schedule.user.api.Role;
  *
  * <p>What each role may reach is decided here, by route: a practitioner reads the agenda and
  * works with clinical records, which are theirs alone (D-51); an admin administers the users, and
- * reaches nothing else (D-68); reception does everything else.
+ * reaches nothing else (D-68); reception does everything else. Every user changes their own
+ * password, and one whose password is temporary does nothing else until they do (D-69).
  * <em>Whose</em> agenda or record a practitioner reads is not a route question, so it is
  * decided by the use case, which asks the security module who is asking (D-04, D-49).
  */
@@ -52,7 +56,9 @@ class SecurityConfiguration {
                         .requestMatchers("/api/consultations/**", "/api/checks/**", "/api/orders/**",
                                 "/api/attachments/**", "/api/clinical-records/**", "/api/my-queue/**").hasRole(PRACTITIONER)
                         .requestMatchers("/api/users/**").hasRole(ADMIN)
+                        .requestMatchers(HttpMethod.POST, "/api/password").authenticated()
                         .anyRequest().hasRole(RECEPTION))
+                .addFilterAfter(TemporaryPasswordFilter.forApi(errors), AuthorizationFilter.class)
                 .httpBasic(basic -> basic.authenticationEntryPoint(errors))
                 .exceptionHandling(handling -> handling.authenticationEntryPoint(errors).accessDeniedHandler(errors))
                 .build();
@@ -68,7 +74,9 @@ class SecurityConfiguration {
                         .requestMatchers("/consultations/**", "/checks/**", "/orders/**", "/attachments/**",
                                 "/clinical-records/**", "/my-queue/**").hasRole(PRACTITIONER)
                         .requestMatchers("/users/**").hasRole(ADMIN)
+                        .requestMatchers("/password").authenticated()
                         .anyRequest().hasRole(RECEPTION))
+                .addFilterAfter(TemporaryPasswordFilter.forScreens(), AuthorizationFilter.class)
                 .formLogin(login -> login.loginPage("/login").successHandler(landing()).permitAll())
                 // Every session is registered, with no limit to how many a user has, so the sessions
                 // of a deactivated user can be ended at once (D-68).
@@ -78,12 +86,18 @@ class SecurityConfiguration {
                 .build();
     }
 
-    /** Each role lands on its own screen: the admin on the users, everyone else on the agenda. */
+    /**
+     * Each role lands on its own screen: the admin on the users, everyone else on the agenda. A user
+     * whose password is temporary lands on changing it.
+     */
     private static AuthenticationSuccessHandler landing() {
         String admin = "ROLE_" + ADMIN; // the prefix hasRole adds
-        return (request, response, authentication) -> response.sendRedirect(request.getContextPath()
-                + (authentication.getAuthorities().stream().anyMatch(a -> admin.equals(a.getAuthority()))
-                        ? "/users" : "/agenda"));
+        return (request, response, authentication) -> {
+            var authorities = authentication.getAuthorities().stream().map(a -> a.getAuthority()).toList();
+            String screen = authorities.contains(AppUserDetails.TEMPORARY_PASSWORD) ? "/password?required"
+                    : authorities.contains(admin) ? "/users" : "/agenda";
+            response.sendRedirect(request.getContextPath() + screen);
+        };
     }
 
     @Bean

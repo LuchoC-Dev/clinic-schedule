@@ -24,7 +24,9 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 
 /**
  * An admin administers the practice's users through the API (D-68), as the seeded {@code admin}.
- * Every test makes users of its own, with names nobody else takes.
+ * Every test makes users of its own, with names nobody else takes, and — unless the test is about it —
+ * has each one change the temporary password the admin gave them, as they would before anything else
+ * (D-69).
  */
 @SpringBootTest
 @AutoConfigureMockMvc
@@ -49,8 +51,7 @@ class UserApiIT {
         mockMvc.perform(get("/api/patients").with(httpBasic(username, PASSWORD))).andExpect(status().isOk());
         mockMvc.perform(get("/api/users/" + created.get("id").asText() + "/changes").with(ADMIN))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$[0].action").value("CREATED"))
-                .andExpect(jsonPath("$[0].changedBy").value("admin"));
+                .andExpect(jsonPath("$[?(@.action == 'CREATED')].changedBy", hasItem("admin")));
     }
 
     @Test
@@ -153,7 +154,10 @@ class UserApiIT {
                 .andExpect(status().isOk());
 
         mockMvc.perform(get("/api/patients").with(httpBasic(username, PASSWORD))).andExpect(status().isUnauthorized());
-        mockMvc.perform(get("/api/patients").with(httpBasic(username, "otra-clave-larga"))).andExpect(status().isOk());
+        // The new one is temporary, as the first was: the user changes it before anything else.
+        mockMvc.perform(get("/api/patients").with(httpBasic(username, "otra-clave-larga"))).andExpect(status().isForbidden());
+        changeOwnPassword(username, "otra-clave-larga", "clave-propia-nueva");
+        mockMvc.perform(get("/api/patients").with(httpBasic(username, "clave-propia-nueva"))).andExpect(status().isOk());
         // The tests' clock stands still, so the history is checked for the entry, not for its place.
         mockMvc.perform(get("/api/users/" + id + "/changes").with(ADMIN))
                 .andExpect(jsonPath("$[*].action", hasItem("PASSWORD_RESET")));
@@ -187,11 +191,23 @@ class UserApiIT {
                 .andExpect(jsonPath("$[*].username", not(hasItem("nadie"))));
     }
 
+    /** A user created by the admin with a temporary password, who then changes it to {@code password}. */
     private JsonNode create(String username, String role, UUID practitionerId, String password) throws Exception {
-        return json.readTree(mockMvc.perform(post("/api/users").with(ADMIN).contentType(MediaType.APPLICATION_JSON)
-                        .content(body(username, role, practitionerId, password)))
+        String temporary = "temporal-" + password;
+        JsonNode created = json.readTree(mockMvc.perform(post("/api/users").with(ADMIN).contentType(MediaType.APPLICATION_JSON)
+                        .content(body(username, role, practitionerId, temporary)))
                 .andExpect(status().isCreated())
                 .andReturn().getResponse().getContentAsString());
+        changeOwnPassword(username, temporary, password);
+        return created;
+    }
+
+    private void changeOwnPassword(String username, String current, String next) throws Exception {
+        mockMvc.perform(post("/api/password").with(httpBasic(username, current)).contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {"currentPassword": "%s", "newPassword": "%s"}
+                                """.formatted(current, next)))
+                .andExpect(status().isNoContent());
     }
 
     private org.springframework.test.web.servlet.ResultActions attempt(String username, String role, UUID practitionerId)

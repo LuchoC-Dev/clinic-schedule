@@ -44,6 +44,12 @@ public class ApiSecurityErrorHandler implements AuthenticationEntryPoint, Access
         write(response, HttpStatus.FORBIDDEN, ErrorResponse.of(403, "Forbidden", "You are not allowed to do this"));
     }
 
+    /** A user whose password is temporary, asking for anything but changing it (D-69). */
+    public void passwordMustBeChanged(HttpServletResponse response) throws IOException {
+        write(response, HttpStatus.FORBIDDEN,
+                ErrorResponse.of(403, "Forbidden", "The password must be changed first, through POST /api/password"));
+    }
+
     private void write(HttpServletResponse response, HttpStatus status, ErrorResponse body) throws IOException {
         response.setStatus(status.value());
         response.setContentType(MediaType.APPLICATION_JSON_VALUE);

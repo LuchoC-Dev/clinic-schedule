@@ -103,7 +103,12 @@ class UserViewIT {
         String location = mockMvc.perform(post("/users").with(csrf()).session(admin)
                         .param("username", username).param("role", "RECEPTION").param("password", PASSWORD))
                 .andReturn().getResponse().getRedirectedUrl();
-        MockHttpSession theirs = logIn(username, PASSWORD);
+        // The user changes the temporary password first, and logs in again with their own (D-69).
+        MockHttpSession first = logIn(username, PASSWORD);
+        mockMvc.perform(post("/password").with(csrf()).session(first).param("currentPassword", PASSWORD)
+                        .param("newPassword", "la-clave-propia").param("repeatedPassword", "la-clave-propia"))
+                .andExpect(redirectedUrl("/login?changed"));
+        MockHttpSession theirs = logIn(username, "la-clave-propia");
         mockMvc.perform(get("/agenda").session(theirs)).andExpect(status().isOk());
 
         mockMvc.perform(post(location + "/deactivate").with(csrf()).session(admin))

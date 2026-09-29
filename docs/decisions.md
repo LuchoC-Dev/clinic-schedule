@@ -2352,3 +2352,37 @@ checked against every record first, and nothing needs the row gone); changing a 
 practitioner (the records under their name would change meaning); rules about the password's
 characters; checking on every request whether the user is still active (a query more on every
 request, where ending the sessions once is enough); `admin` reaching reception's routes.
+
+---
+
+## D-69 — A password an admin sets is temporary
+**Date:** 2026-09-28 · **Status:** accepted
+
+The admin types the password a user starts with, and the one a reset gives them (D-68). Until the
+user changes it, the admin knows it too, and whatever is recorded under the username might have been
+either of them.
+
+**Temporary until changed.** `app_user.must_change_password` (`V25`) is set when an admin creates a
+user or resets their password, and cleared when the user changes it. Users already there, and those
+of the development data, start without it.
+
+**Everyone changes their own**, at `/password` — linked from every header — and `POST /api/password`,
+giving the current password, and a new one that follows `PasswordPolicy` and is not the same: the
+same one would leave the admin's in place. A wrong current password is a 400, not a 401, since the user
+is logged in. The change is recorded in the user's history as `PASSWORD_CHANGED`, by the user
+themselves.
+
+**Until then, nothing else.** A user with a temporary password carries a `TEMPORARY_PASSWORD`
+authority besides their role, and `TemporaryPasswordFilter`, after the routes are authorized, narrows
+what they may reach: on the screens everything but the password, the login and logging out goes to
+`/password`, which is also where they land on logging in; on the API everything but `POST
+/api/password` is a 403 that says why. A filter rather than route rules, because every rule would have
+to repeat "and not temporary".
+
+**Changing it on the screen ends the session**, and the login form asks for the new password. The
+session holds the user as they were when they logged in; logging in again is simpler than rewriting
+it. The API authenticates every request, so it needs nothing.
+
+*Rejected:* rewriting the session's authentication after the change (Spring Security code to save the
+user one login); route rules for the temporary password; a password that expires after a while (no one
+asked for it); not recording the user's own change.

@@ -25,6 +25,9 @@ import com.clinic.schedule.user.api.Role;
  * <p>Every change returns the entry that records it, with who made it and when, so no change can
  * be made without one.
  *
+ * <p>A password an admin sets — creating the user, or resetting theirs — is temporary: the user
+ * must change it before doing anything else, so nobody but them knows the one they use (D-69).
+ *
  * <p>Named {@code AppUser}, like its table, so it cannot be confused with Spring Security's own
  * {@code User}.
  */
@@ -61,6 +64,10 @@ public class AppUser {
     @Column(nullable = false)
     private boolean active;
 
+    /** Whether the password was set by an admin, and must be changed at the next login. */
+    @Column(name = "must_change_password", nullable = false)
+    private boolean mustChangePassword;
+
     protected AppUser() {
         // required by JPA
     }
@@ -72,6 +79,7 @@ public class AppUser {
         this.role = role;
         this.practitionerId = practitionerId;
         this.active = true;
+        this.mustChangePassword = true;
     }
 
     /**
@@ -122,11 +130,26 @@ public class AppUser {
         return new AppUserChange(id, UserAction.REACTIVATED, at, by);
     }
 
-    /** Replaces the password, whatever it was: the user forgot it, or it is to be changed. */
+    /**
+     * An admin replaces the password, whatever it was: the user forgot it, or it is to be changed. The
+     * new one is temporary, as the one the user was created with.
+     */
     public AppUserChange resetPassword(String passwordHash, LocalDateTime at, String by) {
         requireHash(passwordHash);
         this.passwordHash = passwordHash;
+        this.mustChangePassword = true;
         return new AppUserChange(id, UserAction.PASSWORD_RESET, at, by);
+    }
+
+    /**
+     * The user changes their own password, which is theirs alone from then on. Whether they gave the
+     * current one, and whether the new one differs, is checked against the hashes by the service.
+     */
+    public AppUserChange changePassword(String passwordHash, LocalDateTime at) {
+        requireHash(passwordHash);
+        this.passwordHash = passwordHash;
+        this.mustChangePassword = false;
+        return new AppUserChange(id, UserAction.PASSWORD_CHANGED, at, username);
     }
 
     private static void requireHash(String passwordHash) {
@@ -157,5 +180,9 @@ public class AppUser {
 
     public boolean isActive() {
         return active;
+    }
+
+    public boolean isMustChangePassword() {
+        return mustChangePassword;
     }
 }

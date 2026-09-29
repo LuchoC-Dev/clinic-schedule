@@ -30,6 +30,7 @@ class UserAccountService implements UserAccountReader {
     }
 
     private static UserAccount account(AppUser user) {
-        return new UserAccount(user.getUsername(), user.getPasswordHash(), user.getRole(), user.getPractitionerId());
+        return new UserAccount(user.getUsername(), user.getPasswordHash(), user.getRole(), user.getPractitionerId(),
+                user.isMustChangePassword());
     }
 }

@@ -93,6 +93,28 @@ class AppUserTest {
     }
 
     @Test
+    void thePasswordAnAdminSetsIsTemporary() {
+        AppUser user = AppUser.create("recepcion.b", "hash", Role.RECEPTION, null);
+        assertThat(user.isMustChangePassword()).isTrue();
+
+        user.changePassword("own", NOW);
+        user.resetPassword("reset", NOW, "admin");
+        assertThat(user.isMustChangePassword()).isTrue();
+    }
+
+    @Test
+    void changingItMakesItTheUsersOwnAndIsRecordedByThem() {
+        AppUser user = AppUser.create("recepcion.b", "hash", Role.RECEPTION, null);
+
+        AppUserChange changed = user.changePassword("own", NOW);
+
+        assertThat(user.isMustChangePassword()).isFalse();
+        assertThat(user.getPasswordHash()).isEqualTo("own");
+        assertThat(changed.getAction()).isEqualTo(UserAction.PASSWORD_CHANGED);
+        assertThat(changed.getChangedBy()).isEqualTo("recepcion.b");
+    }
+
+    @Test
     void aChangeNeedsWhoMadeIt() {
         AppUser user = AppUser.create("recepcion.b", "hash", Role.RECEPTION, null);
 
