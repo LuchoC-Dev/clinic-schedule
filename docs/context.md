@@ -79,8 +79,8 @@ The minimum record needed to book an appointment:
 
 v2 is built in phases, each one scoped here before it starts and closed on its own. The first,
 the clinical record, is closed, and so are the second, the arrival queue, and the third, users
-and security. The fourth, the patient's extra data, is under way. Each next one is chosen from the
-planned evolution below, and its scope is written here before any code.
+and security, and the fourth, the patient's extra data. Each next one is chosen from the planned
+evolution below, and its scope is written here before any code.
 
 ## v2, phase 1 — the clinical record (closed)
 
@@ -400,7 +400,7 @@ Not in this phase: patients' accounts (web booking), several roles per user, a r
 role, two-factor authentication, locking a user after failed logins, recording failed logins,
 resetting a password by email, the first admin of a real deployment.
 
-## v2, phase 4 — the patient's extra data
+## v2, phase 4 — the patient's extra data (closed)
 
 ### What changes
 
@@ -479,7 +479,7 @@ Documented so today's decisions do not close doors, not to bring code forward. T
 v2 are chosen from here.
 
 1. **Arrival queue**: v2, phase 2, above — closed. **Users and security**: v2, phase 3, above — closed.
-   **Extra patient data**: v2, phase 4, above.
+   **Extra patient data**: v2, phase 4, above — closed.
 2. **Later on**: attendance with more states, reminders or a cancellation log, structured
    clinical items, printing, a cash desk, and web booking.
 3. **Reminders**: they need the patient's consent to be contacted. A reminder sent to the person

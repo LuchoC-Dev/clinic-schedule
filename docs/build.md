@@ -995,7 +995,7 @@ it; the waiting room's screen logs in as a user that sees it and nothing else, a
 longer show a queue they no longer know; and the admins read who read which clinical record and who
 was refused one. What it left for later is listed below, under "Explicitly postponed".
 
-### Phase 4 — The patient's extra data `[~]`
+### Phase 4 — The patient's extra data `[x]`
 
 Scope in `docs/context.md`, section "v2, phase 4 — the patient's extra data". Delivered in parts;
 each one is usable on its own. The technical design of each part is agreed before it is coded.
@@ -1102,6 +1102,17 @@ was refused, the screen came back with everything typed and an address holding o
 the day, the reason and the time, and nobody was registered. Another time booked him, with his phone
 and email kept clean and his mother's; a three-digit phone came back as the contact's message, and
 registered nobody.
+
+**Phase 4 of v2, the patient's extra data, is closed.** Reception records a patient's date of birth, a
+phone and an email — each saying whether it is the patient's own or a responsible person's, since a
+child has no phone and an adolescent may share their mother's email — and their health insurance, with
+a history of every change; nothing of it is required, a minor's responsible person included.
+Practitioners read the age and the insurance beside the clinical record, never how to reach the
+patient, and the admins read none of it. A new patient booked from the booking screen is registered
+and booked in one transaction, with their contact, and what is typed of them stays out of the
+screen's address. What it left for later — consent to be contacted, the confidentiality of adolescents
+in the reminders, the cash desk, and the email of a web account — is in the context's planned
+evolution.
 
 ---
 
