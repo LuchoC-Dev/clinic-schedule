@@ -1,6 +1,9 @@
 package com.clinic.schedule.patient.entity;
 
+import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.UUID;
@@ -30,6 +33,11 @@ import jakarta.persistence.Table;
  * afterwards, so a note that says NN-4821 still finds them. How far the practice knows who they
  * are is {@link IdentityStatus}, and every change to it goes through {@link #changeIdentity}, which
  * says what changed.
+ *
+ * <p>Besides who they are, the practice may know when they were born and how to reach them — their
+ * {@link PatientDetails}, all of it optional, changed apart through {@link #changeDetails} and kept
+ * in a history of their own (D-73). The phone and the email are plain columns rather than
+ * embeddables, each with the person it belongs to beside it, and come back as value objects.
  */
 @Entity
 @Table(name = "patient")
@@ -53,6 +61,29 @@ public class Patient {
     @Column(length = 7)
     private String alias;
 
+    @Column(name = "birth_date")
+    private LocalDate birthDate;
+
+    @Column(name = "phone_number", length = 16)
+    private String phoneNumber;
+
+    @Column(name = "phone_owner_name", length = 150)
+    private String phoneOwnerName;
+
+    @Enumerated(EnumType.STRING)
+    @Column(name = "phone_owner_relation", length = 20)
+    private Relation phoneOwnerRelation;
+
+    @Column(name = "email_address", length = 254)
+    private String emailAddress;
+
+    @Column(name = "email_owner_name", length = 150)
+    private String emailOwnerName;
+
+    @Enumerated(EnumType.STRING)
+    @Column(name = "email_owner_relation", length = 20)
+    private Relation emailOwnerRelation;
+
     protected Patient() {
         // required by JPA
     }
@@ -73,11 +104,25 @@ public class Patient {
      * @throws UnverifiableIdentityException when the document is said to be seen and there is none
      */
     public static Patient register(String fullName, IdentityDocument document, boolean documentSeen) {
+        return register(fullName, document, documentSeen, PatientDetails.NONE, null);
+    }
+
+    /**
+     * A new patient who gave a name, with what else is known of them already. Registering is not a
+     * change: nothing goes to the history of their details.
+     *
+     * @param today the practice's date, which a date of birth may not be after; unused without one
+     * @throws InvalidPatientDetailsException when the date of birth cannot be right
+     */
+    public static Patient register(String fullName, IdentityDocument document, boolean documentSeen,
+            PatientDetails details, LocalDate today) {
         if (documentSeen && document == null) {
             throw new UnverifiableIdentityException("An identity is verified on a document, and there is none");
         }
-        return new Patient(UUID.randomUUID(), fullName, document,
+        Patient patient = new Patient(UUID.randomUUID(), fullName, document,
                 documentSeen ? IdentityStatus.VERIFIED : IdentityStatus.DECLARED, null);
+        patient.setDetails(requireBirthDate(details, today));
+        return patient;
     }
 
     /** A new patient who gave no name, under an alias such as NN-4821, which stands as their name. */
@@ -137,6 +182,76 @@ public class Patient {
     }
 
     /**
+     * Changes what is known of the patient besides who they are, and says what changed: one entry
+     * for each detail that did, none when nothing did (D-73). A null detail clears it.
+     *
+     * @param today the practice's date, which a date of birth may not be after
+     * @param changedBy the username of whoever changes it
+     * @throws InvalidPatientDetailsException when the date of birth cannot be right
+     */
+    public List<PatientDetailsChange> changeDetails(PatientDetails details, LocalDate today,
+            LocalDateTime changedAt, String changedBy) {
+        PatientDetails before = getDetails();
+        PatientDetails after = requireBirthDate(details, today);
+        List<PatientDetailsChange> changes = new ArrayList<>();
+        if (!Objects.equals(before.birthDate(), after.birthDate())) {
+            changes.add(new PatientDetailsChange(id, changedAt, changedBy, PatientDetailsChange.Field.BIRTH_DATE,
+                    Objects.toString(before.birthDate(), null), null,
+                    Objects.toString(after.birthDate(), null), null));
+        }
+        if (!Objects.equals(before.phone(), after.phone())) {
+            changes.add(new PatientDetailsChange(id, changedAt, changedBy, PatientDetailsChange.Field.PHONE,
+                    before.phone() == null ? null : before.phone().number(),
+                    before.phone() == null ? null : before.phone().owner(),
+                    after.phone() == null ? null : after.phone().number(),
+                    after.phone() == null ? null : after.phone().owner()));
+        }
+        if (!Objects.equals(before.email(), after.email())) {
+            changes.add(new PatientDetailsChange(id, changedAt, changedBy, PatientDetailsChange.Field.EMAIL,
+                    before.email() == null ? null : before.email().address(),
+                    before.email() == null ? null : before.email().owner(),
+                    after.email() == null ? null : after.email().address(),
+                    after.email() == null ? null : after.email().owner()));
+        }
+        setDetails(after);
+        return changes;
+    }
+
+    /**
+     * A date of birth is not in the future, and not more than {@value #MAX_AGE_YEARS} years ago:
+     * either is a slip of the keyboard, such as a mistyped year (D-38).
+     */
+    private static PatientDetails requireBirthDate(PatientDetails details, LocalDate today) {
+        if (details == null) {
+            return PatientDetails.NONE;
+        }
+        LocalDate birthDate = details.birthDate();
+        if (birthDate != null && birthDate.isAfter(today)) {
+            throw new InvalidPatientDetailsException("A date of birth is not in the future");
+        }
+        if (birthDate != null && birthDate.isBefore(today.minusYears(MAX_AGE_YEARS))) {
+            throw new InvalidPatientDetailsException("A date of birth is at most " + MAX_AGE_YEARS + " years ago");
+        }
+        return details;
+    }
+
+    static final int MAX_AGE_YEARS = 130;
+
+    private void setDetails(PatientDetails details) {
+        this.birthDate = details.birthDate();
+        Phone phone = details.phone();
+        Responsible phoneOwner = phone == null ? null : phone.owner();
+        this.phoneNumber = phone == null ? null : phone.number();
+        this.phoneOwnerName = phoneOwner == null ? null : phoneOwner.name();
+        this.phoneOwnerRelation = phoneOwner == null ? null : phoneOwner.relation();
+        Email email = details.email();
+        Responsible emailOwner = email == null ? null : email.owner();
+        this.emailAddress = email == null ? null : email.address();
+        this.emailOwnerName = emailOwner == null ? null : emailOwner.name();
+        this.emailOwnerRelation = emailOwner == null ? null : emailOwner.relation();
+    }
+
+    /**
      * A name is required, fits its column, and has at least one letter: "!!!" or "123" is a
      * slip of the keyboard, not somebody's name (D-38). Nothing stricter — names carry
      * accents, apostrophes and hyphens.
@@ -179,5 +294,28 @@ public class Patient {
     /** Null for a patient registered with a name. */
     public String getAlias() {
         return alias;
+    }
+
+    public PatientDetails getDetails() {
+        return new PatientDetails(birthDate, getPhone(), getEmail());
+    }
+
+    /** Null when not given. */
+    public LocalDate getBirthDate() {
+        return birthDate;
+    }
+
+    /** Null when not given. */
+    public Phone getPhone() {
+        return phoneNumber == null ? null : new Phone(phoneNumber, owner(phoneOwnerName, phoneOwnerRelation));
+    }
+
+    /** Null when not given. */
+    public Email getEmail() {
+        return emailAddress == null ? null : new Email(emailAddress, owner(emailOwnerName, emailOwnerRelation));
+    }
+
+    private static Responsible owner(String name, Relation relation) {
+        return relation == null ? null : new Responsible(name, relation);
     }
 }

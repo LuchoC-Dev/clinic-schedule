@@ -48,6 +48,7 @@
             <input type="text" name="documentNumber" maxlength="20">
         </label>
         <div class="choices"><label><input type="checkbox" name="documentSeen" value="true"> Vi el documento</label></div>
+        <th:block th:replace="~{patient-details :: fields(null)}"></th:block>
         <button type="submit" class="primary">Registrar</button>
     </form>
 

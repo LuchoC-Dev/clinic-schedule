@@ -53,7 +53,8 @@ password each one changes at `/password` on logging in (D-69).
 week, of one practitioner or everyone — with the day's operations as buttons (*Llegó*,
 *Avisó demora*, *Mover*, *Cancelar*), a booking screen that suggests the free times, a patients
 screen — where a patient who gives no name is registered under an alias, and each patient's
-identity is corrected and verified, with its history — each patient's appointments, cancelled ones included, a practitioners screen to set
+identity is corrected and verified, with its history, and their date of birth, phone and email
+recorded, each saying whose it is, with a history of their own — each patient's appointments, cancelled ones included, a practitioners screen to set
 up their reasons and week and record their absences, a queues screen to set up the arrival
 queues and who serves each, the arrivals screen, where queues are opened and closed and patients
 brought in, and the waiting-room screen, which names nobody. The queue screens show each change as
@@ -69,11 +70,13 @@ Spanish, for the staff.
 
 | Method | Route | What it does |
 |---|---|---|
-| `POST` | `/api/patients` | register a patient, with an optional typed document; `documentSeen` verifies it at once |
+| `POST` | `/api/patients` | register a patient, with an optional typed document; `documentSeen` verifies it at once; optionally `birthDate`, `phone` and `email`, each with its `owner` |
 | `POST` | `/api/patients/unidentified` | register a patient who gives no name, under an alias such as NN-4821 |
 | `PUT` | `/api/patients/{id}` | correct a name, add or remove the document; `documentSeen` verifies the identity |
 | `GET` | `/api/patients/{id}`, `/api/patients?query=` | find patients by name, document or alias |
 | `GET` | `/api/patients/{id}/identity-changes` | the history of a patient's identity: what changed, when and by whom |
+| `PUT` | `/api/patients/{id}/details` | set the date of birth, the phone and the email, each saying whose it is; one left out is cleared |
+| `GET` | `/api/patients/{id}/details-changes` | the history of a patient's details: which one changed, from what to what, when and by whom |
 | `POST` | `/api/practitioners` | register a practitioner |
 | `PUT` | `/api/practitioners/{id}` | rename |
 | `GET` | `/api/practitioners`, `/api/practitioners/{id}` | with reasons, week and time off |
@@ -109,7 +112,7 @@ Spanish, for the staff.
 | `POST` | `/api/checks/{id}/result` | the result of a pending check, by any practitioner with access to the record |
 | `GET` | `/api/checks/pending` | the checks of the practice waiting for a result: only the patient and the check |
 | `POST` | `/api/checks/{id}/access-grants` | access to the record to report that pending check — granted at once, for now, and recorded |
-| `GET` | `/api/clinical-records/{patientId}` | a patient's consultations with their checks, and the checks done without one — for a practitioner who saw them within the access period or is seeing them today |
+| `GET` | `/api/clinical-records/{patientId}` | the patient's date of birth, their consultations with their checks, and the checks done without one — for a practitioner who saw them within the access period or is seeing them today |
 
 A booking whose patient did not arrive — into their practitioner's queue — is marked absent 30 minutes after its start, or at the end of its
 day when the patient warned they would be late; an absent appointment is kept, shown on the agenda

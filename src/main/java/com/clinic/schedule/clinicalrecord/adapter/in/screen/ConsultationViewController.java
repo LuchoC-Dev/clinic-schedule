@@ -1,5 +1,7 @@
 package com.clinic.schedule.clinicalrecord.adapter.in.screen;
 
+import java.time.Clock;
+import java.time.LocalDate;
 import java.util.Arrays;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -58,14 +60,16 @@ class ConsultationViewController {
     private final AddAddendumUseCase addAddendum;
     private final PatientReader patients;
     private final PractitionerReader practitioners;
+    private final Clock clock;
 
     ConsultationViewController(ViewClinicalRecordUseCase clinicalRecord, RecordConsultationUseCase record,
-            AddAddendumUseCase addAddendum, PatientReader patients, PractitionerReader practitioners) {
+            AddAddendumUseCase addAddendum, PatientReader patients, PractitionerReader practitioners, Clock clock) {
         this.clinicalRecord = clinicalRecord;
         this.record = record;
         this.addAddendum = addAddendum;
         this.patients = patients;
         this.practitioners = practitioners;
+        this.clock = clock;
     }
 
     /**
@@ -211,6 +215,8 @@ class ConsultationViewController {
         Map<UUID, String> names = practitioners.findAll().stream()
                 .collect(Collectors.toMap(PractitionerSummary::id, PractitionerSummary::fullName));
         model.addAttribute("patient", patient);
+        // The age, never how to reach the patient: that is reception's alone (D-73).
+        model.addAttribute("age", AgeLabel.of(patient.ageOn(LocalDate.now(clock))));
         model.addAttribute("entries", ClinicalRecordEntry.of(read, names));
         model.addAttribute("grants", GrantEntry.of(read, names));
         // The orders a check done now may fulfil (D-55).

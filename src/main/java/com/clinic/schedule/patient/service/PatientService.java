@@ -1,6 +1,7 @@
 package com.clinic.schedule.patient.service;
 
 import java.time.Clock;
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.Collection;
 import java.util.List;
@@ -22,7 +23,10 @@ import com.clinic.schedule.patient.entity.IdentityDocument;
 import com.clinic.schedule.patient.entity.IdentityStatus;
 import com.clinic.schedule.patient.entity.IncompleteDocumentException;
 import com.clinic.schedule.patient.entity.Patient;
+import com.clinic.schedule.patient.entity.PatientDetails;
+import com.clinic.schedule.patient.entity.PatientDetailsChange;
 import com.clinic.schedule.patient.entity.PatientIdentityChange;
+import com.clinic.schedule.patient.persistence.PatientDetailsChangeRepository;
 import com.clinic.schedule.patient.persistence.PatientIdentityChangeRepository;
 import com.clinic.schedule.patient.persistence.PatientRepository;
 import com.clinic.schedule.security.api.CurrentUserReader;
@@ -41,7 +45,8 @@ import com.clinic.schedule.security.api.CurrentUserReader;
  * where Hibernate would write the change by itself (D-27).
  *
  * <p>A change to a patient's identity is saved with its entry in the history, in the same
- * transaction, stamped with the practice's clock and the user who made it (D-60).
+ * transaction, stamped with the practice's clock and the user who made it (D-60), and so is a change
+ * to their details (D-73).
  */
 @Service
 public class PatientService implements PatientReader, PatientWriter {
@@ -51,21 +56,29 @@ public class PatientService implements PatientReader, PatientWriter {
 
     private final PatientRepository patients;
     private final PatientIdentityChangeRepository identityChanges;
+    private final PatientDetailsChangeRepository detailsChanges;
     private final CurrentUserReader currentUser;
     private final Clock clock;
 
     PatientService(PatientRepository patients, PatientIdentityChangeRepository identityChanges,
-            CurrentUserReader currentUser, Clock clock) {
+            PatientDetailsChangeRepository detailsChanges, CurrentUserReader currentUser, Clock clock) {
         this.patients = patients;
         this.identityChanges = identityChanges;
+        this.detailsChanges = detailsChanges;
         this.currentUser = currentUser;
         this.clock = clock;
     }
 
     @Transactional
     public Patient register(String fullName, IdentityDocument document, boolean documentSeen) {
+        return register(fullName, document, documentSeen, PatientDetails.NONE);
+    }
+
+    /** A new patient with what else is known of them already (D-73). */
+    @Transactional
+    public Patient register(String fullName, IdentityDocument document, boolean documentSeen, PatientDetails details) {
         requireDocumentIsFree(document);
-        return patients.save(Patient.register(fullName, document, documentSeen));
+        return patients.save(Patient.register(fullName, document, documentSeen, details, LocalDate.now(clock)));
     }
 
     /**
@@ -134,6 +147,27 @@ public class PatientService implements PatientReader, PatientWriter {
         return identityChanges.findByPatientIdOrderByChangedAtDesc(id);
     }
 
+    /**
+     * Changes what is known of the patient besides who they are. Each detail that changed goes to
+     * the history; nothing is recorded when nothing changed (D-73).
+     */
+    @Transactional
+    public Patient changeDetails(UUID id, PatientDetails details) {
+        Patient patient = patients.findById(id).orElseThrow(() -> new PatientNotFoundException(id));
+        detailsChanges.saveAll(patient.changeDetails(details, LocalDate.now(clock), LocalDateTime.now(clock),
+                currentUser.username()));
+        return patients.save(patient);
+    }
+
+    /** Every change to the patient's details, the most recent first. */
+    @Transactional(readOnly = true)
+    public List<PatientDetailsChange> detailsHistory(UUID id) {
+        if (!patients.existsById(id)) {
+            throw new PatientNotFoundException(id);
+        }
+        return detailsChanges.findByPatientIdOrderByChangedAtDescFieldAsc(id);
+    }
+
     @Transactional(readOnly = true)
     public Patient byId(UUID id) {
         return patients.findById(id).orElseThrow(() -> new PatientNotFoundException(id));
@@ -180,7 +214,7 @@ public class PatientService implements PatientReader, PatientWriter {
     private static List<PatientSummary> summaries(List<Patient> found) {
         return found.stream()
                 .map(patient -> new PatientSummary(patient.getId(), patient.getFullName(), label(patient.getDocument()),
-                        patient.getIdentityStatus() == IdentityStatus.VERIFIED))
+                        patient.getIdentityStatus() == IdentityStatus.VERIFIED, patient.getBirthDate()))
                 .toList();
     }
 

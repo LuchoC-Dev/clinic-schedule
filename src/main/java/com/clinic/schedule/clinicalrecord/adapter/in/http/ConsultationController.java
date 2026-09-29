@@ -1,6 +1,7 @@
 package com.clinic.schedule.clinicalrecord.adapter.in.http;
 
 import java.net.URI;
+import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 import java.util.stream.Collectors;
@@ -16,6 +17,8 @@ import com.clinic.schedule.clinicalrecord.application.usecase.AddAddendumUseCase
 import com.clinic.schedule.clinicalrecord.application.usecase.RecordConsultationUseCase;
 import com.clinic.schedule.clinicalrecord.application.usecase.ViewClinicalRecordUseCase;
 import com.clinic.schedule.clinicalrecord.domain.PatientId;
+import com.clinic.schedule.patient.api.PatientReader;
+import com.clinic.schedule.patient.api.PatientSummary;
 import com.clinic.schedule.practitioner.api.PractitionerReader;
 import com.clinic.schedule.practitioner.api.PractitionerSummary;
 
@@ -36,13 +39,15 @@ class ConsultationController {
     private final AddAddendumUseCase addAddendum;
     private final ViewClinicalRecordUseCase clinicalRecord;
     private final PractitionerReader practitioners;
+    private final PatientReader patients;
 
     ConsultationController(RecordConsultationUseCase record, AddAddendumUseCase addAddendum,
-            ViewClinicalRecordUseCase clinicalRecord, PractitionerReader practitioners) {
+            ViewClinicalRecordUseCase clinicalRecord, PractitionerReader practitioners, PatientReader patients) {
         this.record = record;
         this.addAddendum = addAddendum;
         this.clinicalRecord = clinicalRecord;
         this.practitioners = practitioners;
+        this.patients = patients;
     }
 
     /** Records a consultation. A retry with the same id answers the same one, still 201. */
@@ -74,7 +79,10 @@ class ConsultationController {
      */
     @GetMapping("/api/clinical-records/{patientId}")
     ClinicalRecordResponse clinicalRecord(@PathVariable UUID patientId) {
-        return ClinicalRecordResponse.of(clinicalRecord.handle(new PatientId(patientId)), practitionerNames());
+        ViewClinicalRecordUseCase.ClinicalRecord read = clinicalRecord.handle(new PatientId(patientId));
+        // Asked only once the record was granted: whoever may not read it learns nothing of the patient (D-73).
+        PatientSummary patient = patients.findAll(List.of(patientId)).stream().findFirst().orElse(null);
+        return ClinicalRecordResponse.of(read, patient, practitionerNames());
     }
 
     private Map<UUID, String> practitionerNames() {

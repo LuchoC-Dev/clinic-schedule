@@ -7,7 +7,7 @@ import com.clinic.schedule.patient.entity.DocumentType;
 import com.clinic.schedule.patient.entity.IdentityDocument;
 
 /**
- * The body for registering or updating a patient.
+ * The body for correcting who a patient is (D-60); registering takes {@link RegisterPatientRequest}.
  *
  * <p>The document is optional, but it comes as a pair: both parts or neither. Sending only
  * one is answered with a 400, not silently ignored — a number without a type identifies

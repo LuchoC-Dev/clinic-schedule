@@ -164,6 +164,26 @@ class ConsultationViewIT {
     }
 
     @Test
+    void theRecordAndTheFormShowThePatientsAgeButNotHowToReachThem() throws Exception {
+        arrivedToday();
+        mockMvc.perform(put("/api/patients/" + patient + "/details")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {"birthDate": "2025-01-10", "phone": {"number": "1145556666"},
+                                 "email": {"address": "reachable@mail.com"}}
+                                """))
+                .andExpect(status().isOk());
+
+        for (String screen : new String[] {"/clinical-records/" + patient, "/consultations/new?patientId=" + patient}) {
+            mockMvc.perform(get(screen).with(asArias))
+                    .andExpect(status().isOk())
+                    .andExpect(content().string(containsString("14 meses · nació el 10/01/2025")))
+                    .andExpect(content().string(not(containsString("1145556666"))))
+                    .andExpect(content().string(not(containsString("reachable@mail.com"))));
+        }
+    }
+
+    @Test
     void showingTheRecordOnScreenIsAReading() throws Exception {
         arrivedToday();
 

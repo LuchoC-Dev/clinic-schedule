@@ -20,7 +20,7 @@ import com.clinic.schedule.patient.entity.Patient;
 import com.clinic.schedule.patient.service.PatientService;
 
 /**
- * The patient endpoints: register, correct, look up.
+ * The patient endpoints: register, correct who they are and what else is known of them, look up.
  *
  * <p>Updating is a {@code PUT} and not a {@code POST} on a sub-path, unlike cancelling an
  * appointment (D-23): correcting a misspelled name or adding the document that was missing
@@ -40,8 +40,9 @@ class PatientController {
     }
 
     @PostMapping
-    ResponseEntity<PatientResponse> register(@Valid @RequestBody PatientRequest request) {
-        return created(patients.register(request.fullName(), request.toDocument(), request.seen()));
+    ResponseEntity<PatientResponse> register(@Valid @RequestBody RegisterPatientRequest request) {
+        return created(patients.register(request.fullName(), request.toDocument(), request.seen(),
+                request.toDetails()));
     }
 
     /** A patient who gives no name: registered under an alias the answer carries (D-60). */
@@ -60,6 +61,21 @@ class PatientController {
     @GetMapping("/{id}/identity-changes")
     List<IdentityChangeResponse> identityChanges(@PathVariable UUID id) {
         return patients.identityHistory(id).stream().map(IdentityChangeResponse::of).toList();
+    }
+
+    /**
+     * Changes what is known of the patient besides who they are — apart from their identity, which
+     * has a history of its own; each detail that changed goes to theirs (D-73).
+     */
+    @PutMapping("/{id}/details")
+    PatientResponse updateDetails(@PathVariable UUID id, @RequestBody PatientDetailsRequest request) {
+        return PatientResponse.of(patients.changeDetails(id, request.toDetails()));
+    }
+
+    /** The history of the patient's details, the most recent change first. */
+    @GetMapping("/{id}/details-changes")
+    List<DetailsChangeResponse> detailsChanges(@PathVariable UUID id) {
+        return patients.detailsHistory(id).stream().map(DetailsChangeResponse::of).toList();
     }
 
     @GetMapping("/{id}")

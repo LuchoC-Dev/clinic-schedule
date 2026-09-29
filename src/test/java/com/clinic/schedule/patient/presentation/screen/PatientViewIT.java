@@ -88,6 +88,65 @@ class PatientViewIT {
                 .andExpect(flash().attribute("error", containsString("necesita su documento y su nombre real")));
     }
 
+    // --- details (D-73) ------------------------------------------------------------------
+
+    @Test
+    void aPatientIsRegisteredWithTheirDetailsAndTheyAreChangedWithTheirHistory() throws Exception {
+        String name = unique("Contacto");
+        mockMvc.perform(post("/patients").with(csrf())
+                        .param("fullName", name)
+                        .param("birthDate", "2015-06-01")
+                        .param("phoneNumber", "11 4555-6666")
+                        .param("phoneOwnerRelation", "MOTHER")
+                        .param("phoneOwnerName", "Ana Pérez")
+                        .param("emailAddress", "")
+                        .param("emailOwnerRelation", "")
+                        .param("emailOwnerName", ""))
+                .andExpect(flash().attribute("message", "Paciente registrado: " + name + "."));
+        String id = mockMvc.perform(get("/patients").param("query", name)).andReturn().getResponse()
+                .getContentAsString().replaceAll("(?s).*href=\"/patients/([0-9a-f-]{36})\".*", "$1");
+        String screen = "/patients/" + id;
+
+        mockMvc.perform(get(screen))
+                .andExpect(content().string(containsString("value=\"2015-06-01\"")))
+                .andExpect(content().string(containsString("value=\"1145556666\"")))
+                .andExpect(content().string(containsString("value=\"Ana Pérez\"")))
+                .andExpect(content().string(containsString("Sin cambios desde que se registró.")));
+
+        mockMvc.perform(post(screen + "/details").with(csrf())
+                        .param("birthDate", "2015-06-01")
+                        .param("phoneNumber", "1145556666")
+                        .param("phoneOwnerRelation", "")
+                        .param("phoneOwnerName", "")
+                        .param("emailAddress", "Luis@Mail.com")
+                        .param("emailOwnerRelation", "FATHER")
+                        .param("emailOwnerName", "Luis Gómez"))
+                .andExpect(redirectedUrl(screen))
+                .andExpect(flash().attribute("message", "Datos personales guardados."));
+
+        mockMvc.perform(get(screen))
+                .andExpect(content().string(containsString("1145556666 (Madre: Ana Pérez)")))
+                .andExpect(content().string(containsString("luis@mail.com (Padre: Luis Gómez)")))
+                .andExpect(content().string(containsString("<td>Teléfono</td>")))
+                .andExpect(content().string(containsString("<td>Email</td>")));
+    }
+
+    @Test
+    void wrongDetailsComeBackAsAMessage() throws Exception {
+        String screen = mockMvc.perform(post("/patients/unidentified").with(csrf()))
+                .andReturn().getResponse().getRedirectedUrl();
+
+        mockMvc.perform(post(screen + "/details").with(csrf()).param("phoneNumber", "123"))
+                .andExpect(redirectedUrl(screen))
+                .andExpect(flash().attribute("error", startsWith("Revisá los datos personales")));
+        mockMvc.perform(post(screen + "/details").with(csrf())
+                        .param("phoneNumber", "1145556666").param("phoneOwnerName", "Ana Pérez"))
+                .andExpect(flash().attribute("error", startsWith("Revisá los datos personales")));
+        mockMvc.perform(post("/patients").with(csrf()).param("fullName", unique("Futuro")).param("birthDate", "2026-03-11"))
+                .andExpect(redirectedUrl("/patients"))
+                .andExpect(flash().attribute("error", startsWith("Revisá los datos personales")));
+    }
+
     @Test
     void anUnknownPatientsScreenIsNotFound() throws Exception {
         mockMvc.perform(get("/patients/" + UUID.randomUUID())).andExpect(status().isNotFound());

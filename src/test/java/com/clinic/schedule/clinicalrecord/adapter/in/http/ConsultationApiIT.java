@@ -3,6 +3,7 @@ package com.clinic.schedule.clinicalrecord.adapter.in.http;
 import static org.hamcrest.Matchers.hasSize;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.header;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
@@ -131,6 +132,39 @@ class ConsultationApiIT {
                 .andExpect(jsonPath("$.consultations[0].notes").value("Control de hipertensión."))
                 .andExpect(jsonPath("$.consultations[0].practitionerName").value("Dra. Arias"))
                 .andExpect(jsonPath("$.consultations[0].items", hasSize(2)));
+    }
+
+    @Test
+    void theRecordCarriesThePatientsDateOfBirthButNotHowToReachThem() throws Exception {
+        book(arias, TODAY, "10:00:00");
+        readRecord(asArias).andExpect(jsonPath("$.patient.birthDate").isEmpty());
+
+        mockMvc.perform(put("/api/patients/" + patient + "/details")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {"birthDate": "1981-03-12", "phone": {"number": "1145556666"}}
+                                """))
+                .andExpect(status().isOk());
+
+        readRecord(asArias)
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.patient.birthDate").value("1981-03-12"))
+                .andExpect(jsonPath("$.patient.phone").doesNotExist())
+                .andExpect(jsonPath("$.patient.email").doesNotExist());
+    }
+
+    @Test
+    void aRecordThatMayNotBeReadTellsNothingOfThePatient() throws Exception {
+        mockMvc.perform(put("/api/patients/" + patient + "/details")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {"birthDate": "1981-03-12"}
+                                """))
+                .andExpect(status().isOk());
+
+        readRecord(asArias)
+                .andExpect(status().isForbidden())
+                .andExpect(jsonPath("$.patient").doesNotExist());
     }
 
     @Test

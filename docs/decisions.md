@@ -2510,3 +2510,68 @@ refuses would have to remember it, and a failure after the refusal would keep it
 the security module for the route refusals (two places to read, and the security module keeps no
 storage since D-43); recording every 403 of the application (most are reception's work refused to a
 practitioner, not clinical); telling the refused user it was recorded; recording failed logins.
+
+---
+
+## D-73 — A patient's details: the date of birth and whose each phone and email is
+**Date:** 2026-09-29 · **Status:** accepted
+
+Until now a patient was a name, maybe a document, and how far the practice knows who they are. Reception
+now also records when they were born, one phone and one email — v2, phase 4, part 1. The reminders will
+need to reach the patient and web booking their email; neither is built here (D-14).
+
+**Details, apart from the identity.** `PatientDetails` — the date of birth, the `Phone` and the `Email`,
+each optional — changes through `Patient.changeDetails`, not `changeIdentity`, and has a history of its
+own: changing a phone says nothing about who the patient is, and the identity's history (D-60) stays
+about that. Registration takes them at once, and is not a change: nothing goes to the history then. A
+patient under an alias may have them, and gets them on their screen once registered.
+
+**Each phone and email says whose it is.** `owner` is null for the patient's own, or a `Responsible` —
+a name and a `Relation`: mother, father, guardian, partner, child or someone else. Each has its own
+owner, since an adolescent may have their own phone and use their mother's email, and separated parents
+may give one each; the reminders will need to know whose each channel is, so as not to tell a parent of
+a visit an adolescent keeps to themselves. The person is not a patient nor an entity of their own: only
+a name and a relation beside the value. The phone and the email are plain columns of `patient`, not
+embeddables, and come back as value objects: a nested embeddable with a nullable owner is more mapping
+than it saves.
+
+**Refused where typed, and nothing more (D-38).** A phone drops spaces, dashes, dots and brackets, and
+keeps 8 to 15 digits with an optional leading `+` — the longest international number. An email is only
+checked for its form and 254 characters, and kept in lower case. A date of birth is not in the future,
+nor more than 130 years ago, against the practice's date from the `Clock`. An owner is a name and a
+relation together, and needs its phone or email. Each value object refuses with
+`InvalidPatientDetailsException`, an `IllegalArgumentException`, so the API answers 400 as for any
+malformed request and the screens can say what to fix in the details rather than the identity.
+
+**Nothing is required, a minor's responsible person included.** From 13 an adolescent decides alone on
+much of their own care (Código Civil y Comercial, art. 26), and a minor who comes alone is seen (D-60):
+requiring a responsible person would turn them away for the paperwork. The email is **not unique**: two
+brothers may carry their mother's. Whether the email of a web account is, is decided with web booking.
+
+**One history row per detail that changed**, in `patient_details_change` (`V29`): which detail, its
+value before and after — a date as `1981-03-12`, a phone's digits, an email — and the owner apart, as a
+name and a relation, so each screen says it in its own language. A save that changes nothing leaves
+nothing. Reception reads it on the patient's screen and through `GET /api/patients/{id}/details-changes`.
+A detail added later is one more value of `field`, and needs no new columns for its value.
+
+**Routes.** `POST /api/patients` takes `birthDate`, `phone` and `email` —
+`{number | address, owner: {name, relation} | null}` —, now through `RegisterPatientRequest`, while
+`PUT /api/patients/{id}` still corrects the identity alone. `PUT /api/patients/{id}/details` sets the
+details as they are to be: one left out is cleared. All of it lives under `/api/patients/**` and
+`/patients/**`, reception's alone, so neither the admin nor a practitioner reaches it (D-34).
+
+**A practitioner reads the age, never how to reach the patient.** `PatientSummary` carries the date of
+birth, and the clinical record and the consultation form show the age beside the name — in years, in
+months below two, as paediatrics counts it, and in days below one month. `GET /api/clinical-records/{id}`
+answers `patient: {birthDate}`, asked for only once the use case granted the record, so a refused
+practitioner learns nothing of the patient. The phone and the email never reach the clinical record
+module.
+
+*Rejected:* one owner for the phone and the email together (an adolescent's own phone and their mother's
+email cannot both be said); the responsible person as a patient of their own (rules on their identity
+and on two guardians, for nothing this phase uses); a unique email (families share one); requiring a
+responsible person for minors (a minor who comes alone is seen); one history row per save with before
+and after of every detail (about twenty columns, more with the health insurance); a single `PUT` for
+identity and details (two histories behind one call, and a phone change would read as an identity
+edit); showing the age in years alone (a baby's age is counted in months); a seed with details (the
+screens give them).

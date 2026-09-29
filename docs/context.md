@@ -79,8 +79,8 @@ The minimum record needed to book an appointment:
 
 v2 is built in phases, each one scoped here before it starts and closed on its own. The first,
 the clinical record, is closed, and so are the second, the arrival queue, and the third, users
-and security. Each next one is chosen from the planned evolution below, and its scope is
-written here before any code.
+and security. The fourth, the patient's extra data, is under way. Each next one is chosen from the
+planned evolution below, and its scope is written here before any code.
 
 ## v2, phase 1 — the clinical record (closed)
 
@@ -400,16 +400,97 @@ Not in this phase: patients' accounts (web booking), several roles per user, a r
 role, two-factor authentication, locking a user after failed logins, recording failed logins,
 resetting a password by email, the first admin of a real deployment.
 
+## v2, phase 4 — the patient's extra data
+
+### What changes
+
+Until now a patient was a name, maybe a document, and how far the practice knows who they are.
+From this phase on reception also records when they were born, how to reach them and their health
+insurance. The next phases build on it — reminders need to reach the patient, web booking their
+email — but nothing of those phases is built here.
+
+### What is recorded
+
+- **Date of birth.** Not in the future, and not more than 130 years ago.
+- **One phone number.** Digits, with an optional leading `+`; the spaces, dashes and brackets
+  reception types are dropped, as they are from a document. From 8 to 15 digits. Whether it takes
+  WhatsApp is left for the reminders.
+- **One email.** A plain check of its form, at most 254 characters, compared without regard to
+  case. It is **not unique** among patients: two brothers may carry their mother's. Whether the
+  email of a web account is unique is decided with the web booking.
+- **Whose each one is.** The phone and the email each say whose they are: the patient's own, or
+  those of a person responsible for them — a mother, a father, a guardian, someone else — whose name
+  and relation are recorded with it. A child has no phone of their own; an adolescent may have their
+  own phone and use their mother's email, and separated parents may give one each, so each one has
+  its owner. That person is not a patient nor anything else of their own: only a name and a relation
+  beside the phone or the email.
+- **Health insurance.** One at most: the name of the insurer, the member number and the plan, all
+  free text, since each insurer has its own format; only their length is checked. A patient with none
+  pays privately. The member number is the patient's and is kept; the token some insurers ask for is
+  generated anew for each visit, so it is not the patient's and is not kept here.
+
+**Nothing is required.** The patients already on the books start with none of it, and nobody has to
+fill it in. A wrong value is refused where it is typed, and nothing more (D-38). A patient registered
+under an alias may have all of it: someone who gives no name may still leave a relative's phone.
+
+### Minors
+
+The law gives minors a progressive autonomy (Código Civil y Comercial, art. 26): from 13 an
+adolescent decides alone on treatments that are not invasive, and from 16 is treated as an adult in
+the care of their own body. A minor who comes alone is seen, as anyone is (phase 2), so **the person
+responsible for a minor is never required**. The consent a minor gives, alone or assisted, for a
+medical act is clinical content, and not part of this phase.
+
+### Who reads and writes it
+
+- **Reception** reads and writes all of it.
+- **Practitioners** read the health insurance and the date of birth — the patient's age — beside the
+  clinical record and the consultation. They do not read how to reach the patient, and write none of
+  it.
+- **Admins** read none of it.
+
+### Every change is kept
+
+Every change to this data is recorded — what it was, what it became, who changed it and when — as a
+patient's identity changes are. Reception reads that history, on the patient's screen and through the
+API; nobody else does.
+
+### Registering and booking at once
+
+A new patient registered from the booking screen — with their contact, since that is where it is most
+often taken, over the phone — and their appointment are saved in **one transaction**: a booking that
+is refused leaves no patient behind (the postponed half of D-37).
+
+### Delivered in parts
+
+1. The date of birth and the contact — phone and email, and whose each one is —, with their history;
+   practitioners read the patient's age beside the record.
+2. The health insurance, with its history; practitioners read it beside the record.
+3. Registering and booking in one transaction from the booking screen, with the contact.
+
+Not in this phase: searching patients by phone, more than one phone or email, marking a phone as
+WhatsApp, consent to be contacted, a list of insurers kept by the practice, more than one insurance,
+the person responsible as a patient of their own, the consent of minors to medical acts, and anything
+of the reminders, the cash desk or web booking.
+
 ## Planned evolution (DO NOT implement yet)
 
 Documented so today's decisions do not close doors, not to bring code forward. The next phases of
 v2 are chosen from here.
 
 1. **Arrival queue**: v2, phase 2, above — closed. **Users and security**: v2, phase 3, above — closed.
-2. **Later on**: attendance with more states, reminders or a cancellation log, extra patient
-   data (phone, health insurance), structured clinical items, printing, and web booking.
-3. **Web booking**: an account with login, linked to the patient's record. It requires an
-   identity document, and **never** uses the internal id to identify the patient.
-4. **Future user interface**: two separate single-page applications, one for
+   **Extra patient data**: v2, phase 4, above.
+2. **Later on**: attendance with more states, reminders or a cancellation log, structured
+   clinical items, printing, a cash desk, and web booking.
+3. **Reminders**: they need the patient's consent to be contacted. A reminder sent to the person
+   responsible for an adolescent may tell them of a visit the adolescent keeps to themselves, since
+   from 13 they decide alone on much of their own care (Código Civil y Comercial, art. 26).
+4. **Cash desk**: how each consultation is paid — health insurance, prepaid plan or privately —
+   becomes required for every consultation, with the token an insurer asks for each visit.
+5. **Web booking**: an account with login, linked to the patient's record. It requires an
+   identity document, and **never** uses the internal id to identify the patient. Whether its
+   email is unique, and whether a parent books for their children from one account, is decided
+   then.
+6. **Future user interface**: two separate single-page applications, one for
    reception/practitioners and one for patients. This is why the REST API is the main
    contract from v1 onwards.

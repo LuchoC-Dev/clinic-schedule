@@ -995,6 +995,65 @@ it; the waiting room's screen logs in as a user that sees it and nothing else, a
 longer show a queue they no longer know; and the admins read who read which clinical record and who
 was refused one. What it left for later is listed below, under "Explicitly postponed".
 
+### Phase 4 — The patient's extra data `[~]`
+
+Scope in `docs/context.md`, section "v2, phase 4 — the patient's extra data". Delivered in parts;
+each one is usable on its own. The technical design of each part is agreed before it is coded.
+
+#### Part 1 — Date of birth and contact `[x]`
+- [x] `docs/context.md`: the scope of phase 4
+- [x] `PatientDetails`, apart from the identity, through `Patient.changeDetails`; registering takes
+      them at once and records no change (D-73)
+- [x] Date of birth: not in the future, not more than 130 years ago, against the `Clock`
+- [x] `Phone`: 8 to 15 digits with an optional leading `+`, separators dropped; `Email`: not unique,
+      at most 254 characters, kept in lower case; each refuses with `InvalidPatientDetailsException`
+- [x] Whose each one is, the phone and the email apart: the patient's own, or a `Responsible` — a
+      name and a `Relation`: mother, father, guardian, partner, child or someone else; never
+      required, a minor included
+- [x] `V29`: the details as columns of `patient`, with checks on the relation and on an owner with
+      its value; `patient_details_change`, one row per detail that changed, with who and when
+- [x] `POST /api/patients` takes the details; `PUT /api/patients/{id}/details`, `GET
+      /api/patients/{id}/details-changes`; on the patient's screen, "Datos personales" and its history,
+      and the same fields on registering, an alias patient included
+- [x] Practitioners read the age beside the clinical record and the consultation — in years, in months
+      below two, in days below one month — and `patient.birthDate` in `GET /api/clinical-records/{id}`,
+      only once the record is granted; admins and practitioners are refused the rest (403)
+- [x] 23 unit and 14 integration tests. 335 unit and 412 integration tests, 747 in total
+
+**Verified with:** every new test failing when the code it covers was broken on purpose — 32
+breakages in all: the phone's length at both ends and its separators, an owner without a phone or an
+email, the email's case, length and dot, the responsible person's relation, letter and "neither or
+both", a date of birth tomorrow or 131 years ago, the history missing the date, the phone's new owner,
+the owner before or its user, the details not set on changing or on registering, the history not
+saved, the summary, the API and the record answer without the date of birth, the API and the screen
+dropping the owner or the details on registering, the screen's refusal and its labels, and the age's
+months, days and singular. The database's checks on the owner are not reached by any test: the
+value objects refuse the same first, so the checks only guard rows written outside the application;
+they were tried by hand below. `mvnw verify` with the PostgreSQL tests running V29.
+
+**Verified with the application running** on a throwaway PostgreSQL: taken to V103 by the previous
+commit's build and given patients — verified, under an alias, and one with an identity change — then
+started: V29 applied out of order, and every patient and history kept, with no details. Through the API
+reception gave a patient a date of birth, a phone of his daughter's and his own email, typed with
+separators and capitals and kept clean; the history showed three entries by `recepcion`; a short
+phone, a date in the future and an owner without a relation were 400; the admin and a practitioner
+were refused the patient and the history (403). The database refused an owner without a phone and an
+unknown relation. In the browser reception registered a boy with his mother's phone and his father's
+email, then made the phone his own: the history read "1155551234 (Madre: Sofía Ríos) → +5491166667777",
+and a short phone came back as the message. Dra. Arias, with an appointment with the patient today, read
+"76 años · nació el 20/05/1950" on the record, and neither the phone nor the email; the patient's screen
+was refused to her and to the admin.
+
+#### Part 2 — Health insurance `[ ]`
+- [ ] One at most: the insurer's name, the member number and the plan, free text, length checked;
+      none means a private patient; no token kept
+- [ ] Its changes kept in the same history
+- [ ] Practitioners read it beside the clinical record and the consultation
+
+#### Part 3 — Registering and booking in one transaction `[ ]`
+- [ ] The booking screen registers a new patient, with their contact, and books them in one
+      transaction: a refused booking leaves no patient behind (D-37)
+
 ---
 
 ## Explicitly postponed
@@ -1023,7 +1082,8 @@ From v2, phase 2:
 From v1:
 
 - Registering a new patient and booking them in **one transaction** from the booking screen;
-  today they are two, and a refused booking leaves the patient registered (see D-37).
+  today they are two, and a refused booking leaves the patient registered (see D-37). Planned as
+  part 3 of v2, phase 4.
 
 ## Out of scope for v1
 

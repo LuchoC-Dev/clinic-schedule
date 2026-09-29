@@ -1,0 +1,43 @@
+package com.clinic.schedule.patient.presentation.screen;
+
+import java.time.LocalDate;
+import java.time.format.DateTimeFormatter;
+import java.util.Locale;
+
+import com.clinic.schedule.patient.entity.PatientDetailsChange;
+import com.clinic.schedule.patient.entity.Responsible;
+
+/**
+ * A change to one of a patient's details as their screen lists it: when, who, which detail, and what
+ * it was before and after, in Spanish (D-73).
+ */
+record DetailsChangeEntry(String when, String by, String field, String before, String after) {
+
+    private static final DateTimeFormatter WHEN =
+            DateTimeFormatter.ofPattern("EEE dd/MM/yyyy HH:mm", Locale.forLanguageTag("es-AR"));
+
+    static DetailsChangeEntry of(PatientDetailsChange change) {
+        return new DetailsChangeEntry(WHEN.format(change.getChangedAt()), change.getChangedBy(),
+                field(change.getField()),
+                describe(change.getField(), change.getValueBefore(), change.getOwnerBefore()),
+                describe(change.getField(), change.getValueAfter(), change.getOwnerAfter()));
+    }
+
+    private static String field(PatientDetailsChange.Field field) {
+        return switch (field) {
+            case BIRTH_DATE -> "Fecha de nacimiento";
+            case PHONE -> "Teléfono";
+            case EMAIL -> "Email";
+        };
+    }
+
+    private static String describe(PatientDetailsChange.Field field, String value, Responsible owner) {
+        if (value == null) {
+            return "—";
+        }
+        if (field == PatientDetailsChange.Field.BIRTH_DATE) {
+            return DetailsEntry.day(LocalDate.parse(value));
+        }
+        return DetailsEntry.describe(value, owner);
+    }
+}

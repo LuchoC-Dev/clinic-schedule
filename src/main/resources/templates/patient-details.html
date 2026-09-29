@@ -1,0 +1,41 @@
+<!DOCTYPE html>
+<html lang="es" xmlns:th="http://www.thymeleaf.org">
+<body>
+<!--
+  The fields of a patient's details, for registering them and for changing them (D-73). Every field
+  is optional; the phone and the email each say whose they are, and a person other than the patient
+  goes with their name. `details` is null when registering.
+-->
+<th:block th:fragment="fields(details)">
+    <label>Fecha de nacimiento
+        <input type="date" name="birthDate" th:value="${details?.birthDate}">
+    </label>
+    <label>Teléfono
+        <input type="tel" name="phoneNumber" maxlength="30" th:value="${details?.phoneNumber}">
+    </label>
+    <label>De quién es
+        <select name="phoneOwnerRelation">
+            <option value="">Del paciente</option>
+            <option th:each="r : ${relations}" th:value="${r.key}" th:text="${r.value}"
+                    th:selected="${r.key == details?.phoneOwnerRelation}"></option>
+        </select>
+    </label>
+    <label>Nombre de esa persona
+        <input type="text" name="phoneOwnerName" maxlength="150" th:value="${details?.phoneOwnerName}">
+    </label>
+    <label>Email
+        <input type="email" name="emailAddress" maxlength="254" th:value="${details?.emailAddress}">
+    </label>
+    <label>De quién es
+        <select name="emailOwnerRelation">
+            <option value="">Del paciente</option>
+            <option th:each="r : ${relations}" th:value="${r.key}" th:text="${r.value}"
+                    th:selected="${r.key == details?.emailOwnerRelation}"></option>
+        </select>
+    </label>
+    <label>Nombre de esa persona
+        <input type="text" name="emailOwnerName" maxlength="150" th:value="${details?.emailOwnerName}">
+    </label>
+</th:block>
+</body>
+</html>

@@ -45,6 +45,28 @@
         </tbody>
     </table>
 
+    <!-- What else is known of the patient, each part optional; the phone and the email each say whose they are (D-73). -->
+    <h2>Datos personales</h2>
+    <form class="card bar" method="post" th:action="@{/patients/{id}/details(id=${patient.id})}">
+        <th:block th:replace="~{patient-details :: fields(${details})}"></th:block>
+        <button type="submit" class="primary">Guardar</button>
+    </form>
+
+    <h2>Cambios de datos personales</h2>
+    <p th:if="${detailsHistory.isEmpty()}" class="muted">Sin cambios desde que se registró.</p>
+    <table th:unless="${detailsHistory.isEmpty()}">
+        <thead><tr><th>Cuándo</th><th>Quién</th><th>Dato</th><th>Antes</th><th>Después</th></tr></thead>
+        <tbody>
+        <tr th:each="c : ${detailsHistory}">
+            <td th:text="${c.when}">vie 25/09/2026 10:00</td>
+            <td th:text="${c.by}">recepcion</td>
+            <td th:text="${c.field}">Teléfono</td>
+            <td th:text="${c.before}">—</td>
+            <td th:text="${c.after}">1145556666 (Madre: Ana Pérez)</td>
+        </tr>
+        </tbody>
+    </table>
+
     <p><a th:href="@{/patients}">Volver a pacientes</a></p>
 </main>
 </body>
