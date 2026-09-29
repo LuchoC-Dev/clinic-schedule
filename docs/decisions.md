@@ -1841,7 +1841,7 @@ consultation (a check without one would have nowhere to be corrected).
 ---
 
 ## D-59 — Every reading of a clinical record is recorded
-**Date:** 2026-09-26 · **Status:** accepted; the admins read them since D-71, and each keeps its user
+**Date:** 2026-09-26 · **Status:** accepted; the admins read them since D-71, and each keeps its user; refusals recorded since D-72
 
 The law asks that access to a clinical record be traceable: every action on it tied to one person,
 leaving a trace (Ley 27.706; Ley 26.529, art. 2). Phase 1 recorded who wrote and who was granted
@@ -2459,3 +2459,54 @@ be traceable, and this shows none of it; recording who looked, and for what, is 
 *Rejected:* the file's name (it may be clinical); recording the admins' searches now; paging (a
 narrower search does it, for a practice this size); the patient searched in `clinicalrecord` (it
 would copy the patient module's search).
+
+---
+
+## D-72 — Refused attempts to reach clinical content are recorded
+**Date:** 2026-09-29 · **Status:** accepted
+
+D-59 recorded what is read, not what is refused: a 403 hands nothing over. But someone probing records
+that are not theirs leaves nothing behind that way, so the refusals are recorded too, and the admins
+read them.
+
+**What counts as a refusal.** Two kinds:
+
+- *The use case refuses:* a practitioner may not read a patient's record, or a file attached to it —
+  `ViewClinicalRecordUseCase` and `DownloadAttachmentUseCase`, which serve the API and the screens. A
+  file that does not exist is refused too, and whose it would have been is unknown. The other refusals
+  of the clinical record are about writing, and are not recorded.
+- *The route refuses a role:* reception, the admin or the waiting room asking for a clinical route — a
+  record, a file, a consultation, a check or an order, on the API or the screens. The practitioner's
+  queue is theirs but holds no clinical content, so it does not count. A request with nobody logged in
+  is sent to log in, not refused, and a form refused for its missing CSRF token is refused for the
+  form, not for who sent it: neither is recorded.
+
+**What is kept:** `RecordRefusal` — who, as the username, and the practitioner they stand for, if any;
+when; what they tried — `RECORD`, `ATTACHMENT` or `ROUTE`; whose record, when known; the file; and the
+route, as method and path, cut at 300 characters — in `record_refusal` (`V28`), only ever inserted.
+The file has no foreign key, since the one asked for may not exist.
+
+**A refusal outlives the refusal.** Refusing throws, and throwing rolls back the use case's
+transaction; so `RecordRefusalWriter` saves in a transaction of its own (`REQUIRES_NEW`), and the
+refusal stays.
+
+**The route refusals come from the security module, through an event.** The 403 of a route is written
+by Spring Security, in the security module: `ApiSecurityErrorHandler` on the API, and
+`ScreenAccessDeniedHandler`, which then gives the usual error page, on the screens. Both say it through
+`ClinicalRouteRefusals`, which publishes `ClinicalRouteRefused(username, method, path)` in
+`security/api` for a clinical route; `clinicalrecord` hears it and records it, with the patient when the
+route names their record. An event, because `clinicalrecord` already depends on `security/api`, and
+the other way round would close a cycle. The 403 itself does not change, and nothing tells the refused
+user it was recorded.
+
+**The admins read them** as they read the readings (D-71): who, when, what they tried, and whose record
+— name and document — when known; a file said to be one, never which. By patient, by user — who may be
+reception or the admin, not only a practitioner — and by days, the last week by default, 500 at most.
+`GET /api/record-refusals?patient=&user=&from=&to=` and the screen `/record-refusals`, "Rechazos" in
+the admins' header, theirs alone.
+
+*Rejected:* recording the refusals in the same transaction with `noRollbackFor` (every use case that
+refuses would have to remember it, and a failure after the refusal would keep it anyway); a table in
+the security module for the route refusals (two places to read, and the security module keeps no
+storage since D-43); recording every 403 of the application (most are reception's work refused to a
+practitioner, not clinical); telling the refused user it was recorded; recording failed logins.

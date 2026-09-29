@@ -957,9 +957,36 @@ both readings — the new one by `arias`, the old one "sin usuario registrado" �
 API and by default on the screen, and none for Dr. Benítez; a first day after the last was refused in
 Spanish; reception, Dra. Arias and `sala` got 403.
 
-#### Part 5 — Refused attempts `[ ]`
-- [ ] A record or file refused to a practitioner, and a clinical route refused to a role, recorded
-- [ ] Read by the admins
+#### Part 5 — Refused attempts `[x]`
+- [x] `RecordRefusal`: who — user, and practitioner if any —, when, what — a record, a file, a
+      clinical route —, whose record when known, the file, the route; `V28`: `record_refusal` (D-72)
+- [x] A record or file refused to a practitioner, recorded by the use case, in a transaction of its
+      own so it outlives the refusal's rollback; a file that does not exist too, whose unknown
+- [x] A clinical route refused to a role — records, files, consultations, checks, orders; not the
+      practitioner's queue —, said by the security module as `ClinicalRouteRefused` and recorded by
+      the clinical record, with the patient when the route names their record; not a missing CSRF
+      token, nor a request with nobody logged in
+- [x] `GET /api/record-refusals` and `/record-refusals`, the admins' alone, "Rechazos" in their header;
+      by patient, user and days, as the readings
+- [x] 5 unit and 12 integration tests. 312 unit and 398 integration tests, 710 in total
+
+**Verified with:** every new test failing when the code it covers was broken on purpose — 25
+breakages: a refused record or file not saved, the refusal saved in the refused transaction, a
+refused file without its patient, a refusal without patient, file, route or user, a long route not
+cut, the route naming no patient, the API's or the screens' refusals unsaid, every route taken for a
+clinical one, a missing token said, the route or the practitioner not stored, the user or the patient
+filter ignored, the days in any order, the API open to the practitioners and the screen to reception
+or the practitioners, the header link, the route and the error unsaid on the screen. A 26th, saying a
+refusal with nobody logged in, changed nothing: Spring Security sends that request to log in and never
+refuses it, so the check was dropped.
+
+**Verified with the application running** on a throwaway PostgreSQL: taken to V27 by the previous
+commit, where a refusal left nothing, and started: V28 applied out of order. Dr. Benítez refused Ana
+Pérez's record and a file that does not exist, Dra. Arias refused a record she had no visit for,
+reception refused her record through the API and on the screen, and the admin refused the
+consultations: six refusals, each with whose record when known. Reception refused its practitioner's
+queue and an anonymous request left none. The admin saw them all on "Rechazos", and reception's two by
+searching the user.
 
 ---
 
@@ -983,7 +1010,6 @@ From v2, phase 2:
 
 - A waiting room that calls patients by name or number, and a reason for "not seen" (see the context).
 
-- Recording refused attempts to read a record, with the security stage (see D-59).
 - Merging two records of the same patient, for someone registered under an alias who already had
   one (see D-60).
 

@@ -10,6 +10,7 @@ import org.springframework.security.web.AuthenticationEntryPoint;
 import org.springframework.security.web.access.AccessDeniedHandler;
 import org.springframework.stereotype.Component;
 
+import com.clinic.schedule.security.presentation.ClinicalRouteRefusals;
 import com.clinic.schedule.shared.http.ErrorResponse;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
@@ -21,15 +22,18 @@ import jakarta.servlet.http.HttpServletResponse;
  * produced by the filter chain before any controller advice runs, so they are written here.
  *
  * <p>The 401 carries no {@code WWW-Authenticate} header, so a browser does not pop up its own
- * credentials dialog over the application.
+ * credentials dialog over the application. A 403 on a clinical route is said first, to be recorded
+ * (D-72).
  */
 @Component
 public class ApiSecurityErrorHandler implements AuthenticationEntryPoint, AccessDeniedHandler {
 
     private final ObjectMapper json;
+    private final ClinicalRouteRefusals refusals;
 
-    ApiSecurityErrorHandler(ObjectMapper json) {
+    ApiSecurityErrorHandler(ObjectMapper json, ClinicalRouteRefusals refusals) {
         this.json = json;
+        this.refusals = refusals;
     }
 
     @Override
@@ -41,6 +45,7 @@ public class ApiSecurityErrorHandler implements AuthenticationEntryPoint, Access
     @Override
     public void handle(HttpServletRequest request, HttpServletResponse response, AccessDeniedException e)
             throws IOException {
+        refusals.report(request, e);
         write(response, HttpStatus.FORBIDDEN, ErrorResponse.of(403, "Forbidden", "You are not allowed to do this"));
     }
 

@@ -18,6 +18,7 @@ import org.springframework.security.web.session.HttpSessionEventPublisher;
 
 import com.clinic.schedule.security.presentation.TemporaryPasswordFilter;
 import com.clinic.schedule.security.presentation.http.ApiSecurityErrorHandler;
+import com.clinic.schedule.security.presentation.screen.ScreenAccessDeniedHandler;
 import com.clinic.schedule.security.service.AppUserDetails;
 import com.clinic.schedule.user.api.Role;
 
@@ -32,9 +33,11 @@ import com.clinic.schedule.user.api.Role;
  *
  * <p>What each role may reach is decided here, by route: a practitioner reads the agenda and
  * works with clinical records, which are theirs alone (D-51); an admin administers the users and
- * reads who read which record, and reaches nothing else (D-68, D-71); reception does everything else. Every user changes their own
- * password, and one whose password is temporary does nothing else until they do (D-69). The waiting
- * room's user sees the waiting-room screen and its stream, and nothing else (D-70).
+ * reads who read which record and who was refused one, and reaches nothing else (D-68, D-71, D-72);
+ * reception does everything else. Every user changes their own password, and one whose password is
+ * temporary does nothing else until they do (D-69). The waiting room's user sees the waiting-room
+ * screen and its stream, and nothing else (D-70). A clinical route refused to a role is said, to be
+ * recorded (D-72).
  * <em>Whose</em> agenda or record a practitioner reads is not a route question, so it is
  * decided by the use case, which asks the security module who is asking (D-04, D-49).
  */
@@ -57,7 +60,7 @@ class SecurityConfiguration {
                         .requestMatchers(HttpMethod.GET, "/api/appointments").hasAnyRole(RECEPTION, PRACTITIONER)
                         .requestMatchers("/api/consultations/**", "/api/checks/**", "/api/orders/**",
                                 "/api/attachments/**", "/api/clinical-records/**", "/api/my-queue/**").hasRole(PRACTITIONER)
-                        .requestMatchers("/api/users/**", "/api/record-readings").hasRole(ADMIN)
+                        .requestMatchers("/api/users/**", "/api/record-readings", "/api/record-refusals").hasRole(ADMIN)
                         .requestMatchers(HttpMethod.POST, "/api/password").authenticated()
                         .anyRequest().hasRole(RECEPTION))
                 .addFilterAfter(TemporaryPasswordFilter.forApi(errors), AuthorizationFilter.class)
@@ -68,7 +71,8 @@ class SecurityConfiguration {
 
     @Bean
     @Order(2)
-    SecurityFilterChain screenChain(HttpSecurity http, SessionRegistry sessions) throws Exception {
+    SecurityFilterChain screenChain(HttpSecurity http, SessionRegistry sessions, ScreenAccessDeniedHandler denied)
+            throws Exception {
         return http
                 .authorizeHttpRequests(routes -> routes
                         .requestMatchers("/login", "/error").permitAll()
@@ -77,7 +81,7 @@ class SecurityConfiguration {
                         .requestMatchers(HttpMethod.GET, "/", "/agenda").hasAnyRole(RECEPTION, PRACTITIONER)
                         .requestMatchers("/consultations/**", "/checks/**", "/orders/**", "/attachments/**",
                                 "/clinical-records/**", "/my-queue/**").hasRole(PRACTITIONER)
-                        .requestMatchers("/users/**", "/record-readings").hasRole(ADMIN)
+                        .requestMatchers("/users/**", "/record-readings", "/record-refusals").hasRole(ADMIN)
                         .requestMatchers("/password").authenticated()
                         .anyRequest().hasRole(RECEPTION))
                 .addFilterAfter(TemporaryPasswordFilter.forScreens(), AuthorizationFilter.class)
@@ -87,6 +91,7 @@ class SecurityConfiguration {
                 .sessionManagement(session -> session.maximumSessions(-1).sessionRegistry(sessions)
                         .expiredUrl("/login?expired"))
                 .logout(logout -> logout.logoutSuccessUrl("/login?logout"))
+                .exceptionHandling(handling -> handling.accessDeniedHandler(denied))
                 .build();
     }
 

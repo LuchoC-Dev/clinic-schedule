@@ -11,11 +11,14 @@ import com.clinic.schedule.clinicalrecord.application.port.AttachmentContentStor
 import com.clinic.schedule.clinicalrecord.application.port.AttachmentRepository;
 import com.clinic.schedule.clinicalrecord.application.port.CurrentPractitionerPort;
 import com.clinic.schedule.clinicalrecord.application.port.RecordReadingWriter;
+import com.clinic.schedule.clinicalrecord.application.port.RecordRefusalWriter;
 import com.clinic.schedule.clinicalrecord.domain.Attachment;
 import com.clinic.schedule.clinicalrecord.domain.AttachmentId;
+import com.clinic.schedule.clinicalrecord.domain.PatientId;
 import com.clinic.schedule.clinicalrecord.domain.PractitionerId;
 import com.clinic.schedule.clinicalrecord.domain.ReadAccess;
 import com.clinic.schedule.clinicalrecord.domain.RecordReading;
+import com.clinic.schedule.clinicalrecord.domain.RecordRefusal;
 
 /**
  * A file attached to a record, for whoever may read that record, and nobody else: files are never
@@ -28,16 +31,18 @@ public class DownloadAttachmentUseCase {
     private final AttachmentRepository attachments;
     private final AttachmentContentStore contents;
     private final RecordReadingWriter readings;
+    private final RecordRefusalWriter refusals;
     private final CurrentPractitionerPort currentPractitioner;
     private final ClinicalRecordAccessReader access;
     private final Clock clock;
 
     public DownloadAttachmentUseCase(AttachmentRepository attachments, AttachmentContentStore contents,
-            RecordReadingWriter readings, CurrentPractitionerPort currentPractitioner,
+            RecordReadingWriter readings, RecordRefusalWriter refusals, CurrentPractitionerPort currentPractitioner,
             ClinicalRecordAccessReader access, Clock clock) {
         this.attachments = attachments;
         this.contents = contents;
         this.readings = readings;
+        this.refusals = refusals;
         this.currentPractitioner = currentPractitioner;
         this.access = access;
         this.clock = clock;
@@ -45,12 +50,12 @@ public class DownloadAttachmentUseCase {
 
     @Transactional
     public Download handle(AttachmentId id) {
-        PractitionerId practitionerId = currentPractitioner.practitionerId()
-                .orElseThrow(ClinicalRecordAccessDeniedException::toRead);
-        Attachment attachment = attachments.findById(id).orElseThrow(ClinicalRecordAccessDeniedException::toRead);
         LocalDateTime now = LocalDateTime.now(clock);
+        PractitionerId practitionerId = currentPractitioner.practitionerId()
+                .orElseThrow(() -> refused(null, id, null, now));
+        Attachment attachment = attachments.findById(id).orElseThrow(() -> refused(practitionerId, id, null, now));
         ReadAccess readAccess = access.readAccess(practitionerId, attachment.patientId(), now.toLocalDate())
-                .orElseThrow(ClinicalRecordAccessDeniedException::toRead);
+                .orElseThrow(() -> refused(practitionerId, id, attachment.patientId(), now));
         byte[] content = contents.get(id)
                 .orElseThrow(() -> new IllegalStateException("The content of attachment " + id.value() + " is missing"));
         readings.save(RecordReading.ofAttachment(practitionerId, currentPractitioner.username(), attachment.patientId(),
@@ -60,5 +65,12 @@ public class DownloadAttachmentUseCase {
 
     /** What describes the file, and the file. */
     public record Download(Attachment attachment, byte[] content) {
+    }
+
+    /** Records the refusal, and gives the 403 to throw. The patient is null for a file that does not exist. */
+    private ClinicalRecordAccessDeniedException refused(PractitionerId practitionerId, AttachmentId id,
+            PatientId patientId, LocalDateTime at) {
+        refusals.save(RecordRefusal.ofAttachment(currentPractitioner.username(), practitionerId, id, patientId, at));
+        return ClinicalRecordAccessDeniedException.toRead();
     }
 }

@@ -55,11 +55,12 @@
 <header th:fragment="header">
     <strong>Consultorio</strong>
     <!--
-      admin is set on the admins' screens: they administer the users (D-68) and read who read which
-      clinical record (D-71), and reach nothing else.
+      admin is set on the admins' screens: they administer the users (D-68), read who read which
+      clinical record (D-71) and who was refused one (D-72), and reach nothing else.
     -->
     <a th:href="@{/users}" th:if="${admin}">Usuarios</a>
     <a th:href="@{/record-readings}" th:if="${admin}">Lecturas</a>
+    <a th:href="@{/record-refusals}" th:if="${admin}">Rechazos</a>
     <th:block th:unless="${admin}">
     <a th:href="@{/agenda}">Agenda</a>
     <!--

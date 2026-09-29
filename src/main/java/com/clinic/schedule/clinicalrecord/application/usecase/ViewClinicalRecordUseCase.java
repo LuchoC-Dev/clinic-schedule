@@ -17,6 +17,7 @@ import com.clinic.schedule.clinicalrecord.application.port.CheckRepository;
 import com.clinic.schedule.clinicalrecord.application.port.ConsultationRepository;
 import com.clinic.schedule.clinicalrecord.application.port.CurrentPractitionerPort;
 import com.clinic.schedule.clinicalrecord.application.port.RecordReadingWriter;
+import com.clinic.schedule.clinicalrecord.application.port.RecordRefusalWriter;
 import com.clinic.schedule.clinicalrecord.domain.AccessGrant;
 import com.clinic.schedule.clinicalrecord.domain.Attachment;
 import com.clinic.schedule.clinicalrecord.domain.Check;
@@ -27,6 +28,7 @@ import com.clinic.schedule.clinicalrecord.domain.PatientId;
 import com.clinic.schedule.clinicalrecord.domain.PractitionerId;
 import com.clinic.schedule.clinicalrecord.domain.ReadAccess;
 import com.clinic.schedule.clinicalrecord.domain.RecordReading;
+import com.clinic.schedule.clinicalrecord.domain.RecordRefusal;
 import com.clinic.schedule.clinicalrecord.domain.VisitToday;
 
 /**
@@ -39,7 +41,8 @@ import com.clinic.schedule.clinicalrecord.domain.VisitToday;
  * as well, so the answer never tells whether they do (D-49, D-50).
  *
  * <p>Every reading is recorded, with the access that allowed it, in the same transaction: a record
- * that cannot be traced is not read (D-59). So this read writes.
+ * that cannot be traced is not read (D-59). So this read writes. Every refusal is recorded too, on its
+ * own, since refusing undoes the rest (D-72).
  */
 @Service
 public class ViewClinicalRecordUseCase {
@@ -50,13 +53,14 @@ public class ViewClinicalRecordUseCase {
     private final CheckOrderRepository orders;
     private final AttachmentRepository attachments;
     private final RecordReadingWriter readings;
+    private final RecordRefusalWriter refusals;
     private final CurrentPractitionerPort currentPractitioner;
     private final ClinicalRecordAccessReader access;
     private final Clock clock;
 
     public ViewClinicalRecordUseCase(ConsultationRepository consultations, CheckRepository checks,
             AccessGrantRepository grants, CheckOrderRepository orders, AttachmentRepository attachments,
-            RecordReadingWriter readings, CurrentPractitionerPort currentPractitioner,
+            RecordReadingWriter readings, RecordRefusalWriter refusals, CurrentPractitionerPort currentPractitioner,
             ClinicalRecordAccessReader access, Clock clock) {
         this.consultations = consultations;
         this.checks = checks;
@@ -64,6 +68,7 @@ public class ViewClinicalRecordUseCase {
         this.orders = orders;
         this.attachments = attachments;
         this.readings = readings;
+        this.refusals = refusals;
         this.currentPractitioner = currentPractitioner;
         this.access = access;
         this.clock = clock;
@@ -72,13 +77,13 @@ public class ViewClinicalRecordUseCase {
     /** @throws ClinicalRecordAccessDeniedException when the user may not read this record */
     @Transactional
     public ClinicalRecord handle(PatientId patientId) {
-        PractitionerId practitionerId = currentPractitioner.practitionerId()
-                .orElseThrow(ClinicalRecordAccessDeniedException::toRead);
         LocalDateTime now = LocalDateTime.now(clock);
+        PractitionerId practitionerId = currentPractitioner.practitionerId()
+                .orElseThrow(() -> refused(null, patientId, now));
         LocalDate today = now.toLocalDate();
         VisitToday visit = access.visitOn(practitionerId, patientId, today);
         ReadAccess readAccess = access.readAccess(practitionerId, patientId, visit, today)
-                .orElseThrow(ClinicalRecordAccessDeniedException::toRead);
+                .orElseThrow(() -> refused(practitionerId, patientId, now));
         readings.save(RecordReading.ofRecord(practitionerId, currentPractitioner.username(), patientId, now, readAccess));
         List<Consultation> foundConsultations = consultations.findAllForPatient(patientId).stream()
                 .sorted(Comparator.comparing(Consultation::recordedAt).reversed())
@@ -111,5 +116,12 @@ public class ViewClinicalRecordUseCase {
      */
     public record ClinicalRecord(List<Consultation> consultations, List<Check> checks, List<CheckOrder> orders,
             List<Attachment> attachments, List<AccessGrant> grants, PractitionerId reader, boolean mayRecord) {
+    }
+
+    /** Records the refusal, and gives the 403 to throw. */
+    private ClinicalRecordAccessDeniedException refused(PractitionerId practitionerId, PatientId patientId,
+            LocalDateTime at) {
+        refusals.save(RecordRefusal.ofRecord(currentPractitioner.username(), practitionerId, patientId, at));
+        return ClinicalRecordAccessDeniedException.toRead();
     }
 }
