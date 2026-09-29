@@ -908,10 +908,26 @@ changed, which was still true, and went to the login form on the next change to 
 room open, restarting the application — which loses the sessions — brought the screen to the login form
 within seconds.
 
-#### Part 3 — The waiting-room user `[ ]`
-- [ ] The `WAITING_ROOM` role: the waiting-room screen and its stream, nothing else; straight there
-      on logging in
-- [ ] `sala` in the development data
+#### Part 3 — The waiting-room user `[x]`
+- [x] The `WAITING_ROOM` role: `/waiting-room` and `/queue-events`, nothing else on the screens or
+      the API; straight there on logging in; reception may still open the waiting room (D-70)
+- [x] A waiting-room session has no idle limit; every other one runs out as before
+- [x] `V26`: the role check widened; `V103`: `sala` in the development data
+- [x] "Sala de espera" among the roles the admin chooses
+- [x] 1 unit and 7 integration tests. 306 unit and 374 integration tests, 680 in total
+
+**Verified with:** every new test failing when the code it covers was broken on purpose — 12
+breakages: the waiting room's session running out, every session never running out, the waiting room
+landing on the agenda, the stream or the screen closed to it, the screen closed to reception or open
+to the practitioners, the agenda, reception's screens or reception's API open to it, `sala` seeded as
+reception, and a waiting-room user standing for a practitioner.
+
+**Verified with the application running** on a throwaway PostgreSQL, with sessions of one minute:
+taken to V102 and V25 by the previous commit, with a queue open, and started: V26 applied out of
+order, then V103. `sala` landed on the waiting room, and two and a half minutes later, untouched,
+still showed Dr. Benítez's queue opening; the agenda, the arrivals and the patients were refused, and
+the API too. The admin created `sala.b` as "Sala de espera" on the screen; its first login went to
+the password change, and the next one to the waiting room.
 
 #### Part 4 — The admins read the readings of the clinical records `[ ]`
 - [ ] The user recorded with each reading from now on
@@ -938,8 +954,6 @@ From v2, phase 1:
 
 From v2, phase 2:
 
-- A user of its own for the waiting-room screen, who may see it and nothing else; it comes with user
-  administration (see D-66).
 - A waiting room that calls patients by name or number, and a reason for "not seen" (see the context).
 
 - Reading the read log of the clinical records, by the admins (see D-59).

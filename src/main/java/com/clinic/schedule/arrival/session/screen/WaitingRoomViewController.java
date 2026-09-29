@@ -14,8 +14,8 @@ import com.clinic.schedule.arrival.setup.query.ListQueuesUseCase;
 /**
  * The waiting-room screen (D-66): every queue, whether it is open, and how many wait and are being
  * seen. It names no patient: it is a screen anyone in the room can see. It shows itself again as
- * the queues change, and will grow later. For now it is opened with reception's session, on the
- * screen of the room; a user of its own comes with user administration.
+ * the queues change, and will grow later. The screen of the room opens it with a user of its own,
+ * who may see it and nothing else; reception may open it too (D-70).
  */
 @Controller
 class WaitingRoomViewController {

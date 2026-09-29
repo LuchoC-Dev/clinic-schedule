@@ -20,6 +20,7 @@ record UserEntry(UUID id, String username, String role, String practitioner, boo
             case RECEPTION -> "Recepción";
             case PRACTITIONER -> "Profesional";
             case ADMIN -> "Administración";
+            case WAITING_ROOM -> "Sala de espera";
         };
     }
 }

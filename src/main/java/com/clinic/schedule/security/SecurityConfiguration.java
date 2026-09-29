@@ -33,7 +33,8 @@ import com.clinic.schedule.user.api.Role;
  * <p>What each role may reach is decided here, by route: a practitioner reads the agenda and
  * works with clinical records, which are theirs alone (D-51); an admin administers the users, and
  * reaches nothing else (D-68); reception does everything else. Every user changes their own
- * password, and one whose password is temporary does nothing else until they do (D-69).
+ * password, and one whose password is temporary does nothing else until they do (D-69). The waiting
+ * room's user sees the waiting-room screen and its stream, and nothing else (D-70).
  * <em>Whose</em> agenda or record a practitioner reads is not a route question, so it is
  * decided by the use case, which asks the security module who is asking (D-04, D-49).
  */
@@ -43,6 +44,7 @@ class SecurityConfiguration {
     private static final String RECEPTION = Role.RECEPTION.name();
     private static final String PRACTITIONER = Role.PRACTITIONER.name();
     private static final String ADMIN = Role.ADMIN.name();
+    private static final String WAITING_ROOM = Role.WAITING_ROOM.name();
 
     @Bean
     @Order(1)
@@ -70,7 +72,9 @@ class SecurityConfiguration {
         return http
                 .authorizeHttpRequests(routes -> routes
                         .requestMatchers("/login", "/error").permitAll()
-                        .requestMatchers(HttpMethod.GET, "/", "/agenda", "/queue-events").hasAnyRole(RECEPTION, PRACTITIONER)
+                        .requestMatchers(HttpMethod.GET, "/queue-events").hasAnyRole(RECEPTION, PRACTITIONER, WAITING_ROOM)
+                        .requestMatchers(HttpMethod.GET, "/waiting-room").hasAnyRole(RECEPTION, WAITING_ROOM)
+                        .requestMatchers(HttpMethod.GET, "/", "/agenda").hasAnyRole(RECEPTION, PRACTITIONER)
                         .requestMatchers("/consultations/**", "/checks/**", "/orders/**", "/attachments/**",
                                 "/clinical-records/**", "/my-queue/**").hasRole(PRACTITIONER)
                         .requestMatchers("/users/**").hasRole(ADMIN)
@@ -87,15 +91,23 @@ class SecurityConfiguration {
     }
 
     /**
-     * Each role lands on its own screen: the admin on the users, everyone else on the agenda. A user
-     * whose password is temporary lands on changing it.
+     * Each role lands on its own screen: the admin on the users, the waiting room on its screen,
+     * everyone else on the agenda. A user whose password is temporary lands on changing it.
+     *
+     * <p>The waiting room's session does not run out while nobody touches it: nobody does, it is a
+     * screen on the wall, and an open stream is not activity for the session (D-70).
      */
     private static AuthenticationSuccessHandler landing() {
         String admin = "ROLE_" + ADMIN; // the prefix hasRole adds
+        String waitingRoom = "ROLE_" + WAITING_ROOM;
         return (request, response, authentication) -> {
             var authorities = authentication.getAuthorities().stream().map(a -> a.getAuthority()).toList();
+            if (authorities.contains(waitingRoom)) {
+                request.getSession().setMaxInactiveInterval(-1); // never, for the servlet container
+            }
             String screen = authorities.contains(AppUserDetails.TEMPORARY_PASSWORD) ? "/password?required"
-                    : authorities.contains(admin) ? "/users" : "/agenda";
+                    : authorities.contains(admin) ? "/users"
+                    : authorities.contains(waitingRoom) ? "/waiting-room" : "/agenda";
             response.sendRedirect(request.getContextPath() + screen);
         };
     }

@@ -40,7 +40,7 @@ class AppUserTest {
     }
 
     @ParameterizedTest
-    @ValueSource(strings = {"RECEPTION", "ADMIN"})
+    @ValueSource(strings = {"RECEPTION", "ADMIN", "WAITING_ROOM"})
     void onlyAPractitionersUserStandsForAPractitioner(Role role) {
         assertThatThrownBy(() -> AppUser.create("otro", "hash", role, ARIAS))
                 .isInstanceOf(IllegalArgumentException.class);

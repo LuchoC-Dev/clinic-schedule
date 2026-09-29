@@ -41,6 +41,7 @@ reasons and weeks, two patients, and these users.
 | `arias`     | `arias123`     | Practitioner: Dra. Arias's agenda and consultations |
 | `benitez`   | `benitez123`   | Practitioner: Dr. Benítez's agenda and consultations |
 | `admin`     | `admin123`     | Admin: the users, and nothing else         |
+| `sala`      | `sala123`      | Waiting room: the screen on the wall, and nothing else |
 
 They live in `src/main/resources/db/seed`, a Flyway location of its own that a real deployment
 removes (D-34). The admin creates everyone else's users, one per person, at `/users` (D-68), with a temporary

@@ -2394,3 +2394,29 @@ it. The API authenticates every request, so it needs nothing.
 *Rejected:* rewriting the session's authentication after the change (Spring Security code to save the
 user one login); route rules for the temporary password; a password that expires after a while (no one
 asked for it); not recording the user's own change.
+
+---
+
+## D-70 — The waiting room has a user of its own
+**Date:** 2026-09-28 · **Status:** accepted
+
+The screen on the waiting room's wall was opened with reception's session (D-66): anyone passing
+by it held a session that reaches the whole of reception's work. It now logs in as a user of its
+own.
+
+**A fifth role, `WAITING_ROOM`,** which reaches `/waiting-room` and `/queue-events` and nothing else,
+on the screens or the API; it lands on the waiting room on logging in. Reception may still open the
+waiting room, as before. The admin creates such a user like any other, with a temporary password
+changed on the first login (D-69); `sala` / `sala123` is in the development data (`V103`).
+
+**Its session does not run out while nobody touches it.** Nobody does: it is a screen on the wall,
+and an open stream is not activity for the session, so it would run out after half an hour without a
+queue changing. On logging in, a waiting-room session is given no idle limit; every other role's runs
+out as before. It holds nothing more than how many patients wait in each queue. It is still lost
+when the application restarts, since sessions live in memory: the screen then shows the login form
+(D-66, amended), and someone logs in again.
+
+*Rejected:* a waiting room with no login (anyone on the network would reach it, and it may grow to
+show more); a remember-me cookie that survives restarts (more to it than a restart now and then
+calls for; it can come if restarts get in the way); keeping every session alive while its screen has
+a stream open (reception's and the practitioners' sessions would never run out on an open screen).
