@@ -31,8 +31,8 @@ import com.clinic.schedule.user.api.Role;
  * </ul>
  *
  * <p>What each role may reach is decided here, by route: a practitioner reads the agenda and
- * works with clinical records, which are theirs alone (D-51); an admin administers the users, and
- * reaches nothing else (D-68); reception does everything else. Every user changes their own
+ * works with clinical records, which are theirs alone (D-51); an admin administers the users and
+ * reads who read which record, and reaches nothing else (D-68, D-71); reception does everything else. Every user changes their own
  * password, and one whose password is temporary does nothing else until they do (D-69). The waiting
  * room's user sees the waiting-room screen and its stream, and nothing else (D-70).
  * <em>Whose</em> agenda or record a practitioner reads is not a route question, so it is
@@ -57,7 +57,7 @@ class SecurityConfiguration {
                         .requestMatchers(HttpMethod.GET, "/api/appointments").hasAnyRole(RECEPTION, PRACTITIONER)
                         .requestMatchers("/api/consultations/**", "/api/checks/**", "/api/orders/**",
                                 "/api/attachments/**", "/api/clinical-records/**", "/api/my-queue/**").hasRole(PRACTITIONER)
-                        .requestMatchers("/api/users/**").hasRole(ADMIN)
+                        .requestMatchers("/api/users/**", "/api/record-readings").hasRole(ADMIN)
                         .requestMatchers(HttpMethod.POST, "/api/password").authenticated()
                         .anyRequest().hasRole(RECEPTION))
                 .addFilterAfter(TemporaryPasswordFilter.forApi(errors), AuthorizationFilter.class)
@@ -77,7 +77,7 @@ class SecurityConfiguration {
                         .requestMatchers(HttpMethod.GET, "/", "/agenda").hasAnyRole(RECEPTION, PRACTITIONER)
                         .requestMatchers("/consultations/**", "/checks/**", "/orders/**", "/attachments/**",
                                 "/clinical-records/**", "/my-queue/**").hasRole(PRACTITIONER)
-                        .requestMatchers("/users/**").hasRole(ADMIN)
+                        .requestMatchers("/users/**", "/record-readings").hasRole(ADMIN)
                         .requestMatchers("/password").authenticated()
                         .anyRequest().hasRole(RECEPTION))
                 .addFilterAfter(TemporaryPasswordFilter.forScreens(), AuthorizationFilter.class)

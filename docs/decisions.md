@@ -1841,7 +1841,7 @@ consultation (a check without one would have nowhere to be corrected).
 ---
 
 ## D-59 — Every reading of a clinical record is recorded
-**Date:** 2026-09-26 · **Status:** accepted
+**Date:** 2026-09-26 · **Status:** accepted; the admins read them since D-71, and each keeps its user
 
 The law asks that access to a clinical record be traceable: every action on it tied to one person,
 leaving a trace (Ley 27.706; Ley 26.529, art. 2). Phase 1 recorded who wrote and who was granted
@@ -2420,3 +2420,42 @@ when the application restarts, since sessions live in memory: the screen then sh
 show more); a remember-me cookie that survives restarts (more to it than a restart now and then
 calls for; it can come if restarts get in the way); keeping every session alive while its screen has
 a stream open (reception's and the practitioners' sessions would never run out on an open screen).
+
+---
+
+## D-71 — The admins read who read which clinical record
+**Date:** 2026-09-29 · **Status:** accepted
+
+D-59 recorded every reading of a clinical record and left reading them to the admins, with what to
+index decided then. The admins now look through them.
+
+**What they see, and what they never see.** Each reading shows when, the practitioner and the user
+they logged in as, the patient with their document, by which access, and whether what was read was
+the record or an attached file. Never what was read, and never which file: a file's name is written
+by the practitioner who attached it and may say what it holds. That a practitioner read a patient's
+record already says something about the patient, which is why the admins alone read this, by route
+(D-34): a practitioner, reception or the waiting room asking is a 403 (D-50).
+
+**Each reading now keeps the user** — `read_by` (`V27`), the username from `CurrentPractitionerPort`,
+answered by `security/api` — since a practitioner may have had more than one user (D-68). A new
+reading needs it; those recorded before have none, and say so ("sin usuario registrado"), restored
+through `RecordReading.restore`.
+
+**The search.** `ListRecordReadingsUseCase` in `clinicalrecord`, which owns the readings, over
+`RecordReadingReader`: by patient — the text reception types, a name, document or alias, resolved by
+the patient module —, by practitioner, and by days, the last week when none are given; the most
+recent first, at most 500, and the answer says when there were more so a narrower search finds them.
+The use case knows ids alone; the names come from `patient/api` and `practitioner/api`, read by the
+adapters (D-51). The filters apply only when given, so the JPA adapter builds the query from
+specifications. `read_at`, and `patient_id` with `read_at`, are indexed.
+
+**Routes.** `GET /api/record-readings?patient=&practitionerId=&from=&to=`, answering
+`{from, to, limitReached, readings}`; a first day after the last is a 400. The screen
+`/record-readings`, "Lecturas" in the admins' header.
+
+**Looking at the readings is not recorded, for now.** The law asks that access to the clinical record
+be traceable, and this shows none of it; recording who looked, and for what, is left for later.
+
+*Rejected:* the file's name (it may be clinical); recording the admins' searches now; paging (a
+narrower search does it, for a practice this size); the patient searched in `clinicalrecord` (it
+would copy the patient module's search).

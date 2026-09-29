@@ -4,8 +4,11 @@ import java.time.LocalDateTime;
 import java.util.UUID;
 
 import com.clinic.schedule.clinicalrecord.domain.AttachmentId;
+import com.clinic.schedule.clinicalrecord.domain.PatientId;
+import com.clinic.schedule.clinicalrecord.domain.PractitionerId;
 import com.clinic.schedule.clinicalrecord.domain.ReadAccess;
 import com.clinic.schedule.clinicalrecord.domain.RecordReading;
+import com.clinic.schedule.clinicalrecord.domain.RecordReadingId;
 
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
@@ -14,10 +17,7 @@ import jakarta.persistence.Enumerated;
 import jakarta.persistence.Id;
 import jakarta.persistence.Table;
 
-/**
- * A reading as a row of {@code record_reading}. Separate from the domain object (D-16). Written
- * only, so there is no way back to a {@link RecordReading} until something reads them.
- */
+/** A reading as a row of {@code record_reading}. Separate from the domain object (D-16). */
 @Entity
 @Table(name = "record_reading")
 class RecordReadingRow {
@@ -27,6 +27,10 @@ class RecordReadingRow {
 
     @Column(name = "practitioner_id", nullable = false)
     private UUID practitionerId;
+
+    /** Null for the readings recorded before users were (D-71). */
+    @Column(name = "read_by", length = 50)
+    private String readBy;
 
     @Column(name = "patient_id", nullable = false)
     private UUID patientId;
@@ -49,10 +53,16 @@ class RecordReadingRow {
         RecordReadingRow row = new RecordReadingRow();
         row.id = reading.id().value();
         row.practitionerId = reading.practitionerId().value();
+        row.readBy = reading.readBy().orElse(null);
         row.patientId = reading.patientId().value();
         row.readAt = reading.readAt();
         row.access = reading.access();
         row.attachmentId = reading.attachmentId().map(AttachmentId::value).orElse(null);
         return row;
+    }
+
+    RecordReading toDomain() {
+        return RecordReading.restore(new RecordReadingId(id), new PractitionerId(practitionerId), readBy,
+                new PatientId(patientId), readAt, access, attachmentId == null ? null : new AttachmentId(attachmentId));
     }
 }

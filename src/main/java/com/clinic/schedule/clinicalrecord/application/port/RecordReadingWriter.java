@@ -3,8 +3,8 @@ package com.clinic.schedule.clinicalrecord.application.port;
 import com.clinic.schedule.clinicalrecord.domain.RecordReading;
 
 /**
- * Where the readings of clinical records are kept (D-59). Only written: nobody reads them yet —
- * not on a screen, not through the API — and admins will, when they exist.
+ * Where the readings of clinical records are kept (D-59). Only ever added to; the admins read them
+ * through {@link RecordReadingReader} (D-71).
  */
 public interface RecordReadingWriter {
 

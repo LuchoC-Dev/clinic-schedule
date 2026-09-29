@@ -1,0 +1,50 @@
+<!DOCTYPE html>
+<html lang="es" xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{fragments :: head('Lecturas de historias')}"></head>
+<body>
+<header th:replace="~{fragments :: header}"></header>
+<main class="wide">
+    <h1>Lecturas de historias clínicas</h1>
+    <p class="muted">Quién leyó la historia de qué paciente, cuándo y con qué acceso. Nunca lo que leyó.</p>
+    <div th:replace="~{fragments :: messages}"></div>
+
+    <form class="card bar" method="get" th:action="@{/record-readings}">
+        <label>Paciente (nombre, documento o alias)
+            <input type="text" name="patient" th:value="${patient}">
+        </label>
+        <label>Profesional
+            <select name="practitionerId">
+                <option value="">— todos —</option>
+                <option th:each="p : ${practitioners}" th:value="${p.id}" th:text="${p.fullName}"
+                        th:selected="${p.id == practitionerId}"></option>
+            </select>
+        </label>
+        <label>Desde
+            <input type="date" name="from" th:value="${from}">
+        </label>
+        <label>Hasta
+            <input type="date" name="to" th:value="${to}">
+        </label>
+        <button type="submit" class="primary">Buscar</button>
+    </form>
+
+    <p class="error" th:if="${limitReached}">
+        Hay más lecturas de las que se muestran: acotá la búsqueda para ver el resto.
+    </p>
+    <p th:if="${rows.isEmpty()}" class="muted">No hay lecturas con esos datos.</p>
+    <table th:unless="${rows.isEmpty()}">
+        <thead><tr><th>Cuándo</th><th>Profesional</th><th>Usuario</th><th>Paciente</th><th>Acceso</th><th>Qué</th></tr></thead>
+        <tbody>
+        <tr th:each="r : ${rows}">
+            <td th:text="${r.when}">lun 28/09/2026 10:00</td>
+            <td th:text="${r.practitioner}">Dra. Laura Arias</td>
+            <td th:text="${r.user}">arias</td>
+            <td th:text="${r.patient}">Ana Pérez — DNI 30111222</td>
+            <td th:text="${r.access}">Lo atiende hoy</td>
+            <td th:text="${r.what}">Historia</td>
+        </tr>
+        </tbody>
+    </table>
+</main>
+</body>
+</html>

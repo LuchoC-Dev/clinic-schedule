@@ -22,4 +22,9 @@ class CurrentPractitionerAdapter implements CurrentPractitionerPort {
     public Optional<PractitionerId> practitionerId() {
         return currentUser.practitionerId().map(PractitionerId::new);
     }
+
+    @Override
+    public String username() {
+        return currentUser.username();
+    }
 }

@@ -53,7 +53,8 @@ public class DownloadAttachmentUseCase {
                 .orElseThrow(ClinicalRecordAccessDeniedException::toRead);
         byte[] content = contents.get(id)
                 .orElseThrow(() -> new IllegalStateException("The content of attachment " + id.value() + " is missing"));
-        readings.save(RecordReading.ofAttachment(practitionerId, attachment.patientId(), now, readAccess, id));
+        readings.save(RecordReading.ofAttachment(practitionerId, currentPractitioner.username(), attachment.patientId(),
+                now, readAccess, id));
         return new Download(attachment, content);
     }
 

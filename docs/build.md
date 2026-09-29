@@ -929,10 +929,33 @@ still showed Dr. Benítez's queue opening; the agenda, the arrivals and the pati
 the API too. The admin created `sala.b` as "Sala de espera" on the screen; its first login went to
 the password change, and the next one to the waiting room.
 
-#### Part 4 — The admins read the readings of the clinical records `[ ]`
-- [ ] The user recorded with each reading from now on
-- [ ] Who, whose record, when, by which access, which file — never what was read; filtered by
-      patient, practitioner and dates
+#### Part 4 — The admins read the readings of the clinical records `[x]`
+- [x] `V27`: `record_reading.read_by`, the user, from now on; the readings from before have none; indexes
+      on `read_at` and on `patient_id` with `read_at` (D-71)
+- [x] `RecordReadingReader` and `ListRecordReadingsUseCase`: by patient — resolved by the patient
+      module's search —, practitioner and days, the last week by default; the most recent first, 500 at
+      most, saying when there were more
+- [x] `GET /api/record-readings` and `/record-readings`, the admins' alone, "Lecturas" in their header
+- [x] Who — practitioner and user —, whose — name and document —, when, by which access, and whether it
+      was a file; never what was read, nor the file's name
+- [x] Looking at the readings is not recorded, for now
+- [x] 1 unit and 12 integration tests. 307 unit and 386 integration tests, 693 in total
+
+**Verified with:** every new test failing when the code it covers was broken on purpose — 20
+breakages: the user not stored or not required, the readings from before refused for lacking one, the
+patient, practitioner and first-day filters ignored, the last day left out, a default of eight days,
+the limit never noticed, the oldest first, the days in any order, a file never said, the API open to
+the practitioners and the screen to reception or the practitioners, the missing user shown blank, the
+header link, the error and the access unsaid. A 21st, dropping the early answer when no patient
+matches, changed nothing: the query with no patient finds nothing either, so it only saves a query.
+`mvnw verify` ran V27 on H2.
+
+**Verified with the application running** on a throwaway PostgreSQL: taken to V103 and V26 by the
+previous commit, where Dra. Arias, with an appointment with Ana Pérez that day, read her record; then
+started: V27 applied out of order. Dra. Arias read it again and Dr. Benítez was refused. The admin found
+both readings — the new one by `arias`, the old one "sin usuario registrado" —, by "Ana" through the
+API and by default on the screen, and none for Dr. Benítez; a first day after the last was refused in
+Spanish; reception, Dra. Arias and `sala` got 403.
 
 #### Part 5 — Refused attempts `[ ]`
 - [ ] A record or file refused to a practitioner, and a clinical route refused to a role, recorded
@@ -943,6 +966,10 @@ the password change, and the next one to the waiting room.
 ## Explicitly postponed
 
 These are not oversights: they are decided and waiting for their moment.
+
+From v2, phase 3:
+
+- Recording when the admins look at the readings of the clinical records, and for what (see D-71).
 
 From v2, phase 1:
 
@@ -956,7 +983,6 @@ From v2, phase 2:
 
 - A waiting room that calls patients by name or number, and a reason for "not seen" (see the context).
 
-- Reading the read log of the clinical records, by the admins (see D-59).
 - Recording refused attempts to read a record, with the security stage (see D-59).
 - Merging two records of the same patient, for someone registered under an alias who already had
   one (see D-60).

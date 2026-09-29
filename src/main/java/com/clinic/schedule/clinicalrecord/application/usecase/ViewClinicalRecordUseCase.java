@@ -79,7 +79,7 @@ public class ViewClinicalRecordUseCase {
         VisitToday visit = access.visitOn(practitionerId, patientId, today);
         ReadAccess readAccess = access.readAccess(practitionerId, patientId, visit, today)
                 .orElseThrow(ClinicalRecordAccessDeniedException::toRead);
-        readings.save(RecordReading.ofRecord(practitionerId, patientId, now, readAccess));
+        readings.save(RecordReading.ofRecord(practitionerId, currentPractitioner.username(), patientId, now, readAccess));
         List<Consultation> foundConsultations = consultations.findAllForPatient(patientId).stream()
                 .sorted(Comparator.comparing(Consultation::recordedAt).reversed())
                 .toList();
