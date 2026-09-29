@@ -7,6 +7,7 @@
     <h1 th:text="'Historia clínica de ' + ${patient.fullName}">Historia clínica de Ana Pérez</h1>
     <p class="muted" th:if="${patient.document}" th:text="${patient.document}">DNI 30111222</p>
     <p class="muted" th:if="${age}" th:text="${age} + ' · nació el ' + ${#temporals.format(patient.birthDate, 'dd/MM/yyyy')}">45 años · nació el 12/03/1981</p>
+    <p class="muted" th:text="${insurance}">Obra social: OSDE · plan 310 · afiliado 61234567801</p>
     <!-- Nobody saw this patient's document: who they are is what they said, or an alias (D-60). -->
     <p class="error" th:unless="${patient.identityVerified}">Identidad no verificada</p>
     <div th:replace="~{fragments :: messages}"></div>

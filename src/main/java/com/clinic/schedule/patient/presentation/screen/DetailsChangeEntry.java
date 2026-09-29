@@ -4,6 +4,7 @@ import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
 import java.util.Locale;
 
+import com.clinic.schedule.patient.entity.HealthInsurance;
 import com.clinic.schedule.patient.entity.PatientDetailsChange;
 import com.clinic.schedule.patient.entity.Responsible;
 
@@ -17,6 +18,11 @@ record DetailsChangeEntry(String when, String by, String field, String before, S
             DateTimeFormatter.ofPattern("EEE dd/MM/yyyy HH:mm", Locale.forLanguageTag("es-AR"));
 
     static DetailsChangeEntry of(PatientDetailsChange change) {
+        if (change.getField() == PatientDetailsChange.Field.INSURANCE) {
+            return new DetailsChangeEntry(WHEN.format(change.getChangedAt()), change.getChangedBy(),
+                    field(change.getField()), insurance(change.getInsuranceBefore()),
+                    insurance(change.getInsuranceAfter()));
+        }
         return new DetailsChangeEntry(WHEN.format(change.getChangedAt()), change.getChangedBy(),
                 field(change.getField()),
                 describe(change.getField(), change.getValueBefore(), change.getOwnerBefore()),
@@ -28,7 +34,12 @@ record DetailsChangeEntry(String when, String by, String field, String before, S
             case BIRTH_DATE -> "Fecha de nacimiento";
             case PHONE -> "Teléfono";
             case EMAIL -> "Email";
+            case INSURANCE -> "Obra social";
         };
+    }
+
+    private static String insurance(HealthInsurance insurance) {
+        return insurance == null ? "—" : DetailsEntry.describe(insurance);
     }
 
     private static String describe(PatientDetailsChange.Field field, String value, Responsible owner) {

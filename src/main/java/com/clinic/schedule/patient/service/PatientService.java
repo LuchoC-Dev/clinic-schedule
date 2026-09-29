@@ -19,6 +19,7 @@ import com.clinic.schedule.patient.api.PatientRegistrationRefusedException;
 import com.clinic.schedule.patient.api.PatientSummary;
 import com.clinic.schedule.patient.api.PatientWriter;
 import com.clinic.schedule.patient.entity.DocumentType;
+import com.clinic.schedule.patient.entity.HealthInsurance;
 import com.clinic.schedule.patient.entity.IdentityDocument;
 import com.clinic.schedule.patient.entity.IdentityStatus;
 import com.clinic.schedule.patient.entity.IncompleteDocumentException;
@@ -214,8 +215,14 @@ public class PatientService implements PatientReader, PatientWriter {
     private static List<PatientSummary> summaries(List<Patient> found) {
         return found.stream()
                 .map(patient -> new PatientSummary(patient.getId(), patient.getFullName(), label(patient.getDocument()),
-                        patient.getIdentityStatus() == IdentityStatus.VERIFIED, patient.getBirthDate()))
+                        patient.getIdentityStatus() == IdentityStatus.VERIFIED, patient.getBirthDate(),
+                        insurance(patient.getInsurance())))
                 .toList();
+    }
+
+    private static PatientSummary.Insurance insurance(HealthInsurance insurance) {
+        return insurance == null ? null
+                : new PatientSummary.Insurance(insurance.insurer(), insurance.memberNumber(), insurance.plan());
     }
 
     private static String label(IdentityDocument document) {

@@ -142,8 +142,9 @@ class PatientViewController {
         }
         if (e instanceof InvalidPatientDetailsException) {
             return "Revisá los datos personales: la fecha de nacimiento no puede ser futura ni de hace más de 130 años; "
-                    + "el teléfono lleva de 8 a 15 dígitos; el email, la forma nombre@dominio.com; y si el teléfono o el "
-                    + "email son de otra persona, van con su nombre y su vínculo.";
+                    + "el teléfono lleva de 8 a 15 dígitos; el email, la forma nombre@dominio.com; si el teléfono o el "
+                    + "email son de otra persona, van con su nombre y su vínculo; y el número de afiliado y el plan van "
+                    + "con el nombre de la obra social, de hasta 100 caracteres (el afiliado, hasta 30; el plan, hasta 50).";
         }
         if (e instanceof IllegalArgumentException) {
             return "Revisá los datos: el nombre lleva letras y hasta 150 caracteres; el DNI, 7 u 8 dígitos; LE y LC, de 6 a 8 dígitos; CI y pasaporte, solo letras y números.";

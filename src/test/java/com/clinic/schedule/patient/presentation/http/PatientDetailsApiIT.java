@@ -175,6 +175,56 @@ class PatientDetailsApiIT {
         change(sister, mothers).andExpect(status().isOk());
     }
 
+    // --- health insurance (D-74) ------------------------------------------------------------
+
+    @Test
+    void aPatientIsRegisteredWithTheirInsurance() throws Exception {
+        mockMvc.perform(post("/api/patients")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {"fullName": "Luis Perez", "insurance": {"insurer": " OSDE ", "memberNumber": "61234567801", "plan": "310"}}
+                                """))
+                .andExpect(status().isCreated())
+                .andExpect(jsonPath("$.insurance.insurer").value("OSDE"))
+                .andExpect(jsonPath("$.insurance.memberNumber").value("61234567801"))
+                .andExpect(jsonPath("$.insurance.plan").value("310"));
+    }
+
+    @Test
+    void aChangeOfInsuranceIsInTheHistoryWithEachPart() throws Exception {
+        String id = registered();
+        change(id, """
+                {"insurance": {"insurer": "OSDE", "memberNumber": "61234567801", "plan": "310"}}
+                """).andExpect(status().isOk());
+        change(id, """
+                {"insurance": {"insurer": "PAMI", "memberNumber": "15012345678900"}}
+                """)
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.insurance.insurer").value("PAMI"))
+                .andExpect(jsonPath("$.insurance.plan").isEmpty());
+
+        history(id)
+                .andExpect(jsonPath("$", hasSize(2)))
+                .andExpect(jsonPath("$[*].field").value(everyItem(is("INSURANCE"))))
+                .andExpect(jsonPath("$[?(@.after.value == 'PAMI')].before.value").value("OSDE"))
+                .andExpect(jsonPath("$[?(@.after.value == 'PAMI')].before.memberNumber").value("61234567801"))
+                .andExpect(jsonPath("$[?(@.after.value == 'PAMI')].before.plan").value("310"))
+                .andExpect(jsonPath("$[?(@.after.value == 'PAMI')].after.memberNumber").value("15012345678900"));
+    }
+
+    @Test
+    void aMemberNumberWithoutTheInsurerAnswers400() throws Exception {
+        String id = registered();
+
+        change(id, """
+                {"insurance": {"memberNumber": "61234567801"}}
+                """).andExpect(status().isBadRequest());
+        change(id, """
+                {"insurance": {"insurer": "OSDE", "plan": "%s"}}
+                """.formatted("p".repeat(51))).andExpect(status().isBadRequest());
+        history(id).andExpect(jsonPath("$", hasSize(0)));
+    }
+
     @Test
     void anUnknownPatientAnswers404() throws Exception {
         change(UUID.randomUUID().toString(), FULL).andExpect(status().isNotFound());

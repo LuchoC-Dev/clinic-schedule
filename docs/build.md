@@ -1044,11 +1044,36 @@ and a short phone came back as the message. Dra. Arias, with an appointment with
 "76 años · nació el 20/05/1950" on the record, and neither the phone nor the email; the patient's screen
 was refused to her and to the admin.
 
-#### Part 2 — Health insurance `[ ]`
-- [ ] One at most: the insurer's name, the member number and the plan, free text, length checked;
-      none means a private patient; no token kept
-- [ ] Its changes kept in the same history
-- [ ] Practitioners read it beside the clinical record and the consultation
+#### Part 2 — Health insurance `[x]`
+- [x] `HealthInsurance`, one at most: the insurer's name, the member number and the plan, free text of
+      100, 30 and 50 characters; a member number or a plan needs the insurer; no token kept (D-74)
+- [x] None on the books is "Sin obra social cargada", never "private": nobody asked the patients
+      already there
+- [x] `V30`: three columns of `patient`; its changes in the same history, with the member number and the
+      plan, before and after, in columns of their own
+- [x] On registering, on `PUT /api/patients/{id}/details` and on the patient's screen, with its history
+- [x] Practitioners read it beside the clinical record and the consultation, and as `patient.insurance`
+      in `GET /api/clinical-records/{id}`, once the record is granted
+- [x] 7 unit and 6 integration tests. 342 unit and 418 integration tests, 760 in total
+
+**Verified with:** every new test failing when the code it covers was broken on purpose — 21
+breakages in all: an insurance without its insurer, a member number or a plan alone taken for none,
+each part one character too long, an insurer without a letter, the parts not trimmed, a change of
+insurance not recorded, the member number before or the plan after lost from the history, the
+insurance not stored, the summary, the record's answer and the API's body dropping it on changing and
+on registering, the history's plan left out of the API, the screen dropping it, its label and its
+plan, a patient with none shown as "Particular", and the member number hidden from the practitioner.
+`mvnw verify` with the PostgreSQL tests running V30.
+
+**Verified with the application running** on a throwaway PostgreSQL: taken to V29 by part 1's build and
+given a patient with her son's phone and email, and their history; then started: V30 applied out of
+order, and the patient, her details and their history kept, with no insurance. Through the API reception
+gave her PAMI with its fourteen-digit member number, which the history showed as its own entry; a plan
+alone was a 400, and the database refused a plan without an insurer. In the browser reception added the
+plan: the history read "PAMI · afiliado 15012345678900 → PAMI · plan Básico · afiliado
+15012345678900". Dra. Arias, with an appointment with her today, read "Obra social: PAMI · plan Básico ·
+afiliado 15012345678900" beside the age on the record, and not the phone; a record she has no access to
+was still refused.
 
 #### Part 3 — Registering and booking in one transaction `[ ]`
 - [ ] The booking screen registers a new patient, with their contact, and books them in one

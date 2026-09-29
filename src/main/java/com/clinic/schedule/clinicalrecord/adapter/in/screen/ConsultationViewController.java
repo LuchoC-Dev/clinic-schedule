@@ -209,14 +209,28 @@ class ConsultationViewController {
         }
     }
 
+    /**
+     * "Obra social: OSDE · plan 310 · afiliado 61234567801", or that there is none on the books — which
+     * does not mean the patient pays privately: nobody may have asked (D-74).
+     */
+    private static String insurance(PatientSummary.Insurance insurance) {
+        if (insurance == null) {
+            return "Sin obra social cargada";
+        }
+        return "Obra social: " + insurance.insurer()
+                + (insurance.plan() == null ? "" : " · plan " + insurance.plan())
+                + (insurance.memberNumber() == null ? "" : " · afiliado " + insurance.memberNumber());
+    }
+
     private void addRecord(Model model, UUID patientId, ViewClinicalRecordUseCase.ClinicalRecord read) {
         PatientSummary patient = patients.findAll(List.of(patientId)).stream().findFirst()
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.FORBIDDEN));
         Map<UUID, String> names = practitioners.findAll().stream()
                 .collect(Collectors.toMap(PractitionerSummary::id, PractitionerSummary::fullName));
         model.addAttribute("patient", patient);
-        // The age, never how to reach the patient: that is reception's alone (D-73).
+        // The age and the insurance, never how to reach the patient: that is reception's alone (D-73, D-74).
         model.addAttribute("age", AgeLabel.of(patient.ageOn(LocalDate.now(clock))));
+        model.addAttribute("insurance", insurance(patient.insurance()));
         model.addAttribute("entries", ClinicalRecordEntry.of(read, names));
         model.addAttribute("grants", GrantEntry.of(read, names));
         // The orders a check done now may fulfil (D-55).

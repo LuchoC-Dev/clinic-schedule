@@ -17,9 +17,10 @@ class PatientDetailsTest {
     private static final Responsible MOTHER = new Responsible("Ana Pérez", Relation.MOTHER);
     private static final Phone OWN_PHONE = new Phone("1145556666", null);
     private static final Email OWN_EMAIL = new Email("luis@mail.com", null);
+    private static final HealthInsurance OSDE = new HealthInsurance("OSDE", "61234567801", "310");
 
     private static PatientDetails born(LocalDate birthDate) {
-        return new PatientDetails(birthDate, null, null);
+        return new PatientDetails(birthDate, null, null, null);
     }
 
     private static Patient registered(PatientDetails details) {
@@ -28,7 +29,8 @@ class PatientDetailsTest {
 
     @Test
     void aPatientIsRegisteredWithWhatIsKnownOfThem() {
-        PatientDetails details = new PatientDetails(LocalDate.of(1981, 3, 12), new Phone("1145556666", MOTHER), OWN_EMAIL);
+        PatientDetails details = new PatientDetails(LocalDate.of(1981, 3, 12), new Phone("1145556666", MOTHER),
+                OWN_EMAIL, OSDE);
 
         Patient patient = registered(details);
 
@@ -53,10 +55,10 @@ class PatientDetailsTest {
 
     @Test
     void eachDetailThatChangesLeavesItsOwnEntryWithWhoAndWhen() {
-        Patient patient = registered(new PatientDetails(null, OWN_PHONE, OWN_EMAIL));
+        Patient patient = registered(new PatientDetails(null, OWN_PHONE, OWN_EMAIL, null));
 
         List<PatientDetailsChange> changes = patient.changeDetails(
-                new PatientDetails(LocalDate.of(1981, 3, 12), new Phone("1145556666", MOTHER), OWN_EMAIL),
+                new PatientDetails(LocalDate.of(1981, 3, 12), new Phone("1145556666", MOTHER), OWN_EMAIL, null),
                 TODAY, NOW, "recepcion");
 
         assertThat(changes).extracting(PatientDetailsChange::getField)
@@ -77,7 +79,7 @@ class PatientDetailsTest {
 
     @Test
     void clearingADetailKeepsWhatItWas() {
-        Patient patient = registered(new PatientDetails(null, OWN_PHONE, new Email("ana@mail.com", MOTHER)));
+        Patient patient = registered(new PatientDetails(null, OWN_PHONE, new Email("ana@mail.com", MOTHER), null));
 
         List<PatientDetailsChange> changes = patient.changeDetails(PatientDetails.NONE, TODAY, NOW, "recepcion");
 
@@ -92,18 +94,18 @@ class PatientDetailsTest {
     @Test
     void savingTheSameDetailsLeavesNoTrace() {
         PatientDetails details = new PatientDetails(LocalDate.of(1981, 3, 12), new Phone("(011) 4555-6666", MOTHER),
-                new Email("Luis@Mail.com", null));
+                new Email("Luis@Mail.com", null), null);
         Patient patient = registered(details);
 
         assertThat(patient.changeDetails(new PatientDetails(LocalDate.of(1981, 3, 12), new Phone("01145556666", MOTHER),
-                OWN_EMAIL), TODAY, NOW, "recepcion")).isEmpty();
+                OWN_EMAIL, null), TODAY, NOW, "recepcion")).isEmpty();
     }
 
     @Test
     void aWrongDateOfBirthIsRefusedAndChangesNothing() {
-        Patient patient = registered(new PatientDetails(null, OWN_PHONE, null));
+        Patient patient = registered(new PatientDetails(null, OWN_PHONE, null, null));
 
-        assertThatThrownBy(() -> patient.changeDetails(new PatientDetails(TODAY.plusYears(1), null, OWN_EMAIL),
+        assertThatThrownBy(() -> patient.changeDetails(new PatientDetails(TODAY.plusYears(1), null, OWN_EMAIL, null),
                 TODAY, NOW, "recepcion")).isInstanceOf(InvalidPatientDetailsException.class);
         assertThat(patient.getPhone()).isEqualTo(OWN_PHONE);
         assertThat(patient.getEmail()).isNull();
@@ -113,8 +115,46 @@ class PatientDetailsTest {
     void aPatientUnderAnAliasMayHaveDetailsToo() {
         Patient patient = Patient.registerUnidentified("NN-4821");
 
-        patient.changeDetails(new PatientDetails(null, new Phone("1145556666", MOTHER), null), TODAY, NOW, "recepcion");
+        patient.changeDetails(new PatientDetails(null, new Phone("1145556666", MOTHER), null, null), TODAY, NOW,
+                "recepcion");
 
         assertThat(patient.getPhone().owner()).isEqualTo(MOTHER);
+    }
+
+    // --- health insurance (D-74) ------------------------------------------------------------
+
+    @Test
+    void aChangeOfInsuranceKeepsEachPartBeforeAndAfter() {
+        Patient patient = registered(new PatientDetails(null, null, null, OSDE));
+
+        List<PatientDetailsChange> changes = patient.changeDetails(
+                new PatientDetails(null, null, null, new HealthInsurance("OSDE", "61234567801", "410")),
+                TODAY, NOW, "recepcion");
+
+        assertThat(changes).hasSize(1);
+        PatientDetailsChange change = changes.get(0);
+        assertThat(change.getField()).isEqualTo(PatientDetailsChange.Field.INSURANCE);
+        assertThat(change.getInsuranceBefore()).isEqualTo(OSDE);
+        assertThat(change.getInsuranceAfter()).isEqualTo(new HealthInsurance("OSDE", "61234567801", "410"));
+        assertThat(patient.getInsurance().plan()).isEqualTo("410");
+    }
+
+    @Test
+    void takingTheInsuranceAwayKeepsWhatItWas() {
+        Patient patient = registered(new PatientDetails(null, null, null, OSDE));
+
+        PatientDetailsChange change = patient.changeDetails(PatientDetails.NONE, TODAY, NOW, "recepcion").get(0);
+
+        assertThat(change.getInsuranceBefore()).isEqualTo(OSDE);
+        assertThat(change.getInsuranceAfter()).isNull();
+        assertThat(patient.getInsurance()).isNull();
+    }
+
+    @Test
+    void theSameInsuranceTypedAgainLeavesNoTrace() {
+        Patient patient = registered(new PatientDetails(null, null, null, OSDE));
+
+        assertThat(patient.changeDetails(new PatientDetails(null, null, null,
+                new HealthInsurance(" OSDE ", "61234567801 ", "310")), TODAY, NOW, "recepcion")).isEmpty();
     }
 }

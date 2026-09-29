@@ -184,6 +184,25 @@ class ConsultationViewIT {
     }
 
     @Test
+    void theRecordAndTheFormShowThePatientsInsuranceOrThatThereIsNone() throws Exception {
+        arrivedToday();
+        mockMvc.perform(get("/clinical-records/" + patient).with(asArias))
+                .andExpect(content().string(containsString("Sin obra social cargada")));
+
+        mockMvc.perform(put("/api/patients/" + patient + "/details")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {"insurance": {"insurer": "OSDE", "memberNumber": "61234567801", "plan": "310"}}
+                                """))
+                .andExpect(status().isOk());
+
+        for (String screen : new String[] {"/clinical-records/" + patient, "/consultations/new?patientId=" + patient}) {
+            mockMvc.perform(get(screen).with(asArias))
+                    .andExpect(content().string(containsString("Obra social: OSDE · plan 310 · afiliado 61234567801")));
+        }
+    }
+
+    @Test
     void showingTheRecordOnScreenIsAReading() throws Exception {
         arrivedToday();
 

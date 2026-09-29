@@ -29,7 +29,9 @@ record RegisterPatientRequest(
 
         PatientDetailsRequest.PhoneRequest phone,
 
-        PatientDetailsRequest.EmailRequest email) {
+        PatientDetailsRequest.EmailRequest email,
+
+        PatientDetailsRequest.InsuranceRequest insurance) {
 
     IdentityDocument toDocument() {
         return IdentityDocument.ofNullable(documentType, documentNumber);
@@ -40,6 +42,6 @@ record RegisterPatientRequest(
     }
 
     PatientDetails toDetails() {
-        return new PatientDetailsRequest(birthDate, phone, email).toDetails();
+        return new PatientDetailsRequest(birthDate, phone, email, insurance).toDetails();
     }
 }

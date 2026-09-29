@@ -132,6 +132,25 @@ class PatientViewIT {
     }
 
     @Test
+    void theInsuranceIsChangedFromThePatientsScreenWithItsHistory() throws Exception {
+        String screen = mockMvc.perform(post("/patients/unidentified").with(csrf()))
+                .andReturn().getResponse().getRedirectedUrl();
+
+        mockMvc.perform(post(screen + "/details").with(csrf())
+                        .param("insurer", "OSDE").param("memberNumber", "61234567801").param("plan", "310"))
+                .andExpect(flash().attribute("message", "Datos personales guardados."));
+        mockMvc.perform(post(screen + "/details").with(csrf()).param("insurer", "PAMI"))
+                .andExpect(flash().attribute("message", "Datos personales guardados."));
+
+        mockMvc.perform(get(screen))
+                .andExpect(content().string(containsString("value=\"PAMI\"")))
+                .andExpect(content().string(containsString("<td>Obra social</td>")))
+                .andExpect(content().string(containsString("OSDE · plan 310 · afiliado 61234567801")));
+        mockMvc.perform(post(screen + "/details").with(csrf()).param("plan", "310"))
+                .andExpect(flash().attribute("error", startsWith("Revisá los datos personales")));
+    }
+
+    @Test
     void wrongDetailsComeBackAsAMessage() throws Exception {
         String screen = mockMvc.perform(post("/patients/unidentified").with(csrf()))
                 .andReturn().getResponse().getRedirectedUrl();

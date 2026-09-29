@@ -16,18 +16,19 @@ import com.clinic.schedule.patient.api.PatientSummary;
  * which it belongs to — and the access granted to the record to whoever (D-53, D-54, D-57).
  *
  * <p>{@code patient} is what a practitioner reads of the patient beside the record: their date of
- * birth, null when not given — never how to reach them, which is reception's alone (D-73).
+ * birth and their health insurance, each null when not given — never how to reach them, which is
+ * reception's alone (D-73, D-74).
  */
 record ClinicalRecordResponse(Patient patient, List<ConsultationResponse> consultations, List<CheckResponse> checks,
         List<AttachmentResponse> attachments, List<AccessGrantResponse> accessGrants) {
 
-    record Patient(LocalDate birthDate) {
+    record Patient(LocalDate birthDate, PatientSummary.Insurance insurance) {
     }
 
     static ClinicalRecordResponse of(ViewClinicalRecordUseCase.ClinicalRecord record, PatientSummary patient,
             Map<UUID, String> names) {
         return new ClinicalRecordResponse(
-                new Patient(patient == null ? null : patient.birthDate()),
+                new Patient(patient == null ? null : patient.birthDate(), patient == null ? null : patient.insurance()),
                 record.consultations().stream()
                         .map(consultation -> ConsultationResponse.of(consultation,
                                 record.checks().stream()

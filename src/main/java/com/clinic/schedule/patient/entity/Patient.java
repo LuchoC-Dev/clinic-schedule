@@ -34,10 +34,11 @@ import jakarta.persistence.Table;
  * are is {@link IdentityStatus}, and every change to it goes through {@link #changeIdentity}, which
  * says what changed.
  *
- * <p>Besides who they are, the practice may know when they were born and how to reach them — their
- * {@link PatientDetails}, all of it optional, changed apart through {@link #changeDetails} and kept
- * in a history of their own (D-73). The phone and the email are plain columns rather than
- * embeddables, each with the person it belongs to beside it, and come back as value objects.
+ * <p>Besides who they are, the practice may know when they were born, how to reach them and their
+ * health insurance — their {@link PatientDetails}, all of it optional, changed apart through
+ * {@link #changeDetails} and kept in a history of their own (D-73, D-74). The phone, the email and the
+ * insurance are plain columns rather than embeddables, the phone and the email each with the person
+ * it belongs to beside it, and come back as value objects.
  */
 @Entity
 @Table(name = "patient")
@@ -83,6 +84,15 @@ public class Patient {
     @Enumerated(EnumType.STRING)
     @Column(name = "email_owner_relation", length = 20)
     private Relation emailOwnerRelation;
+
+    @Column(name = "insurance_insurer", length = 100)
+    private String insuranceInsurer;
+
+    @Column(name = "insurance_member_number", length = 30)
+    private String insuranceMemberNumber;
+
+    @Column(name = "insurance_plan", length = 50)
+    private String insurancePlan;
 
     protected Patient() {
         // required by JPA
@@ -195,23 +205,27 @@ public class Patient {
         PatientDetails after = requireBirthDate(details, today);
         List<PatientDetailsChange> changes = new ArrayList<>();
         if (!Objects.equals(before.birthDate(), after.birthDate())) {
-            changes.add(new PatientDetailsChange(id, changedAt, changedBy, PatientDetailsChange.Field.BIRTH_DATE,
+            changes.add(PatientDetailsChange.of(id, changedAt, changedBy, PatientDetailsChange.Field.BIRTH_DATE,
                     Objects.toString(before.birthDate(), null), null,
                     Objects.toString(after.birthDate(), null), null));
         }
         if (!Objects.equals(before.phone(), after.phone())) {
-            changes.add(new PatientDetailsChange(id, changedAt, changedBy, PatientDetailsChange.Field.PHONE,
+            changes.add(PatientDetailsChange.of(id, changedAt, changedBy, PatientDetailsChange.Field.PHONE,
                     before.phone() == null ? null : before.phone().number(),
                     before.phone() == null ? null : before.phone().owner(),
                     after.phone() == null ? null : after.phone().number(),
                     after.phone() == null ? null : after.phone().owner()));
         }
         if (!Objects.equals(before.email(), after.email())) {
-            changes.add(new PatientDetailsChange(id, changedAt, changedBy, PatientDetailsChange.Field.EMAIL,
+            changes.add(PatientDetailsChange.of(id, changedAt, changedBy, PatientDetailsChange.Field.EMAIL,
                     before.email() == null ? null : before.email().address(),
                     before.email() == null ? null : before.email().owner(),
                     after.email() == null ? null : after.email().address(),
                     after.email() == null ? null : after.email().owner()));
+        }
+        if (!Objects.equals(before.insurance(), after.insurance())) {
+            changes.add(PatientDetailsChange.ofInsurance(id, changedAt, changedBy, before.insurance(),
+                    after.insurance()));
         }
         setDetails(after);
         return changes;
@@ -249,6 +263,10 @@ public class Patient {
         this.emailAddress = email == null ? null : email.address();
         this.emailOwnerName = emailOwner == null ? null : emailOwner.name();
         this.emailOwnerRelation = emailOwner == null ? null : emailOwner.relation();
+        HealthInsurance insurance = details.insurance();
+        this.insuranceInsurer = insurance == null ? null : insurance.insurer();
+        this.insuranceMemberNumber = insurance == null ? null : insurance.memberNumber();
+        this.insurancePlan = insurance == null ? null : insurance.plan();
     }
 
     /**
@@ -297,7 +315,13 @@ public class Patient {
     }
 
     public PatientDetails getDetails() {
-        return new PatientDetails(birthDate, getPhone(), getEmail());
+        return new PatientDetails(birthDate, getPhone(), getEmail(), getInsurance());
+    }
+
+    /** Null when not given. */
+    public HealthInsurance getInsurance() {
+        return insuranceInsurer == null ? null
+                : new HealthInsurance(insuranceInsurer, insuranceMemberNumber, insurancePlan);
     }
 
     /** Null when not given. */

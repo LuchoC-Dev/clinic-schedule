@@ -9,7 +9,7 @@ Read these before proposing design or code:
 
 - `docs/context.md` — what the application does, who uses it, the business rules and the
   planned evolution.
-- `docs/decisions.md` — technical decisions and their reasoning (D-01 … D-73).
+- `docs/decisions.md` — technical decisions and their reasoning (D-01 … D-74).
 - `docs/build.md` — the staged plan and the current progress.
 
 ## Stack

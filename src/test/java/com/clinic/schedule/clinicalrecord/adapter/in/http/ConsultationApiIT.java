@@ -154,6 +154,24 @@ class ConsultationApiIT {
     }
 
     @Test
+    void theRecordCarriesThePatientsInsurance() throws Exception {
+        book(arias, TODAY, "10:00:00");
+        readRecord(asArias).andExpect(jsonPath("$.patient.insurance").isEmpty());
+
+        mockMvc.perform(put("/api/patients/" + patient + "/details")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {"insurance": {"insurer": "OSDE", "memberNumber": "61234567801", "plan": "310"}}
+                                """))
+                .andExpect(status().isOk());
+
+        readRecord(asArias)
+                .andExpect(jsonPath("$.patient.insurance.insurer").value("OSDE"))
+                .andExpect(jsonPath("$.patient.insurance.memberNumber").value("61234567801"))
+                .andExpect(jsonPath("$.patient.insurance.plan").value("310"));
+    }
+
+    @Test
     void aRecordThatMayNotBeReadTellsNothingOfThePatient() throws Exception {
         mockMvc.perform(put("/api/patients/" + patient + "/details")
                         .contentType(MediaType.APPLICATION_JSON)

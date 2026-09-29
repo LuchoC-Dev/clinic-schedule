@@ -2575,3 +2575,40 @@ and after of every detail (about twenty columns, more with the health insurance)
 identity and details (two histories behind one call, and a phone change would read as an identity
 edit); showing the age in years alone (a baby's age is counted in months); a seed with details (the
 screens give them).
+
+---
+
+## D-74 — A patient's health insurance, as free text, and read by practitioners too
+**Date:** 2026-09-29 · **Status:** accepted
+
+v2, phase 4, part 2. A patient has one health insurance at most: an obra social or a prepaid plan.
+
+**What is kept.** `HealthInsurance` — the insurer's name, the member number and the plan — is one more
+of the patient's details (D-73): it goes in and changes through the same `PatientDetails`, on
+registering and on `PUT /api/patients/{id}/details`, as `insurance: {insurer, memberNumber, plan}`, and
+lives in three columns of `patient` (`V30`). All three are free text: every insurer numbers and names
+its plans its own way — PAMI's member number is fourteen digits, others carry letters —, so only the
+length is checked: 100, 30 and 50 characters. The insurer's name needs a letter, and a member number or
+a plan without it is refused, as half a document is (D-26). The token some insurers ask for is not
+kept: it is generated anew for each visit, so it belongs to the visit, and to the cash desk when there
+is one.
+
+**None on the books is not "private".** The patients registered before this were never asked, so an
+empty insurance cannot say they pay privately. The screens say "Sin obra social cargada", and whoever
+pays each consultation will be the cash desk's to record.
+
+**Its history keeps each part apart.** A change to the insurance is one more entry in
+`patient_details_change`, with the insurer as its value and four columns of its own — the member number
+and the plan, before and after — so the history still says what each part was. The API answers them as
+`memberNumber` and `plan` beside the `value`, null for the other details.
+
+**Practitioners read it.** A prescription and an order carry the member number, so the whole insurance
+reaches the clinical record module through `PatientSummary.insurance`: the record and the consultation
+form show "Obra social: OSDE · plan 310 · afiliado 61234567801", and `GET /api/clinical-records/{id}`
+answers `patient.insurance`, asked for only once the record was granted, as the date of birth (D-73).
+Only reception writes it; the admins read none of it.
+
+*Rejected:* a list of insurers kept by the practice (someone has to keep it, and nothing yet counts by
+insurer); more than one insurance (the cash desk will say which paid each visit); a mark for a private
+patient (it would say the same as nothing for everyone never asked); the three parts joined in one
+text in the history (it would no longer say which part changed); keeping the token.

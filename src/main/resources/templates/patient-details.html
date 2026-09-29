@@ -2,7 +2,7 @@
 <html lang="es" xmlns:th="http://www.thymeleaf.org">
 <body>
 <!--
-  The fields of a patient's details, for registering them and for changing them (D-73). Every field
+  The fields of a patient's details, for registering them and for changing them (D-73, D-74). Every field
   is optional; the phone and the email each say whose they are, and a person other than the patient
   goes with their name. `details` is null when registering.
 -->
@@ -35,6 +35,16 @@
     </label>
     <label>Nombre de esa persona
         <input type="text" name="emailOwnerName" maxlength="150" th:value="${details?.emailOwnerName}">
+    </label>
+    <!-- Left empty, the patient has no insurance on the books; whether they pay privately is not said (D-74). -->
+    <label>Obra social o prepaga
+        <input type="text" name="insurer" maxlength="100" th:value="${details?.insurer}">
+    </label>
+    <label>N° de afiliado
+        <input type="text" name="memberNumber" maxlength="30" th:value="${details?.memberNumber}">
+    </label>
+    <label>Plan
+        <input type="text" name="plan" maxlength="50" th:value="${details?.plan}">
     </label>
 </th:block>
 </body>
