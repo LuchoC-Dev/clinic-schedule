@@ -79,8 +79,9 @@ The minimum record needed to book an appointment:
 
 v2 is built in phases, each one scoped here before it starts and closed on its own. The first,
 the clinical record, is closed, and so are the second, the arrival queue, and the third, users
-and security, and the fourth, the patient's extra data. Each next one is chosen from the planned
-evolution below, and its scope is written here before any code.
+and security, and the fourth, the patient's extra data. The fifth, reminders and the cancellation
+log, is under way. Each next one is chosen from the planned evolution below, and its scope is
+written here before any code.
 
 ## v2, phase 1 — the clinical record (closed)
 
@@ -473,24 +474,137 @@ WhatsApp, consent to be contacted, a list of insurers kept by the practice, more
 the person responsible as a patient of their own, the consent of minors to medical acts, and anything
 of the reminders, the cash desk or web booking.
 
+## v2, phase 5 — reminders and the cancellation log
+
+### What changes
+
+Until now a cancelled appointment said only that it was cancelled: not who cancelled it, when, why,
+nor whether reception did it or a practitioner's time off did. And the application reminded nobody of
+their appointment. From this phase on every cancellation is recorded, each of the patient's channels
+says whether it may be used to reach them, and the application reminds them of their appointment by
+email a few days before.
+
+### The cancellation log
+
+- Every cancellation records **who** cancelled it, **when**, **how** — by hand at reception, or by a
+  practitioner's time off —, **who asked** for it — the patient or the practice — and an optional
+  **note**. A cancellation by time off was made by whoever recorded the time off, and asked by the
+  practice.
+- The cancellations are listed by the day they were made, showing the appointment's day beside it.
+- Moving an appointment is not a cancellation, and it keeps no history of its previous times, as since
+  v1. An absent appointment is not a cancellation either: it is the record that the patient did not
+  come (phase 2).
+- The appointments cancelled before this phase say that nothing was recorded of their cancellation:
+  nothing tells who did it, nor whether it was by hand or automatic, and nothing is made up.
+- **Reception** reads all of it: on each cancelled appointment, and in a list of cancellations filtered
+  by dates and by practitioner.
+- **Admins** read it too, to follow what the staff does, but **without the patient and without the
+  note**: who cancelled, when, how, who asked, and the practitioner and time of the appointment. The
+  note is reception's alone, since it may say something close to clinical — "cancels because she is
+  in hospital".
+- **Practitioners** do not read it.
+- Patients still do not cancel by themselves: they call or come to the practice, reception cancels,
+  and the log says the patient asked. Cancelling from the reminder waits for web booking.
+- The application does not tell a patient that their appointment was cancelled: reception calls them,
+  and recording a time off already lists the appointments it cancelled.
+
+### Consent to be contacted
+
+The data protection law does not require consent for data that come from a professional relationship
+and are needed to carry it out (Ley 25.326, art. 5), and a reminder may be that. But that someone has
+an appointment with a practitioner is health data, which the law treats as sensitive, so the practice
+asks.
+
+- **Each channel carries its own consent**: the phone one, the email another. Only reception records
+  and withdraws it; practitioners and admins do not read it.
+- A consent says **who gave it**: the patient, or — for a responsible person's channel — that person.
+- The patients already on the books start with **no consent**: nobody is reminded until reception
+  records it.
+- Changing a channel's number, address or owner **drops its consent**: it was given for that number
+  and that person.
+- Every change to a consent is kept in the history of the patient's details (phase 4), with who and
+  when.
+
+### Adolescents
+
+From 13 an adolescent decides alone on much of their own care (Código Civil y Comercial, art. 26), and
+the confidentiality of what a patient tells the practice is one of their rights (Ley 26.529, art. 2 d),
+also towards their parents. A reminder sent to a parent may tell them of a visit the adolescent keeps
+to themselves.
+
+- A reminder goes to a **responsible person's channel** of a patient **13 or older** only when the
+  consent was given **by the patient themselves**. The same rule lets an adult who uses their
+  daughter's email be reminded there, because they said so.
+- For a patient under 13, the responsible person's consent is enough.
+- A patient with no date of birth is taken as 13 or older when the channel is a responsible person's.
+  Their own channel is used on their own consent, whatever their age.
+
+### The reminders
+
+- **By email**, and nothing else in this phase. The sending goes through a port, so WhatsApp or SMS
+  will be one more adapter without touching the rules; whether a phone takes WhatsApp waits for that
+  adapter.
+- **When:** every day, from a configurable time — 10:00 by default —, the application reminds every
+  booked appointment of the next days — 3 by default, configurable —, not today's, that has not been
+  reminded yet. An appointment booked two days ahead is reminded at the next day's run. Each
+  appointment is reminded once; one moved after its reminder is reminded again, with its new time.
+- **Not sent** for an appointment that is no longer booked, or when the patient has no email, the
+  email has no consent, or the adolescents' rule says no.
+- **One attempt.** A failed sending is recorded, and reception sees it, to call the patient instead.
+- **What it says**, in Spanish, since the patient reads it: the practice's name as a header, a
+  greeting, the day, the time and the practitioner, and "to cancel or change it, call … or come to
+  reception", with the practice's phone and address. The practice's name, address, phone and sender
+  come from the configuration. It never says the reason for the appointment, which may be clinical.
+  The practitioner's speciality and consulting room are not said either: the application does not know
+  the first, and the second belongs to the queues. When a practitioner has both, both go in.
+- **The greeting:** on the patient's own channel it names the patient; on a responsible person's, it
+  names that person, and says whose appointment it is. A patient under an alias is greeted without a
+  name and without anything that says their sex.
+
+### The record of each reminder
+
+- What happened to each appointment's reminder: sent, failed, or not sent and why, and when, on which
+  channel.
+- The address it went to is **not kept**, only a hash of it that cannot be turned back into it: it
+  answers whether a reminder went to a given address. The text is not kept.
+- **Reception** reads it on each appointment; nobody else does.
+
+### Screens and API
+
+Everything reception and the admins do or read here has a screen and a route in the API, as in the rest
+of the application.
+
+### Delivered in parts
+
+1. The cancellation log: who, when, how, who asked and a note; read by reception, and by the admins
+   without the patient and the note.
+2. Consent to be contacted, per channel, with who gave it and its history.
+3. The reminders by email, with the adolescents' rule and the record of each one.
+
+Not in this phase: reminders by WhatsApp or SMS, and marking a phone as WhatsApp; cancelling or
+confirming from the reminder (web booking); telling the patient of a cancellation; a history of the
+times an appointment was moved; a list of cancellation reasons; practitioners reading the cancellation
+log; the practitioner's speciality and consulting room in the reminder.
+
 ## Planned evolution (DO NOT implement yet)
 
 Documented so today's decisions do not close doors, not to bring code forward. The next phases of
 v2 are chosen from here.
 
 1. **Arrival queue**: v2, phase 2, above — closed. **Users and security**: v2, phase 3, above — closed.
-   **Extra patient data**: v2, phase 4, above — closed.
-2. **Later on**: attendance with more states, reminders or a cancellation log, structured
-   clinical items, printing, a cash desk, and web booking.
-3. **Reminders**: they need the patient's consent to be contacted. A reminder sent to the person
-   responsible for an adolescent may tell them of a visit the adolescent keeps to themselves, since
-   from 13 they decide alone on much of their own care (Código Civil y Comercial, art. 26).
+   **Extra patient data**: v2, phase 4, above — closed. **Reminders and the cancellation log**: v2,
+   phase 5, above.
+2. **Later on**: attendance with more states, structured clinical items, printing, a cash desk, and
+   web booking.
+3. **Reminders by other channels**: WhatsApp or SMS, each one more adapter behind the reminders'
+   port, with whether a phone takes WhatsApp; the practitioner's speciality and consulting room in the
+   reminder, once the application knows them.
 4. **Cash desk**: how each consultation is paid — health insurance, prepaid plan or privately —
    becomes required for every consultation, with the token an insurer asks for each visit.
 5. **Web booking**: an account with login, linked to the patient's record. It requires an
    identity document, and **never** uses the internal id to identify the patient. Whether its
    email is unique, and whether a parent books for their children from one account, is decided
-   then.
+   then, and so is cancelling an appointment from its reminder.
 6. **Future user interface**: two separate single-page applications, one for
    reception/practitioners and one for patients. This is why the REST API is the main
    contract from v1 onwards.

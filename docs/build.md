@@ -1114,6 +1114,39 @@ screen's address. What it left for later — consent to be contacted, the confid
 in the reminders, the cash desk, and the email of a web account — is in the context's planned
 evolution.
 
+### Phase 5 — Reminders and the cancellation log `[ ]`
+
+Scope in `docs/context.md`, section "v2, phase 5 — reminders and the cancellation log". Delivered in
+parts; each one is usable on its own. The technical design of each part is agreed before it is coded.
+
+#### Part 1 — The cancellation log `[ ]`
+- [x] `docs/context.md`: the scope of phase 5
+- [ ] Every cancellation records who, when, how — by hand or by a time off —, who asked — the
+      patient or the practice — and an optional note
+- [ ] Appointments cancelled before this phase say nothing was recorded; nothing is made up
+- [ ] Reception reads it on each cancelled appointment and in a list by dates and practitioner, on
+      screen and through the API
+- [ ] The admins read the list without the patient and without the note; practitioners do not read it
+
+#### Part 2 — Consent to be contacted `[ ]`
+- [ ] One consent per channel — phone and email —, with who gave it: the patient, or the
+      responsible person who owns the channel
+- [ ] Recorded and withdrawn by reception alone; the patients on the books start without it
+- [ ] Changing a channel's number, address or owner drops its consent
+- [ ] Every change kept in the history of the patient's details
+
+#### Part 3 — The reminders by email `[ ]`
+- [ ] A port for sending, answered by an email adapter; Mailpit in development, a fake in the tests
+- [ ] A daily run from a configurable time reminds the booked appointments of the next configurable
+      days, not today's, once each; a moved appointment is reminded again
+- [ ] Not sent without an email, without consent, or to a responsible person's channel of a patient
+      of 13 or older — or with no date of birth — unless the patient consented themselves
+- [ ] One attempt; a failure is shown to reception
+- [ ] The text: the practice, a greeting, the day, the time and the practitioner, and how to cancel;
+      never the reason; a patient under an alias greeted without a name or a sex
+- [ ] The record of each reminder — sent, failed or not sent and why —, the address kept only as a
+      hash; read by reception alone
+
 ---
 
 ## Explicitly postponed
