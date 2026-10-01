@@ -20,15 +20,18 @@ import jakarta.persistence.Table;
  * apart, so a screen can say it in its own language, and so are an insurance's member number and plan
  * (D-74), each part in a column of its own.
  *
- * <p>Only {@link Patient#changeDetails} makes one, and nothing changes one once made.
+ * <p>A consent to be reminded on a channel is one more entry, with who gave it as the value (D-77).
+ *
+ * <p>Only {@link Patient#changeDetails} and {@link Patient#changeConsent} make one, and nothing changes
+ * one once made.
  */
 @Entity
 @Table(name = "patient_details_change")
 public class PatientDetailsChange {
 
-    /** Which detail changed. */
+    /** Which detail changed; a consent counts as one, beside the channel it is for (D-77). */
     public enum Field {
-        BIRTH_DATE, PHONE, EMAIL, INSURANCE
+        BIRTH_DATE, PHONE, EMAIL, INSURANCE, PHONE_CONSENT, EMAIL_CONSENT
     }
 
     @Id
@@ -117,6 +120,15 @@ public class PatientDetailsChange {
         change.valueAfter = after == null ? null : after.insurer();
         change.memberNumberAfter = after == null ? null : after.memberNumber();
         change.planAfter = after == null ? null : after.plan();
+        return change;
+    }
+
+    /** A change to who agreed to being reminded on a channel: who gave it as the value, null for nobody. */
+    static PatientDetailsChange ofConsent(UUID patientId, LocalDateTime changedAt, String changedBy, Field field,
+            Consent before, Consent after) {
+        PatientDetailsChange change = new PatientDetailsChange(patientId, changedAt, changedBy, field);
+        change.valueBefore = before == null ? null : before.name();
+        change.valueAfter = after == null ? null : after.name();
         return change;
     }
 

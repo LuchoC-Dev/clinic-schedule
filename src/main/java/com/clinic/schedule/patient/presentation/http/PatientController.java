@@ -72,6 +72,15 @@ class PatientController {
         return PatientResponse.of(patients.changeDetails(id, request.toDetails()));
     }
 
+    /**
+     * Who agreed to the patient being reminded on each channel, as it is to be; one left out is withdrawn
+     * (D-77).
+     */
+    @PutMapping("/{id}/contact-consent")
+    PatientResponse updateConsent(@PathVariable UUID id, @RequestBody ContactConsentRequest request) {
+        return PatientResponse.of(patients.changeConsent(id, request.phone(), request.email()));
+    }
+
     /** The history of the patient's details, the most recent change first. */
     @GetMapping("/{id}/details-changes")
     List<DetailsChangeResponse> detailsChanges(@PathVariable UUID id) {

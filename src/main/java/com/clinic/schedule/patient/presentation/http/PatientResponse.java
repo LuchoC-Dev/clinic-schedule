@@ -3,6 +3,7 @@ package com.clinic.schedule.patient.presentation.http;
 import java.time.LocalDate;
 import java.util.UUID;
 
+import com.clinic.schedule.patient.entity.Consent;
 import com.clinic.schedule.patient.entity.DocumentType;
 import com.clinic.schedule.patient.entity.Email;
 import com.clinic.schedule.patient.entity.HealthInsurance;
@@ -21,7 +22,8 @@ import com.clinic.schedule.patient.entity.Responsible;
  *
  * <p>The date of birth, the phone and the email are null when not given; the phone's and the email's
  * {@code owner} is null when they are the patient's own (D-73). So is the health insurance, whose
- * member number and plan are null when not given (D-74).
+ * member number and plan are null when not given (D-74). The phone's and the email's {@code consent} say
+ * who agreed to the patient being reminded there, null for nobody (D-77).
  */
 record PatientResponse(UUID id, String fullName, Document document, IdentityStatus identity, String alias,
         LocalDate birthDate, PhoneResponse phone, EmailResponse email, InsuranceResponse insurance) {
@@ -44,17 +46,17 @@ record PatientResponse(UUID id, String fullName, Document document, IdentityStat
         }
     }
 
-    record PhoneResponse(String number, Owner owner) {
+    record PhoneResponse(String number, Owner owner, Consent consent) {
 
-        static PhoneResponse of(Phone phone) {
-            return phone == null ? null : new PhoneResponse(phone.number(), Owner.of(phone.owner()));
+        static PhoneResponse of(Phone phone, Consent consent) {
+            return phone == null ? null : new PhoneResponse(phone.number(), Owner.of(phone.owner()), consent);
         }
     }
 
-    record EmailResponse(String address, Owner owner) {
+    record EmailResponse(String address, Owner owner, Consent consent) {
 
-        static EmailResponse of(Email email) {
-            return email == null ? null : new EmailResponse(email.address(), Owner.of(email.owner()));
+        static EmailResponse of(Email email, Consent consent) {
+            return email == null ? null : new EmailResponse(email.address(), Owner.of(email.owner()), consent);
         }
     }
 
@@ -67,8 +69,8 @@ record PatientResponse(UUID id, String fullName, Document document, IdentityStat
                 patient.getIdentityStatus(),
                 patient.getAlias(),
                 patient.getBirthDate(),
-                PhoneResponse.of(patient.getPhone()),
-                EmailResponse.of(patient.getEmail()),
+                PhoneResponse.of(patient.getPhone(), patient.getPhoneConsent()),
+                EmailResponse.of(patient.getEmail(), patient.getEmailConsent()),
                 InsuranceResponse.of(patient.getInsurance()));
     }
 }

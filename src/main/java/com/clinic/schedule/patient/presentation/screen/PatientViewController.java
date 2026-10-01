@@ -18,6 +18,7 @@ import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 import com.clinic.schedule.patient.entity.DocumentType;
 import com.clinic.schedule.patient.entity.IdentityDocument;
 import com.clinic.schedule.patient.entity.IncompleteDocumentException;
+import com.clinic.schedule.patient.entity.Consent;
 import com.clinic.schedule.patient.entity.InvalidPatientDetailsException;
 import com.clinic.schedule.patient.entity.Patient;
 import com.clinic.schedule.patient.entity.UnverifiableIdentityException;
@@ -87,6 +88,7 @@ class PatientViewController {
             Patient patient = patients.byId(id);
             model.addAttribute("patient", PatientEntry.of(patient));
             model.addAttribute("details", DetailsEntry.of(patient.getDetails()));
+            model.addAttribute("consent", ConsentEntry.of(patient));
             model.addAttribute("history", patients.identityHistory(id).stream().map(IdentityChangeEntry::of).toList());
             model.addAttribute("detailsHistory",
                     patients.detailsHistory(id).stream().map(DetailsChangeEntry::of).toList());
@@ -125,6 +127,23 @@ class PatientViewController {
             throw new ResponseStatusException(HttpStatus.NOT_FOUND, e.getMessage());
         } catch (RuntimeException e) {
             flash.addFlashAttribute("error", refusal(e));
+        }
+        return "redirect:/patients/" + id;
+    }
+
+    /** Who agreed to the patient being reminded on each channel; an empty choice is nobody (D-77). */
+    @PostMapping("/patients/{id}/consent")
+    String changeConsent(@PathVariable UUID id, @RequestParam(required = false) Consent phoneConsent,
+            @RequestParam(required = false) Consent emailConsent, RedirectAttributes flash) {
+        try {
+            patients.changeConsent(id, phoneConsent, emailConsent);
+            flash.addFlashAttribute("message", "Consentimiento guardado.");
+        } catch (PatientNotFoundException e) {
+            throw new ResponseStatusException(HttpStatus.NOT_FOUND, e.getMessage());
+        } catch (InvalidPatientDetailsException e) {
+            flash.addFlashAttribute("error",
+                    "El consentimiento va con un teléfono o un email cargado, y solo lo da la persona responsable "
+                            + "si el teléfono o el email son de ella.");
         }
         return "redirect:/patients/" + id;
     }

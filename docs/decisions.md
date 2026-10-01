@@ -2703,3 +2703,43 @@ week by default and at most 500, as the readings of the records (D-71). Practiti
 (what a role sees would hang on a branch, not on the route); a list of cancellation reasons (who asked
 and a note say what is needed so far); listing by the appointment's day (the admins follow what was
 done each day); keeping the old empty body (a cancellation would record nobody asking).
+
+---
+
+## D-77 — Each channel carries its own consent to be reminded, with who gave it
+**Date:** 2026-10-01 · **Status:** accepted
+
+v2, phase 5, part 2. Reminders need the patient's consent to be contacted, and an adolescent's
+confidentiality hangs on who agreed to a responsible person's channel (Código Civil y Comercial,
+art. 26; Ley 26.529, art. 2 d). Nothing is sent yet: part 3 reads this.
+
+**One consent per channel, saying who gave it.** `Consent` is `PATIENT` or `OWNER` — the responsible
+person the phone or the email belongs to —, and null is none. The phone and the email each have one, in
+`phone_consent` and `email_consent` (`V32`): an adolescent may agree to their own phone and not to their
+mother's email. The patient may consent on any of their channels; the owner only on a responsible
+person's, since on the patient's own the patient is the owner. A channel that is not there takes none.
+The value objects refuse it, as `InvalidPatientDetailsException`, and so do the database's checks.
+
+**Apart from the details, and changed on its own.** `Patient.changeConsent` sets both as they are to be,
+through `PUT /api/patients/{id}/contact-consent` — `{phone, email}`, one left out withdrawn — and a form of
+its own on the patient's screen, under "Recordatorios", which offers the owner's consent only for a
+responsible person's channel, named. `PUT /api/patients/{id}/details` does not take it: a consent is
+something the patient or the owner said, not a detail reception types beside the number.
+
+**A new number, address or owner drops it.** It was given for that one and that person, so
+`changeDetails` keeps a channel's consent only when the channel stays exactly as it was — the same digits,
+the same owner — and records the drop. The patients on the books, and every new one, start with none:
+nobody is reminded until reception records it.
+
+**In the history of the details.** A consent given, changed or withdrawn is one more entry of
+`patient_details_change` — `PHONE_CONSENT` or `EMAIL_CONSENT`, with who gave it as the value before and
+after —, read where the rest of the history is. Who reads and writes it follows the details (D-73):
+reception alone; `PatientSummary` does not carry it, so practitioners never see it, and the admins reach
+none of `/api/patients/**`. The API answers it as `phone.consent` and `email.consent`.
+
+*Rejected:* one consent per patient (an adolescent may agree to one channel and not the other); the
+consent inside `PUT .../details` (a save that only fixes a typo in the number would carry a consent given
+for the old one, and nothing could tell it from a new one); keeping the consent when the number changes
+(it was given for the old one); a consent without who gave it (part 3 has to tell an adolescent's own
+agreement from a parent's); asking it on the booking screen (it can wait for the patient's screen, like
+the date of birth).

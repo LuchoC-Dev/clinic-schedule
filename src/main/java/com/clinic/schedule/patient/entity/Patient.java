@@ -39,6 +39,10 @@ import jakarta.persistence.Table;
  * {@link #changeDetails} and kept in a history of their own (D-73, D-74). The phone, the email and the
  * insurance are plain columns rather than embeddables, the phone and the email each with the person
  * it belongs to beside it, and come back as value objects.
+ *
+ * <p>Each of the two channels carries its own consent to be reminded on it, with who gave it, changed
+ * through {@link #changeConsent} and kept in the same history (D-77). It is not one of the details: it
+ * was given for a number and a person, so changing either drops it.
  */
 @Entity
 @Table(name = "patient")
@@ -84,6 +88,16 @@ public class Patient {
     @Enumerated(EnumType.STRING)
     @Column(name = "email_owner_relation", length = 20)
     private Relation emailOwnerRelation;
+
+    /** Who agreed to being reminded on the phone; null for nobody (D-77). */
+    @Enumerated(EnumType.STRING)
+    @Column(name = "phone_consent", length = 10)
+    private Consent phoneConsent;
+
+    /** Who agreed to being reminded at the email; null for nobody (D-77). */
+    @Enumerated(EnumType.STRING)
+    @Column(name = "email_consent", length = 10)
+    private Consent emailConsent;
 
     @Column(name = "insurance_insurer", length = 100)
     private String insuranceInsurer;
@@ -195,6 +209,9 @@ public class Patient {
      * Changes what is known of the patient besides who they are, and says what changed: one entry
      * for each detail that did, none when nothing did (D-73). A null detail clears it.
      *
+     * <p>A phone or an email whose number, address or owner changes loses its consent, which was given
+     * for that one and that person, and the history says so too (D-77).
+     *
      * @param today the practice's date, which a date of birth may not be after
      * @param changedBy the username of whoever changes it
      * @throws InvalidPatientDetailsException when the date of birth cannot be right
@@ -228,7 +245,53 @@ public class Patient {
                     after.insurance()));
         }
         setDetails(after);
+        changes.addAll(changeConsent(Objects.equals(before.phone(), after.phone()) ? phoneConsent : null,
+                Objects.equals(before.email(), after.email()) ? emailConsent : null, changedAt, changedBy));
         return changes;
+    }
+
+    /**
+     * Sets who agreed to the patient being reminded on each channel, and says what changed: one entry for
+     * each consent that did (D-77). A null consent is none, which withdraws it.
+     *
+     * <p>A channel the patient has no number or address for takes no consent, and only a responsible
+     * person's channel takes its owner's: on the patient's own, the patient is the owner.
+     *
+     * @param changedBy the username of whoever changes it
+     * @throws InvalidPatientDetailsException when a consent is for a channel that is not there, or is its
+     *         owner's on the patient's own channel
+     */
+    public List<PatientDetailsChange> changeConsent(Consent phone, Consent email, LocalDateTime changedAt,
+            String changedBy) {
+        Phone currentPhone = getPhone();
+        Email currentEmail = getEmail();
+        requireConsentFits(phone, currentPhone == null ? null : currentPhone.owner(), currentPhone != null, "phone");
+        requireConsentFits(email, currentEmail == null ? null : currentEmail.owner(), currentEmail != null, "email");
+        List<PatientDetailsChange> changes = new ArrayList<>();
+        if (phone != phoneConsent) {
+            changes.add(PatientDetailsChange.ofConsent(id, changedAt, changedBy,
+                    PatientDetailsChange.Field.PHONE_CONSENT, phoneConsent, phone));
+        }
+        if (email != emailConsent) {
+            changes.add(PatientDetailsChange.ofConsent(id, changedAt, changedBy,
+                    PatientDetailsChange.Field.EMAIL_CONSENT, emailConsent, email));
+        }
+        this.phoneConsent = phone;
+        this.emailConsent = email;
+        return changes;
+    }
+
+    private static void requireConsentFits(Consent consent, Responsible owner, boolean channelThere, String channel) {
+        if (consent == null) {
+            return;
+        }
+        if (!channelThere) {
+            throw new InvalidPatientDetailsException("A consent needs the " + channel + " it is for");
+        }
+        if (consent == Consent.OWNER && owner == null) {
+            throw new InvalidPatientDetailsException(
+                    "The patient's own " + channel + " takes the patient's consent, not an owner's");
+        }
     }
 
     /**
@@ -316,6 +379,16 @@ public class Patient {
 
     public PatientDetails getDetails() {
         return new PatientDetails(birthDate, getPhone(), getEmail(), getInsurance());
+    }
+
+    /** Who agreed to being reminded on the phone; null for nobody (D-77). */
+    public Consent getPhoneConsent() {
+        return phoneConsent;
+    }
+
+    /** Who agreed to being reminded at the email; null for nobody (D-77). */
+    public Consent getEmailConsent() {
+        return emailConsent;
     }
 
     /** Null when not given. */

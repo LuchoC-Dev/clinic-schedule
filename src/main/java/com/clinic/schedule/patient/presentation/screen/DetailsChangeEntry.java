@@ -4,6 +4,7 @@ import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
 import java.util.Locale;
 
+import com.clinic.schedule.patient.entity.Consent;
 import com.clinic.schedule.patient.entity.HealthInsurance;
 import com.clinic.schedule.patient.entity.PatientDetailsChange;
 import com.clinic.schedule.patient.entity.Responsible;
@@ -35,6 +36,8 @@ record DetailsChangeEntry(String when, String by, String field, String before, S
             case PHONE -> "Teléfono";
             case EMAIL -> "Email";
             case INSURANCE -> "Obra social";
+            case PHONE_CONSENT -> "Recordatorios al teléfono";
+            case EMAIL_CONSENT -> "Recordatorios al email";
         };
     }
 
@@ -48,6 +51,9 @@ record DetailsChangeEntry(String when, String by, String field, String before, S
         }
         if (field == PatientDetailsChange.Field.BIRTH_DATE) {
             return DetailsEntry.day(LocalDate.parse(value));
+        }
+        if (field == PatientDetailsChange.Field.PHONE_CONSENT || field == PatientDetailsChange.Field.EMAIL_CONSENT) {
+            return ConsentEntry.describe(Consent.valueOf(value));
         }
         return DetailsEntry.describe(value, owner);
     }

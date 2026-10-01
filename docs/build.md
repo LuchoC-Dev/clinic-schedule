@@ -1161,12 +1161,39 @@ neither, and each was a 403 to the other role and to a practitioner. In a browse
 who asked was stopped by the screen, and with "el consultorio" and an accented note it cancelled and
 the patient's screen said so.
 
-#### Part 2 — Consent to be contacted `[ ]`
-- [ ] One consent per channel — phone and email —, with who gave it: the patient, or the
-      responsible person who owns the channel
-- [ ] Recorded and withdrawn by reception alone; the patients on the books start without it
-- [ ] Changing a channel's number, address or owner drops its consent
-- [ ] Every change kept in the history of the patient's details
+#### Part 2 — Consent to be contacted `[x]`
+- [x] `Consent`: `PATIENT` or `OWNER` — the responsible person a channel belongs to —, one for the phone
+      and one for the email; the owner's only on a responsible person's channel, and none without the
+      channel (D-77)
+- [x] `Patient.changeConsent`, apart from the details; `changeDetails` keeps a channel's consent only
+      while its number, address and owner stay as they were
+- [x] `V32`: `phone_consent` and `email_consent`, checked against their channel; the history's field
+      check widened
+- [x] Every consent given, changed, withdrawn or dropped in the history of the details, as
+      `PHONE_CONSENT` or `EMAIL_CONSENT`
+- [x] `PUT /api/patients/{id}/contact-consent`, `phone.consent` and `email.consent` in every patient
+      answered; "Recordatorios" on the patient's screen, offering the owner's consent only for a
+      responsible person's channel
+- [x] Reception alone: practitioners never see it, the admins reach none of it; the patients on the
+      books start without it
+- [x] 9 unit and 10 integration tests. 362 unit and 458 integration tests, 820 in total
+
+**Verified with:** every new test failing when the code it covers was broken on purpose — 21 breakages,
+none surviving and all compiling: a new phone or email keeping its consent, an unchanged one losing it,
+a consent without its channel, the owner's on the patient's own channel, the history without the phone's
+consent, without who gave it or what it was, the service keeping no history, the API swapping the
+channels or answering without the consent, the three checks of V32, the screen never offering the owner
+or offering it on the patient's own phone, not showing what was chosen, the history's words, a wrong
+consent breaking the screen, and the patient with no channel told nothing; `mvnw clean verify` with the
+PostgreSQL tests running V32.
+
+**Verified with the application running** on a throwaway PostgreSQL: taken to V103 by the previous
+commit's build, with a boy who had his own phone and his mother's email, and started: V32 applied out of
+order and both channels came back with no consent. The owner's consent on his own phone was a 400; his
+own for the phone and his mother's for the email were kept, and a new phone number dropped the first and
+not the second, the history saying each step. The admin and a practitioner were refused the route. In a
+browser, a patient with only her own email was offered her consent alone, and saving it showed it chosen
+and in the history.
 
 #### Part 3 — The reminders by email `[ ]`
 - [ ] A port for sending, answered by an email adapter; Mailpit in development, a fake in the tests

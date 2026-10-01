@@ -52,6 +52,34 @@
         <button type="submit" class="primary">Guardar</button>
     </form>
 
+    <!--
+      Whether the patient may be reminded on each channel, and who agreed (D-77). Changing a channel's
+      number, address or owner drops its consent, which was given for that one and that person.
+    -->
+    <h2>Recordatorios</h2>
+    <p th:unless="${consent.hasPhone or consent.hasEmail}" class="muted">
+        Sin teléfono ni email cargados: no hay a dónde mandarle recordatorios.</p>
+    <form class="card bar" method="post" th:if="${consent.hasPhone or consent.hasEmail}"
+          th:action="@{/patients/{id}/consent(id=${patient.id})}">
+        <label th:if="${consent.hasPhone}">Al teléfono
+            <select name="phoneConsent">
+                <option value="">Sin consentimiento</option>
+                <option value="PATIENT" th:selected="${consent.phone?.name() == 'PATIENT'}">Lo dio el paciente</option>
+                <option value="OWNER" th:if="${consent.phoneOwner}" th:selected="${consent.phone?.name() == 'OWNER'}"
+                        th:text="'Lo dio ' + ${consent.phoneOwner}">Lo dio Madre: Ana Pérez</option>
+            </select>
+        </label>
+        <label th:if="${consent.hasEmail}">Al email
+            <select name="emailConsent">
+                <option value="">Sin consentimiento</option>
+                <option value="PATIENT" th:selected="${consent.email?.name() == 'PATIENT'}">Lo dio el paciente</option>
+                <option value="OWNER" th:if="${consent.emailOwner}" th:selected="${consent.email?.name() == 'OWNER'}"
+                        th:text="'Lo dio ' + ${consent.emailOwner}">Lo dio Madre: Ana Pérez</option>
+            </select>
+        </label>
+        <button type="submit" class="primary">Guardar</button>
+    </form>
+
     <h2>Cambios de datos personales</h2>
     <p th:if="${detailsHistory.isEmpty()}" class="muted">Sin cambios desde que se registró.</p>
     <table th:unless="${detailsHistory.isEmpty()}">

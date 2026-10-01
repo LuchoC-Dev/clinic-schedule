@@ -56,7 +56,7 @@ and books a new patient at once, with their phone and email, the cancellations �
 when, how and who asked —, a patients
 screen — where a patient who gives no name is registered under an alias, and each patient's
 identity is corrected and verified, with its history, and their date of birth, phone and email
-recorded, each saying whose it is, and their health insurance, with a history of their own — each patient's appointments, cancelled ones included, a practitioners screen to set
+recorded, each saying whose it is, and their health insurance, and who agreed to be reminded on each, with a history of their own — each patient's appointments, cancelled ones included, a practitioners screen to set
 up their reasons and week and record their absences, a queues screen to set up the arrival
 queues and who serves each, the arrivals screen, where queues are opened and closed and patients
 brought in, and the waiting-room screen, which names nobody. The queue screens show each change as
@@ -78,6 +78,7 @@ Spanish, for the staff.
 | `GET` | `/api/patients/{id}`, `/api/patients?query=` | find patients by name, document or alias |
 | `GET` | `/api/patients/{id}/identity-changes` | the history of a patient's identity: what changed, when and by whom |
 | `PUT` | `/api/patients/{id}/details` | set the date of birth, the phone and the email, each saying whose it is, and the health insurance; one left out is cleared |
+| `PUT` | `/api/patients/{id}/contact-consent` | who agreed to reminders on each channel — `{phone, email}`, each `PATIENT`, `OWNER` or left out for nobody; a new number, address or owner drops it |
 | `GET` | `/api/patients/{id}/details-changes` | the history of a patient's details: which one changed, from what to what, when and by whom |
 | `POST` | `/api/practitioners` | register a practitioner |
 | `PUT` | `/api/practitioners/{id}` | rename |

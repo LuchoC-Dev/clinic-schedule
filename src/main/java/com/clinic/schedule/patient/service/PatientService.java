@@ -19,6 +19,7 @@ import com.clinic.schedule.patient.api.PatientRegistrationRefusedException.Reaso
 import com.clinic.schedule.patient.api.PatientRegistrationRefusedException;
 import com.clinic.schedule.patient.api.PatientSummary;
 import com.clinic.schedule.patient.api.PatientWriter;
+import com.clinic.schedule.patient.entity.Consent;
 import com.clinic.schedule.patient.entity.DocumentType;
 import com.clinic.schedule.patient.entity.Email;
 import com.clinic.schedule.patient.entity.HealthInsurance;
@@ -182,6 +183,17 @@ public class PatientService implements PatientReader, PatientWriter {
         Patient patient = patients.findById(id).orElseThrow(() -> new PatientNotFoundException(id));
         detailsChanges.saveAll(patient.changeDetails(details, LocalDate.now(clock), LocalDateTime.now(clock),
                 currentUser.username()));
+        return patients.save(patient);
+    }
+
+    /**
+     * Sets who agreed to the patient being reminded on each channel; each consent that changed goes to
+     * the history of the details (D-77).
+     */
+    @Transactional
+    public Patient changeConsent(UUID id, Consent phone, Consent email) {
+        Patient patient = patients.findById(id).orElseThrow(() -> new PatientNotFoundException(id));
+        detailsChanges.saveAll(patient.changeConsent(phone, email, LocalDateTime.now(clock), currentUser.username()));
         return patients.save(patient);
     }
 
