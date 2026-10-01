@@ -257,7 +257,8 @@ class SecurityIT {
     @Test
     @WithUserDetails("arias")
     void aPractitionerMayNotActOnTheAgendaEvenBypassingTheScreen() throws Exception {
-        mockMvc.perform(post("/agenda/appointments/00000000-0000-0000-0000-000000000000/cancel").with(csrf())
+        mockMvc.perform(post("/agenda/appointments/00000000-0000-0000-0000-000000000000/cancel")
+                        .param("requestedBy", "PATIENT").with(csrf())
                         .param("practitionerId", ARIAS).param("date", DAY))
                 .andExpect(status().isForbidden());
     }

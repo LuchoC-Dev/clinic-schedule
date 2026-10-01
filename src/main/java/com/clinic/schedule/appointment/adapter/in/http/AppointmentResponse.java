@@ -5,6 +5,8 @@ import java.util.UUID;
 
 import com.clinic.schedule.appointment.domain.Appointment;
 import com.clinic.schedule.appointment.domain.AppointmentStatus;
+import com.clinic.schedule.appointment.domain.CancellationOrigin;
+import com.clinic.schedule.appointment.domain.CancellationRequester;
 
 /**
  * An appointment as the API returns it: plain values, no domain types. The wrappers stay
@@ -13,6 +15,9 @@ import com.clinic.schedule.appointment.domain.AppointmentStatus;
  *
  * <p>It carries {@code endsAt} even though the domain stores a duration, because every
  * client would compute it otherwise.
+ *
+ * <p>{@code cancellation} is null unless it is cancelled, and for one cancelled before anything was
+ * recorded of it (D-76).
  */
 record AppointmentResponse(
         UUID id,
@@ -25,7 +30,13 @@ record AppointmentResponse(
         String note,
         AppointmentStatus status,
         LocalDateTime arrivedAt,
-        boolean lateArrivalNotice) {
+        boolean lateArrivalNotice,
+        Cancellation cancellation) {
+
+    /** {@code note} is null when reception wrote none. */
+    record Cancellation(LocalDateTime at, String by, CancellationOrigin origin, CancellationRequester requestedBy,
+            String note) {
+    }
 
     static AppointmentResponse of(Appointment appointment, LocalDateTime arrivedAt) {
         return new AppointmentResponse(
@@ -39,6 +50,10 @@ record AppointmentResponse(
                 appointment.note(),
                 appointment.status(),
                 arrivedAt,
-                appointment.hasLateArrivalNotice());
+                appointment.hasLateArrivalNotice(),
+                appointment.cancellation()
+                        .map(cancellation -> new Cancellation(cancellation.at(), cancellation.by(),
+                                cancellation.origin(), cancellation.requestedBy(), cancellation.note()))
+                        .orElse(null));
     }
 }

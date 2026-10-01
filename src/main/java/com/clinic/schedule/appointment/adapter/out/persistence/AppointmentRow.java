@@ -6,6 +6,9 @@ import java.util.UUID;
 import com.clinic.schedule.appointment.domain.Appointment;
 import com.clinic.schedule.appointment.domain.AppointmentId;
 import com.clinic.schedule.appointment.domain.AppointmentStatus;
+import com.clinic.schedule.appointment.domain.Cancellation;
+import com.clinic.schedule.appointment.domain.CancellationOrigin;
+import com.clinic.schedule.appointment.domain.CancellationRequester;
 import com.clinic.schedule.appointment.domain.PatientId;
 import com.clinic.schedule.appointment.domain.PractitionerId;
 import com.clinic.schedule.appointment.domain.TimeSlot;
@@ -59,6 +62,24 @@ class AppointmentRow {
     @Column(name = "auto_cancellation_suspended", nullable = false)
     private boolean lateArrivalNotice;
 
+    /** What was recorded of its cancellation (D-76): all null when there is none. */
+    @Column(name = "cancelled_at")
+    private LocalDateTime cancelledAt;
+
+    @Column(name = "cancelled_by")
+    private String cancelledBy;
+
+    @Enumerated(EnumType.STRING)
+    @Column(name = "cancellation_origin")
+    private CancellationOrigin cancellationOrigin;
+
+    @Enumerated(EnumType.STRING)
+    @Column(name = "cancellation_requested_by")
+    private CancellationRequester cancellationRequestedBy;
+
+    @Column(name = "cancellation_note")
+    private String cancellationNote;
+
     protected AppointmentRow() {
         // required by JPA
     }
@@ -74,6 +95,13 @@ class AppointmentRow {
         row.note = appointment.note();
         row.status = appointment.status();
         row.lateArrivalNotice = appointment.hasLateArrivalNotice();
+        appointment.cancellation().ifPresent(cancellation -> {
+            row.cancelledAt = cancellation.at();
+            row.cancelledBy = cancellation.by();
+            row.cancellationOrigin = cancellation.origin();
+            row.cancellationRequestedBy = cancellation.requestedBy();
+            row.cancellationNote = cancellation.note();
+        });
         return row;
     }
 
@@ -86,6 +114,8 @@ class AppointmentRow {
                 reason,
                 note,
                 status,
-                lateArrivalNotice);
+                lateArrivalNotice,
+                cancelledAt == null ? null : new Cancellation(cancelledAt, cancelledBy, cancellationOrigin,
+                        cancellationRequestedBy, cancellationNote));
     }
 }

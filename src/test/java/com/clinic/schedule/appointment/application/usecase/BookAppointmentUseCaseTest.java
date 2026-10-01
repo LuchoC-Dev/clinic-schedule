@@ -21,6 +21,7 @@ import com.clinic.schedule.appointment.domain.PractitionerId;
 import com.clinic.schedule.appointment.domain.TimeSlot;
 import com.clinic.schedule.appointment.domain.exception.PatientAlreadyBookedException;
 import com.clinic.schedule.appointment.domain.exception.PractitionerAlreadyBookedException;
+import com.clinic.schedule.appointment.domain.CancellationRequester;
 
 class BookAppointmentUseCaseTest {
 
@@ -173,7 +174,8 @@ class BookAppointmentUseCaseTest {
     void aCancelledAppointmentDoesNotBlockItsSlot() {
         AppointmentId first = AppointmentId.newId();
         useCase.handle(command(first, LUIS, ARIAS, ariasConsulta, 0));
-        new CancelAppointmentUseCase(appointments, new FakeArrivals()).handle(first);
+        new CancelAppointmentUseCase(appointments, new FakeArrivals(), () -> "recepcion", CLOCK)
+                .handle(new CancelAppointmentUseCase.Command(first, CancellationRequester.PATIENT, null));
 
         Appointment second = useCase.handle(withArias(ANA, 0));
 

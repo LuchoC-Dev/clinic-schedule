@@ -103,6 +103,20 @@ class InMemoryAppointmentRepository implements AppointmentRepository {
     }
 
     @Override
+    public List<Appointment> findCancelledBetween(PractitionerId practitioner, java.time.LocalDateTime from,
+            java.time.LocalDateTime until, int limit) {
+        return stored.values().stream()
+                .filter(appointment -> appointment.cancellation().isPresent())
+                .filter(appointment -> practitioner == null || appointment.practitionerId().equals(practitioner))
+                .filter(appointment -> !appointment.cancellation().get().at().isBefore(from)
+                        && appointment.cancellation().get().at().isBefore(until))
+                .sorted(java.util.Comparator.comparing(
+                        (Appointment appointment) -> appointment.cancellation().get().at()).reversed())
+                .limit(limit)
+                .toList();
+    }
+
+    @Override
     public void save(Appointment appointment) {
         stored.put(appointment.id(), appointment);
         saves++;

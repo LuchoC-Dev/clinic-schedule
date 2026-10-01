@@ -52,7 +52,8 @@ password each one changes at `/password` on logging in (D-69).
 **Screens** — open http://localhost:8080 and log in. Reception gets the agenda — a day or a
 week, of one practitioner or everyone — with the day's operations as buttons (*Llegó*,
 *Avisó demora*, *Mover*, *Cancelar*), a booking screen that suggests the free times and registers
-and books a new patient at once, with their phone and email, a patients
+and books a new patient at once, with their phone and email, the cancellations — who cancelled,
+when, how and who asked —, a patients
 screen — where a patient who gives no name is registered under an alias, and each patient's
 identity is corrected and verified, with its history, and their date of birth, phone and email
 recorded, each saying whose it is, and their health insurance, with a history of their own — each patient's appointments, cancelled ones included, a practitioners screen to set
@@ -86,7 +87,9 @@ Spanish, for the staff.
 | `PUT` | `/api/practitioners/{id}/weekly-schedule` | replace the week; a break is a gap between stretches |
 | `POST` | `/api/appointments` | book; the duration follows from the reason |
 | `POST` | `/api/appointments/{id}/reschedule` | move it, keeping its duration |
-| `POST` | `/api/appointments/{id}/cancel` | cancel it, keeping the record |
+| `POST` | `/api/appointments/{id}/cancel` | cancel it, keeping the record — `{requestedBy: PATIENT \| PRACTICE, note?}`; who and when come from the session and the clock |
+| `GET` | `/api/cancellations?practitionerId=&from=&to=` | the cancellations by the day they were made, with who, how, who asked, the patient and the note |
+| `GET` | `/api/cancellation-log?practitionerId=&from=&to=` | the same for the admins, without the patient and the note |
 | `POST` | `/api/appointments/{id}/late-arrival-notice` | the patient warned they will be late |
 | `GET` | `/api/appointments?practitionerId=&date=` | a day's agenda — a practitioner may only ask for their own |
 | `POST` | `/api/time-off` | a practitioner's absence — whole days up to `untilDate`, or part of one — cancelling the appointments it hits |

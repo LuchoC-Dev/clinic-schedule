@@ -56,11 +56,13 @@
     <strong>Consultorio</strong>
     <!--
       admin is set on the admins' screens: they administer the users (D-68), read who read which
-      clinical record (D-71) and who was refused one (D-72), and reach nothing else.
+      clinical record (D-71) and who was refused one (D-72), and the cancellations without their
+      patients (D-76), and reach nothing else.
     -->
     <a th:href="@{/users}" th:if="${admin}">Usuarios</a>
     <a th:href="@{/record-readings}" th:if="${admin}">Lecturas</a>
     <a th:href="@{/record-refusals}" th:if="${admin}">Rechazos</a>
+    <a th:href="@{/cancellation-log}" th:if="${admin}">Cancelaciones</a>
     <th:block th:unless="${admin}">
     <a th:href="@{/agenda}">Agenda</a>
     <!--
@@ -76,6 +78,7 @@
     <a th:href="@{/arrivals}" th:unless="${readOnly}">Llegadas</a>
     <a th:href="@{/waiting-room}" th:unless="${readOnly}" target="_blank">Sala de espera</a>
     <a th:href="@{/queues}" th:unless="${readOnly}">Colas</a>
+    <a th:href="@{/cancellations}" th:unless="${readOnly}">Cancelaciones</a>
     </th:block>
     <a th:href="@{/password}">Contraseña</a>
     <form class="inline" method="post" th:action="@{/logout}">

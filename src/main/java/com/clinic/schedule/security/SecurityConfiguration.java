@@ -60,7 +60,8 @@ class SecurityConfiguration {
                         .requestMatchers(HttpMethod.GET, "/api/appointments").hasAnyRole(RECEPTION, PRACTITIONER)
                         .requestMatchers("/api/consultations/**", "/api/checks/**", "/api/orders/**",
                                 "/api/attachments/**", "/api/clinical-records/**", "/api/my-queue/**").hasRole(PRACTITIONER)
-                        .requestMatchers("/api/users/**", "/api/record-readings", "/api/record-refusals").hasRole(ADMIN)
+                        .requestMatchers("/api/users/**", "/api/record-readings", "/api/record-refusals",
+                                "/api/cancellation-log").hasRole(ADMIN)
                         .requestMatchers(HttpMethod.POST, "/api/password").authenticated()
                         .anyRequest().hasRole(RECEPTION))
                 .addFilterAfter(TemporaryPasswordFilter.forApi(errors), AuthorizationFilter.class)
@@ -81,7 +82,8 @@ class SecurityConfiguration {
                         .requestMatchers(HttpMethod.GET, "/", "/agenda").hasAnyRole(RECEPTION, PRACTITIONER)
                         .requestMatchers("/consultations/**", "/checks/**", "/orders/**", "/attachments/**",
                                 "/clinical-records/**", "/my-queue/**").hasRole(PRACTITIONER)
-                        .requestMatchers("/users/**", "/record-readings", "/record-refusals").hasRole(ADMIN)
+                        .requestMatchers("/users/**", "/record-readings", "/record-refusals", "/cancellation-log")
+                                .hasRole(ADMIN)
                         .requestMatchers("/password").authenticated()
                         .anyRequest().hasRole(RECEPTION))
                 .addFilterAfter(TemporaryPasswordFilter.forScreens(), AuthorizationFilter.class)

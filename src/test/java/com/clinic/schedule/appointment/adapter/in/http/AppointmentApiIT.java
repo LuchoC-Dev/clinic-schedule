@@ -232,7 +232,8 @@ class AppointmentApiIT {
     void cancellingKeepsTheAppointmentAsCancelled() throws Exception {
         JsonNode booked = bookSuccessfully(fixture.workingEveryDay(), TEN);
 
-        mockMvc.perform(post("/api/appointments/" + booked.get("id").asText() + "/cancel"))
+        mockMvc.perform(post("/api/appointments/" + booked.get("id").asText() + "/cancel")
+                        .contentType(MediaType.APPLICATION_JSON).content("{\"requestedBy\":\"PATIENT\"}"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.status").value("CANCELLED"));
     }
@@ -242,8 +243,12 @@ class AppointmentApiIT {
         JsonNode booked = bookSuccessfully(fixture.workingEveryDay(), TEN);
         String cancelUrl = "/api/appointments/" + booked.get("id").asText() + "/cancel";
 
-        mockMvc.perform(post(cancelUrl)).andExpect(status().isOk());
-        mockMvc.perform(post(cancelUrl)).andExpect(status().isConflict());
+        mockMvc.perform(post(cancelUrl)
+                        .contentType(MediaType.APPLICATION_JSON).content("{\"requestedBy\":\"PATIENT\"}"))
+                .andExpect(status().isOk());
+        mockMvc.perform(post(cancelUrl)
+                        .contentType(MediaType.APPLICATION_JSON).content("{\"requestedBy\":\"PATIENT\"}"))
+                .andExpect(status().isConflict());
     }
 
     @Test
@@ -310,7 +315,8 @@ class AppointmentApiIT {
 
     @Test
     void anUnknownAppointmentAnswers404() throws Exception {
-        mockMvc.perform(post("/api/appointments/" + UUID.randomUUID() + "/cancel"))
+        mockMvc.perform(post("/api/appointments/" + UUID.randomUUID() + "/cancel")
+                        .contentType(MediaType.APPLICATION_JSON).content("{\"requestedBy\":\"PATIENT\"}"))
                 .andExpect(status().isNotFound())
                 .andExpect(jsonPath("$.status").value(404))
                 .andExpect(jsonPath("$.error").value("Not found"));
@@ -322,7 +328,8 @@ class AppointmentApiIT {
         bookSuccessfully(arias, DAY + "T15:00:00");
         bookSuccessfully(arias, DAY + "T09:00:00");
         JsonNode toCancel = bookSuccessfully(arias, DAY + "T12:00:00");
-        mockMvc.perform(post("/api/appointments/" + toCancel.get("id").asText() + "/cancel"))
+        mockMvc.perform(post("/api/appointments/" + toCancel.get("id").asText() + "/cancel")
+                        .contentType(MediaType.APPLICATION_JSON).content("{\"requestedBy\":\"PATIENT\"}"))
                 .andExpect(status().isOk());
 
         mockMvc.perform(get("/api/appointments")
@@ -383,7 +390,8 @@ class AppointmentApiIT {
 
     @Test
     void aMalformedIdAnswers400WithoutTheInnerWorkings() throws Exception {
-        mockMvc.perform(post("/api/appointments/not-an-id/cancel"))
+        mockMvc.perform(post("/api/appointments/not-an-id/cancel")
+                        .contentType(MediaType.APPLICATION_JSON).content("{\"requestedBy\":\"PATIENT\"}"))
                 .andExpect(status().isBadRequest())
                 .andExpect(jsonPath("$.message").value("Parameter 'id' has an invalid value"));
     }

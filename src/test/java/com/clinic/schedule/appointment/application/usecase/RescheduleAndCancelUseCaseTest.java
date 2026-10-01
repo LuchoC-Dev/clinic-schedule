@@ -20,6 +20,7 @@ import com.clinic.schedule.appointment.domain.PractitionerId;
 import com.clinic.schedule.appointment.domain.TimeSlot;
 import com.clinic.schedule.appointment.domain.exception.BookingRuleViolationException;
 import com.clinic.schedule.appointment.domain.exception.PractitionerAlreadyBookedException;
+import com.clinic.schedule.appointment.domain.CancellationRequester;
 
 class RescheduleAndCancelUseCaseTest {
 
@@ -39,11 +40,17 @@ class RescheduleAndCancelUseCaseTest {
 
     private final RescheduleAppointmentUseCase reschedule =
             new RescheduleAppointmentUseCase(appointments, practitioners, new BookingService(), arrivals, CLOCK);
-    private final CancelAppointmentUseCase cancel = new CancelAppointmentUseCase(appointments, arrivals);
+    private final CancelAppointmentUseCase cancel = new CancelAppointmentUseCase(appointments, arrivals,
+            () -> "recepcion", CLOCK);
 
     private Appointment stored(PatientId patient, int atMinute, int minutes) {
         return Appointment.restore(AppointmentId.newId(), patient, ARIAS,
-                TimeSlot.of(TEN.plusMinutes(atMinute), minutes), "consulta", null, AppointmentStatus.BOOKED, false);
+                TimeSlot.of(TEN.plusMinutes(atMinute), minutes), "consulta", null,
+                        AppointmentStatus.BOOKED, false, null);
+    }
+
+    private static CancelAppointmentUseCase.Command byPatient(AppointmentId id) {
+        return new CancelAppointmentUseCase.Command(id, CancellationRequester.PATIENT, null);
     }
 
     private RescheduleAppointmentUseCase.Command moveTo(Appointment appointment, LocalDateTime startsAt) {
@@ -78,7 +85,7 @@ class RescheduleAndCancelUseCaseTest {
         Appointment original = stored(ANA, 0, 30);
         appointments.given(original);
 
-        cancel.handle(original.id());
+        cancel.handle(byPatient(original.id()));
 
         assertThat(arrivals.cancelled()).containsExactly(original.id());
     }
@@ -130,7 +137,7 @@ class RescheduleAndCancelUseCaseTest {
         Appointment original = stored(ANA, 0, 30);
         appointments.given(original);
 
-        Appointment cancelled = cancel.handle(original.id());
+        Appointment cancelled = cancel.handle(byPatient(original.id()));
 
         assertThat(cancelled.status()).isEqualTo(AppointmentStatus.CANCELLED);
         assertThat(appointments.findById(original.id())).contains(cancelled);
@@ -141,9 +148,9 @@ class RescheduleAndCancelUseCaseTest {
     void cancellingTwiceFails() {
         Appointment original = stored(ANA, 0, 30);
         appointments.given(original);
-        cancel.handle(original.id());
+        cancel.handle(byPatient(original.id()));
 
-        assertThatThrownBy(() -> cancel.handle(original.id()))
+        assertThatThrownBy(() -> cancel.handle(byPatient(original.id())))
                 .isInstanceOf(BookingRuleViolationException.class);
     }
 
@@ -151,7 +158,7 @@ class RescheduleAndCancelUseCaseTest {
     void aCancelledAppointmentCannotBeRescheduled() {
         Appointment original = stored(ANA, 0, 30);
         appointments.given(original);
-        cancel.handle(original.id());
+        cancel.handle(byPatient(original.id()));
 
         assertThatThrownBy(() -> reschedule.handle(moveTo(original, TEN.plusHours(3))))
                 .isInstanceOf(BookingRuleViolationException.class);
@@ -159,7 +166,7 @@ class RescheduleAndCancelUseCaseTest {
 
     @Test
     void cancellingAnUnknownAppointmentFails() {
-        assertThatThrownBy(() -> cancel.handle(AppointmentId.newId()))
+        assertThatThrownBy(() -> cancel.handle(byPatient(AppointmentId.newId())))
                 .isInstanceOf(AppointmentNotFoundException.class);
     }
 }

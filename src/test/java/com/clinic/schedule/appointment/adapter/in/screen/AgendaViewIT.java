@@ -130,10 +130,10 @@ class AgendaViewIT {
     void aRefusalComesBackAsAMessageInSpanish() throws Exception {
         CreatedPractitioner arias = practitioners.workingEveryDay();
         String id = bookThroughTheApi(arias, patients.newPatient(), "10:00:00");
-        mockMvc.perform(post("/agenda/appointments/" + id + "/cancel").with(csrf())
+        mockMvc.perform(post("/agenda/appointments/" + id + "/cancel").param("requestedBy", "PATIENT").with(csrf())
                 .param("practitionerId", arias.id().toString()).param("date", DAY));
 
-        mockMvc.perform(post("/agenda/appointments/" + id + "/cancel").with(csrf())
+        mockMvc.perform(post("/agenda/appointments/" + id + "/cancel").param("requestedBy", "PATIENT").with(csrf())
                         .param("practitionerId", arias.id().toString()).param("date", DAY))
                 .andExpect(flash().attribute("error", containsString("ya fue cancelado")));
     }
@@ -603,7 +603,7 @@ class AgendaViewIT {
         CreatedPractitioner arias = practitioners.workingEveryDay();
         String id = bookThroughTheApi(arias, patients.newPatient(), "10:00:00");
 
-        mockMvc.perform(post("/agenda/appointments/" + id + "/cancel").with(csrf())
+        mockMvc.perform(post("/agenda/appointments/" + id + "/cancel").param("requestedBy", "PATIENT").with(csrf())
                         .param("practitionerId", "").param("date", DAY).param("view", "week"))
                 .andExpect(redirectedUrl("/agenda?date=" + DAY + "&view=week"));
     }
@@ -615,7 +615,9 @@ class AgendaViewIT {
         UUID patient = UUID.fromString(registerPatientNamed(name));
         String cancelled = bookThroughTheApi(arias, patient, "09:00:00");
         bookThroughTheApi(arias, patient, "2026-03-12", "10:00:00");
-        mockMvc.perform(post("/api/appointments/" + cancelled + "/cancel")).andExpect(status().isOk());
+        mockMvc.perform(post("/api/appointments/" + cancelled + "/cancel")
+                        .contentType(MediaType.APPLICATION_JSON).content("{\"requestedBy\":\"PATIENT\"}"))
+                .andExpect(status().isOk());
 
         mockMvc.perform(get("/agenda/patients/" + patient))
                 .andExpect(status().isOk())

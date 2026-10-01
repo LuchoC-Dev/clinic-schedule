@@ -10,6 +10,8 @@ import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.security.core.context.SecurityContextHolder;
+import org.springframework.security.test.context.TestSecurityContextHolder;
 import org.springframework.security.test.context.support.WithMockUser;
 import org.springframework.test.web.servlet.MockMvc;
 
@@ -27,6 +29,7 @@ import com.clinic.schedule.appointment.domain.PatientId;
 import com.clinic.schedule.appointment.domain.PractitionerId;
 import com.clinic.schedule.appointment.domain.TimeSlot;
 import com.clinic.schedule.appointment.domain.exception.PractitionerAlreadyBookedException;
+import com.clinic.schedule.appointment.domain.CancellationRequester;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
 /**
@@ -161,7 +164,9 @@ class AppointmentFlowIT {
         CreatedPractitioner arias = fixture.workingEveryDay();
         Appointment booked = book.handle(consulta(arias, TEN));
 
-        Appointment cancelled = cancel.handle(booked.id());
+        // The fixture's requests leave the thread without a user; cancelling records who did it (D-76).
+        SecurityContextHolder.setContext(TestSecurityContextHolder.getContext());
+        Appointment cancelled = cancel.handle(byPatient(booked.id()));
 
         assertThat(cancelled.status()).isEqualTo(AppointmentStatus.CANCELLED);
         assertThat(book.handle(consulta(arias, TEN)).isBooked()).isTrue();
@@ -169,7 +174,11 @@ class AppointmentFlowIT {
 
     @Test
     void anUnknownAppointmentCannotBeCancelled() {
-        assertThatThrownBy(() -> cancel.handle(AppointmentId.newId()))
+        assertThatThrownBy(() -> cancel.handle(byPatient(AppointmentId.newId())))
                 .isInstanceOf(AppointmentNotFoundException.class);
+    }
+
+    private static CancelAppointmentUseCase.Command byPatient(AppointmentId id) {
+        return new CancelAppointmentUseCase.Command(id, CancellationRequester.PATIENT, null);
     }
 }

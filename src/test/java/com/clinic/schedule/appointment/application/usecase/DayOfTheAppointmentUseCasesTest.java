@@ -19,6 +19,7 @@ import com.clinic.schedule.appointment.domain.PatientId;
 import com.clinic.schedule.appointment.domain.PractitionerId;
 import com.clinic.schedule.appointment.domain.TimeSlot;
 import com.clinic.schedule.appointment.domain.exception.BookingRuleViolationException;
+import com.clinic.schedule.appointment.domain.Cancellations;
 
 /**
  * Check-in, the late-arrival notice and the sweep of overdue appointments, with the clock
@@ -37,7 +38,7 @@ class DayOfTheAppointmentUseCasesTest {
 
     private Appointment stored(LocalDateTime startsAt) {
         return Appointment.restore(AppointmentId.newId(), PatientId.newId(), PractitionerId.newId(),
-                TimeSlot.of(startsAt, 30), "consulta", null, AppointmentStatus.BOOKED, false);
+                TimeSlot.of(startsAt, 30), "consulta", null, AppointmentStatus.BOOKED, false, null);
     }
 
     private final FakeArrivals arrivals = new FakeArrivals();
@@ -110,7 +111,7 @@ class DayOfTheAppointmentUseCasesTest {
 
     @Test
     void theSweepIgnoresWhatWasAlreadyCancelled() {
-        Appointment cancelled = stored(TEN).cancelled();
+        Appointment cancelled = stored(TEN).cancelled(Cancellations.byHand());
         appointments.given(cancelled);
 
         assertThat(sweepAt(TEN.plusHours(1)).handle()).isEmpty();

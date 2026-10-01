@@ -25,6 +25,7 @@ import com.clinic.schedule.appointment.domain.PractitionerId;
 import com.clinic.schedule.appointment.domain.TimeSlot;
 import com.clinic.schedule.appointment.domain.exception.PatientAlreadyBookedException;
 import com.clinic.schedule.appointment.domain.exception.PractitionerAlreadyBookedException;
+import com.clinic.schedule.appointment.domain.Cancellations;
 
 /**
  * What only PostgreSQL can answer: that the database itself refuses overlapping appointments,
@@ -64,7 +65,7 @@ class AppointmentOverlapPostgresIT {
 
     private static Appointment booked(PatientId patient, PractitionerId practitioner, LocalDateTime startsAt) {
         return Appointment.restore(AppointmentId.newId(), patient, practitioner, TimeSlot.of(startsAt, 30),
-                "consulta", null, AppointmentStatus.BOOKED, false);
+                "consulta", null, AppointmentStatus.BOOKED, false, null);
     }
 
     @Test
@@ -94,7 +95,7 @@ class AppointmentOverlapPostgresIT {
     void aCancelledAppointmentFreesItsSlot() {
         Appointment first = booked(ana, arias, TEN);
         appointments.save(first);
-        appointments.save(first.cancelled());
+        appointments.save(first.cancelled(Cancellations.byHand()));
 
         assertThatNoException().isThrownBy(() -> appointments.save(booked(ana, arias, TEN)));
     }

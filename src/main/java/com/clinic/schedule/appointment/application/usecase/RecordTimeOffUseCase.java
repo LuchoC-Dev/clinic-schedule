@@ -16,9 +16,11 @@ import com.clinic.schedule.appointment.application.exception.TimeOffInThePastExc
 import com.clinic.schedule.appointment.application.exception.UnknownPractitionerException;
 import com.clinic.schedule.appointment.application.port.AppointmentRepository;
 import com.clinic.schedule.appointment.application.port.ArrivalPort;
+import com.clinic.schedule.appointment.application.port.CurrentUserPort;
 import com.clinic.schedule.appointment.application.port.PractitionerSchedulePort;
 import com.clinic.schedule.appointment.domain.Appointment;
 import com.clinic.schedule.appointment.domain.AppointmentId;
+import com.clinic.schedule.appointment.domain.Cancellation;
 import com.clinic.schedule.appointment.domain.PractitionerId;
 import com.clinic.schedule.appointment.domain.TimeSlot;
 
@@ -26,7 +28,8 @@ import com.clinic.schedule.appointment.domain.TimeSlot;
  * Records a practitioner's time off and handles the appointments it hits (D-32):
  *
  * <ul>
- *   <li>those whose patient has not arrived are cancelled automatically;</li>
+ *   <li>those whose patient has not arrived are cancelled automatically, each recorded as cancelled
+ *       by the time off, by whoever recorded it, on the practice's behalf (D-76);</li>
  *   <li>those whose patient already arrived are left as they are and reported, because a
  *       person is waiting and reception has to decide what to do.</li>
  * </ul>
@@ -45,13 +48,15 @@ public class RecordTimeOffUseCase {
     private final AppointmentRepository appointments;
     private final PractitionerSchedulePort practitioners;
     private final ArrivalPort arrivals;
+    private final CurrentUserPort currentUser;
     private final Clock clock;
 
     public RecordTimeOffUseCase(AppointmentRepository appointments, PractitionerSchedulePort practitioners,
-            ArrivalPort arrivals, Clock clock) {
+            ArrivalPort arrivals, CurrentUserPort currentUser, Clock clock) {
         this.appointments = appointments;
         this.practitioners = practitioners;
         this.arrivals = arrivals;
+        this.currentUser = currentUser;
         this.clock = clock;
     }
 
@@ -72,9 +77,10 @@ public class RecordTimeOffUseCase {
         List<Appointment> hit = bookedDuring(command.practitionerId(), command.span());
         Map<AppointmentId, LocalDateTime> arrived = arrivals.arrivalsOf(hit.stream().map(Appointment::id).toList());
 
+        Cancellation cancellation = Cancellation.byTimeOff(LocalDateTime.now(clock), currentUser.username());
         List<Appointment> cancelled = hit.stream()
                 .filter(appointment -> !arrived.containsKey(appointment.id()))
-                .map(Appointment::cancelled)
+                .map(appointment -> appointment.cancelled(cancellation))
                 .toList();
         cancelled.forEach(appointments::save);
         cancelled.forEach(appointment -> arrivals.appointmentCancelled(appointment.id()));

@@ -2,6 +2,7 @@ package com.clinic.schedule.appointment.domain;
 
 import java.time.Duration;
 import java.time.LocalDateTime;
+import java.util.Optional;
 
 import com.clinic.schedule.appointment.domain.exception.BookingRuleViolationException;
 import com.clinic.schedule.appointment.domain.exception.NotTheAppointmentDayException;
@@ -44,9 +45,11 @@ public class Appointment {
     private final String note;
     private final AppointmentStatus status;
     private final boolean lateArrivalNotice;
+    private final Cancellation cancellation;
 
     private Appointment(AppointmentId id, PatientId patientId, PractitionerId practitionerId, TimeSlot slot,
-            String reason, String note, AppointmentStatus status, boolean lateArrivalNotice) {
+            String reason, String note, AppointmentStatus status, boolean lateArrivalNotice,
+            Cancellation cancellation) {
         this.id = id;
         this.patientId = patientId;
         this.practitionerId = practitionerId;
@@ -55,6 +58,7 @@ public class Appointment {
         this.note = note;
         this.status = status;
         this.lateArrivalNotice = lateArrivalNotice;
+        this.cancellation = cancellation;
     }
 
     /**
@@ -68,7 +72,7 @@ public class Appointment {
             String reason, String note) {
         requireInvariants(id, patientId, practitionerId, slot, reason, note);
         return new Appointment(id, patientId, practitionerId, slot, reason.strip(), note, AppointmentStatus.BOOKED,
-                false);
+                false, null);
     }
 
     /**
@@ -84,14 +88,22 @@ public class Appointment {
      * <p>It is public because the adapter lives in another package and Java cannot export a
      * method to one package only. Using it to bypass {@link BookingService} is possible and
      * deliberate, the same way writing raw SQL would be; see D-15.
+     *
+     * @param cancellation what was recorded of its cancellation; null for one cancelled before
+     *        anything was (D-76), and for every appointment that is not cancelled
      */
     public static Appointment restore(AppointmentId id, PatientId patientId, PractitionerId practitionerId,
-            TimeSlot slot, String reason, String note, AppointmentStatus status, boolean lateArrivalNotice) {
+            TimeSlot slot, String reason, String note, AppointmentStatus status, boolean lateArrivalNotice,
+            Cancellation cancellation) {
         requireInvariants(id, patientId, practitionerId, slot, reason, note);
         if (status == null) {
             throw new IllegalArgumentException("A stored appointment needs a status");
         }
-        return new Appointment(id, patientId, practitionerId, slot, reason.strip(), note, status, lateArrivalNotice);
+        if (cancellation != null && status != AppointmentStatus.CANCELLED) {
+            throw new IllegalArgumentException("Only a cancelled appointment has a cancellation");
+        }
+        return new Appointment(id, patientId, practitionerId, slot, reason.strip(), note, status, lateArrivalNotice,
+                cancellation);
     }
 
     private static void requireInvariants(AppointmentId id, PatientId patientId, PractitionerId practitionerId,
@@ -109,16 +121,19 @@ public class Appointment {
 
     /**
      * The same appointment, cancelled. It is kept as a record and never deleted, because the
-     * patient file will show it.
+     * patient file will show it, and it keeps what is recorded of its cancellation (D-76).
      *
      * <p>Cancelling twice is rejected instead of ignored: it means whoever asked was looking
      * at a stale agenda. An appointment whose patient already arrived can still be cancelled:
      * that is the manual handling the context asks for when a practitioner is absent.
      */
-    public Appointment cancelled() {
+    public Appointment cancelled(Cancellation cancellation) {
         requireBooked("cancelled");
+        if (cancellation == null) {
+            throw new IllegalArgumentException("A cancellation is recorded with the appointment it cancels");
+        }
         return new Appointment(id, patientId, practitionerId, slot, reason, note, AppointmentStatus.CANCELLED,
-                lateArrivalNotice);
+                lateArrivalNotice, cancellation);
     }
 
     /**
@@ -136,7 +151,7 @@ public class Appointment {
         if (newSlot == null) {
             throw new IllegalArgumentException("An appointment needs a slot");
         }
-        return new Appointment(id, patientId, practitionerId, newSlot, reason, note, status, false);
+        return new Appointment(id, patientId, practitionerId, newSlot, reason, note, status, false, null);
     }
 
     /**
@@ -154,7 +169,7 @@ public class Appointment {
         if (lateArrivalNotice) {
             throw new BookingRuleViolationException("Reception was already warned that this patient will be late");
         }
-        return new Appointment(id, patientId, practitionerId, slot, reason, note, status, true);
+        return new Appointment(id, patientId, practitionerId, slot, reason, note, status, true, null);
     }
 
     /**
@@ -185,7 +200,7 @@ public class Appointment {
             throw new BookingRuleViolationException("The patient of this appointment may still come");
         }
         return new Appointment(id, patientId, practitionerId, slot, reason, note, AppointmentStatus.ABSENT,
-                lateArrivalNotice);
+                lateArrivalNotice, null);
     }
 
     private void requireTheDayOfTheAppointment(LocalDateTime now, String action) {
@@ -244,5 +259,13 @@ public class Appointment {
     /** Whether reception was warned the patient would be late. */
     public boolean hasLateArrivalNotice() {
         return lateArrivalNotice;
+    }
+
+    /**
+     * What was recorded of its cancellation. Empty when it is not cancelled, and when it was cancelled
+     * before anything was recorded (D-76).
+     */
+    public Optional<Cancellation> cancellation() {
+        return Optional.ofNullable(cancellation);
     }
 }

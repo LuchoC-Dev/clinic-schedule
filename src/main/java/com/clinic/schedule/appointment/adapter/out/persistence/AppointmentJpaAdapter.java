@@ -6,6 +6,8 @@ import java.util.List;
 import java.util.Optional;
 
 import org.springframework.dao.DataIntegrityViolationException;
+import org.springframework.data.domain.Sort;
+import org.springframework.data.jpa.domain.Specification;
 import org.springframework.stereotype.Repository;
 
 import com.clinic.schedule.appointment.application.port.AppointmentRepository;
@@ -76,6 +78,20 @@ class AppointmentJpaAdapter implements AppointmentRepository {
     public List<Appointment> findBookedStartingBy(LocalDateTime instant) {
         return toAppointments(rows.findByStatusAndStartsAtLessThanEqual(
                 AppointmentStatus.BOOKED, instant));
+    }
+
+    @Override
+    public List<Appointment> findCancelledBetween(PractitionerId practitioner, LocalDateTime from,
+            LocalDateTime until, int limit) {
+        Specification<AppointmentRow> search = (row, query, criteria) -> criteria.and(
+                criteria.greaterThanOrEqualTo(row.get("cancelledAt"), from),
+                criteria.lessThan(row.get("cancelledAt"), until));
+        if (practitioner != null) {
+            search = search.and((row, query, criteria) ->
+                    criteria.equal(row.get("practitionerId"), practitioner.value()));
+        }
+        return toAppointments(rows.findBy(search,
+                found -> found.sortBy(Sort.by(Sort.Direction.DESC, "cancelledAt")).limit(limit).all()));
     }
 
     /**

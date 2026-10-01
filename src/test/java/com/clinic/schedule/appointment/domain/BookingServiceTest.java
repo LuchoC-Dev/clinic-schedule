@@ -31,7 +31,8 @@ class BookingServiceTest {
 
     private Appointment stored(PatientId patient, int atMinute, int minutes) {
         return Appointment.restore(AppointmentId.newId(), patient, ARIAS,
-                TimeSlot.of(TEN.plusMinutes(atMinute), minutes), "consulta", null, AppointmentStatus.BOOKED, false);
+                TimeSlot.of(TEN.plusMinutes(atMinute), minutes), "consulta", null,
+                        AppointmentStatus.BOOKED, false, null);
     }
 
     @Test
@@ -94,7 +95,7 @@ class BookingServiceTest {
 
     @Test
     void aCancelledAppointmentCannotBeRescheduled() {
-        Appointment cancelled = stored(ANA, 0, 30).cancelled();
+        Appointment cancelled = stored(ANA, 0, 30).cancelled(Cancellations.byHand());
 
         assertThatThrownBy(() -> bookingService.reschedule(cancelled, TimeSlot.of(TEN.plusHours(3), 30), NOW,
                 List.of(), Optional.empty()))

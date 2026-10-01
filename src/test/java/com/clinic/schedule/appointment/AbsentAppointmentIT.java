@@ -111,7 +111,8 @@ class AbsentAppointmentIT {
         markAbsent.handle();
 
         for (String operation : new String[] {"cancel", "late-arrival-notice"}) {
-            mockMvc.perform(post("/api/appointments/" + absent + "/" + operation))
+            mockMvc.perform(post("/api/appointments/" + absent + "/" + operation)
+                            .contentType(MediaType.APPLICATION_JSON).content("{\"requestedBy\":\"PATIENT\"}"))
                     .andExpect(status().isConflict())
                     .andExpect(jsonPath("$.message").value(containsString("absent")));
         }

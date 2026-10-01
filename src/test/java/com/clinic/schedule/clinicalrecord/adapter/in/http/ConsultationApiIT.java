@@ -211,7 +211,9 @@ class ConsultationApiIT {
     @Test
     void aCancelledAppointmentGrantsNothing() throws Exception {
         String appointment = book(arias, TODAY, "10:00:00");
-        mockMvc.perform(post("/api/appointments/" + appointment + "/cancel")).andExpect(status().isOk());
+        mockMvc.perform(post("/api/appointments/" + appointment + "/cancel")
+                        .contentType(MediaType.APPLICATION_JSON).content("{\"requestedBy\":\"PATIENT\"}"))
+                .andExpect(status().isOk());
 
         readRecord(asArias).andExpect(status().isForbidden());
     }
@@ -248,7 +250,9 @@ class ConsultationApiIT {
         send(asArias, consultation(patient, "Control.")).andExpect(status().isCreated());
 
         // The appointment cancelled, and the call a day old: no visit today, the consultation alone keeps it open.
-        mockMvc.perform(post("/api/appointments/" + appointment + "/cancel")).andExpect(status().isOk());
+        mockMvc.perform(post("/api/appointments/" + appointment + "/cancel")
+                        .contentType(MediaType.APPLICATION_JSON).content("{\"requestedBy\":\"PATIENT\"}"))
+                .andExpect(status().isOk());
         new ArrivalFixture(mockMvc, jdbc).seenTheDayBefore(patient);
 
         readRecord(asArias).andExpect(status().isOk()).andExpect(jsonPath("$.consultations", hasSize(1)));

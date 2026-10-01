@@ -79,9 +79,10 @@ class AppointmentController {
         return respond(reschedule.handle(request.toCommand(id)));
     }
 
+    /** Who asked for it comes in the body, with reception's note; who cancelled it, from the session (D-76). */
     @PostMapping("/{id}/cancel")
-    AppointmentResponse cancel(@PathVariable UUID id) {
-        return respond(cancel.handle(new AppointmentId(id)));
+    AppointmentResponse cancel(@PathVariable UUID id, @Valid @RequestBody CancelAppointmentRequest request) {
+        return respond(cancel.handle(request.toCommand(id)));
     }
 
     /** The patient arrived. The time is the practice's clock, not something the client sends. */

@@ -1,0 +1,52 @@
+<!DOCTYPE html>
+<html lang="es" xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{fragments :: head('Cancelaciones')}"></head>
+<body>
+<header th:replace="~{fragments :: header}"></header>
+<main class="wide">
+    <h1>Cancelaciones</h1>
+    <p class="muted">Los turnos cancelados, por el día en que se cancelaron: quién, cómo y quién lo pidió.</p>
+    <div th:replace="~{fragments :: messages}"></div>
+
+    <form class="card bar" method="get" th:action="@{/cancellations}">
+        <label>Profesional
+            <select name="practitionerId">
+                <option value="">— todos —</option>
+                <option th:each="p : ${practitioners}" th:value="${p.id}" th:text="${p.fullName}"
+                        th:selected="${p.id == practitionerId}"></option>
+            </select>
+        </label>
+        <label>Desde
+            <input type="date" name="from" th:value="${from}">
+        </label>
+        <label>Hasta
+            <input type="date" name="to" th:value="${to}">
+        </label>
+        <button type="submit" class="primary">Buscar</button>
+    </form>
+
+    <p class="error" th:if="${limitReached}">
+        Hay más cancelaciones de las que se muestran: acotá la búsqueda para ver el resto.
+    </p>
+    <p th:if="${rows.isEmpty()}" class="muted">No hay cancelaciones con esos datos.</p>
+    <table th:unless="${rows.isEmpty()}">
+        <thead>
+        <tr><th>Cuándo</th><th>Usuario</th><th>Cómo</th><th>Lo pidió</th><th>Turno</th><th>Profesional</th>
+            <th>Paciente</th><th>Nota</th></tr>
+        </thead>
+        <tbody>
+        <tr th:each="r : ${rows}">
+            <td th:text="${r.when}">mié 30/09/2026 10:15</td>
+            <td th:text="${r.user}">recepcion</td>
+            <td th:text="${r.origin}">A mano</td>
+            <td th:text="${r.requestedBy}">el paciente</td>
+            <td th:text="${r.appointment}">jue 01/10/2026 10:00</td>
+            <td th:text="${r.practitioner}">Dra. Laura Arias</td>
+            <td><a th:href="@{/agenda/patients/{id}(id=${r.patientId})}" th:text="${r.patient}">Ana Pérez</a></td>
+            <td th:text="${r.note}"></td>
+        </tr>
+        </tbody>
+    </table>
+</main>
+</body>
+</html>

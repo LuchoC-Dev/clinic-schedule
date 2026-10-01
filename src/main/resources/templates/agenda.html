@@ -105,11 +105,19 @@
                     <a th:unless="${row.arrived}" th:href="@{/agenda/appointments/{id}/reschedule(id=${row.id})}">
                         <button type="button">Mover</button>
                     </a>
+                    <!-- Who asked for it is required, the note is not (D-76). -->
                     <form class="inline" method="post"
                           th:action="@{/agenda/appointments/{id}/cancel(id=${row.id})}">
                         <input type="hidden" name="practitionerId" th:value="${practitioner?.id}">
                         <input type="hidden" name="date" th:value="${date}">
                         <input type="hidden" name="view" th:value="${view}">
+                        <select name="requestedBy" required aria-label="Quién pidió la cancelación">
+                            <option value="">Lo pidió…</option>
+                            <option value="PATIENT">el paciente</option>
+                            <option value="PRACTICE">el consultorio</option>
+                        </select>
+                        <input type="text" name="note" maxlength="200" placeholder="Nota (opcional)"
+                               aria-label="Nota de la cancelación">
                         <button type="submit" class="danger">Cancelar</button>
                     </form>
                     </th:block>

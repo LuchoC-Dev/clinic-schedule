@@ -36,11 +36,12 @@ class RecordTimeOffUseCaseTest {
             ZoneId.of("America/Argentina/Buenos_Aires"));
 
     private final FakeArrivals arrivals = new FakeArrivals();
-    private final RecordTimeOffUseCase recordTimeOff = new RecordTimeOffUseCase(appointments, practitioners, arrivals, CLOCK);
+    private final RecordTimeOffUseCase recordTimeOff = new RecordTimeOffUseCase(appointments, practitioners, arrivals,
+            () -> "recepcion", CLOCK);
 
     private static Appointment booked(PractitionerId practitioner, LocalDateTime startsAt) {
         return Appointment.restore(AppointmentId.newId(), PatientId.newId(), practitioner,
-                TimeSlot.of(startsAt, 30), "consulta", null, AppointmentStatus.BOOKED, false);
+                TimeSlot.of(startsAt, 30), "consulta", null, AppointmentStatus.BOOKED, false, null);
     }
 
     private static TimeSlot wholeDay() {
@@ -152,7 +153,8 @@ class RecordTimeOffUseCaseTest {
         Appointment afternoon = booked(ARIAS, DAY.atTime(15, 0));
         appointments.given(afternoon);
 
-        RecordTimeOffUseCase.Result result = new RecordTimeOffUseCase(appointments, practitioners, arrivals, atNoon)
+        RecordTimeOffUseCase.Result result = new RecordTimeOffUseCase(appointments, practitioners, arrivals,
+                () -> "recepcion", atNoon)
                 .handle(new RecordTimeOffUseCase.Command(ARIAS, wholeDay()));
 
         assertThat(result.cancelled()).extracting(Appointment::id).containsExactly(afternoon.id());

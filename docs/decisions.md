@@ -2657,3 +2657,49 @@ and the insurance on the booking screen (they can wait for the patient's screen)
 (nothing but the booking screen asks yet); keeping the new patient in the address (personal data in the
 browser's history), or in a session attribute of its own (state to clear by hand, where a flash
 attribute lasts one request).
+
+---
+
+## D-76 — Every cancellation says who, when, how and who asked, and the admins read it without the patient
+**Date:** 2026-09-30 · **Status:** accepted
+
+v2, phase 5, part 1. A cancelled appointment said only that it was cancelled: not who cancelled it,
+when, why, nor whether reception or a practitioner's time off did it.
+
+**What is recorded.** `Cancellation` — when, from the `Clock`; who, the username; how, `BY_HAND` or
+`TIME_OFF`; who asked, `PATIENT` or `PRACTICE`; and reception's note, up to 200 characters, trimmed,
+blank taken as none — is a value object the appointment keeps: `Appointment.cancelled(Cancellation)`
+replaces `cancelled()`, and `restore` takes it back. A time off cancels on the practice's behalf, so
+`TIME_OFF` with anyone else asking is refused, in the value object and in the database. Who cancelled
+by a time off is whoever recorded it: nothing cancels on its own any more, since the sweep marks
+appointments absent (D-61). The username comes through a new port, `CurrentUserPort`, answered by
+`security/api/CurrentUserReader`, apart from `AgendaAccessPort`, which says whose agenda one reads.
+
+**Columns of the appointment** (`V31`), not a table of their own: an appointment is cancelled once, and
+a cancelled one never changes again. The four that go together are all there or all missing, and only
+on a cancelled appointment; the checks say so, as D-09 asks.
+
+**Before this, nothing.** The appointments cancelled before this phase keep no cancellation: nothing
+told who cancelled them, nor whether by hand or automatically (D-61), and nothing is made up. The
+patient's appointments say "Sin registro de la cancelación", and the lists, which go by the day of the
+cancellation, never show them.
+
+**Cancelling says who asked.** `POST /api/appointments/{id}/cancel` takes `{requestedBy, note}` and
+answers 400 without `requestedBy`; the agenda's "Cancelar" asks "Lo pidió…" with no default, and a note.
+It breaks the route's old empty body, which nothing outside the application sends (as D-61 did). The
+appointment in every answer carries `cancellation`, null unless it was recorded.
+
+**Two lists, one per role.** Reception reads the cancellations whole — `GET /api/cancellations` and
+`/cancellations` —, the admins without the patient and without the note — `GET /api/cancellation-log`
+and `/cancellation-log`, with their header —, to follow what the staff does. The note is reception's
+alone, since it may say something close to clinical. Each route has an answer type of its own, so what
+each role sees is decided by the route (D-34) and the admins' type has no place for the patient; one
+use case, `ListCancellationsUseCase`, serves both. They go by the day the cancellation was made — what
+the staff did that day —, showing the appointment's day beside it, filtered by practitioner, the last
+week by default and at most 500, as the readings of the records (D-71). Practitioners reach neither.
+
+*Rejected:* a table of cancellations (one per appointment, never changed, is the appointment's own);
+"the application" as who cancelled by a time off (a person recorded it); one route answering by role
+(what a role sees would hang on a branch, not on the route); a list of cancellation reasons (who asked
+and a note say what is needed so far); listing by the appointment's day (the admins follow what was
+done each day); keeping the old empty body (a cancellation would record nobody asking).

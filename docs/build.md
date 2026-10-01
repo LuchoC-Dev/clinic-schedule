@@ -1119,14 +1119,47 @@ evolution.
 Scope in `docs/context.md`, section "v2, phase 5 — reminders and the cancellation log". Delivered in
 parts; each one is usable on its own. The technical design of each part is agreed before it is coded.
 
-#### Part 1 — The cancellation log `[ ]`
+#### Part 1 — The cancellation log `[x]`
 - [x] `docs/context.md`: the scope of phase 5
-- [ ] Every cancellation records who, when, how — by hand or by a time off —, who asked — the
-      patient or the practice — and an optional note
-- [ ] Appointments cancelled before this phase say nothing was recorded; nothing is made up
-- [ ] Reception reads it on each cancelled appointment and in a list by dates and practitioner, on
-      screen and through the API
-- [ ] The admins read the list without the patient and without the note; practitioners do not read it
+- [x] `Cancellation`: when, who, how — `BY_HAND` or `TIME_OFF` —, who asked — `PATIENT` or
+      `PRACTICE` — and a note of up to 200 characters; a time off is always asked by the practice and
+      recorded under whoever recorded it; kept by the appointment, `Appointment.cancelled(Cancellation)`
+      (D-76)
+- [x] `CurrentUserPort`, answered by `CurrentUserReader`, to say who cancelled
+- [x] `V31`: five columns on `appointment`, all or nothing and only on a cancelled one, and a time off
+      asked by the practice; an index by when it was cancelled
+- [x] Appointments cancelled before this phase keep nothing: "Sin registro de la cancelación"
+- [x] `POST /api/appointments/{id}/cancel` takes `{requestedBy, note}`; every appointment answered
+      carries `cancellation`; the agenda's "Cancelar" asks who asked, with no default, and a note
+- [x] `ListCancellationsUseCase`: by the day of the cancellation and by practitioner, the last week by
+      default, at most 500
+- [x] Reception: `GET /api/cancellations` and `/cancellations`, whole; the patient's appointments say who
+      cancelled, when, how and who asked, and the note
+- [x] The admins: `GET /api/cancellation-log` and `/cancellation-log`, with their header, without the
+      patient and the note; practitioners reach neither
+- [x] 11 unit and 26 integration tests. 353 unit and 448 integration tests, 801 in total
+
+**Verified with:** every new test failing when the code it covers was broken on purpose — 48
+breakages in all, none surviving and all compiling: the time off asked by anyone, the note untrimmed,
+kept blank or one character longer, who or how not required, the appointment keeping no cancellation
+or one on any state, the use cases recording another user, another time, ignoring who asked or the
+note, the list's default days, reversed days, its limit and its last day, the row losing the note or the
+cancellation, the oldest first, any practitioner, the end of the range included, no limit, both checks
+of V31 dropped, who asked not required by the API, the answers without the cancellation or with the
+wrong time, the admins losing their route or their screen, the agenda cancelling without who asked or
+dropping the note, the screens' words for an old cancellation, a time off and who asked, the admins'
+header, the patient and the note missing from reception's list, and each header's link; `mvnw clean
+verify` with the PostgreSQL tests running V31.
+
+**Verified with the application running** on a throwaway PostgreSQL: taken to V103 by the previous
+commit's build, with an appointment cancelled by hand, one cancelled by a time off and one booked, and
+started: V31 applied out of order and left the three as they were. The two old cancellations said
+"Sin registro de la cancelación". Through the API, a cancellation with no body or no `requestedBy` was a
+400, and one asked by the patient with a note recorded `recepcion`, the time and the note; a time off
+recorded `TIME_OFF` and `PRACTICE`. Reception's list showed the patient and the note, the admins' list
+neither, and each was a 403 to the other role and to a practitioner. In a browser, "Cancelar" without
+who asked was stopped by the screen, and with "el consultorio" and an accented note it cancelled and
+the patient's screen said so.
 
 #### Part 2 — Consent to be contacted `[ ]`
 - [ ] One consent per channel — phone and email —, with who gave it: the patient, or the

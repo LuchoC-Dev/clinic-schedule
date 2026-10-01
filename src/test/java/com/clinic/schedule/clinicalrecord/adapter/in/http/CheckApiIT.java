@@ -150,7 +150,8 @@ class CheckApiIT {
                 .andExpect(status().isConflict());
         send(asAnalyst, "/api/checks/" + check + "/result", result).andExpect(status().isOk());
 
-        readRecord(asArias).andExpect(jsonPath("$.consultations[0].checks[1].result.text").value("Hemoglobina 13,5 g/dl"));
+        readRecord(asArias)
+                .andExpect(jsonPath("$.consultations[0].checks[1].result.text").value("Hemoglobina 13,5 g/dl"));
     }
 
     @Test
@@ -181,7 +182,9 @@ class CheckApiIT {
                 {"patientId": "%s", "description": "Presión arterial", "result": "120/80"}
                 """.formatted(patient)).andExpect(status().isCreated());
 
-        mockMvc.perform(post("/api/appointments/" + appointment + "/cancel")).andExpect(status().isOk());
+        mockMvc.perform(post("/api/appointments/" + appointment + "/cancel")
+                        .contentType(MediaType.APPLICATION_JSON).content("{\"requestedBy\":\"PATIENT\"}"))
+                .andExpect(status().isOk());
         new ArrivalFixture(mockMvc, jdbc).seenTheDayBefore(patient);
 
         readRecord(asArias).andExpect(status().isOk()).andExpect(jsonPath("$.checks", hasSize(1)));

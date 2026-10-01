@@ -28,7 +28,8 @@ class BookingPolicyTest {
 
     private Appointment stored(PatientId patient, PractitionerId practitioner, int atMinute, int minutes) {
         return Appointment.restore(AppointmentId.newId(), patient, practitioner,
-                TimeSlot.of(TEN.plusMinutes(atMinute), minutes), "consulta", null, AppointmentStatus.BOOKED, false);
+                TimeSlot.of(TEN.plusMinutes(atMinute), minutes), "consulta", null,
+                        AppointmentStatus.BOOKED, false, null);
     }
 
     @Test
@@ -71,7 +72,7 @@ class BookingPolicyTest {
 
     @Test
     void cancelledAppointmentsDoNotBlockTheSlot() {
-        Appointment cancelled = stored(LUIS, ARIAS, 0, 30).cancelled();
+        Appointment cancelled = stored(LUIS, ARIAS, 0, 30).cancelled(Cancellations.byHand());
 
         assertThatCode(() -> policy.check(appointment(ANA, ARIAS, 0, 30), List.of(cancelled)))
                 .doesNotThrowAnyException();

@@ -38,6 +38,7 @@ import com.clinic.schedule.appointment.application.usecase.RecordLateArrivalNoti
 import com.clinic.schedule.appointment.application.usecase.ViewAgendaUseCase;
 import com.clinic.schedule.appointment.domain.Appointment;
 import com.clinic.schedule.appointment.domain.AppointmentId;
+import com.clinic.schedule.appointment.domain.CancellationRequester;
 import com.clinic.schedule.appointment.domain.PatientId;
 import com.clinic.schedule.appointment.domain.PractitionerId;
 import com.clinic.schedule.patient.api.PatientReader;
@@ -197,11 +198,19 @@ class AgendaViewController {
         return redirectToAgenda(practitionerId, date, view);
     }
 
+    /** Reception says who asked for it, and may leave a note (D-76). */
     @PostMapping("/agenda/appointments/{id}/cancel")
     String cancel(@PathVariable UUID id, @RequestParam(required = false) UUID practitionerId,
             @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate date,
-            @RequestParam(required = false) String view, RedirectAttributes flash) {
-        attempt(() -> cancel.handle(new AppointmentId(id)), "Turno cancelado.", flash);
+            @RequestParam(required = false) String view,
+            @RequestParam(required = false) CancellationRequester requestedBy,
+            @RequestParam(required = false) String note, RedirectAttributes flash) {
+        if (requestedBy == null) {
+            flash.addFlashAttribute("error", "Para cancelar, elegí quién lo pidió: el paciente o el consultorio.");
+        } else {
+            attempt(() -> cancel.handle(new CancelAppointmentUseCase.Command(new AppointmentId(id), requestedBy, note)),
+                    "Turno cancelado.", flash);
+        }
         return redirectToAgenda(practitionerId, date, view);
     }
 

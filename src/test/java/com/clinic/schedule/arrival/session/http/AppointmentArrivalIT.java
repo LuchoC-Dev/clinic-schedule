@@ -178,7 +178,9 @@ class AppointmentArrivalIT {
         String appointment = book(ana, "2026-03-10T10:00:00");
         arrives(appointment);
 
-        mockMvc.perform(post("/api/appointments/" + appointment + "/cancel")).andExpect(status().isOk());
+        mockMvc.perform(post("/api/appointments/" + appointment + "/cancel")
+                        .contentType(MediaType.APPLICATION_JSON).content("{\"requestedBy\":\"PATIENT\"}"))
+                .andExpect(status().isOk());
 
         mockMvc.perform(get("/api/queues/" + queue + "/session"))
                 .andExpect(jsonPath("$.waiting[0].patientId").value(ana.toString()))

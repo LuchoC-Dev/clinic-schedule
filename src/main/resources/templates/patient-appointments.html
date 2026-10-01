@@ -22,7 +22,13 @@
                 <span th:text="${row.reason}">consulta</span>
                 <div class="muted" th:if="${row.note}" th:text="${row.note}"></div>
             </td>
-            <td th:text="${row.state}">Reservado</td>
+            <td>
+                <span th:text="${row.state}">Reservado</span>
+                <!-- Who cancelled it, when, how and who asked, and reception's note (D-76). -->
+                <div class="muted" th:if="${row.cancellation}" th:text="${row.cancellation}">
+                    Por recepcion el mié 30/09/2026 10:15 · lo pidió el paciente</div>
+                <div class="muted" th:if="${row.cancellationNote}" th:text="'Nota: ' + ${row.cancellationNote}"></div>
+            </td>
             <td>
                 <a th:if="${row.booked}"
                    th:href="@{/agenda(practitionerId=${row.practitionerId}, date=${row.date})}">Ver en la agenda</a>

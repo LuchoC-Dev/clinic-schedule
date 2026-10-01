@@ -152,7 +152,9 @@ class RecordReadingApiIT {
                 {"patientId": "%s", "notes": "Control."}
                 """.formatted(patient)).andExpect(status().isCreated());
         // The appointment cancelled, and the call a day old: only having seen the patient remains.
-        mockMvc.perform(post("/api/appointments/" + appointment + "/cancel")).andExpect(status().isOk());
+        mockMvc.perform(post("/api/appointments/" + appointment + "/cancel")
+                        .contentType(MediaType.APPLICATION_JSON).content("{\"requestedBy\":\"PATIENT\"}"))
+                .andExpect(status().isOk());
         new ArrivalFixture(mockMvc, jdbc).seenTheDayBefore(patient);
 
         mockMvc.perform(get("/api/clinical-records/" + patient).with(asArias)).andExpect(status().isOk());

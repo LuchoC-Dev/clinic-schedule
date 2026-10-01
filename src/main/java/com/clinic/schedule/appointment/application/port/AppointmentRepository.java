@@ -53,6 +53,16 @@ public interface AppointmentRepository {
      */
     List<Appointment> findBookedStartingBy(LocalDateTime instant);
 
+    /**
+     * Appointments cancelled from {@code from}, included, to {@code until}, excluded — by when they
+     * were cancelled, not by when they were to be —, the most recent first, at most {@code limit}. Those
+     * cancelled before anything was recorded of it are never among them (D-76).
+     *
+     * @param practitioner only this practitioner's; null for everyone's
+     */
+    List<Appointment> findCancelledBetween(PractitionerId practitioner, LocalDateTime from, LocalDateTime until,
+            int limit);
+
     /** Stores a new appointment or the new state of an existing one. */
     void save(Appointment appointment);
 }

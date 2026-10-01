@@ -72,7 +72,7 @@ class AppointmentDayTest {
     void anAppointmentWhosePatientArrivedCanStillBeCancelledByHand() {
         // The manual handling the context asks for when a practitioner is absent: the appointment
         // does not even know the patient came.
-        assertThat(booked.cancelled().status()).isEqualTo(AppointmentStatus.CANCELLED);
+        assertThat(booked.cancelled(Cancellations.byHand()).status()).isEqualTo(AppointmentStatus.CANCELLED);
     }
 
     // --- when the patient is absent (D-61) -------------------------------------------------
@@ -121,7 +121,7 @@ class AppointmentDayTest {
                 .isInstanceOf(BookingRuleViolationException.class);
         assertThatThrownBy(() -> DAY.markAbsent(DAY.lateArrivalNotice(booked, TEN, NOT_ARRIVED), TEN.plusHours(3),
                 NOT_ARRIVED)).isInstanceOf(BookingRuleViolationException.class);
-        assertThatThrownBy(() -> DAY.markAbsent(booked.cancelled(), TEN.plusDays(1), NOT_ARRIVED))
+        assertThatThrownBy(() -> DAY.markAbsent(booked.cancelled(Cancellations.byHand()), TEN.plusDays(1), NOT_ARRIVED))
                 .isInstanceOf(BookingRuleViolationException.class);
     }
 
@@ -129,7 +129,7 @@ class AppointmentDayTest {
     void nothingMoreHappensToAnAbsentAppointment() {
         Appointment absent = DAY.markAbsent(booked, TEN.plusMinutes(30), NOT_ARRIVED);
 
-        assertThatThrownBy(absent::cancelled).isInstanceOf(BookingRuleViolationException.class)
+        assertThatThrownBy(() -> absent.cancelled(Cancellations.byHand())).isInstanceOf(BookingRuleViolationException.class)
                 .hasMessageContaining("absent");
         assertThatThrownBy(() -> DAY.lateArrivalNotice(absent, TEN.plusMinutes(40), NOT_ARRIVED))
                 .isInstanceOf(BookingRuleViolationException.class);
@@ -139,7 +139,8 @@ class AppointmentDayTest {
 
     @Test
     void aCancelledAppointmentIsNeverDue() {
-        assertThat(DAY.isDueForAbsence(booked.cancelled(), TEN.plusDays(1), NOT_ARRIVED)).isFalse();
+        assertThat(DAY.isDueForAbsence(booked.cancelled(Cancellations.byHand()), TEN.plusDays(1), NOT_ARRIVED))
+                .isFalse();
     }
 
     // --- only on the day of the appointment (D-38) --------------------------------------

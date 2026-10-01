@@ -23,7 +23,7 @@ class ViewPatientAppointmentsUseCaseTest {
 
     private Appointment stored(PatientId patient, LocalDateTime startsAt, AppointmentStatus status) {
         return Appointment.restore(AppointmentId.newId(), patient, PractitionerId.newId(),
-                TimeSlot.of(startsAt, 30), "consulta", null, status, false);
+                TimeSlot.of(startsAt, 30), "consulta", null, status, false, null);
     }
 
     @Test
