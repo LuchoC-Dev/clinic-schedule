@@ -1,6 +1,7 @@
 package com.clinic.schedule.appointment.api;
 
 import java.time.LocalDate;
+import java.time.LocalTime;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
@@ -28,6 +29,13 @@ public interface AppointmentReader {
 
     /** Every appointment of the patient, cancelled and absent ones included, in no order (D-80). */
     List<PatientAppointment> findForPatient(UUID patientId);
+
+    /**
+     * The start times worth offering for that reason with that practitioner on that day: every quarter of an
+     * hour they work and a slot of its length is free, none already gone (D-33). None for a reason they do
+     * not have.
+     */
+    List<LocalTime> suggestedTimes(UUID practitionerId, UUID reasonId, LocalDate date);
 
     /** The appointment, if it is still booked: neither cancelled nor absent (D-64). */
     Optional<AppointmentSummary> findBooked(UUID appointmentId);

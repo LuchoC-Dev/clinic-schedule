@@ -117,9 +117,10 @@ class PractitionerViewController {
 
     @PostMapping("/practitioners/{id}/reasons/{reasonId}")
     String changeReason(@PathVariable UUID id, @PathVariable UUID reasonId, @RequestParam String name,
-            @RequestParam int durationMinutes, RedirectAttributes flash) {
-        return attempt(id, () -> practitioners.changeReason(id, reasonId, name, durationMinutes), "Razón guardada.",
-                REASON_RULES, flash);
+            @RequestParam int durationMinutes, @RequestParam(defaultValue = "false") boolean webBookable,
+            RedirectAttributes flash) {
+        return attempt(id, () -> practitioners.changeReason(id, reasonId, name, durationMinutes, webBookable),
+                "Razón guardada.", REASON_RULES, flash);
     }
 
     /**

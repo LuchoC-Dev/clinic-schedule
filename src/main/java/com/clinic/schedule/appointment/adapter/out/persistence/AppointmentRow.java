@@ -6,6 +6,7 @@ import java.util.UUID;
 import com.clinic.schedule.appointment.domain.Appointment;
 import com.clinic.schedule.appointment.domain.AppointmentId;
 import com.clinic.schedule.appointment.domain.AppointmentStatus;
+import com.clinic.schedule.appointment.domain.BookingChannel;
 import com.clinic.schedule.appointment.domain.Cancellation;
 import com.clinic.schedule.appointment.domain.CancellationOrigin;
 import com.clinic.schedule.appointment.domain.CancellationRequester;
@@ -80,6 +81,11 @@ class AppointmentRow {
     @Column(name = "cancellation_note")
     private String cancellationNote;
 
+    /** At reception or on the web (D-82). */
+    @Enumerated(EnumType.STRING)
+    @Column(name = "booked_via", nullable = false, length = 10)
+    private BookingChannel bookedVia;
+
     protected AppointmentRow() {
         // required by JPA
     }
@@ -95,6 +101,7 @@ class AppointmentRow {
         row.note = appointment.note();
         row.status = appointment.status();
         row.lateArrivalNotice = appointment.hasLateArrivalNotice();
+        row.bookedVia = appointment.bookedVia();
         appointment.cancellation().ifPresent(cancellation -> {
             row.cancelledAt = cancellation.at();
             row.cancelledBy = cancellation.by();
@@ -116,6 +123,7 @@ class AppointmentRow {
                 status,
                 lateArrivalNotice,
                 cancelledAt == null ? null : new Cancellation(cancelledAt, cancelledBy, cancellationOrigin,
-                        cancellationRequestedBy, cancellationNote));
+                        cancellationRequestedBy, cancellationNote),
+                bookedVia);
     }
 }

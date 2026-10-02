@@ -11,6 +11,7 @@ import com.clinic.schedule.portal.application.exception.OwnDataRefusedException;
 import com.clinic.schedule.portal.application.exception.UnknownPatientException;
 import com.clinic.schedule.portal.domain.exception.AccountRefusedException;
 import com.clinic.schedule.portal.domain.exception.AccountStateException;
+import com.clinic.schedule.portal.domain.exception.WebBookingRefusedException;
 import com.clinic.schedule.shared.http.ErrorResponse;
 
 /** Translates this module's refusals into HTTP for its own controllers only (D-23). */
@@ -22,8 +23,11 @@ class PortalExceptionHandler {
         return ResponseEntity.status(HttpStatus.NOT_FOUND).body(ErrorResponse.of(404, "Not found", e.getMessage()));
     }
 
-    /** The patient may not have an account, or the account's state does not allow what was asked. */
-    @ExceptionHandler({AccountRefusedException.class, AccountStateException.class})
+    /**
+     * The patient may not have an account, the account's state does not allow what was asked, or the web does
+     * not book what was asked.
+     */
+    @ExceptionHandler({AccountRefusedException.class, AccountStateException.class, WebBookingRefusedException.class})
     ResponseEntity<ErrorResponse> conflict(RuntimeException e) {
         return ResponseEntity.status(HttpStatus.CONFLICT).body(ErrorResponse.of(409, "Conflict", e.getMessage()));
     }

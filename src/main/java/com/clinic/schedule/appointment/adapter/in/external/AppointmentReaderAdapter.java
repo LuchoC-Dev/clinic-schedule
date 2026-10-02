@@ -1,6 +1,7 @@
 package com.clinic.schedule.appointment.adapter.in.external;
 
 import java.time.LocalDate;
+import java.time.LocalTime;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
@@ -10,15 +11,18 @@ import org.springframework.stereotype.Component;
 import com.clinic.schedule.appointment.api.AppointmentReader;
 import com.clinic.schedule.appointment.api.AppointmentSummary;
 import com.clinic.schedule.appointment.api.PatientAppointment;
+import com.clinic.schedule.appointment.application.exception.UnknownReasonException;
 import com.clinic.schedule.appointment.application.usecase.FindPatientDayUseCase;
 import com.clinic.schedule.appointment.application.exception.AppointmentNotFoundException;
 import com.clinic.schedule.appointment.application.usecase.FindAppointmentUseCase;
 import com.clinic.schedule.appointment.application.usecase.FindAppointmentsBetweenUseCase;
+import com.clinic.schedule.appointment.application.usecase.SuggestSlotsUseCase;
 import com.clinic.schedule.appointment.application.usecase.ViewPatientAppointmentsUseCase;
 import com.clinic.schedule.appointment.domain.Appointment;
 import com.clinic.schedule.appointment.domain.AppointmentId;
 import com.clinic.schedule.appointment.domain.AppointmentStatus;
 import com.clinic.schedule.appointment.domain.PatientId;
+import com.clinic.schedule.appointment.domain.PractitionerId;
 
 /**
  * Answers this module's {@link AppointmentReader} for other modules. A driving adapter like the
@@ -35,13 +39,16 @@ class AppointmentReaderAdapter implements AppointmentReader {
     private final FindAppointmentUseCase appointment;
     private final FindAppointmentsBetweenUseCase between;
     private final ViewPatientAppointmentsUseCase patientAppointments;
+    private final SuggestSlotsUseCase slots;
 
     AppointmentReaderAdapter(FindPatientDayUseCase patientDay, FindAppointmentUseCase appointment,
-            FindAppointmentsBetweenUseCase between, ViewPatientAppointmentsUseCase patientAppointments) {
+            FindAppointmentsBetweenUseCase between, ViewPatientAppointmentsUseCase patientAppointments,
+            SuggestSlotsUseCase slots) {
         this.patientDay = patientDay;
         this.appointment = appointment;
         this.between = between;
         this.patientAppointments = patientAppointments;
+        this.slots = slots;
     }
 
     @Override
@@ -66,6 +73,15 @@ class AppointmentReaderAdapter implements AppointmentReader {
         return patientDay.handle(new PatientId(patientId), date).stream()
                 .map(AppointmentReaderAdapter::summary)
                 .toList();
+    }
+
+    @Override
+    public List<LocalTime> suggestedTimes(UUID practitionerId, UUID reasonId, LocalDate date) {
+        try {
+            return slots.forReason(new PractitionerId(practitionerId), reasonId, date).times();
+        } catch (UnknownReasonException e) {
+            return List.of();
+        }
     }
 
     @Override

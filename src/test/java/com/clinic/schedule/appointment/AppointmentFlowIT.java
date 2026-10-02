@@ -25,6 +25,7 @@ import com.clinic.schedule.appointment.application.usecase.RescheduleAppointment
 import com.clinic.schedule.appointment.domain.Appointment;
 import com.clinic.schedule.appointment.domain.AppointmentId;
 import com.clinic.schedule.appointment.domain.AppointmentStatus;
+import com.clinic.schedule.appointment.domain.BookingChannel;
 import com.clinic.schedule.appointment.domain.PatientId;
 import com.clinic.schedule.appointment.domain.PractitionerId;
 import com.clinic.schedule.appointment.domain.TimeSlot;
@@ -75,7 +76,8 @@ class AppointmentFlowIT {
     private BookAppointmentUseCase.Command consulta(CreatedPractitioner practitioner, LocalDateTime startsAt)
             throws Exception {
         return new BookAppointmentUseCase.Command(AppointmentId.newId(), new PatientId(patients.newPatient()),
-                new PractitionerId(practitioner.id()), practitioner.consulta(), startsAt, null);
+                new PractitionerId(practitioner.id()), practitioner.consulta(), startsAt, null,
+                        BookingChannel.RECEPTION);
     }
 
     @Test
@@ -83,7 +85,8 @@ class AppointmentFlowIT {
         CreatedPractitioner arias = fixture.workingEveryDay();
 
         Appointment booked = book.handle(new BookAppointmentUseCase.Command(AppointmentId.newId(),
-                new PatientId(patients.newPatient()), new PractitionerId(arias.id()), arias.ecografia(), TEN, null));
+                new PatientId(patients.newPatient()), new PractitionerId(arias.id()), arias.ecografia(), TEN, null,
+                        BookingChannel.RECEPTION));
 
         assertThat(booked.slot()).isEqualTo(TimeSlot.of(TEN, 45));
         assertThat(booked.reason()).isEqualTo("ecografia");
@@ -103,7 +106,8 @@ class AppointmentFlowIT {
     void refusesToBookAPatientWhoIsNotRegistered() throws Exception {
         CreatedPractitioner arias = fixture.workingEveryDay();
         BookAppointmentUseCase.Command forAStranger = new BookAppointmentUseCase.Command(AppointmentId.newId(),
-                PatientId.newId(), new PractitionerId(arias.id()), arias.consulta(), TEN, null);
+                PatientId.newId(), new PractitionerId(arias.id()), arias.consulta(), TEN, null,
+                        BookingChannel.RECEPTION);
 
         assertThatThrownBy(() -> book.handle(forAStranger))
                 .isInstanceOf(UnknownPatientException.class);

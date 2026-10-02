@@ -7,6 +7,7 @@ import java.util.UUID;
 
 import com.clinic.schedule.appointment.domain.Appointment;
 import com.clinic.schedule.appointment.domain.AppointmentStatus;
+import com.clinic.schedule.appointment.domain.BookingChannel;
 import com.clinic.schedule.appointment.domain.Cancellation;
 import com.clinic.schedule.patient.api.PatientSummary;
 
@@ -33,7 +34,8 @@ record AgendaRow(
         boolean lateNotice,
         String state,
         String cancellation,
-        String cancellationNote) {
+        String cancellationNote,
+        boolean web) {
 
     /** @param arrivedAt when the patient arrived, if they did — the queues say it (D-65) */
     static AgendaRow of(Appointment appointment, PatientSummary patient, String practitioner, LocalDateTime arrivedAt) {
@@ -56,7 +58,8 @@ record AgendaRow(
                 appointment.hasLateArrivalNotice(),
                 stateOf(appointment, arrivedAt),
                 CancellationWords.summary(appointment),
-                appointment.cancellation().map(Cancellation::note).orElse(null));
+                appointment.cancellation().map(Cancellation::note).orElse(null),
+                appointment.bookedVia() == BookingChannel.WEB);
     }
 
     /** The day with its year, for lists that span more than a week. Public so the template can call it. */

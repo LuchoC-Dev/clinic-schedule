@@ -38,6 +38,7 @@ import com.clinic.schedule.appointment.application.usecase.RecordLateArrivalNoti
 import com.clinic.schedule.appointment.application.usecase.ViewAgendaUseCase;
 import com.clinic.schedule.appointment.domain.Appointment;
 import com.clinic.schedule.appointment.domain.AppointmentId;
+import com.clinic.schedule.appointment.domain.BookingChannel;
 import com.clinic.schedule.appointment.domain.CancellationRequester;
 import com.clinic.schedule.appointment.domain.PatientId;
 import com.clinic.schedule.appointment.domain.PractitionerId;
@@ -306,7 +307,8 @@ class AgendaViewController {
         } else {
             booked = attempt(() -> book.handle(new BookAppointmentUseCase.Command(AppointmentId.newId(),
                             new PatientId(form.patientId()), new PractitionerId(form.practitionerId()),
-                            form.reasonId(), form.date().atTime(form.chosenTime()), form.cleanNote())),
+                            form.reasonId(), form.date().atTime(form.chosenTime()), form.cleanNote(),
+                            BookingChannel.RECEPTION)),
                     "Turno reservado.", flash);
         }
         if (!booked) {

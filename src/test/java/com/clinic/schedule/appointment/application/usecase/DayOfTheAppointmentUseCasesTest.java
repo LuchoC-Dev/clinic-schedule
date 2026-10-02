@@ -15,6 +15,7 @@ import com.clinic.schedule.appointment.domain.Appointment;
 import com.clinic.schedule.appointment.domain.AppointmentId;
 import com.clinic.schedule.appointment.domain.AppointmentDayService;
 import com.clinic.schedule.appointment.domain.AppointmentStatus;
+import com.clinic.schedule.appointment.domain.BookingChannel;
 import com.clinic.schedule.appointment.domain.PatientId;
 import com.clinic.schedule.appointment.domain.PractitionerId;
 import com.clinic.schedule.appointment.domain.TimeSlot;
@@ -38,7 +39,8 @@ class DayOfTheAppointmentUseCasesTest {
 
     private Appointment stored(LocalDateTime startsAt) {
         return Appointment.restore(AppointmentId.newId(), PatientId.newId(), PractitionerId.newId(),
-                TimeSlot.of(startsAt, 30), "consulta", null, AppointmentStatus.BOOKED, false, null);
+                TimeSlot.of(startsAt, 30), "consulta", null, AppointmentStatus.BOOKED, false, null,
+                        BookingChannel.RECEPTION);
     }
 
     private final FakeArrivals arrivals = new FakeArrivals();

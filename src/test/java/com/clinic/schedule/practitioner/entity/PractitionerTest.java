@@ -69,11 +69,19 @@ class PractitionerTest {
         Practitioner practitioner = Practitioner.register("Dra. Arias");
         Reason reason = practitioner.addReason("control", 20);
 
-        Reason changed = practitioner.changeReason(reason.getId(), "control anual", 40);
+        Reason changed = practitioner.changeReason(reason.getId(), "control anual", 40, true);
 
         assertThat(changed.getId()).isEqualTo(reason.getId());
         assertThat(changed.getName()).isEqualTo("control anual");
         assertThat(changed.getDurationMinutes()).isEqualTo(40);
+        assertThat(changed.isWebBookable()).isTrue();
+        assertThat(reason.isWebBookable()).isTrue();
+    }
+
+    /** None is booked on the web until reception says so (D-82). */
+    @Test
+    void aNewReasonIsNotBookedOnTheWeb() {
+        assertThat(Practitioner.register("Dra. Arias").addReason("control", 20).isWebBookable()).isFalse();
     }
 
     @Test
@@ -81,7 +89,7 @@ class PractitionerTest {
         Practitioner practitioner = Practitioner.register("Dra. Arias");
         Reason reason = practitioner.addReason("consulta", 30);
 
-        Reason changed = practitioner.changeReason(reason.getId(), "Consulta", 45);
+        Reason changed = practitioner.changeReason(reason.getId(), "Consulta", 45, false);
 
         assertThat(changed.getDurationMinutes()).isEqualTo(45);
     }
@@ -92,7 +100,7 @@ class PractitionerTest {
         practitioner.addReason("consulta", 30);
         Reason control = practitioner.addReason("control", 20);
 
-        assertThatThrownBy(() -> practitioner.changeReason(control.getId(), "consulta", 20))
+        assertThatThrownBy(() -> practitioner.changeReason(control.getId(), "consulta", 20, false))
                 .isInstanceOf(DuplicateReasonException.class);
     }
 
@@ -100,7 +108,7 @@ class PractitionerTest {
     void changingAnUnknownReasonFails() {
         Practitioner practitioner = Practitioner.register("Dra. Arias");
 
-        assertThatThrownBy(() -> practitioner.changeReason(UUID.randomUUID(), "consulta", 30))
+        assertThatThrownBy(() -> practitioner.changeReason(UUID.randomUUID(), "consulta", 30, false))
                 .isInstanceOf(ReasonNotFoundException.class);
     }
 

@@ -13,6 +13,7 @@ import org.junit.jupiter.api.Test;
 import com.clinic.schedule.appointment.domain.Appointment;
 import com.clinic.schedule.appointment.domain.AppointmentId;
 import com.clinic.schedule.appointment.domain.AppointmentStatus;
+import com.clinic.schedule.appointment.domain.BookingChannel;
 import com.clinic.schedule.appointment.domain.Cancellation;
 import com.clinic.schedule.appointment.domain.CancellationRequester;
 import com.clinic.schedule.appointment.domain.PatientId;
@@ -33,7 +34,7 @@ class ListCancellationsUseCaseTest {
     private Appointment cancelledAt(LocalDateTime at) {
         Appointment appointment = Appointment.restore(AppointmentId.newId(), PatientId.newId(), ARIAS,
                 TimeSlot.of(TODAY.plusDays(5).atTime(10, 0), 30), "consulta", null, AppointmentStatus.CANCELLED, false,
-                Cancellation.byHand(at, "recepcion", CancellationRequester.PATIENT, null));
+                Cancellation.byHand(at, "recepcion", CancellationRequester.PATIENT, null), BookingChannel.RECEPTION);
         appointments.given(appointment);
         return appointment;
     }

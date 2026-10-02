@@ -80,10 +80,12 @@ app:
     cron: "0 0 10 * * *"
     days-ahead: 3
   # The patients' web accounts (D-79): where patients reach the application, which the links in their emails
-  # point at, and how long the link to activate an account lasts, an ISO-8601 duration.
+  # point at, how long the link to activate an account lasts, an ISO-8601 duration, and how many days ahead a
+  # patient books on the web, from tomorrow (D-82).
   portal:
     base-url: http://localhost:8080
     activation-valid-for: PT72H
+    booking-days-ahead: 30
 
 logging:
   level:

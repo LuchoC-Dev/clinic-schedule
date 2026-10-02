@@ -9,6 +9,7 @@ import org.junit.jupiter.api.Test;
 import com.clinic.schedule.appointment.domain.Appointment;
 import com.clinic.schedule.appointment.domain.AppointmentId;
 import com.clinic.schedule.appointment.domain.AppointmentStatus;
+import com.clinic.schedule.appointment.domain.BookingChannel;
 import com.clinic.schedule.appointment.domain.PatientId;
 import com.clinic.schedule.appointment.domain.PractitionerId;
 import com.clinic.schedule.appointment.domain.TimeSlot;
@@ -23,7 +24,7 @@ class ViewPatientAppointmentsUseCaseTest {
 
     private Appointment stored(PatientId patient, LocalDateTime startsAt, AppointmentStatus status) {
         return Appointment.restore(AppointmentId.newId(), patient, PractitionerId.newId(),
-                TimeSlot.of(startsAt, 30), "consulta", null, status, false, null);
+                TimeSlot.of(startsAt, 30), "consulta", null, status, false, null, BookingChannel.RECEPTION);
     }
 
     @Test

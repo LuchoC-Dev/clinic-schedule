@@ -24,7 +24,8 @@ import com.clinic.schedule.appointment.domain.exception.NotTheAppointmentDayExce
  * else's appointment needs the rest of the agenda, so it is decided by {@link BookingService}.
  *
  * <p>The reason is carried as text: a snapshot of what was booked, together with the
- * duration, so renaming a reason later does not rewrite history (D-29).
+ * duration, so renaming a reason later does not rewrite history (D-29). It keeps where it was
+ * booked, at reception or on the web (D-82), which nothing that happens to it afterwards changes.
  */
 public class Appointment {
 
@@ -46,10 +47,11 @@ public class Appointment {
     private final AppointmentStatus status;
     private final boolean lateArrivalNotice;
     private final Cancellation cancellation;
+    private final BookingChannel bookedVia;
 
     private Appointment(AppointmentId id, PatientId patientId, PractitionerId practitionerId, TimeSlot slot,
             String reason, String note, AppointmentStatus status, boolean lateArrivalNotice,
-            Cancellation cancellation) {
+            Cancellation cancellation, BookingChannel bookedVia) {
         this.id = id;
         this.patientId = patientId;
         this.practitionerId = practitionerId;
@@ -59,6 +61,7 @@ public class Appointment {
         this.status = status;
         this.lateArrivalNotice = lateArrivalNotice;
         this.cancellation = cancellation;
+        this.bookedVia = bookedVia;
     }
 
     /**
@@ -69,10 +72,10 @@ public class Appointment {
      * the rest of the agenda, so the way in is {@link BookingService#book}.
      */
     static Appointment book(AppointmentId id, PatientId patientId, PractitionerId practitionerId, TimeSlot slot,
-            String reason, String note) {
-        requireInvariants(id, patientId, practitionerId, slot, reason, note);
+            String reason, String note, BookingChannel bookedVia) {
+        requireInvariants(id, patientId, practitionerId, slot, reason, note, bookedVia);
         return new Appointment(id, patientId, practitionerId, slot, reason.strip(), note, AppointmentStatus.BOOKED,
-                false, null);
+                false, null, bookedVia);
     }
 
     /**
@@ -94,8 +97,8 @@ public class Appointment {
      */
     public static Appointment restore(AppointmentId id, PatientId patientId, PractitionerId practitionerId,
             TimeSlot slot, String reason, String note, AppointmentStatus status, boolean lateArrivalNotice,
-            Cancellation cancellation) {
-        requireInvariants(id, patientId, practitionerId, slot, reason, note);
+            Cancellation cancellation, BookingChannel bookedVia) {
+        requireInvariants(id, patientId, practitionerId, slot, reason, note, bookedVia);
         if (status == null) {
             throw new IllegalArgumentException("A stored appointment needs a status");
         }
@@ -103,13 +106,16 @@ public class Appointment {
             throw new IllegalArgumentException("Only a cancelled appointment has a cancellation");
         }
         return new Appointment(id, patientId, practitionerId, slot, reason.strip(), note, status, lateArrivalNotice,
-                cancellation);
+                cancellation, bookedVia);
     }
 
     private static void requireInvariants(AppointmentId id, PatientId patientId, PractitionerId practitionerId,
-            TimeSlot slot, String reason, String note) {
+            TimeSlot slot, String reason, String note, BookingChannel bookedVia) {
         if (id == null || patientId == null || practitionerId == null || slot == null) {
             throw new IllegalArgumentException("An appointment needs an id, a patient, a practitioner and a slot");
+        }
+        if (bookedVia == null) {
+            throw new IllegalArgumentException("An appointment needs where it was booked");
         }
         if (reason == null || reason.isBlank()) {
             throw new IllegalArgumentException("An appointment needs a reason");
@@ -133,7 +139,7 @@ public class Appointment {
             throw new IllegalArgumentException("A cancellation is recorded with the appointment it cancels");
         }
         return new Appointment(id, patientId, practitionerId, slot, reason, note, AppointmentStatus.CANCELLED,
-                lateArrivalNotice, cancellation);
+                lateArrivalNotice, cancellation, bookedVia);
     }
 
     /**
@@ -151,7 +157,7 @@ public class Appointment {
         if (newSlot == null) {
             throw new IllegalArgumentException("An appointment needs a slot");
         }
-        return new Appointment(id, patientId, practitionerId, newSlot, reason, note, status, false, null);
+        return new Appointment(id, patientId, practitionerId, newSlot, reason, note, status, false, null, bookedVia);
     }
 
     /**
@@ -169,7 +175,7 @@ public class Appointment {
         if (lateArrivalNotice) {
             throw new BookingRuleViolationException("Reception was already warned that this patient will be late");
         }
-        return new Appointment(id, patientId, practitionerId, slot, reason, note, status, true, null);
+        return new Appointment(id, patientId, practitionerId, slot, reason, note, status, true, null, bookedVia);
     }
 
     /**
@@ -200,7 +206,7 @@ public class Appointment {
             throw new BookingRuleViolationException("The patient of this appointment may still come");
         }
         return new Appointment(id, patientId, practitionerId, slot, reason, note, AppointmentStatus.ABSENT,
-                lateArrivalNotice, null);
+                lateArrivalNotice, null, bookedVia);
     }
 
     private void requireTheDayOfTheAppointment(LocalDateTime now, String action) {
@@ -267,5 +273,10 @@ public class Appointment {
      */
     public Optional<Cancellation> cancellation() {
         return Optional.ofNullable(cancellation);
+    }
+
+    /** Where it was booked: at reception, or by the patient on the web (D-82). */
+    public BookingChannel bookedVia() {
+        return bookedVia;
     }
 }

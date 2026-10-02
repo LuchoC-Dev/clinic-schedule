@@ -17,6 +17,7 @@ import com.clinic.schedule.appointment.application.exception.UnknownReasonExcept
 import com.clinic.schedule.appointment.domain.Appointment;
 import com.clinic.schedule.appointment.domain.AppointmentId;
 import com.clinic.schedule.appointment.domain.AppointmentStatus;
+import com.clinic.schedule.appointment.domain.BookingChannel;
 import com.clinic.schedule.appointment.domain.PatientId;
 import com.clinic.schedule.appointment.domain.PractitionerId;
 import com.clinic.schedule.appointment.domain.TimeSlot;
@@ -44,7 +45,7 @@ class SuggestSlotsUseCaseTest {
 
     private static Appointment booked(LocalTime at, int minutes) {
         return Appointment.restore(AppointmentId.newId(), PatientId.newId(), ARIAS, TimeSlot.of(DAY.atTime(at), minutes),
-                "consulta", null, AppointmentStatus.BOOKED, false, null);
+                "consulta", null, AppointmentStatus.BOOKED, false, null, BookingChannel.RECEPTION);
     }
 
     private static List<LocalTime> times(String... values) {

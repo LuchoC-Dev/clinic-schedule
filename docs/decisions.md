@@ -2992,3 +2992,54 @@ route for the contact and the consent (a typo fixed would carry a consent given 
 consent left out withdrawn, as at reception (a patient touching only their phone would drop their mother's
 consent on the email); the account's bare id as who changed it (nothing would tell it from a staff username);
 reading the history from the web (reception's, as before).
+
+---
+
+## D-82 — A patient books on the web what reception opens to it, three ahead at most
+**Date:** 2026-10-02 · **Status:** accepted
+
+v2, phase 6, part 3. Until now only reception booked. A patient now books an appointment for themselves
+from their account.
+
+**Reception opens each reason to the web.** `reason.web_bookable` (`V35`), false at first, so nothing is
+offered until reception says so: on the practitioners' screen, "Se reserva por la web" beside each reason, and
+`webBookable` in the reason's `PUT`, false when left out. A new reason is never booked on the web; reception
+marks it afterwards. `ReasonDetails` carries it to the other modules.
+
+**What the web books is the portal's; how any appointment is booked stays the appointment module's.**
+`WebBookingPolicy`, pure, is handed what it needs: a reason opened to the web; a day from tomorrow to
+`app.portal.booking-days-ahead` days on, 30 — today's appointments are reception's —; one of the times the
+agenda offers that day, every quarter of an hour where a slot of its length is free (D-33), not any free time
+as reception may; and fewer than three appointments ahead, every booked one counted whoever booked it — a
+limit of the web's, which reception books beyond. Then the appointment module books it through
+`appointment/api/AppointmentWriter.bookOnWeb`, with `BookAppointmentUseCase` and every rule reception's
+bookings follow: the practitioner's hours, no overlap with their agenda nor with the patient's. Its refusals
+come back as `BookingRefusedException`, of the api, which the portal tells the patient as a time taken or
+another appointment of theirs at that time. `AppointmentReader.suggestedTimes` answers the times offered,
+with `SuggestSlotsUseCase`. Two bookings of one patient at the very same moment could both pass the limit; for
+a small practice that is accepted, not guarded by the database.
+
+**The appointment keeps where it was booked.** `Appointment.bookedVia`, `RECEPTION` or `WEB`, given when it is
+booked and never changed afterwards; `appointment.booked_via` (`V35`), the appointments already there booked
+at reception, the only place there was. The agenda and the patient's appointments mark the web's "· Web", and
+the API answers `bookedVia`. Who booked it, beyond where, is not recorded (the context). A web booking has no
+note.
+
+**The confirmation goes to the account that booked it,** in plain text: the practice, the day, the time and
+the practitioner, and how to cancel or change it — by calling or at reception, until cancelling from the web
+comes (part 4). Never the reason, as the reminders (D-78). One attempt: a confirmation that does not go out
+leaves the appointment booked, and the patient is told. `AccountMailPort` sends it beside the activation.
+
+**Routes and screen.** `GET /api/portal/booking/options` — the days and each practitioner with the reasons
+booked on the web —; `GET /api/portal/booking/times?practitionerId=&reasonId=&date=`; `POST
+/api/portal/appointments`, `{practitionerId, reasonId, startsAt}`, 201 with whether the confirmation went
+out. What the web does not book is a 409, as a refusal for the state (D-23). The screen `/portal/booking`,
+*Sacar turno* in the patients' header: a reason with its practitioner and a day, then the times offered,
+each a button that books it.
+
+*Rejected:* every reason on the web (reception decides what may be booked without a word with the patient);
+any free time, as reception books (the agenda would fill with odd times); a limit per account or per family
+(the patient is who has the appointments); a unique constraint against two bookings at once (a counted
+limit is not a constraint, and the race is a patient booking twice in the same instant); the reason in the
+confirmation (it may be clinical); recording who booked each appointment (not asked, beyond where); same-day
+booking on the web (today's agenda is reception's to manage).

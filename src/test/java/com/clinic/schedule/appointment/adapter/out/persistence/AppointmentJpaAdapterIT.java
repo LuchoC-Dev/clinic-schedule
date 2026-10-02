@@ -20,6 +20,7 @@ import com.clinic.schedule.appointment.domain.Appointment;
 import com.clinic.schedule.appointment.domain.AppointmentDayService;
 import com.clinic.schedule.appointment.domain.AppointmentId;
 import com.clinic.schedule.appointment.domain.AppointmentStatus;
+import com.clinic.schedule.appointment.domain.BookingChannel;
 import com.clinic.schedule.appointment.domain.Cancellation;
 import com.clinic.schedule.appointment.domain.CancellationRequester;
 import com.clinic.schedule.appointment.domain.Cancellations;
@@ -50,7 +51,8 @@ class AppointmentJpaAdapterIT {
     private Appointment appointment(PatientId patient, PractitionerId practitioner, LocalDateTime startsAt,
             int minutes, String note) {
         return Appointment.restore(AppointmentId.newId(), patient, practitioner,
-                TimeSlot.of(startsAt, minutes), "consulta", note, AppointmentStatus.BOOKED, false, null);
+                TimeSlot.of(startsAt, minutes), "consulta", note, AppointmentStatus.BOOKED, false, null,
+                        BookingChannel.RECEPTION);
     }
 
     /** Sends everything to the database and empties the context, so reads are real queries. */

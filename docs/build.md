@@ -1344,12 +1344,41 @@ email's stayed her mother's, her date of birth unchanged. A phone of three digit
 fix. Reception's screen of the patient listed the three changes by "el paciente (web)", and the history kept
 `portal:` and the account's id, never her document.
 
-#### Part 3 — Booking on the web `[ ]`
-- [ ] Reception marks which reasons of each practitioner may be booked on the web; none at first
-- [ ] From tomorrow to 30 days ahead, at the suggested times, three appointments ahead at most per
-      patient — every booked one counted, the limit binding the web only
-- [ ] An email to the account that booked confirms it, without the reason
-- [ ] The appointment keeps where it was booked; the agenda and the patient's appointments mark the web's
+#### Part 3 — Booking on the web `[x]`
+- [x] Reception marks which reasons of each practitioner may be booked on the web — `reason.web_bookable`,
+      false at first —, on the practitioners' screen and in the reason's `PUT` (D-82)
+- [x] `WebBookingPolicy`: from tomorrow to `app.portal.booking-days-ahead` days (30), at the times the agenda
+      offers, three appointments ahead at most per patient — every booked one counted, the limit binding the
+      web only; the appointment module books it with reception's rules through `AppointmentWriter.bookOnWeb`
+- [x] An email to the account that booked confirms it, without the reason; one that does not go out leaves
+      the appointment booked, and the patient is told
+- [x] `Appointment.bookedVia` (`RECEPTION` or `WEB`, `appointment.booked_via`); the agenda and the patient's
+      appointments mark the web's "· Web", and the API answers `bookedVia`
+- [x] `GET /api/portal/booking/options` and `/times`, `POST /api/portal/appointments`, and *Sacar turno*
+- [x] `V35`: the reason's flag and the appointment's channel, the appointments already there booked at
+      reception
+- [x] 7 unit and 8 integration tests. 414 unit and 501 integration tests, 915 in total
+
+**Verified with:** every new test failing when the code it covers was broken on purpose — 39 breakages, all
+compiling and all caught: each rule of the policy (any reason, today, a day too many, any time, cancelled,
+absent or past appointments counted, a fourth allowed), each part of the confirmation's text, the appointment
+booked nowhere or always at reception, the channel not stored or read back as reception, the web's booking
+made as reception's, a busy patient told the time is taken, no times offered, the agenda's mark, the API's
+`bookedVia`, the reason's flag lost in the entity, the api, the answer, the API's request or the screen,
+every reason or any day offered, the confirmation said sent or not wrongly or sent to someone else, the
+policy skipped, a refusal not a 409, each refusal's words and the screen's last day, and V35's check. The run
+was stopped twice by the machine's lack of memory; the fault left planted was restored, every file checked
+against its state before, and the rest run in shorter batches. `mvnw clean verify` with the PostgreSQL tests
+running V35.
+
+**Verified with the application running** on a throwaway PostgreSQL and a throwaway Mailpit: taken to V104 by
+the previous commit's build with two appointments reception booked for the development patient, then started
+on this one: V35 applied out of order, the two appointments booked at reception and every reason closed to
+the web. Reception ticked "Se reserva por la web" on Dra. Arias's "consulta"; the patient's *Sacar turno*
+offered it alone, from tomorrow to 30 days on, and the times of a Wednesday from 09:00 to 17:30 without her
+break. She booked 10:30: the agenda showed it "consulta · Web", stored as `WEB` without a note, and Mailpit got
+the confirmation at her account's email — the day, the time and the practitioner, not the reason. A fourth
+appointment ahead was refused with what to do instead.
 
 #### Part 4 — Cancelling `[ ]`
 - [ ] On the web, any of the patient's booked appointments up to 24 hours before it

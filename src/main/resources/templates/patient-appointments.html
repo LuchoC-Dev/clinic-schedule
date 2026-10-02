@@ -20,6 +20,7 @@
             <td th:text="${row.practitioner}">Dra. Laura Arias</td>
             <td>
                 <span th:text="${row.reason}">consulta</span>
+                <span class="muted" th:if="${row.web}">· Web</span>
                 <div class="muted" th:if="${row.note}" th:text="${row.note}"></div>
             </td>
             <td>

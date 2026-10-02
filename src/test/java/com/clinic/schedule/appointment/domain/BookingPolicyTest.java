@@ -23,13 +23,13 @@ class BookingPolicyTest {
 
     private Appointment appointment(PatientId patient, PractitionerId practitioner, int atMinute, int minutes) {
         return Appointment.book(AppointmentId.newId(), patient, practitioner,
-                TimeSlot.of(TEN.plusMinutes(atMinute), minutes), "consulta", null);
+                TimeSlot.of(TEN.plusMinutes(atMinute), minutes), "consulta", null, BookingChannel.RECEPTION);
     }
 
     private Appointment stored(PatientId patient, PractitionerId practitioner, int atMinute, int minutes) {
         return Appointment.restore(AppointmentId.newId(), patient, practitioner,
                 TimeSlot.of(TEN.plusMinutes(atMinute), minutes), "consulta", null,
-                        AppointmentStatus.BOOKED, false, null);
+                        AppointmentStatus.BOOKED, false, null, BookingChannel.RECEPTION);
     }
 
     @Test

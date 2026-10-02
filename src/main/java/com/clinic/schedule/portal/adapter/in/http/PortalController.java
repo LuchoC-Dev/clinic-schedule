@@ -1,21 +1,27 @@
 package com.clinic.schedule.portal.adapter.in.http;
 
+import java.net.URI;
+import java.time.LocalDate;
 import java.util.Map;
 import java.util.UUID;
 import java.util.stream.Collectors;
 
+import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 import com.clinic.schedule.portal.application.usecase.ActivateAccountUseCase;
+import com.clinic.schedule.portal.application.usecase.BookOnWebUseCase;
 import com.clinic.schedule.portal.application.usecase.ChangeOwnConsentUseCase;
 import com.clinic.schedule.portal.application.usecase.ChangeOwnContactUseCase;
 import com.clinic.schedule.portal.application.usecase.ListOwnAppointmentsUseCase;
 import com.clinic.schedule.portal.application.usecase.ViewOwnDataUseCase;
+import com.clinic.schedule.portal.application.usecase.ViewWebBookingUseCase;
 import com.clinic.schedule.practitioner.api.PractitionerReader;
 import com.clinic.schedule.practitioner.api.PractitionerSummary;
 
@@ -34,15 +40,20 @@ class PortalController {
     private final ViewOwnDataUseCase data;
     private final ChangeOwnContactUseCase contact;
     private final ChangeOwnConsentUseCase consent;
+    private final ViewWebBookingUseCase booking;
+    private final BookOnWebUseCase book;
     private final PractitionerReader practitioners;
 
     PortalController(ActivateAccountUseCase activate, ListOwnAppointmentsUseCase appointments, ViewOwnDataUseCase data,
-            ChangeOwnContactUseCase contact, ChangeOwnConsentUseCase consent, PractitionerReader practitioners) {
+            ChangeOwnContactUseCase contact, ChangeOwnConsentUseCase consent, ViewWebBookingUseCase booking,
+            BookOnWebUseCase book, PractitionerReader practitioners) {
         this.activate = activate;
         this.appointments = appointments;
         this.data = data;
         this.contact = contact;
         this.consent = consent;
+        this.booking = booking;
+        this.book = book;
         this.practitioners = practitioners;
     }
 
@@ -58,6 +69,27 @@ class PortalController {
         Map<UUID, String> names = practitioners.findAll().stream()
                 .collect(Collectors.toMap(PractitionerSummary::id, PractitionerSummary::fullName));
         return OwnAppointmentsResponse.of(appointments.handle(), names);
+    }
+
+    /** The reasons booked on the web, by practitioner, and the days the web books (D-82). */
+    @GetMapping("/api/portal/booking/options")
+    BookingOptionsResponse bookingOptions() {
+        return BookingOptionsResponse.of(booking.options());
+    }
+
+    /** The times offered for a reason booked on the web, on a day the web books. */
+    @GetMapping("/api/portal/booking/times")
+    BookingTimesResponse bookingTimes(@RequestParam UUID practitionerId, @RequestParam UUID reasonId,
+            @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate date) {
+        return new BookingTimesResponse(date, booking.times(practitionerId, reasonId, date));
+    }
+
+    /** The patient books an appointment for themselves. */
+    @PostMapping("/api/portal/appointments")
+    ResponseEntity<WebBookingResponse> book(@Valid @RequestBody WebBookingRequest request) {
+        BookOnWebUseCase.Result booked = book.handle(request.practitionerId(), request.reasonId(), request.startsAt());
+        return ResponseEntity.created(URI.create("/api/portal/appointments/" + booked.appointmentId()))
+                .body(WebBookingResponse.of(booked));
     }
 
     /** The patient's own data (D-81). */

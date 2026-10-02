@@ -10,6 +10,7 @@ import com.clinic.schedule.appointment.application.port.PatientRegistrationPort;
 import com.clinic.schedule.appointment.application.port.PatientRegistrationPort.NewPatient;
 import com.clinic.schedule.appointment.domain.Appointment;
 import com.clinic.schedule.appointment.domain.AppointmentId;
+import com.clinic.schedule.appointment.domain.BookingChannel;
 import com.clinic.schedule.appointment.domain.PatientId;
 import com.clinic.schedule.appointment.domain.PractitionerId;
 
@@ -41,7 +42,7 @@ public class BookNewPatientUseCase {
     public Appointment handle(Command command) {
         PatientId registered = patients.register(command.patient());
         return book.handle(new BookAppointmentUseCase.Command(command.id(), registered, command.practitionerId(),
-                command.reasonId(), command.startsAt(), command.note()));
+                command.reasonId(), command.startsAt(), command.note(), BookingChannel.RECEPTION));
     }
 
     /** A booking as {@link BookAppointmentUseCase.Command}, with the patient to register in place of their id. */

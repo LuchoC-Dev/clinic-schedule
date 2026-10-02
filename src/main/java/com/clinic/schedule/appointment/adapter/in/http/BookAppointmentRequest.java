@@ -5,6 +5,7 @@ import java.util.UUID;
 
 import com.clinic.schedule.appointment.application.usecase.BookAppointmentUseCase;
 import com.clinic.schedule.appointment.domain.AppointmentId;
+import com.clinic.schedule.appointment.domain.BookingChannel;
 import com.clinic.schedule.appointment.domain.PatientId;
 import com.clinic.schedule.appointment.domain.PractitionerId;
 
@@ -49,6 +50,7 @@ record BookAppointmentRequest(
                 new PractitionerId(practitionerId),
                 reasonId,
                 startsAt,
-                note);
+                note,
+                BookingChannel.RECEPTION);
     }
 }

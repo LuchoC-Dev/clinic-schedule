@@ -16,6 +16,7 @@ import com.clinic.schedule.appointment.application.exception.UnknownPractitioner
 import com.clinic.schedule.appointment.domain.Appointment;
 import com.clinic.schedule.appointment.domain.AppointmentId;
 import com.clinic.schedule.appointment.domain.AppointmentStatus;
+import com.clinic.schedule.appointment.domain.BookingChannel;
 import com.clinic.schedule.appointment.domain.PatientId;
 import com.clinic.schedule.appointment.domain.PractitionerId;
 import com.clinic.schedule.appointment.domain.TimeSlot;
@@ -41,7 +42,8 @@ class RecordTimeOffUseCaseTest {
 
     private static Appointment booked(PractitionerId practitioner, LocalDateTime startsAt) {
         return Appointment.restore(AppointmentId.newId(), PatientId.newId(), practitioner,
-                TimeSlot.of(startsAt, 30), "consulta", null, AppointmentStatus.BOOKED, false, null);
+                TimeSlot.of(startsAt, 30), "consulta", null, AppointmentStatus.BOOKED, false, null,
+                        BookingChannel.RECEPTION);
     }
 
     private static TimeSlot wholeDay() {

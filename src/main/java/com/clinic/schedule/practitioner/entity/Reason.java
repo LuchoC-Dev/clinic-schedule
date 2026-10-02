@@ -14,6 +14,8 @@ import jakarta.persistence.Table;
  *
  * <p>It has its own id so it can be renamed without losing its identity. The duration is
  * what reception reserves in the agenda; the real visit may run longer (see the context).
+ *
+ * <p>Reception says whether a patient may book it on the web (D-82); none may until reception says so.
  */
 @Entity
 @Table(name = "reason")
@@ -33,6 +35,9 @@ public class Reason {
     @Column(name = "duration_minutes", nullable = false)
     private int durationMinutes;
 
+    @Column(name = "web_bookable", nullable = false)
+    private boolean webBookable;
+
     protected Reason() {
         // required by JPA
     }
@@ -47,9 +52,10 @@ public class Reason {
         return new Reason(UUID.randomUUID(), name, durationMinutes);
     }
 
-    void change(String name, int durationMinutes) {
+    void change(String name, int durationMinutes, boolean webBookable) {
         this.name = requireName(name);
         this.durationMinutes = requireDuration(durationMinutes);
+        this.webBookable = webBookable;
     }
 
     /** Names are compared ignoring case and surrounding spaces: "Consulta" is "consulta ". */
@@ -88,5 +94,10 @@ public class Reason {
 
     public int getDurationMinutes() {
         return durationMinutes;
+    }
+
+    /** Whether a patient may book it on the web (D-82). */
+    public boolean isWebBookable() {
+        return webBookable;
     }
 }

@@ -20,6 +20,7 @@ import com.clinic.schedule.appointment.application.port.AppointmentRepository;
 import com.clinic.schedule.appointment.domain.Appointment;
 import com.clinic.schedule.appointment.domain.AppointmentId;
 import com.clinic.schedule.appointment.domain.AppointmentStatus;
+import com.clinic.schedule.appointment.domain.BookingChannel;
 import com.clinic.schedule.appointment.domain.PatientId;
 import com.clinic.schedule.appointment.domain.PractitionerId;
 import com.clinic.schedule.appointment.domain.TimeSlot;
@@ -65,7 +66,7 @@ class AppointmentOverlapPostgresIT {
 
     private static Appointment booked(PatientId patient, PractitionerId practitioner, LocalDateTime startsAt) {
         return Appointment.restore(AppointmentId.newId(), patient, practitioner, TimeSlot.of(startsAt, 30),
-                "consulta", null, AppointmentStatus.BOOKED, false, null);
+                "consulta", null, AppointmentStatus.BOOKED, false, null, BookingChannel.RECEPTION);
     }
 
     @Test

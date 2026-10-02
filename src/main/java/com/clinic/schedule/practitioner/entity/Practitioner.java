@@ -86,13 +86,14 @@ public class Practitioner {
     }
 
     /**
-     * Renames a reason or changes its duration. Appointments already booked keep the duration
-     * they were booked with, so the agenda does not move under reception's feet.
+     * Renames a reason, changes its duration or whether patients may book it on the web (D-82).
+     * Appointments already booked keep the duration they were booked with, so the agenda does not
+     * move under reception's feet.
      */
-    public Reason changeReason(UUID reasonId, String name, int durationMinutes) {
+    public Reason changeReason(UUID reasonId, String name, int durationMinutes, boolean webBookable) {
         Reason reason = findReason(reasonId).orElseThrow(() -> new ReasonNotFoundException(id, reasonId));
         requireNameIsFree(name, reason);
-        reason.change(name, durationMinutes);
+        reason.change(name, durationMinutes, webBookable);
         return reason;
     }
 

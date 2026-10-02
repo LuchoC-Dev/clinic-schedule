@@ -87,12 +87,13 @@
     </form>
 </header>
 <!--
-  The patients' header, on their own screens (D-80): their appointments, their data (D-81) and logging out,
-  and nothing of the staff's.
+  The patients' header, on their own screens (D-80): their appointments, booking one (D-82), their data
+  (D-81) and logging out, and nothing of the staff's.
 -->
 <header th:fragment="portalHeader">
     <strong>Consultorio</strong>
     <a th:href="@{/portal/appointments}">Mis turnos</a>
+    <a th:href="@{/portal/booking}">Sacar turno</a>
     <a th:href="@{/portal/profile}">Mis datos</a>
     <form class="inline" method="post" th:action="@{/portal/logout}">
         <button type="submit">Salir</button>

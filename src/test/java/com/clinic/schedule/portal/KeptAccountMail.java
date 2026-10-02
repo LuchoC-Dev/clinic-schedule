@@ -9,6 +9,7 @@ import org.springframework.context.annotation.Primary;
 
 import com.clinic.schedule.portal.application.port.AccountMailPort;
 import com.clinic.schedule.portal.domain.ActivationMessage;
+import com.clinic.schedule.portal.domain.BookingConfirmation;
 
 /**
  * Keeps the web accounts' emails instead of sending them; an address that starts with "falla" cannot be
@@ -18,15 +19,29 @@ import com.clinic.schedule.portal.domain.ActivationMessage;
 public class KeptAccountMail {
 
     public static final List<ActivationMessage> SENT = new CopyOnWriteArrayList<>();
+    public static final List<BookingConfirmation> CONFIRMATIONS = new CopyOnWriteArrayList<>();
 
     @Bean
     @Primary
     AccountMailPort keptAccountMail() {
-        return message -> {
-            if (message.address().startsWith("falla")) {
-                throw new IllegalStateException("The mail server is down");
+        return new AccountMailPort() {
+            @Override
+            public void sendActivation(ActivationMessage message) {
+                reach(message.address());
+                SENT.add(message);
             }
-            SENT.add(message);
+
+            @Override
+            public void sendBookingConfirmation(BookingConfirmation confirmation) {
+                reach(confirmation.address());
+                CONFIRMATIONS.add(confirmation);
+            }
         };
+    }
+
+    private static void reach(String address) {
+        if (address.startsWith("falla")) {
+            throw new IllegalStateException("The mail server is down");
+        }
     }
 }

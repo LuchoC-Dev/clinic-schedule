@@ -14,6 +14,7 @@ import com.clinic.schedule.appointment.application.exception.OutsideWorkingHours
 import com.clinic.schedule.appointment.domain.Appointment;
 import com.clinic.schedule.appointment.domain.AppointmentId;
 import com.clinic.schedule.appointment.domain.AppointmentStatus;
+import com.clinic.schedule.appointment.domain.BookingChannel;
 import com.clinic.schedule.appointment.domain.BookingService;
 import com.clinic.schedule.appointment.domain.PatientId;
 import com.clinic.schedule.appointment.domain.PractitionerId;
@@ -46,7 +47,7 @@ class RescheduleAndCancelUseCaseTest {
     private Appointment stored(PatientId patient, int atMinute, int minutes) {
         return Appointment.restore(AppointmentId.newId(), patient, ARIAS,
                 TimeSlot.of(TEN.plusMinutes(atMinute), minutes), "consulta", null,
-                        AppointmentStatus.BOOKED, false, null);
+                        AppointmentStatus.BOOKED, false, null, BookingChannel.RECEPTION);
     }
 
     private static CancelAppointmentUseCase.Command byPatient(AppointmentId id) {

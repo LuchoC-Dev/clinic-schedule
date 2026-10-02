@@ -5,6 +5,7 @@ import java.util.UUID;
 
 import com.clinic.schedule.appointment.domain.Appointment;
 import com.clinic.schedule.appointment.domain.AppointmentStatus;
+import com.clinic.schedule.appointment.domain.BookingChannel;
 import com.clinic.schedule.appointment.domain.CancellationOrigin;
 import com.clinic.schedule.appointment.domain.CancellationRequester;
 
@@ -31,7 +32,8 @@ record AppointmentResponse(
         AppointmentStatus status,
         LocalDateTime arrivedAt,
         boolean lateArrivalNotice,
-        Cancellation cancellation) {
+        Cancellation cancellation,
+        BookingChannel bookedVia) {
 
     /** {@code note} is null when reception wrote none. */
     record Cancellation(LocalDateTime at, String by, CancellationOrigin origin, CancellationRequester requestedBy,
@@ -54,6 +56,7 @@ record AppointmentResponse(
                 appointment.cancellation()
                         .map(cancellation -> new Cancellation(cancellation.at(), cancellation.by(),
                                 cancellation.origin(), cancellation.requestedBy(), cancellation.note()))
-                        .orElse(null));
+                        .orElse(null),
+                appointment.bookedVia());
     }
 }

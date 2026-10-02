@@ -18,7 +18,8 @@
     </form>
 
     <h2>Razones</h2>
-    <p class="muted">Cada razón dura siempre lo mismo con este profesional. Cambiar una duración no mueve los turnos ya dados.</p>
+    <p class="muted">Cada razón dura siempre lo mismo con este profesional. Cambiar una duración no mueve los turnos
+        ya dados. Las que se reservan por la web son las únicas que los pacientes pueden sacar desde su cuenta.</p>
     <div class="card">
         <p th:if="${practitioner.reasons.isEmpty()}" class="muted">Todavía no tiene razones: sin ellas no se le pueden dar turnos.</p>
         <form class="bar" method="post" th:each="r : ${practitioner.reasons}"
@@ -29,6 +30,8 @@
             <label>Minutos
                 <input type="number" name="durationMinutes" required min="1" max="480" th:value="${r.durationMinutes}">
             </label>
+            <div class="choices"><label><input type="checkbox" name="webBookable" value="true"
+                    th:checked="${r.webBookable}"> Se reserva por la web</label></div>
             <button type="submit">Guardar</button>
         </form>
         <form class="bar" method="post" th:action="@{/practitioners/{id}/reasons(id=${practitioner.id})}">

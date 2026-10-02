@@ -60,9 +60,9 @@ public class PractitionerService implements PractitionerReader, TimeOffWriter {
     }
 
     @Transactional
-    public Reason changeReason(UUID id, UUID reasonId, String name, int durationMinutes) {
+    public Reason changeReason(UUID id, UUID reasonId, String name, int durationMinutes, boolean webBookable) {
         Practitioner practitioner = load(id);
-        Reason reason = practitioner.changeReason(reasonId, name, durationMinutes);
+        Reason reason = practitioner.changeReason(reasonId, name, durationMinutes, webBookable);
         practitioners.save(practitioner);
         return reason;
     }
@@ -92,8 +92,7 @@ public class PractitionerService implements PractitionerReader, TimeOffWriter {
                         practitioner.getId(),
                         practitioner.getFullName(),
                         practitioner.getReasons().stream()
-                                .map(reason -> new ReasonDetails(reason.getId(), reason.getName(),
-                                        reason.getDurationMinutes()))
+                                .map(PractitionerService::details)
                                 .toList()))
                 .toList();
     }
@@ -103,7 +102,12 @@ public class PractitionerService implements PractitionerReader, TimeOffWriter {
     public Optional<ReasonDetails> findReason(UUID practitionerId, UUID reasonId) {
         return practitioners.findById(practitionerId)
                 .flatMap(practitioner -> practitioner.findReason(reasonId))
-                .map(reason -> new ReasonDetails(reason.getId(), reason.getName(), reason.getDurationMinutes()));
+                .map(PractitionerService::details);
+    }
+
+    private static ReasonDetails details(Reason reason) {
+        return new ReasonDetails(reason.getId(), reason.getName(), reason.getDurationMinutes(),
+                reason.isWebBookable());
     }
 
     @Override

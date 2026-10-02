@@ -18,7 +18,7 @@ class AppointmentTest {
     private static final TimeSlot TEN_THIRTY = TimeSlot.of(LocalDateTime.of(2026, 3, 10, 10, 0), 30);
 
     private Appointment booked() {
-        return Appointment.book(ID, PATIENT, PRACTITIONER, TEN_THIRTY, "consulta", null);
+        return Appointment.book(ID, PATIENT, PRACTITIONER, TEN_THIRTY, "consulta", null, BookingChannel.RECEPTION);
     }
 
     @Test
@@ -33,25 +33,32 @@ class AppointmentTest {
 
     @Test
     void theReasonIsRequiredAndTrimmed() {
-        assertThat(Appointment.book(ID, PATIENT, PRACTITIONER, TEN_THIRTY, "  consulta  ", null).reason())
+        assertThat(Appointment.book(ID, PATIENT, PRACTITIONER, TEN_THIRTY, "  consulta  ", null,
+                BookingChannel.RECEPTION).reason())
                 .isEqualTo("consulta");
 
         assertThatIllegalArgumentException()
-                .isThrownBy(() -> Appointment.book(ID, PATIENT, PRACTITIONER, TEN_THIRTY, "   ", null));
+                .isThrownBy(() -> Appointment.book(ID, PATIENT, PRACTITIONER, TEN_THIRTY, "   ", null,
+                        BookingChannel.RECEPTION));
         assertThatIllegalArgumentException()
-                .isThrownBy(() -> Appointment.book(ID, PATIENT, PRACTITIONER, TEN_THIRTY, null, null));
+                .isThrownBy(() -> Appointment.book(ID, PATIENT, PRACTITIONER, TEN_THIRTY, null, null,
+                        BookingChannel.RECEPTION));
     }
 
     @Test
     void anAppointmentNeedsIdPatientPractitionerAndSlot() {
         assertThatIllegalArgumentException()
-                .isThrownBy(() -> Appointment.book(null, PATIENT, PRACTITIONER, TEN_THIRTY, "consulta", null));
+                .isThrownBy(() -> Appointment.book(null, PATIENT, PRACTITIONER, TEN_THIRTY, "consulta", null,
+                        BookingChannel.RECEPTION));
         assertThatIllegalArgumentException()
-                .isThrownBy(() -> Appointment.book(ID, null, PRACTITIONER, TEN_THIRTY, "consulta", null));
+                .isThrownBy(() -> Appointment.book(ID, null, PRACTITIONER, TEN_THIRTY, "consulta", null,
+                        BookingChannel.RECEPTION));
         assertThatIllegalArgumentException()
-                .isThrownBy(() -> Appointment.book(ID, PATIENT, null, TEN_THIRTY, "consulta", null));
+                .isThrownBy(() -> Appointment.book(ID, PATIENT, null, TEN_THIRTY, "consulta", null,
+                        BookingChannel.RECEPTION));
         assertThatIllegalArgumentException()
-                .isThrownBy(() -> Appointment.book(ID, PATIENT, PRACTITIONER, null, "consulta", null));
+                .isThrownBy(() -> Appointment.book(ID, PATIENT, PRACTITIONER, null, "consulta", null,
+                        BookingChannel.RECEPTION));
     }
 
     @Test
@@ -109,12 +116,14 @@ class AppointmentTest {
     @Test
     void onlyACancelledAppointmentIsRestoredWithACancellation() {
         assertThatIllegalArgumentException().isThrownBy(() -> Appointment.restore(ID, PATIENT, PRACTITIONER,
-                TEN_THIRTY, "consulta", null, AppointmentStatus.BOOKED, false, Cancellations.byHand()));
+                TEN_THIRTY, "consulta", null, AppointmentStatus.BOOKED, false, Cancellations.byHand(),
+                        BookingChannel.RECEPTION));
         assertThatIllegalArgumentException().isThrownBy(() -> Appointment.restore(ID, PATIENT, PRACTITIONER,
-                TEN_THIRTY, "consulta", null, AppointmentStatus.ABSENT, false, Cancellations.byHand()));
+                TEN_THIRTY, "consulta", null, AppointmentStatus.ABSENT, false, Cancellations.byHand(),
+                        BookingChannel.RECEPTION));
         // Cancelled before anything was recorded of it (D-76).
         assertThat(Appointment.restore(ID, PATIENT, PRACTITIONER, TEN_THIRTY, "consulta", null,
-                AppointmentStatus.CANCELLED, false, null).cancellation()).isEmpty();
+                AppointmentStatus.CANCELLED, false, null, BookingChannel.RECEPTION).cancellation()).isEmpty();
     }
 
     @Test
@@ -129,21 +138,24 @@ class AppointmentTest {
     void aRestoredAppointmentIsCheckedLikeANewOne() {
         // The aggregate does not trust the persistence adapter either.
         assertThatIllegalArgumentException().isThrownBy(() -> Appointment.restore(
-                ID, null, PRACTITIONER, TEN_THIRTY, "consulta", null, AppointmentStatus.BOOKED, false, null));
+                ID, null, PRACTITIONER, TEN_THIRTY, "consulta", null, AppointmentStatus.BOOKED, false, null,
+                        BookingChannel.RECEPTION));
         assertThatIllegalArgumentException().isThrownBy(() -> Appointment.restore(
-                ID, PATIENT, PRACTITIONER, TEN_THIRTY, "  ", null, AppointmentStatus.BOOKED, false, null));
+                ID, PATIENT, PRACTITIONER, TEN_THIRTY, "  ", null, AppointmentStatus.BOOKED, false, null,
+                        BookingChannel.RECEPTION));
         assertThatIllegalArgumentException().isThrownBy(() -> Appointment.restore(
-                null, PATIENT, PRACTITIONER, TEN_THIRTY, "consulta", null, AppointmentStatus.BOOKED, false, null));
+                null, PATIENT, PRACTITIONER, TEN_THIRTY, "consulta", null, AppointmentStatus.BOOKED, false, null,
+                        BookingChannel.RECEPTION));
         assertThatIllegalArgumentException().isThrownBy(() -> Appointment.restore(
-                ID, PATIENT, PRACTITIONER, TEN_THIRTY, "consulta", null, null, false, null));
+                ID, PATIENT, PRACTITIONER, TEN_THIRTY, "consulta", null, null, false, null, BookingChannel.RECEPTION));
     }
 
     @Test
     void appointmentsAreTheSameOnlyWhenTheirIdMatches() {
         Appointment stored = Appointment.restore(ID, PATIENT, PRACTITIONER, TEN_THIRTY, "consulta", null,
-                AppointmentStatus.BOOKED, false, null);
+                AppointmentStatus.BOOKED, false, null, BookingChannel.RECEPTION);
         Appointment other = Appointment.restore(AppointmentId.newId(), PATIENT, PRACTITIONER, TEN_THIRTY,
-                "consulta", null, AppointmentStatus.BOOKED, false, null);
+                "consulta", null, AppointmentStatus.BOOKED, false, null, BookingChannel.RECEPTION);
 
         // Identity exists from creation, so this is always answerable.
         assertThat(stored.isSameAs(booked())).isTrue();
@@ -164,7 +176,20 @@ class AppointmentTest {
 
         assertThatIllegalArgumentException().isThrownBy(() -> Appointment.restore(AppointmentId.newId(),
                         PatientId.newId(), PractitionerId.newId(), slot, "consulta", "x".repeat(501),
-                        AppointmentStatus.BOOKED, false, null))
+                        AppointmentStatus.BOOKED, false, null, BookingChannel.RECEPTION))
                 .withMessageContaining("at most 500");
+    }
+
+    /** Where it was booked stays with it, through whatever happens to it (D-82). */
+    @Test
+    void anAppointmentKeepsWhereItWasBooked() {
+        Appointment online = Appointment.book(ID, PATIENT, PRACTITIONER, TEN_THIRTY, "consulta", null,
+                BookingChannel.WEB);
+
+        assertThat(online.bookedVia()).isEqualTo(BookingChannel.WEB);
+        assertThat(online.cancelled(Cancellation.byHand(TEN_THIRTY.startsAt(), "recepcion",
+                CancellationRequester.PATIENT, null)).bookedVia()).isEqualTo(BookingChannel.WEB);
+        assertThatIllegalArgumentException()
+                .isThrownBy(() -> Appointment.book(ID, PATIENT, PRACTITIONER, TEN_THIRTY, "consulta", null, null));
     }
 }

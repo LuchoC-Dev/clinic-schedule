@@ -32,7 +32,7 @@ class BookingServiceTest {
     private Appointment stored(PatientId patient, int atMinute, int minutes) {
         return Appointment.restore(AppointmentId.newId(), patient, ARIAS,
                 TimeSlot.of(TEN.plusMinutes(atMinute), minutes), "consulta", null,
-                        AppointmentStatus.BOOKED, false, null);
+                        AppointmentStatus.BOOKED, false, null, BookingChannel.RECEPTION);
     }
 
     @Test
@@ -40,7 +40,7 @@ class BookingServiceTest {
         AppointmentId id = AppointmentId.newId();
 
         Appointment booked = bookingService.book(id, ANA, ARIAS, TimeSlot.of(TEN, 30), "consulta",
-                "trae estudios", NOW, List.of());
+                "trae estudios", NOW, List.of(), BookingChannel.RECEPTION);
 
         assertThat(booked.isBooked()).isTrue();
         assertThat(booked.id()).isEqualTo(id);
@@ -54,7 +54,7 @@ class BookingServiceTest {
         List<Appointment> agenda = List.of(stored(LUIS, 15, 30));
 
         assertThatThrownBy(() -> bookingService.book(AppointmentId.newId(), ANA, ARIAS, TimeSlot.of(TEN, 30),
-                "consulta", null, NOW, agenda))
+                "consulta", null, NOW, agenda, BookingChannel.RECEPTION))
                 .isInstanceOf(PractitionerAlreadyBookedException.class);
     }
 
@@ -64,8 +64,10 @@ class BookingServiceTest {
         // attempt is recognizable as the same appointment instead of becoming a new one.
         AppointmentId id = AppointmentId.newId();
 
-        Appointment first = bookingService.book(id, ANA, ARIAS, TimeSlot.of(TEN, 30), "consulta", null, NOW, List.of());
-        Appointment retry = bookingService.book(id, ANA, ARIAS, TimeSlot.of(TEN, 30), "consulta", null, NOW, List.of());
+        Appointment first = bookingService.book(id, ANA, ARIAS, TimeSlot.of(TEN, 30), "consulta", null, NOW, List.of(),
+                BookingChannel.RECEPTION);
+        Appointment retry = bookingService.book(id, ANA, ARIAS, TimeSlot.of(TEN, 30), "consulta", null, NOW, List.of(),
+                BookingChannel.RECEPTION);
 
         assertThat(retry.isSameAs(first)).isTrue();
     }
@@ -107,7 +109,7 @@ class BookingServiceTest {
     @Test
     void anAppointmentMayStartRightNow() {
         Appointment booked = bookingService.book(AppointmentId.newId(), ANA, ARIAS, TimeSlot.of(NOW, 30), "consulta",
-                null, NOW, List.of());
+                null, NOW, List.of(), BookingChannel.RECEPTION);
 
         assertThat(booked.slot().startsAt()).isEqualTo(NOW);
     }
@@ -115,17 +117,18 @@ class BookingServiceTest {
     @Test
     void aSlotAlreadyStartedIsRefused() {
         assertThatThrownBy(() -> bookingService.book(AppointmentId.newId(), ANA, ARIAS,
-                TimeSlot.of(NOW.minusMinutes(1), 30), "consulta", null, NOW, List.of()))
+                TimeSlot.of(NOW.minusMinutes(1), 30), "consulta", null, NOW, List.of(), BookingChannel.RECEPTION))
                 .isInstanceOf(SlotInThePastException.class);
     }
 
     @Test
     void aYearAheadIsTheLimit() {
         bookingService.book(AppointmentId.newId(), ANA, ARIAS, TimeSlot.of(NOW.plusYears(1), 30), "consulta",
-                null, NOW, List.of());
+                null, NOW, List.of(), BookingChannel.RECEPTION);
 
         assertThatThrownBy(() -> bookingService.book(AppointmentId.newId(), ANA, ARIAS,
-                TimeSlot.of(NOW.plusYears(1).plusMinutes(1), 30), "consulta", null, NOW, List.of()))
+                TimeSlot.of(NOW.plusYears(1).plusMinutes(1), 30), "consulta", null, NOW, List.of(),
+                        BookingChannel.RECEPTION))
                 .isInstanceOf(SlotTooFarAheadException.class);
     }
 

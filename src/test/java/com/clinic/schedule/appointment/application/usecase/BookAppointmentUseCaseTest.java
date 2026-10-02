@@ -15,6 +15,7 @@ import com.clinic.schedule.appointment.application.exception.UnknownPatientExcep
 import com.clinic.schedule.appointment.application.exception.UnknownReasonException;
 import com.clinic.schedule.appointment.domain.Appointment;
 import com.clinic.schedule.appointment.domain.AppointmentId;
+import com.clinic.schedule.appointment.domain.BookingChannel;
 import com.clinic.schedule.appointment.domain.BookingService;
 import com.clinic.schedule.appointment.domain.PatientId;
 import com.clinic.schedule.appointment.domain.PractitionerId;
@@ -53,7 +54,8 @@ class BookAppointmentUseCaseTest {
 
     private BookAppointmentUseCase.Command command(AppointmentId id, PatientId patient, PractitionerId practitioner,
             UUID reasonId, int atMinute) {
-        return new BookAppointmentUseCase.Command(id, patient, practitioner, reasonId, TEN.plusMinutes(atMinute), null);
+        return new BookAppointmentUseCase.Command(id, patient, practitioner, reasonId, TEN.plusMinutes(atMinute), null,
+                BookingChannel.RECEPTION);
     }
 
     private BookAppointmentUseCase.Command withArias(PatientId patient, int atMinute) {
@@ -187,7 +189,7 @@ class BookAppointmentUseCaseTest {
         useCase.handle(withArias(LUIS, 0));
 
         Appointment nextDay = useCase.handle(new BookAppointmentUseCase.Command(AppointmentId.newId(), ANA, ARIAS,
-                ariasConsulta, TEN.plusDays(1), null));
+                ariasConsulta, TEN.plusDays(1), null, BookingChannel.RECEPTION));
 
         assertThat(nextDay.isBooked()).isTrue();
     }

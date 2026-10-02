@@ -26,7 +26,7 @@ class AppointmentDayTest {
     private static final Optional<LocalDateTime> ARRIVED = Optional.of(TEN.minusMinutes(5));
 
     private final Appointment booked = Appointment.book(AppointmentId.newId(), PatientId.newId(),
-            PractitionerId.newId(), TimeSlot.of(TEN, 30), "consulta", null);
+            PractitionerId.newId(), TimeSlot.of(TEN, 30), "consulta", null, BookingChannel.RECEPTION);
 
     // --- late arrival notice -----------------------------------------------------------
 

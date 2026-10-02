@@ -17,6 +17,7 @@ import com.clinic.schedule.appointment.application.port.PractitionerSchedulePort
 import com.clinic.schedule.appointment.application.port.PractitionerSchedulePort;
 import com.clinic.schedule.appointment.domain.Appointment;
 import com.clinic.schedule.appointment.domain.AppointmentId;
+import com.clinic.schedule.appointment.domain.BookingChannel;
 import com.clinic.schedule.appointment.domain.BookingService;
 import com.clinic.schedule.appointment.domain.PatientId;
 import com.clinic.schedule.appointment.domain.PractitionerId;
@@ -88,7 +89,8 @@ public class BookAppointmentUseCase {
                 reason.name(),
                 command.note(),
                 LocalDateTime.now(clock),
-                agenda.around(slot, command.practitionerId(), command.patientId()));
+                agenda.around(slot, command.practitionerId(), command.patientId()),
+                command.bookedVia());
 
         appointments.save(booked);
         return booked;
@@ -100,7 +102,8 @@ public class BookAppointmentUseCase {
      *
      * <p>{@code id} comes from the caller so a retried request reuses it instead of booking
      * twice. {@code reasonId} is the only bare {@code UUID}, so it cannot be swapped with the
-     * wrapped ids by accident.
+     * wrapped ids by accident. {@code bookedVia} says whether reception or the patient on the web
+     * books it (D-82).
      */
     public record Command(
             AppointmentId id,
@@ -108,6 +111,7 @@ public class BookAppointmentUseCase {
             PractitionerId practitionerId,
             UUID reasonId,
             LocalDateTime startsAt,
-            String note) {
+            String note,
+            BookingChannel bookedVia) {
     }
 }

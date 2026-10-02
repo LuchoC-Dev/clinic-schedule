@@ -72,7 +72,8 @@ class PractitionerController {
     @PutMapping("/{id}/reasons/{reasonId}")
     ReasonResponse changeReason(@PathVariable UUID id, @PathVariable UUID reasonId,
             @Valid @RequestBody ReasonRequest request) {
-        return ReasonResponse.of(practitioners.changeReason(id, reasonId, request.name(), request.durationMinutes()));
+        return ReasonResponse.of(practitioners.changeReason(id, reasonId, request.name(), request.durationMinutes(),
+                request.webBookable()));
     }
 
     @PutMapping("/{id}/weekly-schedule")
