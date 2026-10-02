@@ -1114,7 +1114,7 @@ screen's address. What it left for later — consent to be contacted, the confid
 in the reminders, the cash desk, and the email of a web account — is in the context's planned
 evolution.
 
-### Phase 5 — Reminders and the cancellation log `[ ]`
+### Phase 5 — Reminders and the cancellation log `[x]`
 
 Scope in `docs/context.md`, section "v2, phase 5 — reminders and the cancellation log". Delivered in
 parts; each one is usable on its own. The technical design of each part is agreed before it is coded.
@@ -1242,11 +1242,33 @@ With Mailpit stopped and the adolescent's own consent recorded, the next run tri
 it as failed, sent nothing again, and decided the patient without consent anew. The reminders screen
 showed all of it, the failure marked for a call.
 
+**Phase 5 of v2, reminders and the cancellation log, is closed.** Every cancellation says who made it,
+when, how — by hand or by a practitioner's time off — and who asked, with reception's note; reception
+reads them whole and the admins without the patient and the note. Each of a patient's channels carries
+its own consent, saying who gave it, and loses it when the number, the address or the owner changes. The
+application reminds patients by email once a day of their appointments of the next days, on that consent,
+never telling a parent of an adolescent's visit the adolescent did not agree to share, and records what
+happened to each reminder — the address only as a hash — for reception to call whoever was not reached.
+What it left for later is listed below.
+
 ---
 
 ## Explicitly postponed
 
 These are not oversights: they are decided and waiting for their moment.
+
+From v2, phase 5:
+
+- Reminders by WhatsApp or SMS, each one more adapter of the sending port, and marking a phone as
+  WhatsApp (see D-78).
+- Cancelling or confirming an appointment from its reminder, with web booking (see D-78).
+- Telling the patient that their appointment was cancelled, and a history of the times an appointment was
+  moved (see the context).
+- A list of cancellation reasons, and practitioners reading the cancellations of their own appointments
+  (see D-76).
+- The practitioner's speciality and consulting room in the reminder, once the application knows them; a
+  screen that checks whether a reminder went to a given address, against its hash; making up a day's
+  run missed while the application was down (see D-78).
 
 From v2, phase 3:
 
