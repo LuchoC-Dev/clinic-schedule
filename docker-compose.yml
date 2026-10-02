@@ -1,4 +1,5 @@
-# The application's database for development (D-44): `docker compose up -d`, then run the app.
+# The application's database for development (D-44), and where its email goes (D-78):
+# `docker compose up -d`, then run the app.
 # The data lives in the named volume and survives restarts; `docker compose down -v` wipes it.
 services:
   postgres:
@@ -11,6 +12,14 @@ services:
       - "5432:5432"
     volumes:
       - schedule-data:/var/lib/postgresql
+
+  # The reminders' email in development (D-78): it takes whatever the application sends, on port 1025,
+  # shows it at http://localhost:8025, and sends nothing on.
+  mailpit:
+    image: axllent/mailpit
+    ports:
+      - "1025:1025"
+      - "8025:8025"
 
 volumes:
   schedule-data:

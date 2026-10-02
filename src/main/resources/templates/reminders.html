@@ -1,0 +1,37 @@
+<!DOCTYPE html>
+<html lang="es" xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{fragments :: head('Recordatorios')}"></head>
+<body>
+<header th:replace="~{fragments :: header}"></header>
+<main class="wide">
+    <h1>Recordatorios</h1>
+    <p class="muted">Los recordatorios por email de los turnos, por el día del turno. Si uno no se pudo enviar,
+        avisale al paciente por teléfono.</p>
+    <div th:replace="~{fragments :: messages}"></div>
+
+    <form class="card bar" method="get" th:action="@{/reminders}">
+        <label>Desde
+            <input type="date" name="from" th:value="${from}">
+        </label>
+        <label>Hasta
+            <input type="date" name="to" th:value="${to}">
+        </label>
+        <button type="submit" class="primary">Buscar</button>
+    </form>
+
+    <p th:if="${rows.isEmpty()}" class="muted">No hay recordatorios de turnos de esos días.</p>
+    <table th:unless="${rows.isEmpty()}">
+        <thead><tr><th>Turno</th><th>Profesional</th><th>Paciente</th><th>Cuándo</th><th>Resultado</th></tr></thead>
+        <tbody>
+        <tr th:each="r : ${rows}">
+            <td th:text="${r.appointment}">jue 8/10/2026 10:00</td>
+            <td th:text="${r.practitioner}">Dra. Laura Arias</td>
+            <td><a th:href="@{/patients/{id}(id=${r.patientId})}" th:text="${r.patient}">Ana Pérez</a></td>
+            <td th:text="${r.recordedAt}">lun 5/10/2026 10:00</td>
+            <td th:classappend="${r.failed} ? 'error'" th:text="${r.outcome}">Enviado por email</td>
+        </tr>
+        </tbody>
+    </table>
+</main>
+</body>
+</html>

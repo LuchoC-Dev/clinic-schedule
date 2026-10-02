@@ -17,6 +17,13 @@ spring:
       max-file-size: 11MB
       max-request-size: 12MB
 
+  # Where the reminders are sent from (D-78): in development, Mailpit, from docker-compose.yml, which keeps
+  # every message for its screen at http://localhost:8025 and sends none on. A real deployment points this
+  # at its own SMTP server, with its credentials.
+  mail:
+    host: localhost
+    port: 1025
+
   jpa:
     open-in-view: false
     hibernate:
@@ -38,8 +45,9 @@ spring:
 app:
   # The practice's fixed time zone (D-10).
   time-zone: America/Argentina/Buenos_Aires
-  # The jobs that run every minute: marking absent the appointments whose patient never came
-  # (D-06, D-61) and closing the queues at the end of their day (D-63). The tests turn them off.
+  # The jobs: marking absent, every minute, the appointments whose patient never came (D-06, D-61),
+  # closing the queues at the end of their day (D-63), and the daily reminders (D-78). The tests turn
+  # them off.
   scheduling:
     enabled: true
   # A called patient who does not come in is passed over once and called again, this many calls in
@@ -56,6 +64,19 @@ app:
     access-grant:
       period: P1Y
       reason-required: true
+
+  # The practice, as the reminders name it (D-78). These are development values; a real deployment sets
+  # its own.
+  practice:
+    name: Consultorio
+    address: Av. Siempre Viva 742
+    phone: 011 4555-0000
+  # Reminders by email (D-78): once a day, at this time — a Spring cron, in the practice's time zone —,
+  # for every appointment still booked from tomorrow to this many days ahead, not reminded yet.
+  reminders:
+    cron: "0 0 10 * * *"
+    days-ahead: 3
+    from: no-responder@consultorio.local
 
 logging:
   level:

@@ -12,6 +12,7 @@ import com.clinic.schedule.appointment.api.AppointmentSummary;
 import com.clinic.schedule.appointment.application.usecase.FindPatientDayUseCase;
 import com.clinic.schedule.appointment.application.exception.AppointmentNotFoundException;
 import com.clinic.schedule.appointment.application.usecase.FindAppointmentUseCase;
+import com.clinic.schedule.appointment.application.usecase.FindAppointmentsBetweenUseCase;
 import com.clinic.schedule.appointment.domain.Appointment;
 import com.clinic.schedule.appointment.domain.AppointmentId;
 import com.clinic.schedule.appointment.domain.AppointmentStatus;
@@ -30,10 +31,20 @@ class AppointmentReaderAdapter implements AppointmentReader {
 
     private final FindPatientDayUseCase patientDay;
     private final FindAppointmentUseCase appointment;
+    private final FindAppointmentsBetweenUseCase between;
 
-    AppointmentReaderAdapter(FindPatientDayUseCase patientDay, FindAppointmentUseCase appointment) {
+    AppointmentReaderAdapter(FindPatientDayUseCase patientDay, FindAppointmentUseCase appointment,
+            FindAppointmentsBetweenUseCase between) {
         this.patientDay = patientDay;
         this.appointment = appointment;
+        this.between = between;
+    }
+
+    @Override
+    public List<AppointmentSummary> findNotCancelledBetween(LocalDate from, LocalDate to) {
+        return between.handle(from, to).stream()
+                .map(AppointmentReaderAdapter::summary)
+                .toList();
     }
 
     @Override

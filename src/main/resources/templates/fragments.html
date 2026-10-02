@@ -79,6 +79,7 @@
     <a th:href="@{/waiting-room}" th:unless="${readOnly}" target="_blank">Sala de espera</a>
     <a th:href="@{/queues}" th:unless="${readOnly}">Colas</a>
     <a th:href="@{/cancellations}" th:unless="${readOnly}">Cancelaciones</a>
+    <a th:href="@{/reminders}" th:unless="${readOnly}">Recordatorios</a>
     </th:block>
     <a th:href="@{/password}">Contraseña</a>
     <form class="inline" method="post" th:action="@{/logout}">

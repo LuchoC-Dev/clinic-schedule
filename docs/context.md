@@ -567,7 +567,8 @@ to themselves.
   channel.
 - The address it went to is **not kept**, only a hash of it that cannot be turned back into it: it
   answers whether a reminder went to a given address. The text is not kept.
-- **Reception** reads it on each appointment; nobody else does.
+- **Reception** reads it for each appointment, in a list by the appointment's day, a failed one marked so
+  it calls the patient; nobody else does.
 
 ### Screens and API
 

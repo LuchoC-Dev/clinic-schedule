@@ -2743,3 +2743,70 @@ for the old one, and nothing could tell it from a new one); keeping the consent 
 (it was given for the old one); a consent without who gave it (part 3 has to tell an adolescent's own
 agreement from a parent's); asking it on the booking screen (it can wait for the patient's screen, like
 the date of birth).
+
+---
+
+## D-78 — Reminders are a module of their own, sent by email once a day behind a port
+**Date:** 2026-10-01 · **Status:** accepted
+
+v2, phase 5, part 3: the application reminds patients of their appointments by email, a few days before,
+on the consent of D-77.
+
+**A module of its own, `reminder`, laid out as a hexagon** like `appointment` (D-41): who is reminded
+is a rule worth keeping pure, and the sending is an outside service. It reads the booked appointments
+through `appointment/api` — `AppointmentReader.findNotCancelledBetween`, since from tomorrow on none is
+absent yet (D-61) —, each patient's name, date of birth, email and consent through `patient/api` —
+`PatientReader.contactsOf`, answering `PatientContact`, never the document, the phone or the insurance —,
+and the practitioners' names through `practitioner/api`. No module reads it, so it has no `api/`; `ArchitectureTest` checks it like the rest. The appointment stays
+only a booking (D-48): it knows nothing of reminders.
+
+**Who is reminded is `ReminderPolicy`'s**, pure, handed what is known and the appointment's day:
+- no email, `NO_EMAIL`; no consent on it, `NO_CONSENT`;
+- a responsible person's email that only its owner agreed to is used for a patient under 13 on the day of
+  the visit, and for nobody else: from 13 an adolescent decides alone on much of their care (CCyC,
+  art. 26) and keeps their confidentiality towards their parents (Ley 26.529, art. 2 d). Without a date of
+  birth the patient may be that adolescent, so it is `CONFIDENTIAL` too;
+- the patient's own agreement is enough on any of their channels, a responsible person's included.
+
+**Once a day, the next days.** `ReminderJob` runs `SendRemindersUseCase` at `app.reminders.cron`, in the
+practice's time zone — 10:00 by default —, and is off with the other jobs in the tests. It considers
+every appointment still booked from tomorrow to `app.reminders.days-ahead` days on — 3 by default; today's
+are not reminded. One sent or failed is not tried again for that time; one moved afterwards is reminded
+of its new time, since the reminder keeps the time it was about. One not sent is decided again the next
+day, so a consent recorded in between counts, and each day leaves its record. A run missed — the
+application was down at that time — is not made up: the next day's covers what is still ahead.
+
+**What it says.** The practice's name, address and phone come from `app.practice.*`, the sender from
+`app.reminders.from`. "Estimado/a" and the name — the patient's on their own email; the responsible
+person's on theirs, naming whose appointment it is —, the day, the time and the practitioner, and "to
+cancel or change it, call … or come to reception". Never the reason, which may be clinical, nor a
+speciality or room the application does not know. A patient under an alias is named nowhere — `contactsOf`
+answers no name for them — and greeted "Hola", which says nothing of their sex. Plain text and HTML, the
+names escaped. Patients cannot cancel from it: that waits for web booking.
+
+**Behind a port, by email.** `ReminderSenderPort` has one adapter, `EmailReminderAdapter`, over
+`spring-boot-starter-mail` and `spring.mail.*`; WhatsApp or SMS would be one more, and the rules would not
+change. In development the SMTP server is Mailpit, in `docker-compose.yml`, which keeps every message
+for its screen and sends nothing on; the integration tests put a sender that keeps the messages in its
+place. One attempt: a sending that throws is recorded as failed, and the others go on.
+
+**What is recorded** (`reminder`, `V33`): the appointment, its patient and practitioner, the time it was
+about, the channel, sent, failed or not sent and why, and when. Not the text, and not the address: a
+bcrypt hash of its SHA-256 — bcrypt is salted and slow, so guessing addresses against a row is costly, and
+reads only 72 bytes, which an email may pass. It answers whether a reminder went to a given address, and
+nothing reads it yet. The checks keep a reason exactly on what was not sent, and a hash exactly on what
+went or was tried.
+
+**Reception reads it, by the appointment's day**: `GET /api/reminders` and `/reminders`, from today to as
+far ahead as reminders go by default, a failed one marked to call the patient. The scope said "on each
+appointment"; the appointment's screens are the appointment module's, which does not read this one, so
+the list by the appointment's day, in its order, says it for each. The admins and practitioners reach none
+of it.
+
+*Rejected:* the reminders inside `appointment` (it is only a booking, and messaging is not its
+business); SMS or WhatsApp first (a provider, a cost per message and, for WhatsApp, templates approved by
+Meta, where SMTP needs none); a rolling 24 hours (a message at any hour of the day); retrying a failed
+sending (a second message, or a call from reception, could cross); recording a not-sent reminder once
+and for good (a consent given the next day would never count); keeping the address, or a plain SHA-256 of
+it (a list of emails turns it back); reading the reminders from the appointment's screens (the
+appointment module would depend on this one, which depends on it); a link to cancel (web booking).

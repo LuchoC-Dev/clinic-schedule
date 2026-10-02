@@ -24,7 +24,8 @@ closed.**
 - **Docker**, for the database.
 
 ```powershell
-docker compose up -d        # PostgreSQL 18, with its data kept in a volume
+docker compose up -d        # PostgreSQL 18, with its data kept in a volume, and Mailpit for the
+                            # reminders' email: it keeps them at http://localhost:8025 and sends none on
 .\mvnw spring-boot:run      # the application, on http://localhost:8080
 .\mvnw test                 # unit tests: nothing needed, no database
 .\mvnw verify               # unit and integration tests: H2 in memory, no Docker needed;
@@ -53,7 +54,7 @@ password each one changes at `/password` on logging in (D-69).
 week, of one practitioner or everyone — with the day's operations as buttons (*Llegó*,
 *Avisó demora*, *Mover*, *Cancelar*), a booking screen that suggests the free times and registers
 and books a new patient at once, with their phone and email, the cancellations — who cancelled,
-when, how and who asked —, a patients
+when, how and who asked —, what happened to each reminder, and whom to call, a patients
 screen — where a patient who gives no name is registered under an alias, and each patient's
 identity is corrected and verified, with its history, and their date of birth, phone and email
 recorded, each saying whose it is, and their health insurance, and who agreed to be reminded on each, with a history of their own — each patient's appointments, cancelled ones included, a practitioners screen to set
@@ -91,6 +92,7 @@ Spanish, for the staff.
 | `POST` | `/api/appointments/{id}/cancel` | cancel it, keeping the record — `{requestedBy: PATIENT \| PRACTICE, note?}`; who and when come from the session and the clock |
 | `GET` | `/api/cancellations?practitionerId=&from=&to=` | the cancellations by the day they were made, with who, how, who asked, the patient and the note |
 | `GET` | `/api/cancellation-log?practitionerId=&from=&to=` | the same for the admins, without the patient and the note |
+| `GET` | `/api/reminders?from=&to=` | what happened to each appointment's reminder, by the appointment's day: sent, failed, or not sent and why — never the address |
 | `POST` | `/api/appointments/{id}/late-arrival-notice` | the patient warned they will be late |
 | `GET` | `/api/appointments?practitionerId=&date=` | a day's agenda — a practitioner may only ask for their own |
 | `POST` | `/api/time-off` | a practitioner's absence — whole days up to `untilDate`, or part of one — cancelling the appointments it hits |
@@ -123,7 +125,10 @@ A booking whose patient did not arrive — into their practitioner's queue — i
 day when the patient warned they would be late; an absent appointment is kept, shown on the agenda
 and changed no more. The consultation routes are the
 practitioners' only; anything a user may not see answers 403. The access period to a clinical
-record is `app.clinical-record.access-period`, a year by default.
+record is `app.clinical-record.access-period`, a year by default. Reminders go out by email once a day
+(`app.reminders.cron`, 10:00) for the appointments of the next `app.reminders.days-ahead` days (3), to the
+patients whose email has their consent — a responsible person's only for a patient under 13; the
+practice's name, address and phone are `app.practice.*`, and the SMTP server `spring.mail.*`.
 
 ## How it is built
 
@@ -148,6 +153,7 @@ src/main/java/com/clinic/schedule/
 ├── patient/                  layered: presentation/ (http, screen), service/, entity/,
 │                             persistence/ — and api/, its only door for other modules
 ├── practitioner/             layered alike, with the week's rules in plain classes
+├── reminder/                 hexagonal: who is reminded of their appointment, sent by email once a day
 ├── security/                 the access rules: login, roles per route, who is asking
 ├── user/                     layered alike: the users, and the role each one has
 └── shared/                   the clock; http/ holds the API's error body
@@ -155,7 +161,7 @@ src/main/java/com/clinic/schedule/
 
 A module reaches another only through its `api/` package, and in the layered modules each layer
 is reached only by the one above it; `ArchitectureTest` checks both on every build (D-05, D-42).
-The domains of `appointment` and `clinicalrecord` have no framework annotations and are tested
+The domains of `appointment`, `clinicalrecord` and `reminder` have no framework annotations and are tested
 without Spring. The whole repository is in English; on-screen text is in Spanish (D-13).
 
 ## Deliberately postponed

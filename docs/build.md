@@ -1195,17 +1195,52 @@ not the second, the history saying each step. The admin and a practitioner were 
 browser, a patient with only her own email was offered her consent alone, and saving it showed it chosen
 and in the history.
 
-#### Part 3 — The reminders by email `[ ]`
-- [ ] A port for sending, answered by an email adapter; Mailpit in development, a fake in the tests
-- [ ] A daily run from a configurable time reminds the booked appointments of the next configurable
-      days, not today's, once each; a moved appointment is reminded again
-- [ ] Not sent without an email, without consent, or to a responsible person's channel of a patient
-      of 13 or older — or with no date of birth — unless the patient consented themselves
-- [ ] One attempt; a failure is shown to reception
-- [ ] The text: the practice, a greeting, the day, the time and the practitioner, and how to cancel;
-      never the reason; a patient under an alias greeted without a name or a sex
-- [ ] The record of each reminder — sent, failed or not sent and why —, the address kept only as a
-      hash; read by reception alone
+#### Part 3 — The reminders by email `[x]`
+- [x] A module of its own, `reminder`, laid out as a hexagon; `ArchitectureTest` checks its boundary
+      like the rest's (D-78)
+- [x] `ReminderPolicy`: no email, no consent, or a responsible person's email that only its owner agreed
+      to for a patient of 13 or older on the day of the visit — or with no date of birth — is not sent;
+      the patient's own agreement is enough on any of their channels
+- [x] `SendRemindersUseCase`, run by `ReminderJob` once a day at `app.reminders.cron` (10:00): the
+      appointments still booked from tomorrow to `app.reminders.days-ahead` days on (3); one sent or
+      failed is not tried again for that time, one moved is reminded of its new time, one not sent is
+      decided again the next day
+- [x] `ReminderSenderPort`, answered by `EmailReminderAdapter` over `spring-boot-starter-mail`; Mailpit in
+      `docker-compose.yml`; a sender that keeps the messages in the integration tests
+- [x] The text, in Spanish: the practice (`app.practice.*`), a greeting, the day, the time, the
+      practitioner, how to cancel; never the reason; a responsible person told whose appointment it is; a
+      patient under an alias named nowhere and greeted "Hola"
+- [x] `PatientReader.contactsOf` (`PatientContact`) and `AppointmentReader.findNotCancelledBetween`, the
+      only things the module asks of others
+- [x] `V33`: `reminder`, with a bcrypt hash of the address's SHA-256 and never the address or the text
+- [x] `GET /api/reminders` and `/reminders`, for reception, by the appointment's day, a failed one marked
+- [x] 24 unit and 9 integration tests. 386 unit and 467 integration tests, 853 in total
+
+**Verified with:** every new test failing when the code it covers was broken on purpose — 41 breakages,
+none surviving, among them every branch of the policy (no email, no consent, thirteen counted as a child or
+from fourteen, no date of birth as a child, the patient's own consent not enough, the owner greeted as the
+patient), a reason on any reminder, one not sent or a moved one settling the appointment, today's
+appointments or a day too many, reminding again and again, a failure recorded as sent or stopping the run,
+the age taken today, the practitioner left out, the address kept as its own hash or hashed bare, the list
+in reverse, the checks of V33, the alias named, the consent or the owner's name lost on the way, the
+answer without the reason, the list's default days, reversed days, the screen's words and header, and
+each wording of the text and its escaping. Two first versions did not hold: the list's order, renamed in
+the repository alone, did not compile, and was planted again in both places; and filtering out absent
+appointments survived, since from tomorrow on none can be absent, so it was taken out (D-14) and the
+api's method named for what it answers. The run was stopped once by the machine's lack of memory and
+resumed where it was, the fault it left planted restored first. `mvnw clean verify` with the PostgreSQL
+tests running V33.
+
+**Verified with the application running** on a throwaway PostgreSQL and a throwaway Mailpit: taken to
+V103 by the previous commit's build, with five appointments on the third day ahead and one on the fourth,
+and started with the job set two minutes on: V33 applied out of order, and the run considered the five.
+Mailpit got three — the adult on her own email, a child's on her mother's ("Estimado/a Laura Vivo: …
+el turno de Lucia Vivo …"), and the patient under an alias ("Hola: … su turno …") —, with the accents
+intact in text and HTML; the adolescent on his mother's email with her consent alone was not sent as
+confidential, the patient without consent was not sent, and none had its address stored, only its hash.
+With Mailpit stopped and the adolescent's own consent recorded, the next run tried him once and recorded
+it as failed, sent nothing again, and decided the patient without consent anew. The reminders screen
+showed all of it, the failure marked for a call.
 
 ---
 

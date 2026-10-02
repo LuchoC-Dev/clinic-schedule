@@ -44,6 +44,11 @@
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-starter-security</artifactId>
         </dependency>
+        <!-- Reminders go out by email, over SMTP, behind the reminders' sending port (D-78). -->
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-mail</artifactId>
+        </dependency>
 
         <!-- The application runs on PostgreSQL (D-44); flyway-core needs its PostgreSQL module. -->
         <dependency>

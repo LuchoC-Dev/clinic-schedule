@@ -14,6 +14,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import com.clinic.schedule.patient.api.NewPatient;
+import com.clinic.schedule.patient.api.PatientContact;
 import com.clinic.schedule.patient.api.PatientReader;
 import com.clinic.schedule.patient.api.PatientRegistrationRefusedException.Reason;
 import com.clinic.schedule.patient.api.PatientRegistrationRefusedException;
@@ -242,6 +243,26 @@ public class PatientService implements PatientReader, PatientWriter {
     @Transactional(readOnly = true)
     public List<PatientSummary> findAll(Collection<UUID> patientIds) {
         return summaries(patients.findAllById(patientIds));
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public List<PatientContact> contactsOf(Collection<UUID> patientIds) {
+        return patients.findAllById(patientIds).stream()
+                .map(PatientService::contact)
+                .toList();
+    }
+
+    /** A patient under an alias is not named, and a channel's consent goes with it (D-77, D-78). */
+    private static PatientContact contact(Patient patient) {
+        Email email = patient.getEmail();
+        return new PatientContact(patient.getId(),
+                patient.getIdentityStatus() == IdentityStatus.ALIAS ? null : patient.getFullName(),
+                patient.getBirthDate(),
+                email == null ? null : new PatientContact.Channel(email.address(),
+                        email.owner() == null ? null : email.owner().name(),
+                        patient.getEmailConsent() == null ? null
+                                : PatientContact.ConsentGiver.valueOf(patient.getEmailConsent().name())));
     }
 
     @Override
