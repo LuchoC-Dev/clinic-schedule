@@ -23,7 +23,7 @@ class EmailReminderAdapter implements ReminderSenderPort {
     private final ReminderText text;
     private final String from;
 
-    EmailReminderAdapter(JavaMailSender mail, @Value("${app.reminders.from}") String from,
+    EmailReminderAdapter(JavaMailSender mail, @Value("${app.mail.from}") String from,
             @Value("${app.practice.name}") String practice, @Value("${app.practice.address}") String address,
             @Value("${app.practice.phone}") String phone) {
         this.mail = mail;

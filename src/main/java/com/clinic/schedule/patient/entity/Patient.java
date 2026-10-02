@@ -168,13 +168,18 @@ public class Patient {
      *       they were, and is only declared once either changes: nobody has seen the new one.</li>
      * </ul>
      *
+     * <p>A patient with a web account logs in with their document, so their identity stays verified:
+     * a new name or document goes in only with the document seen, and nothing leaves them declared.
+     *
      * @param document null clears it, which is how a wrongly entered one is taken back out
      * @param documentSeen whether reception saw the document now
+     * @param holdsAccount whether the patient has a web account, in any state
      * @param changedBy the username of whoever changes it
      * @throws UnverifiableIdentityException when it is said to be seen and cannot be
+     * @throws VerificationRequiredException when it would leave a patient with a web account unverified
      */
     public Optional<PatientIdentityChange> changeIdentity(String fullName, IdentityDocument document,
-            boolean documentSeen, LocalDateTime changedAt, String changedBy) {
+            boolean documentSeen, boolean holdsAccount, LocalDateTime changedAt, String changedBy) {
         String name = requireName(fullName);
         boolean byAlias = name.equals(alias);
         boolean changed = !name.equals(this.fullName) || !Objects.equals(document, this.document);
@@ -193,6 +198,10 @@ public class Patient {
             status = IdentityStatus.VERIFIED;
         } else {
             status = IdentityStatus.DECLARED;
+        }
+        if (holdsAccount && status != IdentityStatus.VERIFIED) {
+            throw new VerificationRequiredException(
+                    "A patient with a web account changes their name or document only with the document seen");
         }
         if (!changed && status == identityStatus) {
             return Optional.empty();

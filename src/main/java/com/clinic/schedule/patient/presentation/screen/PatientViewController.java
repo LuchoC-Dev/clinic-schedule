@@ -22,6 +22,7 @@ import com.clinic.schedule.patient.entity.Consent;
 import com.clinic.schedule.patient.entity.InvalidPatientDetailsException;
 import com.clinic.schedule.patient.entity.Patient;
 import com.clinic.schedule.patient.entity.UnverifiableIdentityException;
+import com.clinic.schedule.patient.entity.VerificationRequiredException;
 import com.clinic.schedule.patient.service.DuplicateDocumentException;
 import com.clinic.schedule.patient.service.PatientNotFoundException;
 import com.clinic.schedule.patient.service.PatientService;
@@ -158,6 +159,10 @@ class PatientViewController {
         }
         if (e instanceof UnverifiableIdentityException) {
             return "Para marcar que viste el documento, el paciente necesita su documento y su nombre real.";
+        }
+        if (e instanceof VerificationRequiredException) {
+            return "El paciente tiene cuenta web: su nombre o su documento solo cambian si viste el documento y lo "
+                    + "marcás.";
         }
         if (e instanceof InvalidPatientDetailsException) {
             return "Revisá los datos personales: la fecha de nacimiento no puede ser futura ni de hace más de 130 años; "

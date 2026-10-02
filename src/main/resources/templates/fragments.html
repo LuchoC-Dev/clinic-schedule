@@ -86,6 +86,17 @@
         <button type="submit">Salir</button>
     </form>
 </header>
+<!--
+  The patients' header, on their own screens (D-80): their appointments and logging out, and nothing of the
+  staff's.
+-->
+<header th:fragment="portalHeader">
+    <strong>Consultorio</strong>
+    <a th:href="@{/portal/appointments}">Mis turnos</a>
+    <form class="inline" method="post" th:action="@{/portal/logout}">
+        <button type="submit">Salir</button>
+    </form>
+</header>
 <div th:fragment="messages">
     <p class="ok" th:if="${message}" th:text="${message}"></p>
     <p class="error" th:if="${error}" th:text="${error}"></p>

@@ -1,0 +1,29 @@
+<!DOCTYPE html>
+<html lang="es" xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{fragments :: head('Ingresar')}"></head>
+<body>
+<main style="max-width: 22rem">
+    <h1>Consultorio</h1>
+    <p class="muted">Tus turnos, con tu documento y tu contraseña.</p>
+    <p class="error" th:if="${param.error}">Documento o contraseña incorrectos.</p>
+    <p class="ok" th:if="${param.logout}">Sesión cerrada.</p>
+    <p class="ok" th:if="${param.activated}">Cuenta activada: ingresá con tu documento y tu contraseña.</p>
+    <p class="error" th:if="${param.expired}">Tu sesión se cerró: tu cuenta fue desactivada.</p>
+    <form class="card" method="post" th:action="@{/portal/login}">
+        <p><label>Tipo de documento
+            <select name="documentType" required>
+                <option th:each="t : ${documentTypes}" th:value="${t}" th:text="${t}">DNI</option>
+            </select>
+        </label></p>
+        <p><label>Número
+            <input type="text" name="documentNumber" autocomplete="username" required autofocus maxlength="20">
+        </label></p>
+        <p><label>Contraseña
+            <input type="password" name="password" autocomplete="current-password" required>
+        </label></p>
+        <button type="submit" class="primary">Ingresar</button>
+    </form>
+    <p class="muted">¿No tenés cuenta? Pedila en recepción.</p>
+</main>
+</body>
+</html>

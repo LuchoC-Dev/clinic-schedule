@@ -2747,7 +2747,8 @@ the date of birth).
 ---
 
 ## D-78 — Reminders are a module of their own, sent by email once a day behind a port
-**Date:** 2026-10-01 · **Status:** accepted
+**Date:** 2026-10-01 · **Status:** accepted; the sender moved from `app.reminders.from` to the practice's
+`app.mail.from` in D-79
 
 v2, phase 5, part 3: the application reminds patients of their appointments by email, a few days before,
 on the consent of D-77.
@@ -2810,3 +2811,142 @@ sending (a second message, or a call from reception, could cross); recording a n
 and for good (a consent given the next day would never count); keeping the address, or a plain SHA-256 of
 it (a list of emails turns it back); reading the reminders from the appointment's screens (the
 appointment module would depend on this one, which depends on it); a link to cancel (web booking).
+
+---
+
+## D-79 — A patient's web account: a module of its own, opened by reception and activated by email
+**Date:** 2026-10-02 · **Status:** accepted
+
+v2, phase 6, part 1. Until now only the staff used the application. A patient now has an account of their
+own, to read their appointments — and, in the parts to come, to book, cancel and keep their data.
+
+**A module of its own, `portal`, laid out as a hexagon** like `reminder` (D-78): the patients' side of
+the application. Who may have an account is a rule worth keeping pure, sending the activation is an
+outside service, and every later part of the phase — booking, cancelling, the family group — is something
+the patient does, so it goes here too. It asks the patient module for the patient through `patient/api`,
+the appointment module for the patient's appointments through `appointment/api`, and answers
+`portal/api/PatientAccountReader` for the patient and security modules.
+
+**One account per patient, opened by reception.** `AccountOpeningService`, the only way to open one (D-17),
+refuses a patient who has one in any state, one whose identity is not verified — the account logs in with
+their document, so reception must have seen it (D-60) —, one without a date of birth, and one under 13 on the
+day: from 13 a patient decides alone on much of their care (Código Civil y Comercial, art. 26), and the
+reminders already follow that age (D-78). Each refusal is a 409 with its reason. Nobody opens an account,
+nor registers a patient, from the web. A second account opened at once by two receptionists is refused by the
+unique patient of `patient_account` (D-09).
+
+**The account's email is its own.** `PatientAccount` keeps an email apart from the patient's contact
+(D-73): the activation goes there, and the account's later messages, never a reminder. It is checked for its
+form as the contact's is, kept in lower case, and not unique — a family may share one. It changes only
+through reception's `email-change`, with the patient's document in sight, so changing a contact can never
+hand the account to someone else. An active account's new email holds at once; a pending one gets its
+activation there, and the old link stops working.
+
+**Activated from a link, once.** `PENDING` until the patient chooses a password, from 10 to 72 characters as
+the staff's (D-68) — `PasswordPolicy` moved to `shared` so both use it —, never temporary, since nobody
+else ever knew it; then `ACTIVE`; `INACTIVE` when reception switches it off, and back to `ACTIVE`, or to
+`PENDING` if it was never activated. The link carries a token of 256 random bits, of which only the SHA-256
+is kept, in `patient_account_activation`, one per account: for something this unguessable a hash is enough
+to keep it useless if read, and lets the link find its account; the bcrypt of D-78 is for what could be
+guessed. It lasts `app.portal.activation-valid-for`, 72 hours; sending another replaces it, and using it or
+deactivating the account deletes it. The link's address names nothing personal (D-75). Asking for an unknown,
+expired or used link is a 400 that does not say which.
+
+**One attempt at sending.** `SendActivationUseCase` sends through `AccountMailPort`, answered by
+`EmailAccountAdapter` over the same SMTP server as the reminders, in plain text: a greeting, what the account
+is for, the link and when it expires. A port of its own rather than the reminders' (D-78): another address,
+other words, another module. The practice's sender is one setting for both, `app.mail.from`, which replaces
+`app.reminders.from`; the links point at `app.portal.base-url`. A sending that fails leaves the account
+opened, says so to reception, and is not recorded; reception sends it again.
+
+**Every action recorded**, in `patient_account_change`: opened, activation sent, activated, email changed,
+deactivated, reactivated — when, and by whom: reception's username, or nobody for what the patient did,
+which the database checks. Reception reads it on the account's screen and at
+`GET /api/patient-accounts/{id}/changes`.
+
+**A deactivated account loses access at once.** `PatientAccountDeactivated`, in `portal/api`, is heard by
+the security module once it commits, which ends the account's sessions as it ends a deactivated user's
+(D-68): an event because the security module already depends on `portal/api`.
+
+**A patient with an account keeps a verified identity.** If reception could change their name or document
+without seeing it, the account would log in with a document nobody saw. So `Patient.changeIdentity` refuses,
+as `VerificationRequiredException` — a 409 —, any change that would leave a patient with an account, in any
+state, unverified: a new name or document goes in only with the document seen. The patient module asks
+`portal/api` whether the patient has an account; `PatientAccountReaderAdapter` reaches nothing of the patient
+module, so the two depend on each other's api without a cycle between their beans.
+
+**Reception's routes and screen.** `POST /api/patient-accounts`, `GET /api/patient-accounts?patientId=` and
+`/{id}`, `POST /{id}/activation-resend`, `/email-change`, `/deactivate`, `/reactivate`, `GET /{id}/changes`,
+reception's alone by route (D-34); an unknown patient in the body is a 400, as an unknown practitioner is in
+D-68. The screen `/patient-accounts?patient=` belongs to `portal` and is reached by a plain link, *Cuenta
+web*, from the patient's screen, as the reminders' list is (D-78). The admins read none of it.
+
+**Development data.** Laura Medina, verified and adult, with an account in use: `DNI 27333444` /
+`paciente123` (`V104`).
+
+*Rejected:* opening an account from the web with the document and the email on file (anyone holding a
+patient's document could try, and a parent's email on an adolescent's record would open it to the parent);
+using the contact email for the account (reception changing a contact would hand over the account); a unique
+email (a family shares one); the account in the patient module (the patients' side has rules and outside
+services of its own, and every later part of the phase belongs with it); the reminders' sending port for the
+activation (another module's words and address); bcrypt for the token (it is unguessable, and a link must
+find its account); keeping the account usable when the identity is no longer verified, or checking that at
+every login (simpler and safer for it never to happen); a seed account without its patient (the rules of
+opening would be skipped for nothing).
+
+---
+
+## D-80 — Patients log in with their document, on a login, a session and routes of their own
+**Date:** 2026-10-02 · **Status:** accepted
+
+v2, phase 6, part 1. The staff log in with a username; a patient has none, and the account requires their
+identity document and **never** the internal id (the context's planned evolution).
+
+**Two more filter chains, ahead of the staff's.** `/api/portal/**`, with basic authentication and no
+session, the contract of the patients' single-page application to come (D-02); and `/portal/**`, with a
+login form at `/portal/login`, a session and CSRF. A patient carries one authority, `ROLE_PATIENT`, which no
+staff route accepts, and the patients' routes accept no other: a patient reaches nothing of the staff's,
+nor the staff anything of theirs, as tests check both ways. Each chain names whom it looks up —
+`AppUserDetailsService` or `PatientAccountDetailsService` —, since there are two kinds of people to log in.
+Activating an account, before there is one to log in with, is open: the link is what says whose.
+
+**The document is the login.** `PatientAccountDetailsService` reads it as its type and number with a space,
+`DNI 27333444`; the patient module finds the patient — separators and case as reception types them
+(D-26) — and the portal their account, if it is in use. Two lookups in two modules, because the patient
+module asks the portal whether a patient has an account (D-79), and the portal asking back would close a
+cycle. On the screen the type is chosen from a list and the number typed apart; `DocumentLoginFilter`
+joins them before Spring Security's form login reads its single username, on the login's request alone.
+Without JavaScript nothing else could join them.
+
+**The principal is named by the account's id, never the document.** Whatever records who did something
+reads the principal's name (D-60), and a document there would tell anyone reading a record who the patient
+is — the admins included, who read the cancellations without the patient (D-76). `CurrentPatientReader`, in
+`security/api`, says which patient is logged in; the use cases never take a patient from the request, so a
+patient cannot ask for another's.
+
+**A session of their own.** The patients' session keeps its login under a key of its own,
+`PORTAL_SECURITY_CONTEXT`, so the same browser logged in as staff and as a patient keeps both, and neither
+is taken for the other. The sessions are registered as the staff's, so a deactivated account loses its own
+at once (D-79) — but in a registry of their own, `patientSessionRegistry`: a registry keeps one login per
+session, and with one for both, someone of the staff logging in on the patient's browser replaced the
+patient's entry, and deactivating the account found no session to end. The browser showed it; MockMvc cannot,
+since it changes a session's id without telling the registries, as the servlet container does. Ending that
+session ends the whole browser's session, the staff's login in it included, and so does logging out.
+
+**What a patient reads: their appointments.** `GET /api/portal/appointments` and the screen
+`/portal/appointments`, *Mis turnos*: those ahead, the soonest first, and those of the last 12 months, the most
+recent first (`OwnAppointments`), each with its day and time, practitioner, reason and state — booked,
+cancelled or absent — and, cancelled, whether the patient or the practice asked. Never reception's note, nor
+who cancelled it: `appointment/api/PatientAppointment`, which `AppointmentReader.findForPatient` answers, has
+no place for them, so the type decides it, as the admins' list did in D-76. Nothing clinical (D-51).
+
+**The patients' screens** are in Spanish, with a header of their own, *Mis turnos* and *Salir*, and as thin
+and throwaway as the staff's (D-02).
+
+*Rejected:* one login for staff and patients, with a `PATIENT` role in `app_user` (users are the staff's,
+created by the admin, with usernames never used again — D-68); logging in with the email (it is not unique)
+or the internal id (the context forbids it); the document as the principal's name (it would reach every
+record of who did what); a single field for the whole document (patients would have to know how to type
+it); a custom authentication filter for the form (Spring Security's form login does the rest, once the
+username is joined); the staff's session key for the patients (logging in on one side would log out the
+other).

@@ -10,7 +10,7 @@ in [`docs/context.md`](docs/context.md), every technical decision and its reason
 [`docs/decisions.md`](docs/decisions.md), and the progress in [`docs/build.md`](docs/build.md).
 **Version 1 is complete. Version 2 is built in phases; five are closed — the clinical record, the
 arrival queue, users and security, the patient's extra data, and reminders with the cancellation log —
-and v2 is not finished.**
+the sixth, web booking for patients, is under way, and v2 is not finished.**
 
 ## Running it
 
@@ -35,7 +35,7 @@ docker compose up -d        # PostgreSQL 18, with its data kept in a volume, and
 
 Flyway creates the schema on the first start, and the data stays between restarts;
 `docker compose down -v` wipes it. It starts with development data: two practitioners with their
-reasons and weeks, two patients, and these users.
+reasons and weeks, three patients, and these users.
 
 | User        | Password       | Role                                       |
 |-------------|----------------|--------------------------------------------|
@@ -47,7 +47,8 @@ reasons and weeks, two patients, and these users.
 
 They live in `src/main/resources/db/seed`, a Flyway location of its own that a real deployment
 removes (D-34). The admin creates everyone else's users, one per person, at `/users` (D-68), with a temporary
-password each one changes at `/password` on logging in (D-69).
+password each one changes at `/password` on logging in (D-69). One of the patients, Laura Medina, has a web
+account in use: she logs in at http://localhost:8080/portal/login as `DNI 27333444` / `paciente123` (D-80).
 
 ## Using it
 
@@ -69,7 +70,14 @@ with addenda. Under *Mi cola* they call the next patient of their queue and star
 for access to a record to report one; under *Mis órdenes*, they follow up the orders they issued. The screens are in
 Spanish, for the staff.
 
-**API** — basic authentication on every request. Errors share one body:
+**The patients' screens** — at http://localhost:8080/portal/login, apart from the staff's. A patient whom
+reception opened a web account for — from *Cuenta web* on the patient's screen, for a verified patient of
+13 or older — gets a link by email to activate it and choose a password, logs in with their document and
+reads their appointments: those ahead and those of the last year, never reception's note. The emails go to
+Mailpit in development, at http://localhost:8025.
+
+**API** — basic authentication on every request: the staff with their username, a patient with their
+document as its type and number, such as `DNI 27333444`. Errors share one body:
 `{timestamp, status, error, message, fields?}`.
 
 | Method | Route | What it does |
@@ -120,6 +128,12 @@ Spanish, for the staff.
 | `POST` | `/api/checks/{id}/result` | the result of a pending check, by any practitioner with access to the record |
 | `GET` | `/api/checks/pending` | the checks of the practice waiting for a result: only the patient and the check |
 | `POST` | `/api/checks/{id}/access-grants` | access to the record to report that pending check — granted at once, for now, and recorded |
+| `POST` | `/api/patient-accounts` | reception opens a patient's web account — `{patientId, email}`, for a verified patient of 13 or older — and the activation goes to that email |
+| `GET` | `/api/patient-accounts?patientId=`, `/api/patient-accounts/{id}` | a patient's web account and its state; never its password |
+| `POST` | `/api/patient-accounts/{id}/activation-resend`, `/email-change`, `/deactivate`, `/reactivate` | send the activation again, change the account's email, switch it off or on |
+| `GET` | `/api/patient-accounts/{id}/changes` | what was done to the account, when and by whom |
+| `POST` | `/api/portal/activation` | the patient activates their account — `{token, password}`, the token from the email's link; no login |
+| `GET` | `/api/portal/appointments` | the patient logged in reads their appointments: those ahead and those of the last 12 months, without the note |
 | `GET` | `/api/clinical-records/{patientId}` | the patient's date of birth and health insurance, their consultations with their checks, and the checks done without one — for a practitioner who saw them within the access period or is seeing them today |
 
 A booking whose patient did not arrive — into their practitioner's queue — is marked absent 30 minutes after its start, or at the end of its
@@ -129,7 +143,9 @@ practitioners' only; anything a user may not see answers 403. The access period 
 record is `app.clinical-record.access-period`, a year by default. Reminders go out by email once a day
 (`app.reminders.cron`, 10:00) for the appointments of the next `app.reminders.days-ahead` days (3), to the
 patients whose email has their consent — a responsible person's only for a patient under 13; the
-practice's name, address and phone are `app.practice.*`, and the SMTP server `spring.mail.*`.
+practice's name, address and phone are `app.practice.*`, its sender `app.mail.from`, and the SMTP server
+`spring.mail.*`. The links in the patients' emails point at `app.portal.base-url`, and an activation lasts
+`app.portal.activation-valid-for`, 72 hours by default.
 
 ## How it is built
 
@@ -153,6 +169,7 @@ src/main/java/com/clinic/schedule/
 ├── clinicalrecord/           hexagonal too: consultations, checks, orders, attachments, and who may read a record
 ├── patient/                  layered: presentation/ (http, screen), service/, entity/,
 │                             persistence/ — and api/, its only door for other modules
+├── portal/                   hexagonal: the patients' side — their web accounts and what they read with them
 ├── practitioner/             layered alike, with the week's rules in plain classes
 ├── reminder/                 hexagonal: who is reminded of their appointment, sent by email once a day
 ├── security/                 the access rules: login, roles per route, who is asking
@@ -162,7 +179,7 @@ src/main/java/com/clinic/schedule/
 
 A module reaches another only through its `api/` package, and in the layered modules each layer
 is reached only by the one above it; `ArchitectureTest` checks both on every build (D-05, D-42).
-The domains of `appointment`, `clinicalrecord` and `reminder` have no framework annotations and are tested
+The domains of `appointment`, `clinicalrecord`, `portal` and `reminder` have no framework annotations and are tested
 without Spring. The whole repository is in English; on-screen text is in Spanish (D-13).
 
 ## Deliberately postponed

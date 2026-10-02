@@ -9,10 +9,12 @@ import org.springframework.stereotype.Component;
 
 import com.clinic.schedule.appointment.api.AppointmentReader;
 import com.clinic.schedule.appointment.api.AppointmentSummary;
+import com.clinic.schedule.appointment.api.PatientAppointment;
 import com.clinic.schedule.appointment.application.usecase.FindPatientDayUseCase;
 import com.clinic.schedule.appointment.application.exception.AppointmentNotFoundException;
 import com.clinic.schedule.appointment.application.usecase.FindAppointmentUseCase;
 import com.clinic.schedule.appointment.application.usecase.FindAppointmentsBetweenUseCase;
+import com.clinic.schedule.appointment.application.usecase.ViewPatientAppointmentsUseCase;
 import com.clinic.schedule.appointment.domain.Appointment;
 import com.clinic.schedule.appointment.domain.AppointmentId;
 import com.clinic.schedule.appointment.domain.AppointmentStatus;
@@ -32,12 +34,14 @@ class AppointmentReaderAdapter implements AppointmentReader {
     private final FindPatientDayUseCase patientDay;
     private final FindAppointmentUseCase appointment;
     private final FindAppointmentsBetweenUseCase between;
+    private final ViewPatientAppointmentsUseCase patientAppointments;
 
     AppointmentReaderAdapter(FindPatientDayUseCase patientDay, FindAppointmentUseCase appointment,
-            FindAppointmentsBetweenUseCase between) {
+            FindAppointmentsBetweenUseCase between, ViewPatientAppointmentsUseCase patientAppointments) {
         this.patientDay = patientDay;
         this.appointment = appointment;
         this.between = between;
+        this.patientAppointments = patientAppointments;
     }
 
     @Override
@@ -62,6 +66,26 @@ class AppointmentReaderAdapter implements AppointmentReader {
         return patientDay.handle(new PatientId(patientId), date).stream()
                 .map(AppointmentReaderAdapter::summary)
                 .toList();
+    }
+
+    @Override
+    public List<PatientAppointment> findForPatient(UUID patientId) {
+        return patientAppointments.handle(new PatientId(patientId)).stream()
+                .map(AppointmentReaderAdapter::forPatient)
+                .toList();
+    }
+
+    /** Without the note and without who cancelled it, which are reception's (D-76, D-80). */
+    private static PatientAppointment forPatient(Appointment appointment) {
+        return new PatientAppointment(
+                appointment.id().value(),
+                appointment.practitionerId().value(),
+                appointment.slot().startsAt(),
+                appointment.reason(),
+                PatientAppointment.State.valueOf(appointment.status().name()),
+                appointment.cancellation()
+                        .map(cancellation -> PatientAppointment.Requester.valueOf(cancellation.requestedBy().name()))
+                        .orElse(null));
     }
 
     private static AppointmentSummary summary(Appointment appointment) {

@@ -18,9 +18,9 @@ import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 
 import com.clinic.schedule.practitioner.api.PractitionerReader;
 import com.clinic.schedule.practitioner.api.PractitionerSummary;
+import com.clinic.schedule.shared.PasswordPolicy;
 import com.clinic.schedule.user.api.Role;
 import com.clinic.schedule.user.entity.AppUser;
-import com.clinic.schedule.user.entity.PasswordPolicy;
 import com.clinic.schedule.user.entity.UserStatusException;
 import com.clinic.schedule.user.service.PractitionerTakenException;
 import com.clinic.schedule.user.service.SelfDeactivationException;

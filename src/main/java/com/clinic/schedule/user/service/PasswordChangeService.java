@@ -8,8 +8,8 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import com.clinic.schedule.security.api.CurrentUserReader;
+import com.clinic.schedule.shared.PasswordPolicy;
 import com.clinic.schedule.user.entity.AppUser;
-import com.clinic.schedule.user.entity.PasswordPolicy;
 import com.clinic.schedule.user.persistence.AppUserChangeRepository;
 import com.clinic.schedule.user.persistence.AppUserRepository;
 

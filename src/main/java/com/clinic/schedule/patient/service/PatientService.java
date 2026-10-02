@@ -7,6 +7,7 @@ import java.util.Collection;
 import java.util.List;
 import java.util.Arrays;
 import java.util.Objects;
+import java.util.Optional;
 import java.util.UUID;
 import java.util.concurrent.ThreadLocalRandom;
 
@@ -38,6 +39,7 @@ import com.clinic.schedule.patient.entity.Responsible;
 import com.clinic.schedule.patient.persistence.PatientDetailsChangeRepository;
 import com.clinic.schedule.patient.persistence.PatientIdentityChangeRepository;
 import com.clinic.schedule.patient.persistence.PatientRepository;
+import com.clinic.schedule.portal.api.PatientAccountReader;
 import com.clinic.schedule.security.api.CurrentUserReader;
 
 /**
@@ -55,7 +57,8 @@ import com.clinic.schedule.security.api.CurrentUserReader;
  *
  * <p>A change to a patient's identity is saved with its entry in the history, in the same
  * transaction, stamped with the practice's clock and the user who made it (D-60), and so is a change
- * to their details (D-73).
+ * to their details (D-73). A patient with a web account keeps a verified identity (D-79), which only
+ * this module can tell, so it asks the portal whether they have one.
  */
 @Service
 public class PatientService implements PatientReader, PatientWriter {
@@ -66,14 +69,17 @@ public class PatientService implements PatientReader, PatientWriter {
     private final PatientRepository patients;
     private final PatientIdentityChangeRepository identityChanges;
     private final PatientDetailsChangeRepository detailsChanges;
+    private final PatientAccountReader accounts;
     private final CurrentUserReader currentUser;
     private final Clock clock;
 
     PatientService(PatientRepository patients, PatientIdentityChangeRepository identityChanges,
-            PatientDetailsChangeRepository detailsChanges, CurrentUserReader currentUser, Clock clock) {
+            PatientDetailsChangeRepository detailsChanges, PatientAccountReader accounts, CurrentUserReader currentUser,
+            Clock clock) {
         this.patients = patients;
         this.identityChanges = identityChanges;
         this.detailsChanges = detailsChanges;
+        this.accounts = accounts;
         this.currentUser = currentUser;
         this.clock = clock;
     }
@@ -153,7 +159,8 @@ public class PatientService implements PatientReader, PatientWriter {
 
     /**
      * Corrects who the patient is: their name, their document, and whether reception saw the
-     * document now. What changed goes to the history; nothing is recorded when nothing changed.
+     * document now. What changed goes to the history; nothing is recorded when nothing changed. A patient
+     * with a web account changes their name or document only with the document seen (D-79).
      */
     @Transactional
     public Patient changeIdentity(UUID id, String fullName, IdentityDocument document, boolean documentSeen) {
@@ -161,7 +168,8 @@ public class PatientService implements PatientReader, PatientWriter {
         if (!Objects.equals(document, patient.getDocument())) {
             requireDocumentIsFree(document);
         }
-        patient.changeIdentity(fullName, document, documentSeen, LocalDateTime.now(clock), currentUser.username())
+        patient.changeIdentity(fullName, document, documentSeen, accounts.hasAccount(id), LocalDateTime.now(clock),
+                        currentUser.username())
                 .ifPresent(identityChanges::save);
         return patients.save(patient);
     }
@@ -243,6 +251,21 @@ public class PatientService implements PatientReader, PatientWriter {
     @Transactional(readOnly = true)
     public List<PatientSummary> findAll(Collection<UUID> patientIds) {
         return summaries(patients.findAllById(patientIds));
+    }
+
+    /** A type that is not one, or a number that cannot be one, finds nobody. */
+    @Override
+    @Transactional(readOnly = true)
+    public Optional<UUID> findIdByDocument(String documentType, String documentNumber) {
+        if (documentType == null) {
+            return Optional.empty();
+        }
+        try {
+            return patients.findByDocument(new IdentityDocument(DocumentType.valueOf(documentType), documentNumber))
+                    .map(Patient::getId);
+        } catch (IllegalArgumentException e) {
+            return Optional.empty();
+        }
     }
 
     @Override

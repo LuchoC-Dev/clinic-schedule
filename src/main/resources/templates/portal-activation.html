@@ -1,0 +1,26 @@
+<!DOCTYPE html>
+<html lang="es" xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{fragments :: head('Activar tu cuenta')}"></head>
+<body>
+<main style="max-width: 22rem">
+    <h1>Activá tu cuenta</h1>
+    <p class="error" th:unless="${usable}">Este link ya no sirve: venció o ya se usó. Si todavía no activaste tu
+        cuenta, pedí un link nuevo en recepción.</p>
+    <th:block th:if="${usable}">
+        <div th:replace="~{fragments :: messages}"></div>
+        <p class="muted">Elegí tu contraseña: de 10 a 72 caracteres, los que quieras.</p>
+        <form class="card" method="post" th:action="@{/portal/activation}">
+            <input type="hidden" name="token" th:value="${token}">
+            <p><label>Contraseña
+                <input type="password" name="password" autocomplete="new-password" required minlength="10">
+            </label></p>
+            <p><label>Repetila
+                <input type="password" name="repeatedPassword" autocomplete="new-password" required minlength="10">
+            </label></p>
+            <button type="submit" class="primary">Activar</button>
+        </form>
+    </th:block>
+    <p><a th:href="@{/portal/login}">Ingresar</a></p>
+</main>
+</body>
+</html>

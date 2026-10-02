@@ -1,5 +1,6 @@
 package com.clinic.schedule.security;
 
+import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.core.annotation.Order;
@@ -14,12 +15,17 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.access.intercept.AuthorizationFilter;
 import org.springframework.security.web.authentication.AuthenticationSuccessHandler;
+import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
+import org.springframework.security.web.context.HttpSessionSecurityContextRepository;
 import org.springframework.security.web.session.HttpSessionEventPublisher;
 
 import com.clinic.schedule.security.presentation.TemporaryPasswordFilter;
 import com.clinic.schedule.security.presentation.http.ApiSecurityErrorHandler;
+import com.clinic.schedule.security.presentation.screen.DocumentLoginFilter;
 import com.clinic.schedule.security.presentation.screen.ScreenAccessDeniedHandler;
 import com.clinic.schedule.security.service.AppUserDetails;
+import com.clinic.schedule.security.service.AppUserDetailsService;
+import com.clinic.schedule.security.service.PatientAccountDetailsService;
 import com.clinic.schedule.user.api.Role;
 
 /**
@@ -30,6 +36,12 @@ import com.clinic.schedule.user.api.Role;
  *       contract the future single-page applications will consume.</li>
  *   <li>everything else: a login form, a session, and CSRF protection for the screens.</li>
  * </ul>
+ *
+ * <p>The patients have the same two of their own, ahead of the staff's, under {@code /api/portal/**} and
+ * {@code /portal/**} (D-80): they log in with their document, on a login of their own, and reach nothing of
+ * the staff's, as the staff reach nothing of theirs. Each chain names whom it looks up, since there are two
+ * kinds of people to log in. A patient's session keeps its login under a key of its own, so one browser
+ * logged in on both sides keeps both.
  *
  * <p>What each role may reach is decided here, by route: a practitioner reads the agenda and
  * works with clinical records, which are theirs alone (D-51); an admin administers the users and
@@ -48,14 +60,66 @@ class SecurityConfiguration {
     private static final String PRACTITIONER = Role.PRACTITIONER.name();
     private static final String ADMIN = Role.ADMIN.name();
     private static final String WAITING_ROOM = Role.WAITING_ROOM.name();
+    /** The role of a patient logged in to their web account, as {@code hasRole} reads it (D-80). */
+    private static final String PATIENT = "PATIENT";
 
+    /** Activating an account is done before there is one to log in with: the link is what says whose. */
     @Bean
     @Order(1)
-    SecurityFilterChain apiChain(HttpSecurity http, ApiSecurityErrorHandler errors) throws Exception {
+    SecurityFilterChain portalApiChain(HttpSecurity http, ApiSecurityErrorHandler errors,
+            PatientAccountDetailsService patients) throws Exception {
+        return http
+                .securityMatcher("/api/portal/**")
+                .csrf(AbstractHttpConfigurer::disable)
+                .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
+                .userDetailsService(patients)
+                .authorizeHttpRequests(routes -> routes
+                        .requestMatchers(HttpMethod.POST, "/api/portal/activation").permitAll()
+                        .anyRequest().hasRole(PATIENT))
+                .httpBasic(basic -> basic.authenticationEntryPoint(errors))
+                .exceptionHandling(handling -> handling.authenticationEntryPoint(errors).accessDeniedHandler(errors))
+                .build();
+    }
+
+    /**
+     * The login form asks for the document as a type and a number, which {@link DocumentLoginFilter} joins.
+     * Registered sessions, as the staff's, so a deactivated account loses its own at once (D-79) — in a
+     * registry of their own: a registry keeps one login for each session, and a browser where someone of the
+     * staff logged in after the patient would otherwise hide the patient's.
+     */
+    @Bean
+    @Order(2)
+    SecurityFilterChain portalScreenChain(HttpSecurity http,
+            @Qualifier("patientSessionRegistry") SessionRegistry sessions, ScreenAccessDeniedHandler denied,
+            PatientAccountDetailsService patients) throws Exception {
+        HttpSessionSecurityContextRepository logins = new HttpSessionSecurityContextRepository();
+        logins.setSpringSecurityContextKey("PORTAL_SECURITY_CONTEXT");
+        return http
+                .securityMatcher("/portal/**")
+                .userDetailsService(patients)
+                .securityContext(context -> context.securityContextRepository(logins))
+                .authorizeHttpRequests(routes -> routes
+                        .requestMatchers("/portal/login", "/portal/activation").permitAll()
+                        .anyRequest().hasRole(PATIENT))
+                .addFilterBefore(new DocumentLoginFilter("/portal/login"), UsernamePasswordAuthenticationFilter.class)
+                .formLogin(login -> login.loginPage("/portal/login").defaultSuccessUrl("/portal/appointments", true)
+                        .permitAll())
+                .sessionManagement(session -> session.maximumSessions(-1).sessionRegistry(sessions)
+                        .expiredUrl("/portal/login?expired"))
+                .logout(logout -> logout.logoutUrl("/portal/logout").logoutSuccessUrl("/portal/login?logout"))
+                .exceptionHandling(handling -> handling.accessDeniedHandler(denied))
+                .build();
+    }
+
+    @Bean
+    @Order(3)
+    SecurityFilterChain apiChain(HttpSecurity http, ApiSecurityErrorHandler errors, AppUserDetailsService users)
+            throws Exception {
         return http
                 .securityMatcher("/api/**")
                 .csrf(AbstractHttpConfigurer::disable)
                 .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
+                .userDetailsService(users)
                 .authorizeHttpRequests(routes -> routes
                         .requestMatchers(HttpMethod.GET, "/api/appointments").hasAnyRole(RECEPTION, PRACTITIONER)
                         .requestMatchers("/api/consultations/**", "/api/checks/**", "/api/orders/**",
@@ -71,10 +135,11 @@ class SecurityConfiguration {
     }
 
     @Bean
-    @Order(2)
-    SecurityFilterChain screenChain(HttpSecurity http, SessionRegistry sessions, ScreenAccessDeniedHandler denied)
-            throws Exception {
+    @Order(4)
+    SecurityFilterChain screenChain(HttpSecurity http, @Qualifier("sessionRegistry") SessionRegistry sessions,
+            ScreenAccessDeniedHandler denied, AppUserDetailsService users) throws Exception {
         return http
+                .userDetailsService(users)
                 .authorizeHttpRequests(routes -> routes
                         .requestMatchers("/login", "/error").permitAll()
                         .requestMatchers(HttpMethod.GET, "/queue-events").hasAnyRole(RECEPTION, PRACTITIONER, WAITING_ROOM)
@@ -119,12 +184,19 @@ class SecurityConfiguration {
         };
     }
 
+    /** The staff's open sessions. */
     @Bean
     SessionRegistry sessionRegistry() {
         return new SessionRegistryImpl();
     }
 
-    /** Tells the registry when a session ends, by logging out or running out, so it forgets it. */
+    /** The patients' open sessions, apart from the staff's (D-80). */
+    @Bean
+    SessionRegistry patientSessionRegistry() {
+        return new SessionRegistryImpl();
+    }
+
+    /** Tells the registries when a session ends, by logging out or running out, so they forget it. */
     @Bean
     static HttpSessionEventPublisher httpSessionEventPublisher() {
         return new HttpSessionEventPublisher();

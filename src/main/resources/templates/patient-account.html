@@ -1,0 +1,65 @@
+<!DOCTYPE html>
+<html lang="es" xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{fragments :: head('Cuenta web')}"></head>
+<body>
+<header th:replace="~{fragments :: header}"></header>
+<main>
+    <h1>Cuenta web de <a th:href="@{/patients/{id}(id=${patient.id})}" th:text="${patient.fullName}">Ana Pérez</a></h1>
+    <p class="muted" th:text="${patient.document} ?: 'Sin documento'">DNI 30111222</p>
+    <div th:replace="~{fragments :: messages}"></div>
+
+    <th:block th:unless="${account}">
+        <p>No tiene cuenta web. Se abre para un paciente de 13 años o más, con la identidad verificada y la fecha de
+            nacimiento cargada. El email es el de la cuenta: ahí le llega el link para activarla, y no cambia su email
+            de contacto.</p>
+        <form class="card bar" method="post" th:action="@{/patient-accounts}">
+            <input type="hidden" name="patientId" th:value="${patient.id}">
+            <label>Email de la cuenta
+                <input type="email" name="email" required maxlength="254">
+            </label>
+            <button type="submit" class="primary">Abrir cuenta</button>
+        </form>
+    </th:block>
+
+    <th:block th:if="${account}">
+        <p>Estado: <strong th:text="${status}">Activa</strong> ·
+            Email: <span th:text="${account.email}">ana@mail.com</span></p>
+        <div class="bar">
+            <form class="inline" method="post" th:if="${account.status.name() == 'PENDING'}"
+                  th:action="@{/patient-accounts/{id}/activation-resend(id=${account.id})}">
+                <button type="submit">Reenviar link de activación</button>
+            </form>
+            <form class="inline" method="post" th:unless="${account.status.name() == 'INACTIVE'}"
+                  th:action="@{/patient-accounts/{id}/deactivate(id=${account.id})}">
+                <button type="submit" class="danger">Desactivar</button>
+            </form>
+            <form class="inline" method="post" th:if="${account.status.name() == 'INACTIVE'}"
+                  th:action="@{/patient-accounts/{id}/reactivate(id=${account.id})}">
+                <button type="submit">Reactivar</button>
+            </form>
+        </div>
+
+        <h2>Cambiar el email de la cuenta</h2>
+        <form class="card bar" method="post" th:action="@{/patient-accounts/{id}/email-change(id=${account.id})}">
+            <label>Email nuevo
+                <input type="email" name="email" required maxlength="254">
+            </label>
+            <button type="submit">Cambiar</button>
+        </form>
+        <p class="muted">Cambialo solo con el documento del paciente a la vista: es por donde recupera su cuenta.</p>
+
+        <h2>Historial</h2>
+        <table>
+            <thead><tr><th>Cuándo</th><th>Qué</th><th>Quién</th></tr></thead>
+            <tbody>
+            <tr th:each="h : ${history}">
+                <td th:text="${h.when}">vie 2/10/2026 10:00</td>
+                <td th:text="${h.action}">Abierta</td>
+                <td th:text="${h.by}">recepcion</td>
+            </tr>
+            </tbody>
+        </table>
+    </th:block>
+</main>
+</body>
+</html>

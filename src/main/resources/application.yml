@@ -65,18 +65,25 @@ app:
       period: P1Y
       reason-required: true
 
-  # The practice, as the reminders name it (D-78). These are development values; a real deployment sets
-  # its own.
+  # The practice, as the reminders and the patients' accounts name it (D-78, D-79). These are development
+  # values; a real deployment sets its own.
   practice:
     name: Consultorio
     address: Av. Siempre Viva 742
     phone: 011 4555-0000
+  # The practice's sender, for every email it sends: the reminders and the patients' accounts.
+  mail:
+    from: no-responder@consultorio.local
   # Reminders by email (D-78): once a day, at this time — a Spring cron, in the practice's time zone —,
   # for every appointment still booked from tomorrow to this many days ahead, not reminded yet.
   reminders:
     cron: "0 0 10 * * *"
     days-ahead: 3
-    from: no-responder@consultorio.local
+  # The patients' web accounts (D-79): where patients reach the application, which the links in their emails
+  # point at, and how long the link to activate an account lasts, an ISO-8601 duration.
+  portal:
+    base-url: http://localhost:8080
+    activation-valid-for: PT72H
 
 logging:
   level:

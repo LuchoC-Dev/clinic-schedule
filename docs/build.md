@@ -1256,16 +1256,64 @@ What it left for later is listed below.
 Scope in `docs/context.md`, section "v2, phase 6 — web booking for patients". Delivered in parts; each
 one is usable on its own. The technical design of each part is agreed before it is coded.
 
-#### Part 1 — The account `[ ]`
+#### Part 1 — The account `[x]`
 - [x] `docs/context.md`: the scope of phase 6
-- [ ] Reception opens an account for a verified patient of 13 or older, with an email of the account's
-      own; the patient activates it from a link to that email and chooses their password
-- [ ] The patient logs in with their document and password, on a login and screens of their own and a
-      route of the API of their own, and sees their appointments ahead and of the last 12 months —
-      never the note, nor who cancelled one
-- [ ] Reception sees the account on the patient's screen, sends the activation again, changes its email,
-      deactivates and reactivates it; every action on the account is recorded and read by reception
-- [ ] The admins read none of it
+- [x] A module of its own, `portal`, laid out as a hexagon; `ArchitectureTest` checks its boundary (D-79)
+- [x] Reception opens an account for a verified patient of 13 or older — `AccountOpeningService`, one per
+      patient —, with an email of the account's own; the patient activates it from a link to that email,
+      valid for 72 hours and kept only as a SHA-256, and chooses their password (`PasswordPolicy`, moved to
+      `shared`)
+- [x] `AccountMailPort`, answered by `EmailAccountAdapter`; one sender for the practice, `app.mail.from`,
+      replacing `app.reminders.from`; the links point at `app.portal.base-url`
+- [x] A patient with an account keeps a verified identity: `Patient.changeIdentity` refuses a new name or
+      document without the document seen (`VerificationRequiredException`, 409), asking `portal/api`
+- [x] The patient logs in with their document — `DocumentLoginFilter` joins its type and number —, on two
+      filter chains of their own, `/api/portal/**` and `/portal/**`, with a session key and a session registry
+      of their own; the principal is named by the account's id, never the document (D-80)
+- [x] `GET /api/portal/appointments` and `/portal/appointments`: their appointments ahead and of the last 12
+      months, through `appointment/api/PatientAppointment`, which has no place for the note nor for who
+      cancelled one
+- [x] Reception's `/api/patient-accounts` and `/patient-accounts?patient=`, linked from the patient's screen:
+      open, send the activation again, change the email, deactivate — ending its sessions at once — and
+      reactivate; every action recorded in `patient_account_change`, by reception or by the patient
+- [x] The admins read none of it
+- [x] `V34`: `patient_account`, `patient_account_activation`, `patient_account_change`, with their checks;
+      `V104`: Laura Medina, `DNI 27333444` / `paciente123`
+- [x] 19 unit and 21 integration tests. 405 unit and 488 integration tests, 893 in total
+
+**Verified with:** every new test failing when the code it covers was broken on purpose — 84 breakages, all
+of them compiling, among them each rule of opening an account (a second one, an unverified identity, no
+date of birth, thirteen counted as under or twelve allowed), the email's case, length and form, every state
+an account goes through and its checks, who did each action, the token kept bare or expired a moment late,
+the twelve months and both orders of the list, each part of the email's text and its link, the activation
+not recorded, a failed sending said sent, the link not ended when used, replaced or deactivated, the
+sessions not ended, a pending account's new email sent nothing and an active one's sent an activation, the
+reader letting an inactive account log in or saying nobody or everybody has one, the reason, the state and
+who asked lost on the way, the note's absence and `activationSent` where nothing was to go out, each
+refusal's status, each word of the screens and their history, the document never joined or run together, a
+patient read as someone else, the routes opened to any role or closed to the activation, one session key for
+both sides, the patient module not asking for the account, nobody found by document, an account holder left
+unverified, and the checks of V34. One of them first survived because the test read "el paciente" inside
+"del paciente" elsewhere on the screen; the test now reads the history's cell. Another survives, and is
+equivalent: without the guard of a username with no space, the lookup throws, and Spring Security turns that
+into the same 401. The run was stopped once by the machine's lack of memory, during the 56th breakage; the
+fault it left planted was restored, every file checked against its state before, and the rest run in three
+shorter batches. `mvnw clean verify` with the PostgreSQL tests running V34.
+
+**Verified with the application running** on a throwaway PostgreSQL and a throwaway Mailpit: taken to V103
+by the previous commit's build with two patients — one verified and adult, one not — and two appointments,
+one cancelled with a note, then started on this one: V34 applied out of order and V104 after it, the data
+intact. Reception was refused an account for the unverified patient (409) and opened one for the other at
+`Marta.Cuenta@Mail.com`, kept in lower case; Mailpit got the activation, accents intact, its link to
+8081. The activation screen refused two different passwords, then activated the account; the patient logged
+in typing `31.222.333` and read the booked appointment and the cancelled one "a tu pedido", without the
+note. Reception's screen showed the account active and its history, the activation by "el paciente". The
+development patient logged in as `DNI 27333444`. Renaming the patient without seeing the document was a
+409, and a 200 seeing it; the admin and a practitioner were refused the accounts (403), and the patient the
+staff's API (401). Deactivating ended a patient's open session at once — but not in a browser where
+reception had logged in after the patient: one session registry for both kept one login per session. The
+patients now have a registry of their own, and the same browser was sent to `/portal/login?expired`; this
+case is checked live only, since MockMvc does not tell the registries that a session's id changed.
 
 #### Part 2 — The patient's data `[ ]`
 - [ ] From the account, the patient changes their contact, the consent of each channel and their health

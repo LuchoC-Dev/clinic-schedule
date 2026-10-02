@@ -1,4 +1,4 @@
-package com.clinic.schedule.user.entity;
+package com.clinic.schedule.shared;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;

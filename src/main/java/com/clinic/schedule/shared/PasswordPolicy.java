@@ -1,9 +1,10 @@
-package com.clinic.schedule.user.entity;
+package com.clinic.schedule.shared;
 
 import java.nio.charset.StandardCharsets;
 
 /**
- * What a password must be before it is hashed (D-68): from 10 to 72 characters, with no rule about
+ * What a password must be before it is hashed (D-68) — a user's of the practice, or a patient's of their
+ * web account (D-79), hence its place outside both modules: from 10 to 72 characters, with no rule about
  * what they are — length is what makes a password hard to guess, and rules about symbols only make
  * people write them down. 72 is where BCrypt stops reading, counted in bytes: a password with
  * accents reaches it with fewer characters, and is refused rather than cut short in silence.

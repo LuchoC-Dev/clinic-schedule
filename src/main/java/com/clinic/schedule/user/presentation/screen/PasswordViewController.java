@@ -10,7 +10,7 @@ import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
 
-import com.clinic.schedule.user.entity.PasswordPolicy;
+import com.clinic.schedule.shared.PasswordPolicy;
 import com.clinic.schedule.user.service.PasswordChangeService;
 import com.clinic.schedule.user.service.UnchangedPasswordException;
 import com.clinic.schedule.user.service.WrongPasswordException;

@@ -7,6 +7,7 @@ import org.springframework.web.bind.annotation.RestControllerAdvice;
 
 import com.clinic.schedule.patient.entity.IncompleteDocumentException;
 import com.clinic.schedule.patient.entity.UnverifiableIdentityException;
+import com.clinic.schedule.patient.entity.VerificationRequiredException;
 import com.clinic.schedule.patient.service.DuplicateDocumentException;
 import com.clinic.schedule.patient.service.PatientNotFoundException;
 import com.clinic.schedule.shared.http.ErrorResponse;
@@ -26,8 +27,9 @@ class PatientExceptionHandler {
                 .body(ErrorResponse.of(404, "Not found", e.getMessage()));
     }
 
-    @ExceptionHandler(DuplicateDocumentException.class)
-    ResponseEntity<ErrorResponse> duplicateDocument(DuplicateDocumentException e) {
+    /** A taken document, or a patient with a web account left unverified (D-79): refused for the state. */
+    @ExceptionHandler({DuplicateDocumentException.class, VerificationRequiredException.class})
+    ResponseEntity<ErrorResponse> conflict(RuntimeException e) {
         return ResponseEntity.status(HttpStatus.CONFLICT)
                 .body(ErrorResponse.of(409, "Conflict", e.getMessage()));
     }

@@ -2,6 +2,7 @@ package com.clinic.schedule.patient.api;
 
 import java.util.Collection;
 import java.util.List;
+import java.util.Optional;
 import java.util.UUID;
 
 /**
@@ -14,6 +15,12 @@ public interface PatientReader {
 
     /** Reception's search box: part of a name or a document number. No query lists everyone. */
     List<PatientSummary> search(String query);
+
+    /**
+     * The patient with that document — a type such as "DNI", and the number as typed, separators and all —,
+     * for a patient logging in to their web account (D-80). Nobody when the document is not one.
+     */
+    Optional<UUID> findIdByDocument(String documentType, String documentNumber);
 
     /** The patients with those ids; unknown ids are left out. For showing names next to appointments. */
     List<PatientSummary> findAll(Collection<UUID> patientIds);

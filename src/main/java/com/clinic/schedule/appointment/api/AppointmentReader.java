@@ -26,6 +26,9 @@ public interface AppointmentReader {
      */
     List<AppointmentSummary> findNotCancelledBetween(LocalDate from, LocalDate to);
 
+    /** Every appointment of the patient, cancelled and absent ones included, in no order (D-80). */
+    List<PatientAppointment> findForPatient(UUID patientId);
+
     /** The appointment, if it is still booked: neither cancelled nor absent (D-64). */
     Optional<AppointmentSummary> findBooked(UUID appointmentId);
 }
