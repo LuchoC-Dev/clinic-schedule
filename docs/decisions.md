@@ -2897,7 +2897,7 @@ opening would be skipped for nothing).
 ---
 
 ## D-80 — Patients log in with their document, on a login, a session and routes of their own
-**Date:** 2026-10-02 · **Status:** accepted
+**Date:** 2026-10-02 · **Status:** accepted; the principal's name became `portal:` and the account's id in D-81
 
 v2, phase 6, part 1. The staff log in with a username; a patient has none, and the account requires their
 identity document and **never** the internal id (the context's planned evolution).
@@ -2950,3 +2950,45 @@ record of who did what); a single field for the whole document (patients would h
 it); a custom authentication filter for the form (Spring Security's form login does the rest, once the
 username is joined); the staff's session key for the patients (logging in on one side would log out the
 other).
+
+---
+
+## D-81 — A patient changes their own contact, consent and health insurance, with reception's rules
+**Date:** 2026-10-02 · **Status:** accepted
+
+v2, phase 6, part 2. Until now only reception changed how to reach a patient and their health insurance. The
+patient now changes them from their account; their name, document and date of birth stay reception's, since
+they are what verifying the identity looked at.
+
+**The rules stay in the patient module.** `PatientWriter` gains `changeContact` and `changeOwnConsent`, and
+`PatientReader` `profileOf`, which answers `PatientProfile`: name, document, date of birth, the phone and the
+email with whose each is and its consent, and the insurance — nothing clinical, nothing of reception's own.
+`Patient.changeContact` is `changeDetails` with the date of birth as it was, so a new number, address or owner
+still drops its consent (D-77) and every change still goes to the history; a value that cannot be right is
+refused as `PatientChangeRefusedException`, which the portal turns into a 400. The portal repeats none of it:
+its use cases take the patient from the login and ask through `PatientDataPort`.
+
+**Consent from the web is the patient's.** On each channel, yes records the patient's own consent, no
+withdraws any — a responsible person's too, since the reminders are about the patient's appointments —, and
+a channel left out stays as it was (`Patient.changeOwnConsent`). Every account holder is 13 or older, so a
+responsible person's consent alone never reminds them (D-78): the patient's own is what counts. The screen
+offers, for each channel, the consent that stands first — "No" when nobody agreed, so saving the form
+untouched never agrees —, and keeping the owner's only while it stands. As at reception, the consent is
+changed apart from the contact (D-77).
+
+**Who changed it is the account, never the document.** A patient's principal goes by `PatientUsername`,
+`portal:` and the account's id, wherever something records who did it: a staff username cannot hold a colon
+(D-68), so the two are never confused, and the patient's screen of reception says "el paciente (web)" where
+the API answers the name as it is. The cancellation log will read it the same way (part 4).
+
+**Routes and screen.** `GET /api/portal/profile`; `PUT /api/portal/profile/details`, `{phone, email,
+insurance}`, one left out cleared, shaped as reception's; `PUT /api/portal/profile/contact-consent`,
+`{phone, email}` as true, false or left out. The screen `/portal/profile`, *Mis datos* in the patients'
+header, with a form for each.
+
+*Rejected:* the patient changing their date of birth (verifying the identity looked at it, and a wrong one
+would change who is reminded, D-78); the portal checking the formats itself (two places for one rule); one
+route for the contact and the consent (a typo fixed would carry a consent given for the old value, D-77); a
+consent left out withdrawn, as at reception (a patient touching only their phone would drop their mother's
+consent on the email); the account's bare id as who changed it (nothing would tell it from a staff username);
+reading the history from the web (reception's, as before).

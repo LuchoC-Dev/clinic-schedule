@@ -8,6 +8,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.event.TransactionalEventListener;
 
 import com.clinic.schedule.portal.api.PatientAccountDeactivated;
+import com.clinic.schedule.security.api.PatientUsername;
 import com.clinic.schedule.user.api.UserDeactivated;
 
 /**
@@ -38,10 +39,10 @@ class SessionExpiryService {
         expire(staff, deactivated.username());
     }
 
-    /** A patient's principal is named by their account's id (D-80). */
+    /** A patient's principal is named after their account (D-80, D-81). */
     @TransactionalEventListener
     void on(PatientAccountDeactivated deactivated) {
-        expire(patients, deactivated.accountId().toString());
+        expire(patients, PatientUsername.of(deactivated.accountId()));
     }
 
     private static void expire(SessionRegistry sessions, String name) {

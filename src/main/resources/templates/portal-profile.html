@@ -1,0 +1,87 @@
+<!DOCTYPE html>
+<html lang="es" xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{fragments :: head('Mis datos')}"></head>
+<body>
+<header th:replace="~{fragments :: portalHeader}"></header>
+<main>
+    <h1>Mis datos</h1>
+    <div th:replace="~{fragments :: messages}"></div>
+
+    <p>
+        <strong th:text="${data.fullName}">Ana Pérez</strong> ·
+        <span th:text="${data.document}">DNI 30111222</span>
+        <span th:if="${birthDate}" th:text="' · nacimiento ' + ${birthDate}"> · nacimiento 14/05/1990</span>
+    </p>
+    <p class="muted">Para corregir tu nombre, tu documento o tu fecha de nacimiento, acercate a recepción con tu
+        documento.</p>
+
+    <h2>Contacto y obra social</h2>
+    <form class="card" method="post" th:action="@{/portal/profile/details}">
+        <div class="bar">
+            <label>Teléfono
+                <input type="text" name="phoneNumber" maxlength="20" th:value="${data.phone?.value}">
+            </label>
+            <label>Es de
+                <select name="phoneOwnerRelation">
+                    <option value="">Mío</option>
+                    <option th:each="r : ${relations}" th:value="${r.key}" th:text="${r.value}"
+                            th:selected="${r.key == data.phone?.ownerRelation}">Madre</option>
+                </select>
+            </label>
+            <label>Su nombre, si no es tuyo
+                <input type="text" name="phoneOwnerName" maxlength="150" th:value="${data.phone?.ownerName}">
+            </label>
+        </div>
+        <div class="bar">
+            <label>Email
+                <input type="email" name="emailAddress" maxlength="254" th:value="${data.email?.value}">
+            </label>
+            <label>Es de
+                <select name="emailOwnerRelation">
+                    <option value="">Mío</option>
+                    <option th:each="r : ${relations}" th:value="${r.key}" th:text="${r.value}"
+                            th:selected="${r.key == data.email?.ownerRelation}">Madre</option>
+                </select>
+            </label>
+            <label>Su nombre, si no es tuyo
+                <input type="text" name="emailOwnerName" maxlength="150" th:value="${data.email?.ownerName}">
+            </label>
+        </div>
+        <div class="bar">
+            <label>Obra social o prepaga
+                <input type="text" name="insurer" maxlength="100" th:value="${data.insurance?.insurer}">
+            </label>
+            <label>Número de afiliado
+                <input type="text" name="memberNumber" maxlength="30" th:value="${data.insurance?.memberNumber}">
+            </label>
+            <label>Plan
+                <input type="text" name="plan" maxlength="50" th:value="${data.insurance?.plan}">
+            </label>
+        </div>
+        <button type="submit" class="primary">Guardar</button>
+    </form>
+    <p class="muted">Si cambiás un teléfono o un email, o de quién es, tenés que volver a autorizar los recordatorios
+        ahí.</p>
+
+    <h2>Recordatorios de tus turnos</h2>
+    <p th:if="${phoneConsent.isEmpty() and emailConsent.isEmpty()}" class="muted">Cargá un teléfono o un email para
+        recibir recordatorios.</p>
+    <form class="card bar" method="post" th:action="@{/portal/profile/contact-consent}"
+          th:unless="${phoneConsent.isEmpty() and emailConsent.isEmpty()}">
+        <label th:unless="${phoneConsent.isEmpty()}"><span th:text="'Al teléfono ' + ${data.phone?.value}">Al
+            teléfono</span>
+            <select name="phoneConsent">
+                <option th:each="c : ${phoneConsent}" th:value="${c.key}" th:text="${c.value}">No</option>
+            </select>
+        </label>
+        <label th:unless="${emailConsent.isEmpty()}"><span th:text="'Al email ' + ${data.email?.value}">Al
+            email</span>
+            <select name="emailConsent">
+                <option th:each="c : ${emailConsent}" th:value="${c.key}" th:text="${c.value}">No</option>
+            </select>
+        </label>
+        <button type="submit" class="primary">Guardar</button>
+    </form>
+</main>
+</body>
+</html>

@@ -1315,10 +1315,34 @@ reception had logged in after the patient: one session registry for both kept on
 patients now have a registry of their own, and the same browser was sent to `/portal/login?expired`; this
 case is checked live only, since MockMvc does not tell the registries that a session's id changed.
 
-#### Part 2 — The patient's data `[ ]`
-- [ ] From the account, the patient changes their contact, the consent of each channel and their health
-      insurance, with reception's rules; each change in the history as made by the account
-- [ ] The name, the document and the date of birth stay reception's
+#### Part 2 — The patient's data `[x]`
+- [x] From the account, the patient changes their contact and their health insurance with reception's rules,
+      through `PatientWriter.changeContact`; `PatientReader.profileOf` answers what they read (D-81)
+- [x] The consent of each channel: yes is theirs, no withdraws any, a channel left out stays; the screen
+      offers the consent that stands first, "No" when nobody agreed
+- [x] Each change in the history as made by the account, `portal:` and its id (`PatientUsername`), which the
+      patient's screen at reception reads as "el paciente (web)"
+- [x] The name, the document and the date of birth stay reception's
+- [x] `GET /api/portal/profile`, `PUT /api/portal/profile/details` and `/contact-consent`, and *Mis datos*
+- [x] 2 unit and 5 integration tests. 407 unit and 493 integration tests, 900 in total
+
+**Verified with:** every new test failing when the code it covers was broken on purpose — 26 breakages, all
+compiling: yes, no and nothing said on a channel each taken for another, the date of birth cleared, the
+patient module's refusals not translated, each part of what the patient reads lost on the way — the consent,
+the date of birth, the relation, the document, the plan —, the history naming the bare account, the
+`portal:` name changed or never recognised, the email's owner taken from the phone's, the request's insurer
+and the answer's owner lost, the email's consent sent as the phone's, the owner's consent not offered or "Sí"
+offered first to whom nobody agreed, the screen's date of birth, and a refusal not caught on the screen. One
+survived: the screen turned a blank relation into none, which the patient module already does, so it was
+taken out (D-14). `mvnw clean verify`.
+
+**Verified with the application running** on a throwaway PostgreSQL: the development patient, with an email
+of her mother's that her mother agreed to, read *Mis datos* — her name, document and date of birth, and for
+that email "Sí: lo autorizó Rosa Medina" first — and added a phone and her insurance; her phone offered "No"
+first. She agreed on the phone and left the email's choice untouched: the phone's consent became hers and the
+email's stayed her mother's, her date of birth unchanged. A phone of three digits was refused with what to
+fix. Reception's screen of the patient listed the three changes by "el paciente (web)", and the history kept
+`portal:` and the account's id, never her document.
 
 #### Part 3 — Booking on the web `[ ]`
 - [ ] Reception marks which reasons of each practitioner may be booked on the web; none at first

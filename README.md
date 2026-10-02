@@ -73,7 +73,8 @@ Spanish, for the staff.
 **The patients' screens** — at http://localhost:8080/portal/login, apart from the staff's. A patient whom
 reception opened a web account for — from *Cuenta web* on the patient's screen, for a verified patient of
 13 or older — gets a link by email to activate it and choose a password, logs in with their document and
-reads their appointments: those ahead and those of the last year, never reception's note. The emails go to
+reads their appointments: those ahead and those of the last year, never reception's note. Under *Mis datos*
+they change their phone, email and health insurance, and whether they want reminders on each. The emails go to
 Mailpit in development, at http://localhost:8025.
 
 **API** — basic authentication on every request: the staff with their username, a patient with their
@@ -134,6 +135,9 @@ document as its type and number, such as `DNI 27333444`. Errors share one body:
 | `GET` | `/api/patient-accounts/{id}/changes` | what was done to the account, when and by whom |
 | `POST` | `/api/portal/activation` | the patient activates their account — `{token, password}`, the token from the email's link; no login |
 | `GET` | `/api/portal/appointments` | the patient logged in reads their appointments: those ahead and those of the last 12 months, without the note |
+| `GET` | `/api/portal/profile` | the patient's own data: name, document and date of birth, their phone and email with whose each is and its consent, and their health insurance |
+| `PUT` | `/api/portal/profile/details` | the patient sets their phone, email and health insurance, with reception's rules; one left out is cleared |
+| `PUT` | `/api/portal/profile/contact-consent` | `{phone, email}`: true is the patient's own consent, false withdraws any, left out stays |
 | `GET` | `/api/clinical-records/{patientId}` | the patient's date of birth and health insurance, their consultations with their checks, and the checks done without one — for a practitioner who saw them within the access period or is seeing them today |
 
 A booking whose patient did not arrive — into their practitioner's queue — is marked absent 30 minutes after its start, or at the end of its

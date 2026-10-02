@@ -14,8 +14,11 @@ import java.util.concurrent.ThreadLocalRandom;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import com.clinic.schedule.patient.api.ContactChange;
 import com.clinic.schedule.patient.api.NewPatient;
+import com.clinic.schedule.patient.api.PatientChangeRefusedException;
 import com.clinic.schedule.patient.api.PatientContact;
+import com.clinic.schedule.patient.api.PatientProfile;
 import com.clinic.schedule.patient.api.PatientReader;
 import com.clinic.schedule.patient.api.PatientRegistrationRefusedException.Reason;
 import com.clinic.schedule.patient.api.PatientRegistrationRefusedException;
@@ -206,6 +209,43 @@ public class PatientService implements PatientReader, PatientWriter {
         return patients.save(patient);
     }
 
+    @Override
+    @Transactional
+    public void changeContact(UUID patientId, ContactChange change) {
+        Patient patient = loggedIn(patientId);
+        try {
+            detailsChanges.saveAll(patient.changeContact(
+                    Phone.ofNullable(change.phoneNumber(),
+                            Responsible.ofNullable(change.phoneOwnerName(), relation(change.phoneOwnerRelation()))),
+                    Email.ofNullable(change.emailAddress(),
+                            Responsible.ofNullable(change.emailOwnerName(), relation(change.emailOwnerRelation()))),
+                    HealthInsurance.ofNullable(change.insurer(), change.memberNumber(), change.plan()),
+                    LocalDate.now(clock), LocalDateTime.now(clock), currentUser.username()));
+        } catch (IllegalArgumentException e) {
+            throw new PatientChangeRefusedException(e.getMessage());
+        }
+        patients.save(patient);
+    }
+
+    @Override
+    @Transactional
+    public void changeOwnConsent(UUID patientId, Boolean phone, Boolean email) {
+        Patient patient = loggedIn(patientId);
+        try {
+            detailsChanges.saveAll(patient.changeOwnConsent(phone, email, LocalDateTime.now(clock),
+                    currentUser.username()));
+        } catch (IllegalArgumentException e) {
+            throw new PatientChangeRefusedException(e.getMessage());
+        }
+        patients.save(patient);
+    }
+
+    /** The patient of a web account that is logged in, who cannot be missing. */
+    private Patient loggedIn(UUID patientId) {
+        return patients.findById(patientId)
+                .orElseThrow(() -> new IllegalStateException("No patient " + patientId + " for a web account"));
+    }
+
     /** Every change to the patient's details, the most recent first. */
     @Transactional(readOnly = true)
     public List<PatientDetailsChange> detailsHistory(UUID id) {
@@ -266,6 +306,29 @@ public class PatientService implements PatientReader, PatientWriter {
         } catch (IllegalArgumentException e) {
             return Optional.empty();
         }
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public Optional<PatientProfile> profileOf(UUID patientId) {
+        return patients.findById(patientId).map(PatientService::profile);
+    }
+
+    private static PatientProfile profile(Patient patient) {
+        Phone phone = patient.getPhone();
+        Email email = patient.getEmail();
+        HealthInsurance insurance = patient.getInsurance();
+        return new PatientProfile(patient.getFullName(), label(patient.getDocument()), patient.getBirthDate(),
+                phone == null ? null : channel(phone.number(), phone.owner(), patient.getPhoneConsent()),
+                email == null ? null : channel(email.address(), email.owner(), patient.getEmailConsent()),
+                insurance == null ? null : new PatientProfile.Insurance(insurance.insurer(),
+                        insurance.memberNumber(), insurance.plan()));
+    }
+
+    private static PatientProfile.Channel channel(String value, Responsible owner, Consent consent) {
+        return new PatientProfile.Channel(value, owner == null ? null : owner.name(),
+                owner == null ? null : owner.relation().name(),
+                consent == null ? null : PatientProfile.ConsentGiver.valueOf(consent.name()));
     }
 
     @Override

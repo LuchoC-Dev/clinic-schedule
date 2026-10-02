@@ -22,6 +22,9 @@ public interface PatientReader {
      */
     Optional<UUID> findIdByDocument(String documentType, String documentNumber);
 
+    /** The patient's own data, for the patient to read on their web account (D-81). */
+    Optional<PatientProfile> profileOf(UUID patientId);
+
     /** The patients with those ids; unknown ids are left out. For showing names next to appointments. */
     List<PatientSummary> findAll(Collection<UUID> patientIds);
 

@@ -134,4 +134,51 @@ class PatientConsentTest {
         assertThat(patient.getEmailConsent()).isNull();
         assertThat(patient.getPhoneConsent()).isEqualTo(Consent.PATIENT);
     }
+
+    /** From their web account: yes is their own, no withdraws any, and nothing said leaves it (D-81). */
+    @Test
+    void thePatientAgreesOrNotOnEachChannelAndLeavesAloneWhatTheyDoNotSay() {
+        Patient patient = withChannels(OWN_PHONE, MOTHERS_EMAIL);
+        patient.changeConsent(null, Consent.OWNER, NOW, "recepcion");
+
+        assertThat(patient.changeOwnConsent(true, null, NOW, "portal:cuenta")).singleElement()
+                .satisfies(change -> {
+                    assertThat(change.getField()).isEqualTo(PatientDetailsChange.Field.PHONE_CONSENT);
+                    assertThat(change.getChangedBy()).isEqualTo("portal:cuenta");
+                });
+        assertThat(patient.getPhoneConsent()).isEqualTo(Consent.PATIENT);
+        assertThat(patient.getEmailConsent()).isEqualTo(Consent.OWNER);
+
+        patient.changeOwnConsent(false, false, NOW, "portal:cuenta");
+        assertThat(patient.getPhoneConsent()).isNull();
+        assertThat(patient.getEmailConsent()).isNull();
+
+        patient.changeOwnConsent(null, true, NOW, "portal:cuenta");
+        assertThat(patient.getPhoneConsent()).isNull();
+        assertThat(patient.getEmailConsent()).isEqualTo(Consent.PATIENT);
+
+        assertThatThrownBy(() -> withChannels(null, MOTHERS_EMAIL).changeOwnConsent(true, null, NOW, "portal:cuenta"))
+                .isInstanceOf(InvalidPatientDetailsException.class);
+    }
+
+    /** What reception changes, with its rules; the date of birth stays reception's (D-81). */
+    @Test
+    void thePatientChangesTheirContactButNotTheirDateOfBirth() {
+        Patient patient = Patient.register("Luis Pérez", null, false,
+                new PatientDetails(LocalDate.of(1990, 5, 14), OWN_PHONE, MOTHERS_EMAIL, null), TODAY);
+        patient.changeConsent(Consent.PATIENT, Consent.OWNER, NOW, "recepcion");
+
+        List<PatientDetailsChange> changes = patient.changeContact(OWN_PHONE, new Email("luis@mail.com", null),
+                new HealthInsurance("OSDE", "123", "310"), TODAY, NOW, "portal:cuenta");
+
+        assertThat(patient.getBirthDate()).isEqualTo(LocalDate.of(1990, 5, 14));
+        assertThat(patient.getEmail()).isEqualTo(new Email("luis@mail.com", null));
+        assertThat(patient.getInsurance()).isEqualTo(new HealthInsurance("OSDE", "123", "310"));
+        assertThat(patient.getPhoneConsent()).isEqualTo(Consent.PATIENT);
+        assertThat(patient.getEmailConsent()).isNull();
+        assertThat(changes).extracting(PatientDetailsChange::getField).containsExactly(
+                PatientDetailsChange.Field.EMAIL, PatientDetailsChange.Field.INSURANCE,
+                PatientDetailsChange.Field.EMAIL_CONSENT);
+        assertThat(changes).allSatisfy(change -> assertThat(change.getChangedBy()).isEqualTo("portal:cuenta"));
+    }
 }

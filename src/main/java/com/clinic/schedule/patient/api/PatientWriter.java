@@ -3,8 +3,8 @@ package com.clinic.schedule.patient.api;
 import java.util.UUID;
 
 /**
- * Registers patients for other modules. Kept apart from {@link PatientReader} because it writes,
- * and the name says so (D-18).
+ * Registers patients for other modules, and changes what a patient may change of their own from their web
+ * account. Kept apart from {@link PatientReader} because it writes, and the name says so (D-18).
  *
  * <p>Its callers join the registration to their own transaction: booking a new patient registers
  * them and books them at once, so a refused booking leaves no patient behind (D-37, D-75), and the
@@ -27,4 +27,21 @@ public interface PatientWriter {
      * @return the new patient's id
      */
     UUID registerUnidentified();
+
+    /**
+     * The patient changes their own contact and health insurance (D-81), with reception's rules: a new
+     * number, address or owner loses its consent, and every change goes to the history, by whoever is logged
+     * in. The date of birth stays as it was. It joins the caller's transaction.
+     *
+     * @throws PatientChangeRefusedException when a value cannot be right; nothing is changed then
+     */
+    void changeContact(UUID patientId, ContactChange change);
+
+    /**
+     * The patient says, on each channel, whether they agree to be reminded there (D-81): true is their own
+     * consent, false withdraws any — a responsible person's too —, and null leaves it as it is.
+     *
+     * @throws PatientChangeRefusedException when they agree on a channel they have no number or address for
+     */
+    void changeOwnConsent(UUID patientId, Boolean phone, Boolean email);
 }

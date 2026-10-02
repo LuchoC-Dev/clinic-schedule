@@ -9,14 +9,15 @@ import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.userdetails.UserDetails;
 
 import com.clinic.schedule.portal.api.LoginAccount;
+import com.clinic.schedule.security.api.PatientUsername;
 
 /**
  * A patient logged in to their web account, as Spring Security holds them (D-80), with the patient it is
  * theirs.
  *
- * <p>Its name is the account's id, never the document the patient logged in with: whatever records who did
- * something reads the name, and a document there would say who the patient is to anyone reading the record,
- * the admins included.
+ * <p>Its name is {@link PatientUsername}'s — the account's id —, never the document the patient logged in
+ * with: whatever records who did something reads the name, and a document there would say who the patient
+ * is to anyone reading the record, the admins included.
  */
 public class PatientAccountDetails implements UserDetails {
 
@@ -49,6 +50,6 @@ public class PatientAccountDetails implements UserDetails {
 
     @Override
     public String getUsername() {
-        return accountId.toString();
+        return PatientUsername.of(accountId);
     }
 }

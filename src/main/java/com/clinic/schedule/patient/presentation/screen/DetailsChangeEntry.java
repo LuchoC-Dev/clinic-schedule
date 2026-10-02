@@ -8,10 +8,12 @@ import com.clinic.schedule.patient.entity.Consent;
 import com.clinic.schedule.patient.entity.HealthInsurance;
 import com.clinic.schedule.patient.entity.PatientDetailsChange;
 import com.clinic.schedule.patient.entity.Responsible;
+import com.clinic.schedule.security.api.PatientUsername;
 
 /**
  * A change to one of a patient's details as their screen lists it: when, who, which detail, and what
- * it was before and after, in Spanish (D-73).
+ * it was before and after, in Spanish (D-73). A change the patient made from their web account says so,
+ * rather than naming the account (D-81).
  */
 record DetailsChangeEntry(String when, String by, String field, String before, String after) {
 
@@ -20,14 +22,18 @@ record DetailsChangeEntry(String when, String by, String field, String before, S
 
     static DetailsChangeEntry of(PatientDetailsChange change) {
         if (change.getField() == PatientDetailsChange.Field.INSURANCE) {
-            return new DetailsChangeEntry(WHEN.format(change.getChangedAt()), change.getChangedBy(),
+            return new DetailsChangeEntry(WHEN.format(change.getChangedAt()), by(change.getChangedBy()),
                     field(change.getField()), insurance(change.getInsuranceBefore()),
                     insurance(change.getInsuranceAfter()));
         }
-        return new DetailsChangeEntry(WHEN.format(change.getChangedAt()), change.getChangedBy(),
+        return new DetailsChangeEntry(WHEN.format(change.getChangedAt()), by(change.getChangedBy()),
                 field(change.getField()),
                 describe(change.getField(), change.getValueBefore(), change.getOwnerBefore()),
                 describe(change.getField(), change.getValueAfter(), change.getOwnerAfter()));
+    }
+
+    private static String by(String username) {
+        return PatientUsername.is(username) ? "el paciente (web)" : username;
     }
 
     private static String field(PatientDetailsChange.Field field) {

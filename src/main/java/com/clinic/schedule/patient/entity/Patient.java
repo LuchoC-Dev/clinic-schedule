@@ -260,6 +260,38 @@ public class Patient {
     }
 
     /**
+     * The patient changes their own contact and health insurance from their web account (D-81): what
+     * reception changes, with the same rules — a new number, address or owner loses its consent —, and their
+     * date of birth as it was, since it is reception's to change.
+     *
+     * @param changedBy the username of whoever changes it, the patient's web account here
+     * @throws InvalidPatientDetailsException when a value cannot be right
+     */
+    public List<PatientDetailsChange> changeContact(Phone phone, Email email, HealthInsurance insurance,
+            LocalDate today, LocalDateTime changedAt, String changedBy) {
+        return changeDetails(new PatientDetails(birthDate, phone, email, insurance), today, changedAt, changedBy);
+    }
+
+    /**
+     * The patient says, on each of their channels, whether they agree to be reminded there (D-81): yes is
+     * their own consent, no withdraws any — a responsible person's too, since the reminders are about the
+     * patient's appointments —, and null leaves the channel as it is.
+     *
+     * @throws InvalidPatientDetailsException when they agree on a channel that is not there
+     */
+    public List<PatientDetailsChange> changeOwnConsent(Boolean phone, Boolean email, LocalDateTime changedAt,
+            String changedBy) {
+        return changeConsent(own(phone, phoneConsent), own(email, emailConsent), changedAt, changedBy);
+    }
+
+    private static Consent own(Boolean agrees, Consent current) {
+        if (agrees == null) {
+            return current;
+        }
+        return agrees ? Consent.PATIENT : null;
+    }
+
+    /**
      * Sets who agreed to the patient being reminded on each channel, and says what changed: one entry for
      * each consent that did (D-77). A null consent is none, which withdraws it.
      *
