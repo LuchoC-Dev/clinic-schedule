@@ -1251,6 +1251,53 @@ never telling a parent of an adolescent's visit the adolescent did not agree to 
 happened to each reminder — the address only as a hash — for reception to call whoever was not reached.
 What it left for later is listed below.
 
+### Phase 6 — Web booking for patients `[ ]`
+
+Scope in `docs/context.md`, section "v2, phase 6 — web booking for patients". Delivered in parts; each
+one is usable on its own. The technical design of each part is agreed before it is coded.
+
+#### Part 1 — The account `[ ]`
+- [x] `docs/context.md`: the scope of phase 6
+- [ ] Reception opens an account for a verified patient of 13 or older, with an email of the account's
+      own; the patient activates it from a link to that email and chooses their password
+- [ ] The patient logs in with their document and password, on a login and screens of their own and a
+      route of the API of their own, and sees their appointments ahead and of the last 12 months —
+      never the note, nor who cancelled one
+- [ ] Reception sees the account on the patient's screen, sends the activation again, changes its email,
+      deactivates and reactivates it; every action on the account is recorded and read by reception
+- [ ] The admins read none of it
+
+#### Part 2 — The patient's data `[ ]`
+- [ ] From the account, the patient changes their contact, the consent of each channel and their health
+      insurance, with reception's rules; each change in the history as made by the account
+- [ ] The name, the document and the date of birth stay reception's
+
+#### Part 3 — Booking on the web `[ ]`
+- [ ] Reception marks which reasons of each practitioner may be booked on the web; none at first
+- [ ] From tomorrow to 30 days ahead, at the suggested times, three appointments ahead at most per
+      patient — every booked one counted, the limit binding the web only
+- [ ] An email to the account that booked confirms it, without the reason
+- [ ] The appointment keeps where it was booked; the agenda and the patient's appointments mark the web's
+
+#### Part 4 — Cancelling `[ ]`
+- [ ] On the web, any of the patient's booked appointments up to 24 hours before it
+- [ ] From an opaque link in the reminder and in the booking's confirmation, without logging in, kept as
+      a hash, until the same 24 hours before and no more once the appointment is moved or cancelled
+- [ ] The cancellation log says the patient asked, and how: the web — by which account — or an email's
+      link; the admins read "patient (web)" alone
+
+#### Part 5 — The family group `[ ]`
+- [ ] Reception forms it: adults present and agreeing, children under 13 at a parent's or guardian's
+      request, each change recorded; a patient in several groups
+- [ ] An adult member books, cancels and sees the appointments of the members who share theirs; a member
+      under 18 acts only for themselves; nobody reads another's data
+- [ ] From 13 an adolescent's appointments are private until they share them, from their account or at
+      reception; members of 13 or older stop sharing or leave
+
+#### Part 6 — Recovering the password, and locking the account `[ ]`
+- [ ] A link to the account's email, valid for an hour; asking says the same for any document
+- [ ] Five failed logins in a row lock the account for 15 minutes; the staff's users are not locked
+
 ---
 
 ## Explicitly postponed

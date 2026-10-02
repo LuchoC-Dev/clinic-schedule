@@ -80,8 +80,8 @@ The minimum record needed to book an appointment:
 v2 is built in phases, each one scoped here before it starts and closed on its own. The first,
 the clinical record, is closed, and so are the second, the arrival queue, and the third, users
 and security, the fourth, the patient's extra data, and the fifth, reminders and the cancellation
-log. Each next one is chosen from the planned evolution below, and its scope is
-written here before any code.
+log. The sixth, web booking for patients, is under way. Each next one is chosen from the planned
+evolution below, and its scope is written here before any code.
 
 ## v2, phase 1 — the clinical record (closed)
 
@@ -587,6 +587,149 @@ confirming from the reminder (web booking); telling the patient of a cancellatio
 times an appointment was moved; a list of cancellation reasons; practitioners reading the cancellation
 log; the practitioner's speciality and consulting room in the reminder.
 
+## v2, phase 6 — web booking for patients
+
+### What changes
+
+Until now only the staff used the application: a patient called or came to the practice to book or
+cancel, and the reminder told them to. From this phase on a patient has an **account** of their own,
+with which they book, see and cancel their appointments and keep their contact and health insurance
+up to date; a family books for its members from a **family group**; and anyone who gets a reminder
+cancels the appointment from a link in it. The staff's application stays as it was: what a patient
+does on the web shows in it, and nothing else changes for reception.
+
+### The account
+
+- **Reception opens it**, at the desk, for a patient whose identity is **verified** (phase 2) and who is
+  **13 or older** — a patient with no date of birth gets none until reception records it. Reception
+  types the account's email, and the patient gets a link there to activate it and choose their
+  password. Nobody opens an account, nor registers a patient, from the web: a document the practice
+  does not know is sent to reception.
+- An account is always a patient's: a mother who is never seen at the practice is registered as a
+  patient to have one. A patient has one account at most.
+- **The patient logs in with their document** — its type and number — and their password, and never
+  with the internal id. So the account's email does not have to be unique: a family may share one.
+- **The account's email is its own**, apart from the patient's contact email (phase 4): it is confirmed
+  by the activation, and it is used only for the account — the activation, recovering the password and
+  confirming bookings —, never for reminders. Changing the contact email does not touch it, so reception
+  changing a contact cannot hand the account to someone else. It changes only at reception, with the
+  document in sight.
+- From 10 to 72 characters, the staff's rule (phase 3). The patient chooses it on activating, so it is
+  never temporary.
+- **Five failed logins in a row lock the account for 15 minutes**, both settings: the document that
+  logs in is easy to know, and the login faces the internet. The staff's users are not locked (phase 3).
+- **A forgotten password** is recovered with a link to the account's email, valid for one hour. Asking
+  for it says the same whether the document has an account or not. The staff still cannot recover theirs
+  by email.
+- **Reception administers the accounts**: on the patient's screen it sees whether they have one and in
+  what state, opens it, sends the activation again, changes its email, and deactivates and reactivates
+  it. Every action on an account — reception's and the patient's own, such as activating it or changing
+  the password — is recorded with who and when, and reception reads it. The admins read none of it, as
+  they read nothing of the patients (phase 4).
+
+### What a patient sees and does with their account
+
+- **Their appointments**: those ahead and those of the last 12 months, with the day, the time, the
+  practitioner, the reason and the state — booked, cancelled or absent. A cancelled one says whether the
+  patient or the practice asked for it; never reception's note, nor who cancelled it. The appointment's
+  note is reception's and is not shown either.
+- **Their data**: their name and document, which they do not change, and their contact — the phone and
+  the email, and whose each one is —, the consent of each channel, and their health insurance, which
+  they change with reception's rules: a new number, address or owner drops its consent (phase 5), and a
+  consent the patient gives on the web is given by the patient. Every change goes to the history of the
+  patient's details as made by the account. The name, the document and the date of birth stay
+  reception's, since they are what verifying the identity looked at.
+- **Nothing clinical**: no consultations, checks, orders nor files. Clinical content is still written and
+  read by practitioners only (phase 1); a copy of the record is asked for at the practice (Ley 26.529,
+  art. 14).
+
+### Booking
+
+- **Reception marks which reasons may be booked on the web**, practitioner by practitioner; none may at
+  first, so nothing is offered until reception says so.
+- **From tomorrow to 30 days ahead**, both settings. Today's appointments are still reception's.
+- **Only at the times the agenda suggests**, not at any free time as reception may.
+- **Three appointments ahead at most per patient**, counting every booked one, whoever booked it. The
+  limit binds the web only: reception books beyond it.
+- The rules of booking are the same as reception's: no overlapping appointments for a practitioner, none
+  at once for a patient.
+- **An email confirms the booking** to the account that booked: the practice, the day, the time, the
+  practitioner, and the patient's name when it was booked for another member of the group, with a link
+  to cancel it. Never the reason, as in the reminder.
+- **The appointment keeps where it was booked**: at reception or on the web. The agenda and the
+  patient's appointments mark the web ones, and reception is told of nothing else.
+
+### Cancelling
+
+- **On the web**, a patient cancels any of their booked appointments — those reception booked too — up
+  to **24 hours** before it, a setting; later, they call. Moving an appointment is not offered: they
+  cancel it and book again.
+- **From the link of an email** — the reminder, or the confirmation of a booking —, without logging in,
+  so a patient with no account cancels too, and so does whoever got the reminder on their channel, such
+  as a child's mother. The link carries nothing personal in the address, only an opaque token, which the
+  application keeps as a hash. It opens a page with the day, the time and the practitioner — what the
+  email already says — and a button to cancel. It works until the same 24 hours before, and no more once
+  the appointment is moved or cancelled: a moved appointment is reminded again, with a new link.
+- **The reminder says so**: to cancel, the link, or call or come to reception, as before for changing it.
+- **The cancellation log** (phase 5) says the patient asked, and how: from the web, made by the account
+  that cancelled — which may be another member of the family group —, or from an email's link, made by
+  whoever held it. Reception reads it whole, as it does now; the admins read "patient (web)" and nothing
+  that tells who the patient is.
+- There is no confirming the appointment: nothing would read it.
+
+### The family group
+
+So that a family books from one account: a mother for her children, a couple for each other.
+
+- **Reception forms it**, at the desk. Its members are patients. An adult joins only present and
+  agreeing, which shares their appointments with the group. A child under 13 is added at the request of a
+  member who is their parent or guardian, once reception has seen what proves it. Every change to a group
+  is recorded, with who and when.
+- **A patient may be in several groups**: the child of separated parents in each one's (Código Civil y
+  Comercial, art. 641), an adult in their partner's and in their parents'.
+- **What a member does for the others**: an adult member with an account sees the appointments of every
+  member who shares theirs, as their own above, books for them and cancels them — a partner for a child
+  that is not theirs too, as the daily acts of the child's upbringing (CCyC, art. 673). A member under 18
+  acts only for themselves. Nobody reads nor changes another member's data: each changes only their own.
+- **Children under 13 share always**: their parents act for them (CCyC, art. 26).
+- **From 13, the adolescent decides.** They stay in the group, but from their thirteenth birthday their
+  appointments are **private** — the group neither sees, books nor cancels them, those booked earlier
+  included — until they choose to share them, from their own account or at reception; and they may stop
+  sharing whenever they want. It is the reminders' rule (phase 5): from 13 an adolescent decides alone on
+  much of their own care (CCyC, art. 26), and keeps their confidentiality towards their parents (Ley
+  26.529, art. 2 d; Ley 26.061, art. 10), so nothing is shown to their family until they say so.
+- **At 18 nothing changes**: what they chose as an adolescent stands, as an adult's agreement does.
+- **Any member of 13 or older leaves** the group, or stops sharing, from the web or at reception;
+  reception takes members out.
+
+### Screens and API
+
+The patients have screens of their own, in Spanish, with their own login and header, apart from the
+staff's; and a route of their own in the API, the contract of the patients' single-page application to
+come. As every screen, they are thin and meant to be thrown away (D-02).
+
+### Delivered in parts
+
+1. The account: reception opens it, the patient activates it by email, logs in and sees their
+   appointments; reception administers it, and every action is recorded.
+2. The patient's data: their contact, the consent of each channel and their health insurance, changed
+   from the account.
+3. Booking on the web: the reasons reception marks, from tomorrow to 30 days, at the suggested times,
+   three at most; the email that confirms it; the web's appointments marked as such.
+4. Cancelling, from the web and from the link of the reminder and of the confirmation, in the
+   cancellation log.
+5. The family group: forming it at reception, children and adults; booking, cancelling and seeing the
+   members' appointments; the adolescents' privacy.
+6. Recovering the password by email, and locking the account after five failed logins.
+
+Not in this phase: registering a patient, or opening an account, from the web; an account for someone
+who is not a patient; moving an appointment from the web; confirming an appointment; booking today's
+appointments on the web; anything clinical for patients, a copy of the record included; changing the
+name, the document or the date of birth from the web; telling reception of what patients do; recording
+who booked each appointment beyond where; recovering a password by email and locking users for the
+staff; two-factor authentication; telling the patient of a cancellation the practice made; and anything
+of the cash desk or of reminders by WhatsApp or SMS.
+
 ## Planned evolution (DO NOT implement yet)
 
 Documented so today's decisions do not close doors, not to bring code forward. The next phases of
@@ -594,18 +737,16 @@ v2 are chosen from here.
 
 1. **Arrival queue**: v2, phase 2, above — closed. **Users and security**: v2, phase 3, above — closed.
    **Extra patient data**: v2, phase 4, above — closed. **Reminders and the cancellation log**: v2,
-   phase 5, above — closed.
-2. **Later on**: attendance with more states, structured clinical items, printing, a cash desk, and
-   web booking.
+   phase 5, above — closed. **Web booking**: v2, phase 6, above.
+2. **Later on**: attendance with more states, structured clinical items, printing, and a cash desk.
 3. **Reminders by other channels**: WhatsApp or SMS, each one more adapter behind the reminders'
    port, with whether a phone takes WhatsApp; the practitioner's speciality and consulting room in the
    reminder, once the application knows them.
 4. **Cash desk**: how each consultation is paid — health insurance, prepaid plan or privately —
    becomes required for every consultation, with the token an insurer asks for each visit.
-5. **Web booking**: an account with login, linked to the patient's record. It requires an
-   identity document, and **never** uses the internal id to identify the patient. Whether its
-   email is unique, and whether a parent books for their children from one account, is decided
-   then, and so is cancelling an appointment from its reminder.
+5. **Web booking, further on**: registering new patients from the web, and accounts for people who
+   are not patients; moving an appointment from the web; the patients reading what the law lets them
+   ask for of their record.
 6. **Future user interface**: two separate single-page applications, one for
    reception/practitioners and one for patients. This is why the REST API is the main
    contract from v1 onwards.
