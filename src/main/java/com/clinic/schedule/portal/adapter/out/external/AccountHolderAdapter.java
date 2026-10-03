@@ -1,5 +1,6 @@
 package com.clinic.schedule.portal.adapter.out.external;
 
+import java.util.Collection;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
@@ -22,9 +23,14 @@ class AccountHolderAdapter implements AccountHolderPort {
 
     @Override
     public Optional<AccountHolder> find(UUID patientId) {
-        return patients.findAll(List.of(patientId)).stream()
-                .findFirst()
+        return findAll(List.of(patientId)).stream().findFirst();
+    }
+
+    @Override
+    public List<AccountHolder> findAll(Collection<UUID> patientIds) {
+        return patients.findAll(patientIds).stream()
                 .map(patient -> new AccountHolder(patient.id(), patient.fullName(), patient.identityVerified(),
-                        patient.birthDate()));
+                        patient.birthDate()))
+                .toList();
     }
 }

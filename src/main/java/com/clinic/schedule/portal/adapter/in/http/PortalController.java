@@ -2,6 +2,7 @@ package com.clinic.schedule.portal.adapter.in.http;
 
 import java.net.URI;
 import java.time.LocalDate;
+import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 import java.util.stream.Collectors;
@@ -23,6 +24,8 @@ import com.clinic.schedule.portal.application.usecase.CancelOwnAppointmentUseCas
 import com.clinic.schedule.portal.application.usecase.ChangeOwnConsentUseCase;
 import com.clinic.schedule.portal.application.usecase.ChangeOwnContactUseCase;
 import com.clinic.schedule.portal.application.usecase.ListOwnAppointmentsUseCase;
+import com.clinic.schedule.portal.application.usecase.ManageOwnFamilyUseCase;
+import com.clinic.schedule.portal.application.usecase.ViewFamilyUseCase;
 import com.clinic.schedule.portal.application.usecase.ViewOwnDataUseCase;
 import com.clinic.schedule.portal.application.usecase.ViewWebBookingUseCase;
 import com.clinic.schedule.portal.domain.BookedAppointment;
@@ -48,12 +51,14 @@ class PortalController {
     private final BookOnWebUseCase book;
     private final CancelOwnAppointmentUseCase cancel;
     private final CancelLinkUseCase cancelLinks;
+    private final ViewFamilyUseCase family;
+    private final ManageOwnFamilyUseCase ownFamily;
     private final PractitionerReader practitioners;
 
     PortalController(ActivateAccountUseCase activate, ListOwnAppointmentsUseCase appointments, ViewOwnDataUseCase data,
             ChangeOwnContactUseCase contact, ChangeOwnConsentUseCase consent, ViewWebBookingUseCase booking,
             BookOnWebUseCase book, CancelOwnAppointmentUseCase cancel, CancelLinkUseCase cancelLinks,
-            PractitionerReader practitioners) {
+            ViewFamilyUseCase family, ManageOwnFamilyUseCase ownFamily, PractitionerReader practitioners) {
         this.activate = activate;
         this.appointments = appointments;
         this.data = data;
@@ -63,6 +68,8 @@ class PortalController {
         this.book = book;
         this.cancel = cancel;
         this.cancelLinks = cancelLinks;
+        this.family = family;
+        this.ownFamily = ownFamily;
         this.practitioners = practitioners;
     }
 
@@ -77,13 +84,13 @@ class PortalController {
     OwnAppointmentsResponse appointments() {
         Map<UUID, String> names = practitioners.findAll().stream()
                 .collect(Collectors.toMap(PractitionerSummary::id, PractitionerSummary::fullName));
-        return OwnAppointmentsResponse.of(appointments.handle(), names);
+        return OwnAppointmentsResponse.of(appointments.handle(), appointments.family(), names);
     }
 
-    /** The reasons booked on the web, by practitioner, and the days the web books (D-82). */
+    /** The reasons booked on the web, by practitioner, the days the web books (D-82), and for whom (D-85). */
     @GetMapping("/api/portal/booking/options")
     BookingOptionsResponse bookingOptions() {
-        return BookingOptionsResponse.of(booking.options());
+        return BookingOptionsResponse.of(booking.options(), family.bookableFor());
     }
 
     /** The times offered for a reason booked on the web, on a day the web books. */
@@ -93,15 +100,16 @@ class PortalController {
         return new BookingTimesResponse(date, booking.times(practitionerId, reasonId, date));
     }
 
-    /** The patient books an appointment for themselves. */
+    /** The patient books an appointment for themselves, or for a member of their family they act for. */
     @PostMapping("/api/portal/appointments")
     ResponseEntity<WebBookingResponse> book(@Valid @RequestBody WebBookingRequest request) {
-        BookOnWebUseCase.Result booked = book.handle(request.practitionerId(), request.reasonId(), request.startsAt());
+        BookOnWebUseCase.Result booked = book.handle(request.patientId(), request.practitionerId(),
+                request.reasonId(), request.startsAt());
         return ResponseEntity.created(URI.create("/api/portal/appointments/" + booked.appointmentId()))
                 .body(WebBookingResponse.of(booked));
     }
 
-    /** The patient cancels one of their appointments, up to a day before it (D-83). */
+    /** The patient cancels one of their appointments, or a member's, up to a day before it (D-83, D-85). */
     @PostMapping("/api/portal/appointments/{id}/cancel")
     ResponseEntity<Void> cancel(@PathVariable UUID id) {
         cancel.handle(id);
@@ -127,6 +135,26 @@ class PortalController {
                 .map(PractitionerSummary::fullName)
                 .findFirst()
                 .orElse(null));
+    }
+
+    /** The patient's family groups, by name (D-85). */
+    @GetMapping("/api/portal/family")
+    List<FamilyResponse> family() {
+        return family.groups().stream().map(FamilyResponse::of).toList();
+    }
+
+    /** Whether the group sees the patient's appointments: theirs to choose, from 13 on. */
+    @PostMapping("/api/portal/family/{groupId}/sharing")
+    List<FamilyResponse> share(@PathVariable UUID groupId, @RequestBody FamilyGroupRequests.Share request) {
+        ownFamily.share(groupId, request.shares());
+        return family();
+    }
+
+    /** The patient leaves the group; whoever else is in it stays. */
+    @PostMapping("/api/portal/family/{groupId}/leave")
+    List<FamilyResponse> leave(@PathVariable UUID groupId) {
+        ownFamily.leave(groupId);
+        return family();
     }
 
     /** The patient's own data (D-81). */

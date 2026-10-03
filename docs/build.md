@@ -1481,11 +1481,44 @@ first without the proof — and he was in both. The practitioner, the admin and 
 the routes. Found on the way: every staff screen also showed the patients' header, since part 1 — the fix
 above.
 
-#### Part 5b — The members act for each other on the web `[ ]`
-- [ ] An adult member books, cancels and sees the appointments of the members who share theirs; a member
-      under 18 acts only for themselves; nobody reads another's data
-- [ ] From 13 an adolescent's appointments are private until they share them, from their account or at
-      reception; members of 13 or older stop sharing or leave
+#### Part 5b — The members act for each other on the web `[x]`
+- [x] `FamilyAccessPolicy`: from 18, a patient acts for the members of a group of theirs who share — a child
+      always —, whether or not they share their own; under 18, or without a date of birth, only for
+      themselves; worked out at each request, so a child's turn private on their thirteenth birthday (D-85)
+- [x] *Mis turnos* and `GET /api/portal/appointments` show each member's appointments as the patient's own —
+      those ahead and of the last year, with the reason, never the note —, with "Cancelar"
+- [x] Booking for a member: "Para" on *Sacar turno*, `patientId` on the API; three ahead counted on the
+      member's; the confirmation to the account that booked it, naming the member; someone else a 403
+- [x] Cancelling a member's appointment as one's own, recorded as made by the account and asked by the
+      patient; someone else's a 403
+- [x] *Mi familia*, in the patients' header, and `GET /api/portal/family`: the groups, each member's name, age
+      band and whether they share; the patient shares, stops sharing or leaves, recorded as theirs — "el
+      paciente (web)" in reception's history
+- [x] No migration
+- [x] 6 unit and 7 integration tests. 441 unit and 523 integration tests, 964 in total
+
+**Verified with:** every new test failing when the code it covers was broken on purpose — 63 breakages, all
+caught: each condition of the policy — a teen acting, no date of birth, a group not theirs, themselves, the
+sharing and the ages ignored —, the order and the fields of *Mi familia*, the members acted for unsorted or
+anyone's, the patient left out of whom to book for, a member without a date of birth, the members'
+appointments read as the patient's, cancelling only one's own, booking for oneself by id refused or always for
+oneself, the confirmation and the answer naming nobody, the three counted on the booker, the email's words,
+each route and mapping of the API, and each label, choice, refusal, message, button and link of the screens.
+Before the run, the tests were made to tell the members' order from the order they joined in, to read a
+member's past appointments, one without a date of birth, the patient's own refusal beside a member's, a member
+with no appointments and a patient booking for nobody else. The run was stopped once and the full build once by
+the machine's lack of memory; nothing had been left planted, and each was run again.
+
+**Verified with the application running** on a throwaway PostgreSQL and a throwaway Mailpit, with the
+development data: reception formed "Familia Medina" — Laura, the development patient with an account; Jorge;
+Valentina, 15, private; Benjamín, 10, at Laura's request — and booked Monday for Benjamín and for Valentina.
+Laura's *Mis turnos* showed Benjamín's and Jorge's appointments under hers, and nothing of Valentina's; *Sacar
+turno* offered "Laura Medina (vos), Benjamín Medina, Jorge Medina", kept Benjamín through the times, and booked
+Tuesday for him: "Turno reservado para Benjamín Medina". Mailpit got the confirmation at Laura's address:
+"Hola, Laura Medina: El turno de Benjamín Medina quedó reservado…". She cancelled his Monday, read "Cancelado a
+pedido del paciente", and a booking for Valentina forced from the page was refused with a 403. *Mi familia*
+listed the four with their age bands and sharing; Laura stopped sharing and still saw Benjamín's and Jorge's,
+then left, and Benjamín stayed in the group. Reception's history read both changes as "el paciente (web)".
 
 #### Part 6 — Recovering the password, and locking the account `[ ]`
 - [ ] A link to the account's email, valid for an hour; asking says the same for any document

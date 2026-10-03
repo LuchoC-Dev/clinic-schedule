@@ -3142,3 +3142,49 @@ document seen (reception's checkbox records that it was seen, as with the identi
 birthdays (the age is computed when read); a child joining by themselves, or an adolescent added by a
 parent (each joins as their age allows); a member's appointments shared by default from 13 (private until
 they say so); patients forming groups on the web (reception sees the proof).
+
+## D-85 — From 18, a member books, cancels and sees the appointments of those who share theirs
+**Date:** 2026-10-03 · **Status:** accepted
+
+v2, phase 6, part 5b. Reception forms the family groups (D-84); this part is what their members do for each
+other on the web.
+
+**`FamilyAccessPolicy`, worked out at each request.** A patient acts — books, cancels and sees the
+appointments — for the members of a group of theirs whose appointments the group sees, a child under 13
+always and anyone else by their own choice, as long as the patient is 18 or older. A member under 18 acts only
+for themselves, and without a date of birth nobody can tell they are 18. Whether the patient shares their own
+appointments does not matter: it says whether the others see theirs, and a mother who keeps hers private still
+books for her child. Sharing is per group: a grandmother private in her own group and sharing in her
+daughter's is seen by her daughter. Nothing is kept, so a child's appointments stop being seen on their
+thirteenth birthday, and a member who stops sharing is not seen from that moment on.
+
+**What they see of a member's appointments is what they see of their own** (D-80): those ahead and those of
+the last 12 months, with the day, the time, the practitioner, the reason and the state, never reception's
+note. Of the members they do not act for, and in *Mi familia*, only the names, how old as the group counts it
+— "menor de 13", "de 13 a 17", "adulto", never the date of birth — and whether they share; never anyone's
+data, which each changes only for themselves (D-81).
+
+**Booking and cancelling for a member are booking and cancelling as their own,** with every rule of D-82 and
+D-83: the three ahead are counted on the member's appointments, whoever booked them; the confirmation goes to
+the account that booked it, greeting its holder and naming the member; a cancellation is recorded as made by
+that account and asked by the patient. Who booked an appointment is not recorded, as reception's are not. A
+patient asking for someone they do not act for is refused with a 403 (D-50), on booking as on cancelling.
+
+**From 13, each one chooses for themselves on the web.** `ManageOwnFamilyUseCase` shares, stops sharing or
+leaves a group, always for the patient logged in, through the group's own rules (D-84), recorded as made by
+their account — which reception's history reads as "el paciente (web)". A parent leaving leaves the children
+in the group; only reception takes a child out.
+
+**Routes and screens.** `GET /api/portal/appointments` adds `family`, each member acted for with their
+appointments; `POST /api/portal/appointments` takes an optional `patientId`; `GET /api/portal/booking/options`
+adds `patients`, the patient first; `GET /api/portal/family`, and `POST /api/portal/family/{groupId}/sharing`
+and `…/leave`. *Mis turnos* shows each member's appointments under the patient's own, with "Cancelar";
+*Sacar turno* asks "Para" when there is someone else to book for; *Mi familia*, in the patients' header, lists
+the groups with the patient's buttons.
+
+*Rejected:* acting only while sharing one's own appointments (a parent would have to show theirs to book for a
+child); hiding the reason of a member's appointments (they agreed to share them, and read them as the
+patient reads their own); only the members' upcoming appointments (the patient sees a year back of their
+own); recording which account booked an appointment (reception's bookings do not record who either, and
+the confirmation goes to it); the members' dates of birth on *Mi familia* (the age band says what the rules
+need); a member under 18 acting for a younger sibling (only parents and adults act for others).

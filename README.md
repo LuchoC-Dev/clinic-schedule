@@ -75,7 +75,9 @@ reception opened a web account for — from *Cuenta web* on the patient's screen
 13 or older — gets a link by email to activate it and choose a password, logs in with their document and
 reads their appointments: those ahead and those of the last year, never reception's note. Under *Mis turnos* they cancel an appointment up to a
 day before it, as anyone does from the link in its reminder or in a booking's confirmation; under *Sacar turno*
-they book the reasons reception opened to the web — "Se reserva por la web" on the practitioners' screen —, and
+they book the reasons reception opened to the web — "Se reserva por la web" on the practitioners' screen —, under
+*Mi familia* they see their family groups and choose whether each sees their appointments, and from 18 they see,
+book and cancel those of the members who share theirs as their own, and
 under *Mis datos* they change their phone, email and health insurance, and whether they want reminders on each. The emails go to
 Mailpit in development, at http://localhost:8025.
 
@@ -142,12 +144,14 @@ document as its type and number, such as `DNI 27333444`. Errors share one body:
 | `POST` | `/api/family-groups/{id}/members/{patientId}/remove`, `/sharing` | take a member out; a member of 13 or older starts or stops sharing — `{shares}` |
 | `GET` | `/api/family-groups/{id}/changes` | what happened to the group, the most recent first, and by whom |
 | `POST` | `/api/portal/activation` | the patient activates their account — `{token, password}`, the token from the email's link; no login |
-| `GET` | `/api/portal/appointments` | the patient logged in reads their appointments: those ahead and those of the last 12 months, without the note |
+| `GET` | `/api/portal/appointments` | the patient logged in reads their appointments: those ahead and those of the last 12 months, without the note; from 18, also those of each family member who shares theirs, under `family` |
 | `GET` | `/api/portal/profile` | the patient's own data: name, document and date of birth, their phone and email with whose each is and its consent, and their health insurance |
 | `PUT` | `/api/portal/profile/details` | the patient sets their phone, email and health insurance, with reception's rules; one left out is cleared |
-| `GET` | `/api/portal/booking/options`, `/api/portal/booking/times?practitionerId=&reasonId=&date=` | what the patient may book on the web: the reasons reception opened to it, the days from tomorrow to 30 days on, and the times offered |
-| `POST` | `/api/portal/appointments` | the patient books for themselves, three ahead at most; a confirmation goes to the account's email |
-| `POST` | `/api/portal/appointments/{id}/cancel` | the patient cancels one of their appointments, up to a day before it |
+| `GET` | `/api/portal/booking/options`, `/api/portal/booking/times?practitionerId=&reasonId=&date=` | what the patient may book on the web: the reasons reception opened to it, the days from tomorrow to 30 days on, for whom — themselves first — and the times offered |
+| `POST` | `/api/portal/appointments` | the patient books for themselves, or with `patientId` for a family member they act for, three ahead at most for whom it is; a confirmation goes to the account's email |
+| `POST` | `/api/portal/appointments/{id}/cancel` | the patient cancels one of their appointments, or of a family member they act for, up to a day before it |
+| `GET` | `/api/portal/family` | the patient's family groups: each member's name, age band and whether they share, and which is the patient |
+| `POST` | `/api/portal/family/{groupId}/sharing`, `/api/portal/family/{groupId}/leave` | the patient shares their appointments with the group or stops — `{shares}` —, or leaves it |
 | `GET`, `POST` | `/api/portal/cancel-links/{token}`, `/api/portal/cancel-links/{token}/cancel` | what an email's link would cancel — when and with whom — and cancelling it, with nobody logged in |
 | `PUT` | `/api/portal/profile/contact-consent` | `{phone, email}`: true is the patient's own consent, false withdraws any, left out stays |
 | `GET` | `/api/clinical-records/{patientId}` | the patient's date of birth and health insurance, their consultations with their checks, and the checks done without one — for a practitioner who saw them within the access period or is seeing them today |

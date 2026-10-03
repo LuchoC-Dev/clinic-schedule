@@ -7,8 +7,8 @@ import com.clinic.schedule.portal.domain.BookingConfirmation;
 
 /**
  * The words of the email that confirms an appointment booked on the web, in Spanish (D-13, D-82): the
- * practice, a greeting, the day, the time and the practitioner, the link to cancel it (D-83) and how to change
- * it. Never the reason, which may be clinical.
+ * practice, a greeting, whom it is for when not the account's own (D-85), the day, the time and the
+ * practitioner, the link to cancel it (D-83) and how to change it. Never the reason, which may be clinical.
  */
 final class BookingConfirmationText {
 
@@ -45,7 +45,8 @@ final class BookingConfirmationText {
     String plain(BookingConfirmation confirmation) {
         return practice + "\n\n"
                 + "Hola, " + confirmation.fullName() + ":\n\n"
-                + "Tu turno quedó reservado para el " + DAY.format(confirmation.startsAt()) + " a las "
+                + (confirmation.member() == null ? "Tu turno" : "El turno de " + confirmation.member())
+                + " quedó reservado para el " + DAY.format(confirmation.startsAt()) + " a las "
                 + TIME.format(confirmation.startsAt()) + " con " + confirmation.practitioner() + ".\n\n"
                 + howToCancel(confirmation)
                 + practice + " · " + address + " · " + phone + "\n";

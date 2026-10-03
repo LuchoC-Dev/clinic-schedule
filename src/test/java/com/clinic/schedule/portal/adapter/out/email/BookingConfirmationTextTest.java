@@ -8,14 +8,17 @@ import org.junit.jupiter.api.Test;
 
 import com.clinic.schedule.portal.domain.BookingConfirmation;
 
-/** The words of the email that confirms an appointment booked on the web (D-82), and its link to cancel (D-83). */
+/**
+ * The words of the email that confirms an appointment booked on the web (D-82), its link to cancel (D-83), and
+ * whom it is for when booked for a member of the family (D-85).
+ */
 class BookingConfirmationTextTest {
 
     private static final BookingConfirmationText TEXT = new BookingConfirmationText("Consultorio Central",
             "Av. Siempre Viva 742", "011 4555-0000", "https://turnos.example/");
 
     private static BookingConfirmation confirmation(String cancelToken) {
-        return new BookingConfirmation("ana@mail.com", "Ana Pérez", LocalDateTime.of(2026, 3, 12, 10, 30),
+        return new BookingConfirmation("ana@mail.com", "Ana Pérez", null, LocalDateTime.of(2026, 3, 12, 10, 30),
                 "Dra. Arias", cancelToken);
     }
 
@@ -29,6 +32,16 @@ class BookingConfirmationTextTest {
                         + "https://turnos.example/portal/cancel?token=abc-123\n\n"
                         + "Para cambiarlo, llamá al 011 4555-0000 o acercate a recepción.\n\n")
                 .endsWith("Consultorio Central · Av. Siempre Viva 742 · 011 4555-0000\n");
+    }
+
+    @Test
+    void forAMemberOfTheFamilyItNamesThemAndGreetsWhoBookedIt() {
+        assertThat(TEXT.plain(new BookingConfirmation("ana@mail.com", "Ana Pérez", "Tomás Pérez",
+                LocalDateTime.of(2026, 3, 12, 10, 30), "Dra. Arias", "abc-123")))
+                .startsWith("Consultorio Central\n\nHola, Ana Pérez:\n\n")
+                .contains("El turno de Tomás Pérez quedó reservado para el jueves 12 de marzo a las 10:30 con "
+                        + "Dra. Arias.")
+                .doesNotContain("Tu turno");
     }
 
     @Test

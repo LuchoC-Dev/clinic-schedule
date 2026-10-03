@@ -10,6 +10,12 @@
     <p th:if="${reasons.isEmpty()}" class="muted">Por ahora no hay turnos para sacar por la web: llamá o acercate a
         recepción.</p>
     <form class="card bar" method="get" th:action="@{/portal/booking}" th:unless="${reasons.isEmpty()}">
+        <label th:if="${whom.size() > 1}">Para
+            <select name="patient">
+                <option th:each="p, i : ${whom}" th:value="${p.patientId}" th:selected="${p.patientId == patient}"
+                        th:text="${i.first} ? ${p.fullName} + ' (vos)' : ${p.fullName}">Laura Medina (vos)</option>
+            </select>
+        </label>
         <label>Profesional y motivo
             <select name="reason" required>
                 <option th:each="r : ${reasons}" th:value="${r.reasonId}" th:selected="${r.reasonId == reason}"
@@ -31,6 +37,7 @@
         <div class="choices">
             <form class="inline" method="post" th:action="@{/portal/booking}" th:each="t : ${times}">
                 <input type="hidden" name="reason" th:value="${chosen.reasonId}">
+                <input type="hidden" name="patient" th:value="${patient}">
                 <input type="hidden" name="startsAt" th:value="${date} + 'T' + ${t}">
                 <button type="submit" th:text="${t}">10:00</button>
             </form>

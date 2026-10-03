@@ -42,11 +42,16 @@ public final class PatientAccountFixture {
 
     /** "Ana Pérez", with a DNI; {@code birthDate} as {@code 1990-05-14}, or null for none. */
     public Patient patient(boolean seen, String birthDate) throws Exception {
+        return patient("Ana Pérez", seen, birthDate);
+    }
+
+    /** A patient of that name, with a DNI; {@code birthDate} as {@code 1990-05-14}, or null for none. */
+    public Patient patient(String fullName, boolean seen, String birthDate) throws Exception {
         String dni = String.valueOf(ThreadLocalRandom.current().nextInt(50_000_000, 99_999_999));
         String body = """
-                {"fullName": "Ana Pérez", "documentType": "DNI", "documentNumber": "%s", "documentSeen": %s,
+                {"fullName": "%s", "documentType": "DNI", "documentNumber": "%s", "documentSeen": %s,
                  "birthDate": %s}
-                """.formatted(dni, seen, birthDate == null ? "null" : "\"" + birthDate + "\"");
+                """.formatted(fullName, dni, seen, birthDate == null ? "null" : "\"" + birthDate + "\"");
         return new Patient(read(mockMvc.perform(post("/api/patients").with(RECEPTION)
                         .contentType(MediaType.APPLICATION_JSON).content(body))
                 .andExpect(status().isCreated())
@@ -97,7 +102,12 @@ public final class PatientAccountFixture {
 
     /** A verified adult with an account in use, whose password is {@link #PASSWORD}. */
     public Patient withAccount() throws Exception {
-        Patient patient = adult();
+        return withAccount("Ana Pérez", "1990-05-14");
+    }
+
+    /** A verified patient of that name and date of birth, 13 or older, with an account in use. */
+    public Patient withAccount(String fullName, String birthDate) throws Exception {
+        Patient patient = patient(fullName, true, birthDate);
         String address = address();
         open(patient, address);
         activate(lastTokenTo(address));

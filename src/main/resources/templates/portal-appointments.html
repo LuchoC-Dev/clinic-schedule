@@ -40,6 +40,35 @@
         </tr>
         </tbody>
     </table>
+    <th:block th:each="m : ${family}">
+        <h2 th:text="'Turnos de ' + ${m.name}">Turnos de Benjamín Medina</h2>
+        <p th:if="${m.upcoming.isEmpty() and m.past.isEmpty()}" class="muted">No tiene turnos próximos ni del último año.</p>
+        <table th:unless="${m.upcoming.isEmpty() and m.past.isEmpty()}">
+            <thead><tr><th>Cuándo</th><th>Profesional</th><th>Motivo</th><th>Estado</th><th></th></tr></thead>
+            <tbody>
+            <tr th:each="a : ${m.upcoming}">
+                <td th:text="${a.when}">jueves 12/03/2026 10:00</td>
+                <td th:text="${a.practitioner}">Dra. Arias</td>
+                <td th:text="${a.reason}">Consulta</td>
+                <td th:text="${a.state}">Reservado</td>
+                <td class="actions">
+                    <form class="inline" method="post" th:if="${a.cancellable}"
+                          th:action="@{/portal/appointments/{id}/cancel(id=${a.id})}">
+                        <button type="submit" class="danger">Cancelar</button>
+                    </form>
+                </td>
+            </tr>
+            <tr th:each="a : ${m.past}" class="muted">
+                <td th:text="${a.when}">lunes 2/03/2026 10:00</td>
+                <td th:text="${a.practitioner}">Dra. Arias</td>
+                <td th:text="${a.reason}">Consulta</td>
+                <td th:text="${a.state}">Reservado</td>
+                <td></td>
+            </tr>
+            </tbody>
+        </table>
+    </th:block>
+
     <p class="muted"><a th:href="@{/portal/booking}">Sacar un turno</a>. Un turno se cancela acá hasta un día antes;
         después, o para cambiarlo, llamá o acercate a recepción.</p>
 </main>

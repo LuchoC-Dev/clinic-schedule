@@ -5,7 +5,10 @@ import java.util.UUID;
 
 import jakarta.validation.constraints.NotNull;
 
-/** The body a patient sends to book an appointment on the web (D-82). For whom is never asked: themselves. */
+/**
+ * The body a patient sends to book an appointment on the web (D-82): for themselves, or for a member of their
+ * family they act for, named by {@code patientId} (D-85).
+ */
 record WebBookingRequest(
         @NotNull(message = "the practitioner is required")
         UUID practitionerId,
@@ -14,5 +17,6 @@ record WebBookingRequest(
         UUID reasonId,
 
         @NotNull(message = "the time is required")
-        LocalDateTime startsAt) {
+        LocalDateTime startsAt,
+        UUID patientId) {
 }

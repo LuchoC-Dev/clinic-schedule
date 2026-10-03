@@ -9,6 +9,7 @@ import com.clinic.schedule.portal.application.exception.AccountNotFoundException
 import com.clinic.schedule.portal.application.exception.FamilyGroupNotFoundException;
 import com.clinic.schedule.portal.application.exception.InvalidActivationLinkException;
 import com.clinic.schedule.portal.application.exception.NotYourAppointmentException;
+import com.clinic.schedule.portal.application.exception.NotYourFamilyMemberException;
 import com.clinic.schedule.portal.application.exception.OwnDataRefusedException;
 import com.clinic.schedule.portal.application.exception.UnknownPatientException;
 import com.clinic.schedule.portal.domain.exception.AccountRefusedException;
@@ -23,9 +24,12 @@ import com.clinic.schedule.shared.http.ErrorResponse;
         FamilyGroupController.class})
 class PortalExceptionHandler {
 
-    /** An appointment that is not the patient's: refused, never answered as if it were not there (D-50). */
-    @ExceptionHandler(NotYourAppointmentException.class)
-    ResponseEntity<ErrorResponse> notYours(NotYourAppointmentException e) {
+    /**
+     * An appointment that is not the patient's, or a patient they do not act for: refused, never answered as if it
+     * were not there (D-50, D-85).
+     */
+    @ExceptionHandler({NotYourAppointmentException.class, NotYourFamilyMemberException.class})
+    ResponseEntity<ErrorResponse> notYours(RuntimeException e) {
         return ResponseEntity.status(HttpStatus.FORBIDDEN).body(ErrorResponse.of(403, "Forbidden", e.getMessage()));
     }
 

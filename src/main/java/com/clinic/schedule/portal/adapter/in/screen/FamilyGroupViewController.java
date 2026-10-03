@@ -33,6 +33,7 @@ import com.clinic.schedule.portal.domain.FamilyGroupService;
 import com.clinic.schedule.portal.domain.FamilyMember;
 import com.clinic.schedule.portal.domain.FamilyPerson;
 import com.clinic.schedule.portal.domain.exception.FamilyRefusedException;
+import com.clinic.schedule.security.api.PatientUsername;
 
 /**
  * Reception's screens of the family groups (D-84), in Spanish: the groups, and each one's members — who shares
@@ -190,7 +191,7 @@ class FamilyGroupViewController {
         }
     }
 
-    /** An entry of the group's history, in Spanish. */
+    /** An entry of the group's history, in Spanish; a patient's change from the web reads as theirs (D-85). */
     record HistoryRow(String when, String what, String by) {
 
         static HistoryRow of(FamilyChange change, Map<UUID, PatientSummary> patients) {
@@ -202,7 +203,7 @@ class FamilyGroupViewController {
                 case REMOVED -> "Salió";
                 case SHARING_STARTED -> "Empezó a compartir sus turnos";
                 case SHARING_STOPPED -> "Dejó de compartir sus turnos";
-            } + who, change.by());
+            } + who, PatientUsername.is(change.by()) ? "el paciente (web)" : change.by());
         }
     }
 }
