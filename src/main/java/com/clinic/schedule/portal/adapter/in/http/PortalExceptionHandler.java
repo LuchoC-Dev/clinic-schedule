@@ -7,16 +7,33 @@ import org.springframework.web.bind.annotation.RestControllerAdvice;
 
 import com.clinic.schedule.portal.application.exception.AccountNotFoundException;
 import com.clinic.schedule.portal.application.exception.InvalidActivationLinkException;
+import com.clinic.schedule.portal.application.exception.NotYourAppointmentException;
 import com.clinic.schedule.portal.application.exception.OwnDataRefusedException;
 import com.clinic.schedule.portal.application.exception.UnknownPatientException;
 import com.clinic.schedule.portal.domain.exception.AccountRefusedException;
 import com.clinic.schedule.portal.domain.exception.AccountStateException;
 import com.clinic.schedule.portal.domain.exception.WebBookingRefusedException;
+import com.clinic.schedule.portal.domain.exception.WebCancellationRefusedException;
 import com.clinic.schedule.shared.http.ErrorResponse;
 
 /** Translates this module's refusals into HTTP for its own controllers only (D-23). */
 @RestControllerAdvice(assignableTypes = {PatientAccountController.class, PortalController.class})
 class PortalExceptionHandler {
+
+    /** An appointment that is not the patient's: refused, never answered as if it were not there (D-50). */
+    @ExceptionHandler(NotYourAppointmentException.class)
+    ResponseEntity<ErrorResponse> notYours(NotYourAppointmentException e) {
+        return ResponseEntity.status(HttpStatus.FORBIDDEN).body(ErrorResponse.of(403, "Forbidden", e.getMessage()));
+    }
+
+    /** A link that leads to nothing is a 404; an appointment not booked any more, or too close, a 409. */
+    @ExceptionHandler(WebCancellationRefusedException.class)
+    ResponseEntity<ErrorResponse> cancellationRefused(WebCancellationRefusedException e) {
+        if (e.reason() == WebCancellationRefusedException.Reason.GONE) {
+            return ResponseEntity.status(HttpStatus.NOT_FOUND).body(ErrorResponse.of(404, "Not found", e.getMessage()));
+        }
+        return ResponseEntity.status(HttpStatus.CONFLICT).body(ErrorResponse.of(409, "Conflict", e.getMessage()));
+    }
 
     @ExceptionHandler(AccountNotFoundException.class)
     ResponseEntity<ErrorResponse> notFound(AccountNotFoundException e) {

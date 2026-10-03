@@ -1,0 +1,12 @@
+<!DOCTYPE html>
+<html lang="es" xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{fragments :: head('Cancelar turno')}"></head>
+<body>
+<main style="max-width: 26rem">
+    <h1>Cancelar turno</h1>
+    <p class="error" th:if="${error}" th:text="${error}">Este link ya no sirve.</p>
+    <p class="ok" th:unless="${error}">Turno cancelado. Si querés otro, sacalo desde tu cuenta o llamá a
+        recepción.</p>
+</main>
+</body>
+</html>

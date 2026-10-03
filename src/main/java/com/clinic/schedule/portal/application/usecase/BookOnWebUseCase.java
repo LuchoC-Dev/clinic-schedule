@@ -28,7 +28,8 @@ import com.clinic.schedule.portal.domain.WebBookingPolicy;
 /**
  * The patient logged in books an appointment for themselves on the web (D-82). {@link WebBookingPolicy}
  * says what the web lets them book; the appointment module books it with reception's rules, marked as
- * booked on the web; and the account that booked it gets a confirmation by email.
+ * booked on the web; and the account that booked it gets a confirmation by email, with the link to cancel it
+ * (D-83).
  *
  * <p>One attempt at the email. A confirmation that does not go out leaves the appointment booked, and the
  * answer says so.
@@ -45,12 +46,14 @@ public class BookOnWebUseCase {
     private final PatientAccountRepository accounts;
     private final AccountHolderPort holders;
     private final AccountMailPort mail;
+    private final CancelLinkUseCase cancelLinks;
     private final Clock clock;
     private final int daysAhead;
 
     public BookOnWebUseCase(CurrentPatientPort currentPatient, BookableReasonsPort reasons, BookingPort booking,
             PatientAppointmentsPort appointments, PatientAccountRepository accounts, AccountHolderPort holders,
-            AccountMailPort mail, Clock clock, @Value("${app.portal.booking-days-ahead}") int daysAhead) {
+            AccountMailPort mail, CancelLinkUseCase cancelLinks, Clock clock,
+            @Value("${app.portal.booking-days-ahead}") int daysAhead) {
         this.currentPatient = currentPatient;
         this.reasons = reasons;
         this.booking = booking;
@@ -58,6 +61,7 @@ public class BookOnWebUseCase {
         this.accounts = accounts;
         this.holders = holders;
         this.mail = mail;
+        this.cancelLinks = cancelLinks;
         this.clock = clock;
         this.daysAhead = daysAhead;
     }
@@ -76,17 +80,18 @@ public class BookOnWebUseCase {
                 : booking.offeredTimes(practitionerId, reasonId, startsAt.toLocalDate());
         WebBookingPolicy.check(reason, startsAt, offered, appointments.of(patientId), now, daysAhead);
         UUID appointmentId = booking.book(patientId, practitionerId, reasonId, startsAt);
-        return new Result(appointmentId, startsAt, reason.practitionerName(), confirm(patientId, startsAt, reason));
+        return new Result(appointmentId, startsAt, reason.practitionerName(),
+                confirm(patientId, appointmentId, startsAt, reason));
     }
 
-    private boolean confirm(UUID patientId, LocalDateTime startsAt, BookableReason reason) {
+    private boolean confirm(UUID patientId, UUID appointmentId, LocalDateTime startsAt, BookableReason reason) {
         PatientAccount account = accounts.findByPatientId(patientId)
                 .orElseThrow(() -> new IllegalStateException("No web account for the patient logged in"));
         String name = holders.find(patientId).map(AccountHolder::fullName)
                 .orElseThrow(() -> new IllegalStateException("No patient for the web account logged in"));
         try {
             mail.sendBookingConfirmation(new BookingConfirmation(account.email(), name, startsAt,
-                    reason.practitionerName()));
+                    reason.practitionerName(), cancelLinks.issue(appointmentId, startsAt).orElse(null)));
             return true;
         } catch (RuntimeException e) {
             log.warn("The confirmation of an appointment booked on the web did not go out: {}", e.getMessage());

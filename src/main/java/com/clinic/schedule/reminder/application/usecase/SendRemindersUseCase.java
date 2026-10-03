@@ -15,6 +15,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import com.clinic.schedule.reminder.application.port.BookedAppointmentsPort;
+import com.clinic.schedule.reminder.application.port.CancelLinkPort;
 import com.clinic.schedule.reminder.application.port.PatientContactPort;
 import com.clinic.schedule.reminder.application.port.PractitionerNamesPort;
 import com.clinic.schedule.reminder.application.port.ReminderRepository;
@@ -30,9 +31,10 @@ import com.clinic.schedule.reminder.domain.ReminderPolicy;
  * from tomorrow to {@code daysAhead} days on that has not been reminded yet of its time. Today's are not:
  * a reminder the same day says nothing reception could not say.
  *
- * <p>Each one is decided by {@link ReminderPolicy}, sent once, and recorded — sent, failed, or not sent
- * and why. One sent or failed is not tried again for that time; one moved afterwards is reminded of its
- * new time. One not sent is decided again the next day, so a consent recorded in between counts.
+ * <p>Each one is decided by {@link ReminderPolicy}, sent once with the link to cancel it (D-83), and
+ * recorded — sent, failed, or not sent and why. One sent or failed is not tried again for that time; one moved
+ * afterwards is reminded of its new time. One not sent is decided again the next day, so a consent recorded in
+ * between counts.
  */
 @Service
 public class SendRemindersUseCase {
@@ -44,12 +46,13 @@ public class SendRemindersUseCase {
     private final PractitionerNamesPort practitioners;
     private final ReminderRepository reminders;
     private final ReminderSenderPort sender;
+    private final CancelLinkPort cancelLinks;
     private final Clock clock;
     private final int daysAhead;
 
     public SendRemindersUseCase(BookedAppointmentsPort appointments, PatientContactPort patients,
-            PractitionerNamesPort practitioners, ReminderRepository reminders, ReminderSenderPort sender, Clock clock,
-            @Value("${app.reminders.days-ahead}") int daysAhead) {
+            PractitionerNamesPort practitioners, ReminderRepository reminders, ReminderSenderPort sender,
+            CancelLinkPort cancelLinks, Clock clock, @Value("${app.reminders.days-ahead}") int daysAhead) {
         if (daysAhead < 1) {
             throw new IllegalArgumentException("Reminders go out at least a day ahead");
         }
@@ -58,6 +61,7 @@ public class SendRemindersUseCase {
         this.practitioners = practitioners;
         this.reminders = reminders;
         this.sender = sender;
+        this.cancelLinks = cancelLinks;
         this.clock = clock;
         this.daysAhead = daysAhead;
     }
@@ -94,7 +98,8 @@ public class SendRemindersUseCase {
             return Reminder.notSent(appointment, decision.notSent(), now);
         }
         try {
-            sender.send(new ReminderMessage(decision.recipient(), appointment.startsAt(), practitioner));
+            sender.send(new ReminderMessage(decision.recipient(), appointment.startsAt(), practitioner,
+                    cancelLinks.linkFor(appointment.id(), appointment.startsAt()).orElse(null)));
             return Reminder.sent(appointment, decision.recipient().address(), now);
         } catch (RuntimeException e) {
             log.warn("The reminder of appointment {} did not go out: {}", appointment.id(), e.getMessage());

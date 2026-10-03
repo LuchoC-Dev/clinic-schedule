@@ -36,8 +36,17 @@ record CancellationLogResponse(LocalDate from, LocalDate to, boolean limitReache
     private static Entry entry(Appointment appointment, Map<UUID, String> practitionerNames) {
         Cancellation cancellation = appointment.cancellation().orElseThrow();
         UUID practitionerId = appointment.practitionerId().value();
-        return new Entry(cancellation.at(), cancellation.by(), cancellation.origin(), cancellation.requestedBy(),
+        return new Entry(cancellation.at(), byStaff(cancellation), cancellation.origin(), cancellation.requestedBy(),
                 new Practitioner(practitionerId, practitionerNames.get(practitionerId)),
                 appointment.slot().startsAt());
+    }
+
+    /**
+     * The username of whoever of the staff cancelled it; null when the patient did, on the web or from an
+     * email's link, since the account would lead back to them (D-83).
+     */
+    private static String byStaff(Cancellation cancellation) {
+        return cancellation.origin() == CancellationOrigin.ONLINE
+                || cancellation.origin() == CancellationOrigin.EMAIL_LINK ? null : cancellation.by();
     }
 }

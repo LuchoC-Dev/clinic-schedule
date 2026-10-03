@@ -86,6 +86,8 @@ app:
     base-url: http://localhost:8080
     activation-valid-for: PT72H
     booking-days-ahead: 30
+    # Up to how many hours before an appointment a patient cancels it on the web or from an email's link (D-83).
+    cancel-hours-before: 24
 
 logging:
   level:

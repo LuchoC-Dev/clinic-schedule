@@ -140,6 +140,8 @@ class ReminderIT {
         assertThat(sentTo(address)).singleElement().satisfies(message -> {
             assertThat(message.recipient().greeted()).isEqualTo("Luis Perez");
             assertThat(message.practitioner()).isEqualTo("Dra. Arias");
+            // The link to cancel it, from the portal (D-83).
+            assertThat(message.cancelLink()).startsWith("http://localhost:8080/portal/cancel?token=");
         });
         List<Map<String, Object>> recorded = recordedFor(appointment);
         assertThat(recorded).singleElement().satisfies(row -> {

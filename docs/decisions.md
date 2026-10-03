@@ -3043,3 +3043,53 @@ any free time, as reception books (the agenda would fill with odd times); a limi
 limit is not a constraint, and the race is a patient booking twice in the same instant); the reason in the
 confirmation (it may be clinical); recording who booked each appointment (not asked, beyond where); same-day
 booking on the web (today's agenda is reception's to manage).
+
+---
+
+## D-83 — A patient cancels up to a day before, on the web or from an email's link, and the log says so
+**Date:** 2026-10-02 · **Status:** accepted
+
+v2, phase 6, part 4. Until now only reception cancelled, and the reminder told the patient to call (D-78).
+A patient now cancels from their account, and anyone who got a reminder or a booking's confirmation cancels
+from the link in it.
+
+**Up to a day before.** `WebCancellationPolicy`: a booked appointment of the patient's — reception's bookings
+too — up to `app.portal.cancel-hours-before` hours before it, 24. Later, they call; reception still cancels
+it, as it always could. Moving an appointment is not offered: they cancel and book again. A patient asking
+to cancel someone else's appointment is refused with a 403 (D-50).
+
+**From an email's link, with nobody logged in.** `CancelLink`, in `portal`: a `SecretToken` — the same
+256 random bits as the activation's, now one class for both —, of which only the SHA-256 is kept in
+`cancel_link` (`V36`), with the appointment and the time it was about. It has no expiry of its own: it works
+while its appointment is still booked at that time and while there is time to cancel it, so moving the
+appointment ends it, and its new reminder brings a new link. One is issued for each reminder and for each
+web booking's confirmation; none when there is no time left, and the email says to call instead. The page,
+`/portal/cancel?token=`, shows the day, the time and the practitioner — what the email already says —, not
+the patient's name nor the reason, since an email may be forwarded, and a button. The reminder module asks
+for the link through `portal/api/CancelLinkWriter`, which answers its address under `app.portal.base-url`: a
+new dependency of `reminder` on `portal`'s api, and none back.
+
+**The cancellation log says the patient asked, and how** (D-76). `CancellationOrigin` gains `ONLINE` — by the
+account, whose name is `portal:` and its id (D-81) — and `EMAIL_LINK`, made by `Cancellation.EMAIL_LINK_BY`,
+since nobody can tell who held the email: a child's mother may cancel it from the reminder she got. Either
+is asked by the patient, which the value object and `V36`'s check hold, and has no note. Reception reads "el
+paciente (web)" or "el link del email", "Por la web" or "Con el link del email"; the admins read "paciente
+(web)" for both, and the admins' API answers no `cancelledBy` for them, since the account would lead back to
+the patient. The appointment module cancels through `AppointmentWriter.cancelOnWeb` and
+`cancelFromEmailLink`, with `CancelForPatientUseCase`; the arrivals are not told, as they are of reception's
+cancellations (D-64), since a patient cancels a day ahead at least and cannot be waiting with it.
+
+**What the emails say.** The reminder, in the practice's usted: "Para cancelarlo, entre a este link", then
+"Para cambiarlo, llame al … o acérquese a recepción"; without a link, "Para cancelarlo o cambiarlo, llame…", as
+before. The confirmation of a web booking alike, in the voseo of the patients' screens. There is no confirming
+an appointment: nothing would read it.
+
+**Routes and screens.** `POST /api/portal/appointments/{id}/cancel`; `GET /api/portal/cancel-links/{token}` and
+`POST /api/portal/cancel-links/{token}/cancel`, open to anyone, a link leading nowhere a 404 and one too late a
+409. *Mis turnos* offers "Cancelar" on the appointments that may still be cancelled.
+
+*Rejected:* a link that requires logging in (most patients reminded have no account); the patient's name on
+the link's page (the link travels with the email, and may be forwarded); the link's own expiry date (the
+appointment's state and time already say when it stops working); a confirmation of attendance (nothing reads
+it); moving an appointment on the web (cancel and book again); the patient's document or account as who
+cancelled for the admins (it would lead back to the patient); telling the arrivals (unreachable a day ahead).

@@ -10,13 +10,19 @@
     <h2>Próximos</h2>
     <p th:if="${upcoming.isEmpty()}" class="muted">No tenés turnos próximos.</p>
     <table th:unless="${upcoming.isEmpty()}">
-        <thead><tr><th>Cuándo</th><th>Profesional</th><th>Motivo</th><th>Estado</th></tr></thead>
+        <thead><tr><th>Cuándo</th><th>Profesional</th><th>Motivo</th><th>Estado</th><th></th></tr></thead>
         <tbody>
         <tr th:each="a : ${upcoming}">
             <td th:text="${a.when}">jueves 12/03/2026 10:00</td>
             <td th:text="${a.practitioner}">Dra. Arias</td>
             <td th:text="${a.reason}">Consulta</td>
             <td th:text="${a.state}">Reservado</td>
+            <td class="actions">
+                <form class="inline" method="post" th:if="${a.cancellable}"
+                      th:action="@{/portal/appointments/{id}/cancel(id=${a.id})}">
+                    <button type="submit" class="danger">Cancelar</button>
+                </form>
+            </td>
         </tr>
         </tbody>
     </table>
@@ -34,8 +40,8 @@
         </tr>
         </tbody>
     </table>
-    <p class="muted"><a th:href="@{/portal/booking}">Sacar un turno</a>. Para cambiar o cancelar uno, llamá o
-        acercate a recepción.</p>
+    <p class="muted"><a th:href="@{/portal/booking}">Sacar un turno</a>. Un turno se cancela acá hasta un día antes;
+        después, o para cambiarlo, llamá o acercate a recepción.</p>
 </main>
 </body>
 </html>

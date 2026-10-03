@@ -28,7 +28,7 @@ class EmailAccountAdapter implements AccountMailPort {
         this.mail = mail;
         this.from = from;
         this.text = new ActivationText(practice, address, phone, baseUrl);
-        this.confirmationText = new BookingConfirmationText(practice, address, phone);
+        this.confirmationText = new BookingConfirmationText(practice, address, phone, baseUrl);
     }
 
     @Override

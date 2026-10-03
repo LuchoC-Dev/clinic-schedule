@@ -8,14 +8,18 @@ import org.springframework.stereotype.Component;
 import com.clinic.schedule.appointment.api.AppointmentWriter;
 import com.clinic.schedule.appointment.api.BookingRefusedException;
 import com.clinic.schedule.appointment.api.BookingRefusedException.Reason;
+import com.clinic.schedule.appointment.api.CancellationRefusedException;
+import com.clinic.schedule.appointment.application.exception.AppointmentNotFoundException;
 import com.clinic.schedule.appointment.application.exception.OutsideWorkingHoursException;
 import com.clinic.schedule.appointment.application.exception.UnknownPatientException;
 import com.clinic.schedule.appointment.application.exception.UnknownReasonException;
 import com.clinic.schedule.appointment.application.usecase.BookAppointmentUseCase;
+import com.clinic.schedule.appointment.application.usecase.CancelForPatientUseCase;
 import com.clinic.schedule.appointment.domain.AppointmentId;
 import com.clinic.schedule.appointment.domain.BookingChannel;
 import com.clinic.schedule.appointment.domain.PatientId;
 import com.clinic.schedule.appointment.domain.PractitionerId;
+import com.clinic.schedule.appointment.domain.exception.BookingRuleViolationException;
 import com.clinic.schedule.appointment.domain.exception.PatientAlreadyBookedException;
 import com.clinic.schedule.appointment.domain.exception.PractitionerAlreadyBookedException;
 import com.clinic.schedule.appointment.domain.exception.SlotInThePastException;
@@ -30,9 +34,11 @@ import com.clinic.schedule.appointment.domain.exception.SlotTooFarAheadException
 class AppointmentWriterAdapter implements AppointmentWriter {
 
     private final BookAppointmentUseCase book;
+    private final CancelForPatientUseCase cancel;
 
-    AppointmentWriterAdapter(BookAppointmentUseCase book) {
+    AppointmentWriterAdapter(BookAppointmentUseCase book, CancelForPatientUseCase cancel) {
         this.book = book;
+        this.cancel = cancel;
     }
 
     @Override
@@ -47,6 +53,24 @@ class AppointmentWriterAdapter implements AppointmentWriter {
         } catch (OutsideWorkingHoursException | SlotInThePastException | SlotTooFarAheadException
                 | UnknownReasonException | UnknownPatientException e) {
             throw new BookingRefusedException(Reason.NOT_BOOKABLE, e.getMessage());
+        }
+    }
+
+    @Override
+    public void cancelOnWeb(UUID appointmentId) {
+        try {
+            cancel.onTheWeb(new AppointmentId(appointmentId));
+        } catch (AppointmentNotFoundException | BookingRuleViolationException e) {
+            throw new CancellationRefusedException(e.getMessage());
+        }
+    }
+
+    @Override
+    public void cancelFromEmailLink(UUID appointmentId) {
+        try {
+            cancel.byEmailLink(new AppointmentId(appointmentId));
+        } catch (AppointmentNotFoundException | BookingRuleViolationException e) {
+            throw new CancellationRefusedException(e.getMessage());
         }
     }
 }

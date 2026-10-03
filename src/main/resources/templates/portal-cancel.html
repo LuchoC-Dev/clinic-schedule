@@ -1,0 +1,17 @@
+<!DOCTYPE html>
+<html lang="es" xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{fragments :: head('Cancelar turno')}"></head>
+<body>
+<main style="max-width: 26rem">
+    <h1>Cancelar turno</h1>
+    <!-- Whoever opens an email's link: no login, and nothing of the patient's but when and with whom (D-83). -->
+    <p class="error" th:if="${error}" th:text="${error}">Este link ya no sirve.</p>
+    <form class="card" method="post" th:action="@{/portal/cancel}" th:unless="${error}">
+        <p>Turno del <strong th:text="${when}">jueves 12/03/2026 10:00</strong> con
+            <strong th:text="${practitioner}">Dra. Arias</strong>.</p>
+        <input type="hidden" name="token" th:value="${token}">
+        <button type="submit" class="danger">Cancelar el turno</button>
+    </form>
+</main>
+</body>
+</html>

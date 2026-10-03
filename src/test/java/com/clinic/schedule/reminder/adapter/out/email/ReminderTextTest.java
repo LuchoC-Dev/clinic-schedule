@@ -16,7 +16,7 @@ class ReminderTextTest {
     private final ReminderText text = new ReminderText("Consultorio Norte", "Av. Siempre Viva 742", "011 4555-0000");
 
     private String plain(Recipient recipient) {
-        return text.plain(new ReminderMessage(recipient, THURSDAY, "Dra. Laura Arias"));
+        return text.plain(new ReminderMessage(recipient, THURSDAY, "Dra. Laura Arias", null));
     }
 
     @Test
@@ -55,11 +55,30 @@ class ReminderTextTest {
     @Test
     void theHtmlSaysTheSameEscaped() {
         String html = text.html(new ReminderMessage(new Recipient("a@mail.com", "Ana <b>", false, null), THURSDAY,
-                "Dra. Laura Arias"));
+                "Dra. Laura Arias", null));
 
         assertThat(html).contains("<h2>Consultorio Norte</h2>")
                 .contains("Estimado/a Ana &lt;b&gt;:")
                 .contains("Le recordamos su turno del jueves 12/03/2026 a las 10:30 con Dra. Laura Arias.")
                 .contains("acérquese");
+    }
+
+    /** With time left, the link cancels it, and changing it is still a call (D-83). */
+    @Test
+    void withALinkItCancelsThereAndChangesByCalling() {
+        ReminderMessage message = new ReminderMessage(new Recipient("luis@mail.com", "Luis Pérez", false, null),
+                THURSDAY, "Dra. Laura Arias", "https://turnos.example/portal/cancel?token=abc&x=<1>");
+
+        assertThat(text.plain(message)).endsWith("""
+                Para cancelarlo, entre a este link:
+
+                https://turnos.example/portal/cancel?token=abc&x=<1>
+
+                Para cambiarlo, llame al 011 4555-0000 o acérquese a recepción, en Av. Siempre Viva 742.
+                """);
+        assertThat(text.html(message))
+                .contains("<p>Para cancelarlo, entre a <a href=\""
+                        + "https://turnos.example/portal/cancel?token=abc&amp;x=&lt;1&gt;\">este link</a>.</p>")
+                .contains("Para cambiarlo, llame al");
     }
 }

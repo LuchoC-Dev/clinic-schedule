@@ -122,7 +122,7 @@ class CancellationViewController {
             String patientLabel = patient == null ? "(paciente desconocido)"
                     : patient.document() == null ? patient.fullName()
                     : patient.fullName() + " — " + patient.document();
-            return new Row(CancellationWords.when(cancellation.at()), cancellation.by(),
+            return new Row(CancellationWords.when(cancellation.at()), CancellationWords.who(cancellation),
                     CancellationWords.origin(cancellation), CancellationWords.requester(cancellation.requestedBy()),
                     CancellationWords.when(appointment.slot().startsAt()), practitionerName(appointment, names),
                     appointment.patientId().value(), patientLabel, cancellation.note());
@@ -135,7 +135,7 @@ class CancellationViewController {
 
         static LogRow of(Appointment appointment, Map<UUID, String> names) {
             Cancellation cancellation = appointment.cancellation().orElseThrow();
-            return new LogRow(CancellationWords.when(cancellation.at()), cancellation.by(),
+            return new LogRow(CancellationWords.when(cancellation.at()), CancellationWords.whoForAdmins(cancellation),
                     CancellationWords.origin(cancellation), CancellationWords.requester(cancellation.requestedBy()),
                     CancellationWords.when(appointment.slot().startsAt()), practitionerName(appointment, names));
         }

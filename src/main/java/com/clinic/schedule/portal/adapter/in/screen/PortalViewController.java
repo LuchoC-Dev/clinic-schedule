@@ -1,5 +1,6 @@
 package com.clinic.schedule.portal.adapter.in.screen;
 
+import java.time.Clock;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.LocalTime;
@@ -11,19 +12,26 @@ import java.util.Map;
 import java.util.UUID;
 import java.util.stream.Collectors;
 
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.format.annotation.DateTimeFormat;
+import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.server.ResponseStatusException;
 import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 
 import com.clinic.schedule.patient.api.PatientReader;
 import com.clinic.schedule.portal.application.exception.InvalidActivationLinkException;
+import com.clinic.schedule.portal.application.exception.NotYourAppointmentException;
 import com.clinic.schedule.portal.application.exception.OwnDataRefusedException;
 import com.clinic.schedule.portal.application.usecase.ActivateAccountUseCase;
 import com.clinic.schedule.portal.application.usecase.BookOnWebUseCase;
+import com.clinic.schedule.portal.application.usecase.CancelLinkUseCase;
+import com.clinic.schedule.portal.application.usecase.CancelOwnAppointmentUseCase;
 import com.clinic.schedule.portal.application.usecase.ChangeOwnConsentUseCase;
 import com.clinic.schedule.portal.application.usecase.ChangeOwnContactUseCase;
 import com.clinic.schedule.portal.application.usecase.ListOwnAppointmentsUseCase;
@@ -31,18 +39,22 @@ import com.clinic.schedule.portal.application.usecase.ViewOwnDataUseCase;
 import com.clinic.schedule.portal.application.usecase.ViewWebBookingUseCase;
 import com.clinic.schedule.portal.domain.Appointment;
 import com.clinic.schedule.portal.domain.BookableReason;
+import com.clinic.schedule.portal.domain.BookedAppointment;
 import com.clinic.schedule.portal.domain.OwnAppointments;
 import com.clinic.schedule.portal.domain.OwnContact;
 import com.clinic.schedule.portal.domain.OwnData;
+import com.clinic.schedule.portal.domain.WebCancellationPolicy;
 import com.clinic.schedule.portal.domain.exception.WebBookingRefusedException;
+import com.clinic.schedule.portal.domain.exception.WebCancellationRefusedException;
 import com.clinic.schedule.practitioner.api.PractitionerReader;
 import com.clinic.schedule.practitioner.api.PractitionerSummary;
 
 /**
  * The patients' screens (D-80), in Spanish, since patients read them (D-13): logging in with their document,
  * activating their account from the email's link, their appointments, their data, which they change
- * themselves (D-81), and booking an appointment (D-82). Thin and throwaway, as every screen (D-02): the
- * patients' single-page application will replace them.
+ * themselves (D-81), booking an appointment (D-82) and cancelling one, from their account or from an email's
+ * link with nobody logged in (D-83). Thin and throwaway, as every screen (D-02): the patients' single-page
+ * application will replace them.
  */
 @Controller
 class PortalViewController {
@@ -60,13 +72,18 @@ class PortalViewController {
     private final ChangeOwnConsentUseCase consent;
     private final ViewWebBookingUseCase booking;
     private final BookOnWebUseCase book;
+    private final CancelOwnAppointmentUseCase cancel;
+    private final CancelLinkUseCase cancelLinks;
     private final PatientReader patients;
     private final PractitionerReader practitioners;
+    private final Clock clock;
+    private final int cancelHoursBefore;
 
     PortalViewController(ActivateAccountUseCase activate, ListOwnAppointmentsUseCase appointments,
             ViewOwnDataUseCase data, ChangeOwnContactUseCase contact, ChangeOwnConsentUseCase consent,
-            ViewWebBookingUseCase booking, BookOnWebUseCase book, PatientReader patients,
-            PractitionerReader practitioners) {
+            ViewWebBookingUseCase booking, BookOnWebUseCase book, CancelOwnAppointmentUseCase cancel,
+            CancelLinkUseCase cancelLinks, PatientReader patients, PractitionerReader practitioners, Clock clock,
+            @Value("${app.portal.cancel-hours-before}") int cancelHoursBefore) {
         this.activate = activate;
         this.appointments = appointments;
         this.data = data;
@@ -74,8 +91,12 @@ class PortalViewController {
         this.consent = consent;
         this.booking = booking;
         this.book = book;
+        this.cancel = cancel;
+        this.cancelLinks = cancelLinks;
         this.patients = patients;
         this.practitioners = practitioners;
+        this.clock = clock;
+        this.cancelHoursBefore = cancelHoursBefore;
     }
 
     @GetMapping("/portal/login")
@@ -123,9 +144,74 @@ class PortalViewController {
         OwnAppointments own = appointments.handle();
         Map<UUID, String> names = practitioners.findAll().stream()
                 .collect(Collectors.toMap(PractitionerSummary::id, PractitionerSummary::fullName));
-        model.addAttribute("upcoming", rows(own.upcoming(), names));
-        model.addAttribute("past", rows(own.past(), names));
+        LocalDateTime now = LocalDateTime.now(clock);
+        model.addAttribute("upcoming", own.upcoming().stream()
+                .map(appointment -> Row.of(appointment, names,
+                        WebCancellationPolicy.canCancel(appointment, now, cancelHoursBefore)))
+                .toList());
+        model.addAttribute("past", own.past().stream().map(appointment -> Row.of(appointment, names, false)).toList());
         return "portal-appointments";
+    }
+
+    @PostMapping("/portal/appointments/{id}/cancel")
+    String cancel(@PathVariable UUID id, RedirectAttributes redirect) {
+        try {
+            cancel.handle(id);
+            redirect.addFlashAttribute("message", "Turno cancelado.");
+        } catch (NotYourAppointmentException e) {
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN, e.getMessage());
+        } catch (WebCancellationRefusedException e) {
+            redirect.addFlashAttribute("error", cancellationRefusal(e));
+        }
+        return "redirect:/portal/appointments";
+    }
+
+    /** The page of an email's link, with nobody logged in: when and with whom, and a button (D-83). */
+    @GetMapping("/portal/cancel")
+    String cancelLink(@RequestParam(required = false) String token, Model model) {
+        model.addAttribute("token", token);
+        try {
+            BookedAppointment appointment = cancelLinks.read(token);
+            model.addAttribute("when", WHEN.format(appointment.startsAt()));
+            model.addAttribute("practitioner", practitionerName(appointment));
+        } catch (WebCancellationRefusedException e) {
+            model.addAttribute("error", cancellationRefusal(e));
+        }
+        return "portal-cancel";
+    }
+
+    @PostMapping("/portal/cancel")
+    String cancelByLink(@RequestParam String token, RedirectAttributes redirect) {
+        try {
+            cancelLinks.cancel(token);
+            return "redirect:/portal/cancel/done";
+        } catch (WebCancellationRefusedException e) {
+            redirect.addFlashAttribute("error", cancellationRefusal(e));
+            return "redirect:/portal/cancel/done";
+        }
+    }
+
+    @GetMapping("/portal/cancel/done")
+    String cancelled() {
+        return "portal-cancelled";
+    }
+
+    private String practitionerName(BookedAppointment appointment) {
+        return practitioners.findAll().stream()
+                .filter(practitioner -> practitioner.id().equals(appointment.practitionerId()))
+                .map(PractitionerSummary::fullName)
+                .findFirst()
+                .orElse("");
+    }
+
+    /** What the patient reads when an appointment cannot be cancelled on the web. */
+    private static String cancellationRefusal(WebCancellationRefusedException e) {
+        return switch (e.reason()) {
+            case NOT_BOOKED -> "Ese turno ya no está reservado.";
+            case TOO_LATE -> "Falta menos de un día para el turno: para cancelarlo, llamá o acercate a recepción.";
+            case GONE -> "Este link ya no sirve: el turno se movió o ya se canceló. Si querés cancelarlo, llamá o "
+                    + "acercate a recepción.";
+        };
     }
 
     /**
@@ -273,16 +359,16 @@ class PortalViewController {
         return choices;
     }
 
-    private static List<Row> rows(List<Appointment> appointments, Map<UUID, String> names) {
-        return appointments.stream().map(appointment -> Row.of(appointment, names)).toList();
-    }
+    /**
+     * One of the patient's appointments, in Spanish. Never the note nor who cancelled it. {@code cancellable}
+     * offers cancelling it, while it is booked and there is time to (D-83).
+     */
+    record Row(UUID id, String when, String practitioner, String reason, String state, boolean cancellable) {
 
-    /** One of the patient's appointments, in Spanish. Never the note nor who cancelled it. */
-    record Row(String when, String practitioner, String reason, String state) {
-
-        static Row of(Appointment appointment, Map<UUID, String> names) {
-            return new Row(WHEN.format(appointment.startsAt()), names.getOrDefault(appointment.practitionerId(), ""),
-                    appointment.reason(), state(appointment));
+        static Row of(Appointment appointment, Map<UUID, String> names, boolean cancellable) {
+            return new Row(appointment.id(), WHEN.format(appointment.startsAt()),
+                    names.getOrDefault(appointment.practitionerId(), ""), appointment.reason(), state(appointment),
+                    cancellable);
         }
 
         private static String state(Appointment appointment) {

@@ -4,8 +4,9 @@ import java.time.LocalDateTime;
 import java.util.UUID;
 
 /**
- * Books appointments for other modules: a patient booking their own on the web (D-82). Kept apart from
- * {@link AppointmentReader} because it writes, and the name says so (D-18).
+ * Books and cancels appointments for other modules: a patient booking their own on the web (D-82), and
+ * cancelling it there or from an email's link (D-83). Kept apart from {@link AppointmentReader} because it
+ * writes, and the name says so (D-18).
  */
 public interface AppointmentWriter {
 
@@ -18,4 +19,20 @@ public interface AppointmentWriter {
      * @throws BookingRefusedException when it cannot be booked; nothing is booked then
      */
     UUID bookOnWeb(UUID patientId, UUID practitionerId, UUID reasonId, LocalDateTime startsAt);
+
+    /**
+     * Cancels it as the patient logged in asked from their web account: recorded as made by the account,
+     * asked by the patient. Whether they may is the caller's to decide. It joins the caller's transaction.
+     *
+     * @throws CancellationRefusedException when it is not booked any more
+     */
+    void cancelOnWeb(UUID appointmentId);
+
+    /**
+     * Cancels it as asked from an email's link, with nobody logged in: recorded as made from the link, asked
+     * by the patient.
+     *
+     * @throws CancellationRefusedException when it is not booked any more
+     */
+    void cancelFromEmailLink(UUID appointmentId);
 }

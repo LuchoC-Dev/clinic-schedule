@@ -9,6 +9,7 @@ import java.util.stream.Collectors;
 import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
@@ -17,11 +18,14 @@ import org.springframework.web.bind.annotation.RestController;
 
 import com.clinic.schedule.portal.application.usecase.ActivateAccountUseCase;
 import com.clinic.schedule.portal.application.usecase.BookOnWebUseCase;
+import com.clinic.schedule.portal.application.usecase.CancelLinkUseCase;
+import com.clinic.schedule.portal.application.usecase.CancelOwnAppointmentUseCase;
 import com.clinic.schedule.portal.application.usecase.ChangeOwnConsentUseCase;
 import com.clinic.schedule.portal.application.usecase.ChangeOwnContactUseCase;
 import com.clinic.schedule.portal.application.usecase.ListOwnAppointmentsUseCase;
 import com.clinic.schedule.portal.application.usecase.ViewOwnDataUseCase;
 import com.clinic.schedule.portal.application.usecase.ViewWebBookingUseCase;
+import com.clinic.schedule.portal.domain.BookedAppointment;
 import com.clinic.schedule.practitioner.api.PractitionerReader;
 import com.clinic.schedule.practitioner.api.PractitionerSummary;
 
@@ -42,11 +46,14 @@ class PortalController {
     private final ChangeOwnConsentUseCase consent;
     private final ViewWebBookingUseCase booking;
     private final BookOnWebUseCase book;
+    private final CancelOwnAppointmentUseCase cancel;
+    private final CancelLinkUseCase cancelLinks;
     private final PractitionerReader practitioners;
 
     PortalController(ActivateAccountUseCase activate, ListOwnAppointmentsUseCase appointments, ViewOwnDataUseCase data,
             ChangeOwnContactUseCase contact, ChangeOwnConsentUseCase consent, ViewWebBookingUseCase booking,
-            BookOnWebUseCase book, PractitionerReader practitioners) {
+            BookOnWebUseCase book, CancelOwnAppointmentUseCase cancel, CancelLinkUseCase cancelLinks,
+            PractitionerReader practitioners) {
         this.activate = activate;
         this.appointments = appointments;
         this.data = data;
@@ -54,6 +61,8 @@ class PortalController {
         this.consent = consent;
         this.booking = booking;
         this.book = book;
+        this.cancel = cancel;
+        this.cancelLinks = cancelLinks;
         this.practitioners = practitioners;
     }
 
@@ -90,6 +99,34 @@ class PortalController {
         BookOnWebUseCase.Result booked = book.handle(request.practitionerId(), request.reasonId(), request.startsAt());
         return ResponseEntity.created(URI.create("/api/portal/appointments/" + booked.appointmentId()))
                 .body(WebBookingResponse.of(booked));
+    }
+
+    /** The patient cancels one of their appointments, up to a day before it (D-83). */
+    @PostMapping("/api/portal/appointments/{id}/cancel")
+    ResponseEntity<Void> cancel(@PathVariable UUID id) {
+        cancel.handle(id);
+        return ResponseEntity.noContent().build();
+    }
+
+    /** What an email's link would cancel, with nobody logged in: when, and with whom — nothing else (D-83). */
+    @GetMapping("/api/portal/cancel-links/{token}")
+    LinkedAppointmentResponse cancelLink(@PathVariable String token) {
+        return linked(cancelLinks.read(token));
+    }
+
+    /** Cancels the appointment of an email's link, with nobody logged in. */
+    @PostMapping("/api/portal/cancel-links/{token}/cancel")
+    ResponseEntity<Void> cancelByLink(@PathVariable String token) {
+        cancelLinks.cancel(token);
+        return ResponseEntity.noContent().build();
+    }
+
+    private LinkedAppointmentResponse linked(BookedAppointment appointment) {
+        return new LinkedAppointmentResponse(appointment.startsAt(), practitioners.findAll().stream()
+                .filter(practitioner -> practitioner.id().equals(appointment.practitionerId()))
+                .map(PractitionerSummary::fullName)
+                .findFirst()
+                .orElse(null));
     }
 
     /** The patient's own data (D-81). */

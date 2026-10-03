@@ -7,8 +7,8 @@ import com.clinic.schedule.portal.domain.BookingConfirmation;
 
 /**
  * The words of the email that confirms an appointment booked on the web, in Spanish (D-13, D-82): the
- * practice, a greeting, the day, the time and the practitioner, and how to cancel or change it. Never the
- * reason, which may be clinical.
+ * practice, a greeting, the day, the time and the practitioner, the link to cancel it (D-83) and how to change
+ * it. Never the reason, which may be clinical.
  */
 final class BookingConfirmationText {
 
@@ -19,15 +19,27 @@ final class BookingConfirmationText {
     private final String practice;
     private final String address;
     private final String phone;
+    private final String baseUrl;
 
-    BookingConfirmationText(String practice, String address, String phone) {
+    BookingConfirmationText(String practice, String address, String phone, String baseUrl) {
         this.practice = practice;
         this.address = address;
         this.phone = phone;
+        this.baseUrl = baseUrl.endsWith("/") ? baseUrl.substring(0, baseUrl.length() - 1) : baseUrl;
     }
 
     String subject() {
         return practice + " — Turno reservado";
+    }
+
+    /** The link when there is time to cancel on the web; a call otherwise, and to change it in any case. */
+    private String howToCancel(BookingConfirmation confirmation) {
+        if (confirmation.cancelToken() == null) {
+            return "Para cancelarlo o cambiarlo, llamá al " + phone + " o acercate a recepción.\n\n";
+        }
+        return "Para cancelarlo, entrá a este link:\n\n" + baseUrl + "/portal/cancel?token="
+                + confirmation.cancelToken() + "\n\nPara cambiarlo, llamá al " + phone
+                + " o acercate a recepción.\n\n";
     }
 
     String plain(BookingConfirmation confirmation) {
@@ -35,7 +47,7 @@ final class BookingConfirmationText {
                 + "Hola, " + confirmation.fullName() + ":\n\n"
                 + "Tu turno quedó reservado para el " + DAY.format(confirmation.startsAt()) + " a las "
                 + TIME.format(confirmation.startsAt()) + " con " + confirmation.practitioner() + ".\n\n"
-                + "Para cancelarlo o cambiarlo, llamá al " + phone + " o acercate a recepción.\n\n"
+                + howToCancel(confirmation)
                 + practice + " · " + address + " · " + phone + "\n";
     }
 }

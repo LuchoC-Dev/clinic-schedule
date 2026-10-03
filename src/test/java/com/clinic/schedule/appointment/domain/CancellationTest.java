@@ -63,4 +63,25 @@ class CancellationTest {
                 .isThrownBy(() -> Cancellation.byHand(NOW, "recepcion", CancellationRequester.PATIENT, "x".repeat(201)))
                 .withMessageContaining("at most 200");
     }
+
+    /** On the web or from an email's link, the patient asked, and nobody wrote a note (D-83). */
+    @Test
+    void fromTheWebThePatientAsked() {
+        Cancellation online = Cancellation.onTheWeb(NOW, "portal:cuenta");
+        assertThat(online.by()).isEqualTo("portal:cuenta");
+        assertThat(online.origin()).isEqualTo(CancellationOrigin.ONLINE);
+        assertThat(online.requestedBy()).isEqualTo(CancellationRequester.PATIENT);
+        assertThat(online.note()).isNull();
+
+        Cancellation linked = Cancellation.byEmailLink(NOW);
+        assertThat(linked.by()).isEqualTo(Cancellation.EMAIL_LINK_BY);
+        assertThat(linked.origin()).isEqualTo(CancellationOrigin.EMAIL_LINK);
+        assertThat(linked.requestedBy()).isEqualTo(CancellationRequester.PATIENT);
+        assertThat(linked.at()).isEqualTo(NOW);
+
+        assertThatIllegalArgumentException().isThrownBy(() -> new Cancellation(NOW, "portal:cuenta",
+                CancellationOrigin.ONLINE, CancellationRequester.PRACTICE, null));
+        assertThatIllegalArgumentException().isThrownBy(() -> new Cancellation(NOW, "email-link",
+                CancellationOrigin.EMAIL_LINK, CancellationRequester.PRACTICE, null));
+    }
 }

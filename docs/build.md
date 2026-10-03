@@ -1380,12 +1380,48 @@ break. She booked 10:30: the agenda showed it "consulta · Web", stored as `WEB`
 the confirmation at her account's email — the day, the time and the practitioner, not the reason. A fourth
 appointment ahead was refused with what to do instead.
 
-#### Part 4 — Cancelling `[ ]`
-- [ ] On the web, any of the patient's booked appointments up to 24 hours before it
-- [ ] From an opaque link in the reminder and in the booking's confirmation, without logging in, kept as
-      a hash, until the same 24 hours before and no more once the appointment is moved or cancelled
-- [ ] The cancellation log says the patient asked, and how: the web — by which account — or an email's
-      link; the admins read "patient (web)" alone
+#### Part 4 — Cancelling `[x]`
+- [x] On the web, any of the patient's booked appointments — reception's too — up to
+      `app.portal.cancel-hours-before` hours before it (24), `WebCancellationPolicy`; someone else's a 403
+      (D-83)
+- [x] From an opaque link in the reminder and in the booking's confirmation, without logging in: a
+      `SecretToken` kept as its hash in `cancel_link` with the appointment and its time, good while the
+      appointment is booked at that time and a day is left; none issued when there is not; the page shows when
+      and with whom, never the patient
+- [x] The reminder asks `portal/api/CancelLinkWriter` for the link; both emails say to cancel there and to
+      call to change it
+- [x] The cancellation log says the patient asked, and how — `ONLINE`, by the account, or `EMAIL_LINK`, by the
+      link —; reception reads "el paciente (web)" or "el link del email", the admins "paciente (web)" alone, and
+      their API no `cancelledBy` for them
+- [x] `POST /api/portal/appointments/{id}/cancel`, `GET` and `POST /api/portal/cancel-links/{token}`, "Cancelar"
+      on *Mis turnos* and `/portal/cancel`
+- [x] `V36`: the two origins, asked by the patient, and `cancel_link`
+- [x] 8 unit and 7 integration tests. 422 unit and 508 integration tests, 930 in total
+
+**Verified with:** every new test failing when the code it covers was broken on purpose — 45 breakages, all
+caught: each rule of until when and of what, the link for any appointment or time or kept bare, the origins
+and who asked, the web cancelled by nobody, a moved appointment's link working, someone else's appointment
+cancelled, the policy skipped, a link issued or read too late, a link's cancellation recorded as the web's,
+the link's address, no link in the confirmation or the reminder, each wording of both emails and the link
+not escaped, each word of reception's and the admins' lists and of the patient's appointments, the account
+in the admins' API, a link leading nowhere a 409 and someone else's appointment not a 403, the screen's button
+and refusals, the practitioner on the link's page, the routes needing a login, and both checks of V36. One
+first did not compile and was planted again; one first survived because the test read "el link del email"
+inside "Con el link del email", and the test now reads the cell. Telling the arrivals of a patient's
+cancellation was taken out (D-14): a day ahead, nobody waits with it. A link cancelled at the very moment the
+appointment is cancelled elsewhere is refused as not booked; that race is not tested. The run was stopped
+twice by the machine's lack of memory; the fault left planted was restored, every file checked against its
+state before, and the rest run in shorter batches. `mvnw clean verify` with the PostgreSQL tests running V36.
+
+**Verified with the application running** on a throwaway PostgreSQL and a throwaway Mailpit: taken to V104 by
+the previous commit's build, with the development patient's own email and her consent, and three appointments
+reception booked — one then cancelled by hand, asked by the practice —, and started on this one with the
+reminders' run two minutes on: V36 applied out of order, the cancellation by hand as it was. Mailpit got her
+reminder of Monday with the link, in text and HTML; the link opened, with nobody logged in, a page with the day,
+the time and Dra. Arias and nothing of her, cancelled it, and then said it no longer works. Logged in, *Mis
+turnos* offered "Cancelar" on Tuesday's alone and cancelled it. Reception's list read "el paciente (web) · Por
+la web" and "el link del email · Con el link del email", both asked by the patient, beside reception's own; the
+admins' read "paciente (web)" for both; the rows kept `portal:` and the account's id, and `email-link`.
 
 #### Part 5 — The family group `[ ]`
 - [ ] Reception forms it: adults present and agreeing, children under 13 at a parent's or guardian's

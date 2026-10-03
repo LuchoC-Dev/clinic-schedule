@@ -63,7 +63,10 @@ class SecurityConfiguration {
     /** The role of a patient logged in to their web account, as {@code hasRole} reads it (D-80). */
     private static final String PATIENT = "PATIENT";
 
-    /** Activating an account is done before there is one to log in with: the link is what says whose. */
+    /**
+     * Activating an account is done before there is one to log in with, and cancelling from an email's link
+     * with nobody logged in (D-83): the link is what says whose.
+     */
     @Bean
     @Order(1)
     SecurityFilterChain portalApiChain(HttpSecurity http, ApiSecurityErrorHandler errors,
@@ -75,6 +78,7 @@ class SecurityConfiguration {
                 .userDetailsService(patients)
                 .authorizeHttpRequests(routes -> routes
                         .requestMatchers(HttpMethod.POST, "/api/portal/activation").permitAll()
+                        .requestMatchers("/api/portal/cancel-links/**").permitAll()
                         .anyRequest().hasRole(PATIENT))
                 .httpBasic(basic -> basic.authenticationEntryPoint(errors))
                 .exceptionHandling(handling -> handling.authenticationEntryPoint(errors).accessDeniedHandler(errors))
@@ -99,7 +103,8 @@ class SecurityConfiguration {
                 .userDetailsService(patients)
                 .securityContext(context -> context.securityContextRepository(logins))
                 .authorizeHttpRequests(routes -> routes
-                        .requestMatchers("/portal/login", "/portal/activation").permitAll()
+                        .requestMatchers("/portal/login", "/portal/activation", "/portal/cancel", "/portal/cancel/done")
+                                .permitAll()
                         .anyRequest().hasRole(PATIENT))
                 .addFilterBefore(new DocumentLoginFilter("/portal/login"), UsernamePasswordAuthenticationFilter.class)
                 .formLogin(login -> login.loginPage("/portal/login").defaultSuccessUrl("/portal/appointments", true)

@@ -10,7 +10,8 @@ import com.clinic.schedule.reminder.domain.ReminderMessage;
 
 /**
  * A reminder put into words, in Spanish since the patient reads it (D-13, D-78): the practice's name, a
- * greeting, the day, the time and the practitioner, and how to cancel or change it. Never the reason for
+ * greeting, the day, the time and the practitioner, the link to cancel it (D-83) and how to change it — or
+ * to cancel it by calling, when there is no time left to on the web. Never the reason for
  * the appointment, which may be clinical; nor the practitioner's speciality or room, which the application
  * does not know.
  *
@@ -41,8 +42,9 @@ final class ReminderText {
     }
 
     String plain(ReminderMessage message) {
-        return practice + "\n\n" + greeting(message.recipient()) + "\n\n" + reminder(message) + "\n\n" + howToCancel()
-                + "\n";
+        return practice + "\n\n" + greeting(message.recipient()) + "\n\n" + reminder(message) + "\n\n"
+                + (message.cancelLink() == null ? "" : "Para cancelarlo, entre a este link:\n\n" + message.cancelLink()
+                        + "\n\n") + howToChange(message) + "\n";
     }
 
     String html(ReminderMessage message) {
@@ -50,7 +52,9 @@ final class ReminderText {
                 + "<h2>" + escape(practice) + "</h2>"
                 + "<p>" + escape(greeting(message.recipient())) + "</p>"
                 + "<p>" + escape(reminder(message)) + "</p>"
-                + "<p>" + escape(howToCancel()) + "</p>"
+                + (message.cancelLink() == null ? "" : "<p>Para cancelarlo, entre a <a href=\""
+                        + escape(message.cancelLink()) + "\">este link</a>.</p>")
+                + "<p>" + escape(howToChange(message)) + "</p>"
                 + "</div>";
     }
 
@@ -68,8 +72,9 @@ final class ReminderText {
                 + (message.practitioner() == null ? "" : " con " + message.practitioner()) + ".";
     }
 
-    private String howToCancel() {
-        return "Para cancelarlo o cambiarlo, llame al " + phone + " o acérquese a recepción, en " + address + ".";
+    private String howToChange(ReminderMessage message) {
+        return (message.cancelLink() == null ? "Para cancelarlo o cambiarlo" : "Para cambiarlo") + ", llame al "
+                + phone + " o acérquese a recepción, en " + address + ".";
     }
 
     private static String escape(String text) {

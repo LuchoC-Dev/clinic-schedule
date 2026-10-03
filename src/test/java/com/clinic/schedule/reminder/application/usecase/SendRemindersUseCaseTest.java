@@ -12,6 +12,7 @@ import java.util.Collection;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.UUID;
 
 import org.junit.jupiter.api.Test;
@@ -73,6 +74,7 @@ class SendRemindersUseCaseTest {
                 }
                 sent.add(message);
             },
+            (appointmentId, startsAt) -> Optional.of("https://turnos/cancel/" + appointmentId),
             CLOCK, 3);
 
     private BookedAppointment booked(LocalDateTime startsAt, Contact contact) {
@@ -105,6 +107,7 @@ class SendRemindersUseCaseTest {
             assertThat(message.practitioner()).isEqualTo("Dra. Laura Arias");
             assertThat(message.recipient().address()).isEqualTo("patient@mail.com");
             assertThat(message.recipient().greeted()).isEqualTo("Luis Pérez");
+            assertThat(message.cancelLink()).isEqualTo("https://turnos/cancel/" + appointment.id());
         });
         assertThat(stored).isEqualTo(recorded).singleElement().satisfies(reminder -> {
             assertThat(reminder.outcome()).isEqualTo(ReminderOutcome.SENT);
@@ -209,12 +212,13 @@ class SendRemindersUseCaseTest {
 
         assertThat(new SendRemindersUseCase((from, to) -> List.of(), ids -> {
             throw new AssertionError("no patient to ask for");
-        }, Map::of, untouchable, message -> { }, CLOCK, 3).handle()).isEmpty();
+        }, Map::of, untouchable, message -> { }, (id, at) -> Optional.empty(), CLOCK, 3).handle()).isEmpty();
     }
 
     @Test
     void remindersGoAtLeastADayAhead() {
         assertThatIllegalArgumentException().isThrownBy(() -> new SendRemindersUseCase(
-                (from, to) -> List.of(), ids -> Map.of(), Map::of, repository, message -> { }, CLOCK, 0));
+                (from, to) -> List.of(), ids -> Map.of(), Map::of, repository, message -> { },
+                (id, at) -> Optional.empty(), CLOCK, 0));
     }
 }
