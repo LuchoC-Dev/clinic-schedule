@@ -2,7 +2,7 @@
 <html lang="es" xmlns:th="http://www.thymeleaf.org">
 <head th:replace="~{fragments :: head('Consulta')}"></head>
 <body>
-<header th:replace="~{fragments :: header}"></header>
+<header th:replace="~{fragments :: staffHeader}"></header>
 <main class="wide">
     <h1 th:text="'Consulta de ' + ${patient.fullName}">Consulta de Ana Pérez</h1>
     <p class="muted" th:if="${patient.document}" th:text="${patient.document}">DNI 30111222</p>

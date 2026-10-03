@@ -270,6 +270,18 @@ class PortalScreenIT {
                 .andExpect(redirectedUrl("http://localhost/portal/login"));
     }
 
+    @Test
+    void eachHasAHeaderOfTheirOwn() throws Exception {
+        mockMvc.perform(get("/agenda").with(RECEPTION))
+                .andExpect(content().string(allOf(containsString("href=\"/patients\""),
+                        not(containsString("href=\"/portal/")), not(containsString("/portal/logout")))));
+
+        MockHttpSession patient = logIn(accounts.withAccount(), PASSWORD);
+        mockMvc.perform(get("/portal/appointments").session(patient))
+                .andExpect(content().string(allOf(containsString("href=\"/portal/booking\""),
+                        not(containsString("href=\"/patients\"")), not(containsString("action=\"/logout\"")))));
+    }
+
     /** Not when the session runs out: at the very next request (D-79). */
     @Test
     void aDeactivatedAccountIsSentOutOfTheSessionItHadOpen() throws Exception {

@@ -2,7 +2,7 @@
 <html lang="es" xmlns:th="http://www.thymeleaf.org">
 <head th:replace="~{fragments :: head('Agenda')}"></head>
 <body>
-<header th:replace="~{fragments :: header}"></header>
+<header th:replace="~{fragments :: staffHeader}"></header>
 <main>
     <!-- Whose agenda this is, said in words: the choice above can never disagree with it (D-45). -->
     <h1 th:text="${practitioner != null} ? 'Agenda de ' + ${practitioner.fullName} : 'Agenda de todos los profesionales'">Agenda</h1>

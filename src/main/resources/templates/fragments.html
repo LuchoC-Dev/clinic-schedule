@@ -52,7 +52,11 @@
     </style>
 </head>
 <body>
-<header th:fragment="header">
+<!--
+  The staff's header. Named apart from the element: a selector "header" would also take every <header> here,
+  the patients' included.
+-->
+<header th:fragment="staffHeader">
     <strong>Consultorio</strong>
     <!--
       admin is set on the admins' screens: they administer the users (D-68), read who read which

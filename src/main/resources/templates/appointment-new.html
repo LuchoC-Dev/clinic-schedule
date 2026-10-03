@@ -2,7 +2,7 @@
 <html lang="es" xmlns:th="http://www.thymeleaf.org">
 <head th:replace="~{fragments :: head('Nuevo turno')}"></head>
 <body>
-<header th:replace="~{fragments :: header}"></header>
+<header th:replace="~{fragments :: staffHeader}"></header>
 <main>
     <h1 th:text="${practitioner != null} ? 'Nuevo turno con ' + ${practitioner.fullName} : 'Nuevo turno'">Nuevo turno</h1>
     <div th:replace="~{fragments :: messages}"></div>

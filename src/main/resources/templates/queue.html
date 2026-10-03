@@ -2,7 +2,7 @@
 <html lang="es" xmlns:th="http://www.thymeleaf.org">
 <head th:replace="~{fragments :: head('Cola')}"></head>
 <body>
-<header th:replace="~{fragments :: header}"></header>
+<header th:replace="~{fragments :: staffHeader}"></header>
 <main>
     <h1 th:text="${queue.name}">Guardia</h1>
     <p class="muted" th:if="${queue.room}" th:text="'Consultorio ' + ${queue.room}">Consultorio 3</p>

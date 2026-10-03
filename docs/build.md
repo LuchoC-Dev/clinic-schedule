@@ -1423,6 +1423,18 @@ turnos* offered "Cancelar" on Tuesday's alone and cancelled it. Reception's list
 la web" and "el link del email · Con el link del email", both asked by the patient, beside reception's own; the
 admins' read "paciente (web)" for both; the rows kept `portal:` and the account's id, and `email-link`.
 
+#### Fix — each one sees only their own header `[x]`
+- [x] Found trying part 5a's screens: since part 1, every staff screen also showed the patients' header —
+      "Mis turnos", "Sacar turno", "Mis datos" and their "Salir" —, since a fragment selector `header` also
+      takes every `<header>` element, and `fragments.html` had two. Their routes ask for a patient, so it
+      showed nothing of theirs
+- [x] The staff's fragment is now `staffHeader`, on every staff screen
+- [x] 1 integration test, failing with the old selector planted back on the agenda. 422 unit and 509
+      integration tests, 931 in total
+
+**Verified in a browser** against the application on a throwaway PostgreSQL: the agenda and the family groups
+showed reception's header alone, and *Mis turnos* the patient's alone.
+
 #### Part 5 — The family group `[ ]`
 - [ ] Reception forms it: adults present and agreeing, children under 13 at a parent's or guardian's
       request, each change recorded; a patient in several groups

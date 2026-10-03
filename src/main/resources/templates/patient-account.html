@@ -2,7 +2,7 @@
 <html lang="es" xmlns:th="http://www.thymeleaf.org">
 <head th:replace="~{fragments :: head('Cuenta web')}"></head>
 <body>
-<header th:replace="~{fragments :: header}"></header>
+<header th:replace="~{fragments :: staffHeader}"></header>
 <main>
     <h1>Cuenta web de <a th:href="@{/patients/{id}(id=${patient.id})}" th:text="${patient.fullName}">Ana Pérez</a></h1>
     <p class="muted" th:text="${patient.document} ?: 'Sin documento'">DNI 30111222</p>

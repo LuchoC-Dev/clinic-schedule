@@ -2,7 +2,7 @@
 <html lang="es" xmlns:th="http://www.thymeleaf.org">
 <head th:replace="~{fragments :: head('Turnos del paciente')}"></head>
 <body>
-<header th:replace="~{fragments :: header}"></header>
+<header th:replace="~{fragments :: staffHeader}"></header>
 <main>
     <h1 th:text="'Turnos de ' + ${patient.fullName}">Turnos de Ana Pérez</h1>
     <p class="muted" th:if="${patient.document}" th:text="${patient.document}">DNI 30111222</p>
