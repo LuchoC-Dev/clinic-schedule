@@ -9,6 +9,7 @@
         Identidad: <span th:text="${patient.identity}">No verificada</span>
         <span th:if="${patient.alias != null}" th:text="' · alias ' + ${patient.alias}"> · alias NN-4821</span>
         · <a th:href="@{/patient-accounts(patient=${patient.id})}">Cuenta web</a>
+        · <a th:href="@{/family-groups(patient=${patient.id})}">Grupos familiares</a>
     </p>
     <div th:replace="~{fragments :: messages}"></div>
 

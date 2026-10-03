@@ -59,7 +59,7 @@ and books a new patient at once, with their phone and email, the cancellations �
 when, how and who asked —, what happened to each reminder, and whom to call, a patients
 screen — where a patient who gives no name is registered under an alias, and each patient's
 identity is corrected and verified, with its history, and their date of birth, phone and email
-recorded, each saying whose it is, and their health insurance, and who agreed to be reminded on each, with a history of their own — each patient's appointments, cancelled ones included, a practitioners screen to set
+recorded, each saying whose it is, and their health insurance, and who agreed to be reminded on each, with a history of their own — each patient's appointments, their family groups — formed at the desk, a child at a parent's request, with who shares their appointments and a history —, cancelled ones included, a practitioners screen to set
 up their reasons and week and record their absences, a queues screen to set up the arrival
 queues and who serves each, the arrivals screen, where queues are opened and closed and patients
 brought in, and the waiting-room screen, which names nobody. The queue screens show each change as
@@ -135,6 +135,12 @@ document as its type and number, such as `DNI 27333444`. Errors share one body:
 | `GET` | `/api/patient-accounts?patientId=`, `/api/patient-accounts/{id}` | a patient's web account and its state; never its password |
 | `POST` | `/api/patient-accounts/{id}/activation-resend`, `/email-change`, `/deactivate`, `/reactivate` | send the activation again, change the account's email, switch it off or on |
 | `GET` | `/api/patient-accounts/{id}/changes` | what was done to the account, when and by whom |
+| `POST` | `/api/family-groups` | reception forms a family group — `{name}` |
+| `GET` | `/api/family-groups`, `?patientId=`, `/api/family-groups/{id}` | the family groups by name, or a patient's, with each member and whether the group sees their appointments |
+| `POST` | `/api/family-groups/{id}/members` | someone of 13 or older joins, present and agreeing — `{patientId, shares}`, `shares` an adolescent's choice; an adult shares |
+| `POST` | `/api/family-groups/{id}/children` | a child under 13, at the request of an adult of the group — `{patientId, requestedBy, relation, proofSeen}`, `relation` `MOTHER`, `FATHER` or `GUARDIAN` |
+| `POST` | `/api/family-groups/{id}/members/{patientId}/remove`, `/sharing` | take a member out; a member of 13 or older starts or stops sharing — `{shares}` |
+| `GET` | `/api/family-groups/{id}/changes` | what happened to the group, the most recent first, and by whom |
 | `POST` | `/api/portal/activation` | the patient activates their account — `{token, password}`, the token from the email's link; no login |
 | `GET` | `/api/portal/appointments` | the patient logged in reads their appointments: those ahead and those of the last 12 months, without the note |
 | `GET` | `/api/portal/profile` | the patient's own data: name, document and date of birth, their phone and email with whose each is and its consent, and their health insurance |

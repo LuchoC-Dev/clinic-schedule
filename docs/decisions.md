@@ -3093,3 +3093,52 @@ the link's page (the link travels with the email, and may be forwarded); the lin
 appointment's state and time already say when it stops working); a confirmation of attendance (nothing reads
 it); moving an appointment on the web (cancel and book again); the patient's document or account as who
 cancelled for the admins (it would lead back to the patient); telling the arrivals (unreachable a day ahead).
+
+## D-84 — Reception forms family groups, with each member's age deciding how they join and whether they share
+**Date:** 2026-10-03 · **Status:** accepted
+
+v2, phase 6, part 5a. So that a family books from one account (part 5b), reception first forms the group at
+the desk. What a member then does for the others on the web is part 5b; this part only forms the groups and
+keeps their history.
+
+**In `portal`, as its own aggregate.** `FamilyGroup`: a name reception gives it — "Familia Pérez", up to 100
+characters — and its members, `FamilyMember`: the patient, whether they share their appointments with the
+group, and for a child who asked for them to be added and what they are to the child, `MOTHER`, `FATHER` or
+`GUARDIAN`. A patient may be in several groups, and is in each once. It belongs to `portal` because only the
+patients' web reads it; the patients are the patient module's, read through `PatientReader` and the
+`AccountHolderPort` the accounts already use, and `family_member` points at them without a foreign key (D-30).
+
+**The ages decide, and `FamilyGroupService` is the only way in** (D-17). `AgeBand`: a child under 13, an
+adolescent from 13 to 17, an adult from 18, counted on the birthday. Someone of 13 or older joins by
+themselves, present and agreeing: an adult's agreeing is sharing their appointments; an adolescent's stay
+private unless they choose to share them (Código Civil y Comercial, art. 26; Ley 26.529, art. 2 d). A child
+under 13 is added at the request of an adult of the group, with the relation named and once reception has
+seen what proves it — the form's checkbox is what records that it did —; they share always, since their
+parents act for them. From 13 each member chooses whether to share, and reception changes it at their
+request. Nobody joins without a date of birth, since nothing could tell which of these applies; one taken
+away later leaves the member as they were, read as "sin fecha de nacimiento".
+
+**A child's sharing turns private on their thirteenth birthday, with nobody doing anything.** A child is
+stored with `shares` false, and `FamilyGroupService.sharesOn` reads a child's as true while they are under
+13; on the birthday the stored value — their own choice, which nobody has made yet — is what counts. No job
+runs on birthdays.
+
+**Every change is recorded.** `family_group_change`: the group's creation, a member joining or added as a
+child, removed, starting or stopping to share — with who, reception's username, and when. Removing a member
+removes them alone: a parent leaving leaves the children in the group, with whoever else is in it.
+
+**Routes and screens, reception's** (D-34). `POST /api/family-groups`, `GET` them — all by name, or a
+patient's with `?patientId=` — and one by id; `POST /api/family-groups/{id}/members` (`patientId`, `shares`),
+`…/children` (`patientId`, `requestedBy`, `relation`, `proofSeen`), `…/members/{patientId}/remove` and
+`…/members/{patientId}/sharing` (`shares`); `GET …/changes`, the most recent first. A rule refusing is a
+409, a group that is not there a 404, a patient who is not a 400. The screens, `/family-groups` and
+`/family-groups/{id}`, reached from the patient's: the members with their age and whether the group sees
+their appointments — "Siempre (menor de 13)", "Comparte sus turnos", "Turnos privados" —, who asked for a
+child, a search to add patients, a button to share or stop, and the history.
+
+*Rejected:* a household or address as the group (a separated parent's child is in two); the parent-child
+link stored on the patient (it is only the group's, and only for asking to add a child); recording the
+document seen (reception's checkbox records that it was seen, as with the identity, D-60); a job on
+birthdays (the age is computed when read); a child joining by themselves, or an adolescent added by a
+parent (each joins as their age allows); a member's appointments shared by default from 13 (private until
+they say so); patients forming groups on the web (reception sees the proof).

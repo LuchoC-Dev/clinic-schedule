@@ -6,18 +6,21 @@ import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 
 import com.clinic.schedule.portal.application.exception.AccountNotFoundException;
+import com.clinic.schedule.portal.application.exception.FamilyGroupNotFoundException;
 import com.clinic.schedule.portal.application.exception.InvalidActivationLinkException;
 import com.clinic.schedule.portal.application.exception.NotYourAppointmentException;
 import com.clinic.schedule.portal.application.exception.OwnDataRefusedException;
 import com.clinic.schedule.portal.application.exception.UnknownPatientException;
 import com.clinic.schedule.portal.domain.exception.AccountRefusedException;
 import com.clinic.schedule.portal.domain.exception.AccountStateException;
+import com.clinic.schedule.portal.domain.exception.FamilyRefusedException;
 import com.clinic.schedule.portal.domain.exception.WebBookingRefusedException;
 import com.clinic.schedule.portal.domain.exception.WebCancellationRefusedException;
 import com.clinic.schedule.shared.http.ErrorResponse;
 
 /** Translates this module's refusals into HTTP for its own controllers only (D-23). */
-@RestControllerAdvice(assignableTypes = {PatientAccountController.class, PortalController.class})
+@RestControllerAdvice(assignableTypes = {PatientAccountController.class, PortalController.class,
+        FamilyGroupController.class})
 class PortalExceptionHandler {
 
     /** An appointment that is not the patient's: refused, never answered as if it were not there (D-50). */
@@ -35,16 +38,17 @@ class PortalExceptionHandler {
         return ResponseEntity.status(HttpStatus.CONFLICT).body(ErrorResponse.of(409, "Conflict", e.getMessage()));
     }
 
-    @ExceptionHandler(AccountNotFoundException.class)
-    ResponseEntity<ErrorResponse> notFound(AccountNotFoundException e) {
+    @ExceptionHandler({AccountNotFoundException.class, FamilyGroupNotFoundException.class})
+    ResponseEntity<ErrorResponse> notFound(RuntimeException e) {
         return ResponseEntity.status(HttpStatus.NOT_FOUND).body(ErrorResponse.of(404, "Not found", e.getMessage()));
     }
 
     /**
-     * The patient may not have an account, the account's state does not allow what was asked, or the web does
-     * not book what was asked.
+     * The patient may not have an account, the account's state does not allow what was asked, the web does
+     * not book what was asked, or a family group's rules refuse it.
      */
-    @ExceptionHandler({AccountRefusedException.class, AccountStateException.class, WebBookingRefusedException.class})
+    @ExceptionHandler({AccountRefusedException.class, AccountStateException.class, WebBookingRefusedException.class,
+            FamilyRefusedException.class})
     ResponseEntity<ErrorResponse> conflict(RuntimeException e) {
         return ResponseEntity.status(HttpStatus.CONFLICT).body(ErrorResponse.of(409, "Conflict", e.getMessage()));
     }

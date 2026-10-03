@@ -1435,9 +1435,53 @@ admins' read "paciente (web)" for both; the rows kept `portal:` and the account'
 **Verified in a browser** against the application on a throwaway PostgreSQL: the agenda and the family groups
 showed reception's header alone, and *Mis turnos* the patient's alone.
 
-#### Part 5 — The family group `[ ]`
-- [ ] Reception forms it: adults present and agreeing, children under 13 at a parent's or guardian's
-      request, each change recorded; a patient in several groups
+#### Part 5a — Reception forms the family group `[x]`
+- [x] `FamilyGroup` in `portal`: a name and its members, each with whether they share their appointments and,
+      for a child, who asked and what they are to them; a patient in several groups, once in each (D-84)
+- [x] `FamilyGroupService`, the only way in: from 13 a patient joins by themselves — an adult sharing, an
+      adolescent as they choose —; a child under 13 at the request of an adult of the group, with the relation
+      and the proof seen; nobody without a date of birth; from 13 each member chooses whether to share
+- [x] A child shares always, read from the date of birth, and turns private on their thirteenth birthday with
+      nobody doing anything
+- [x] Every change recorded, with who and when; removing a member leaves the rest, a parent's children too
+- [x] `POST /api/family-groups`, `GET` them, by patient and by id, `…/members`, `…/children`,
+      `…/members/{patientId}/remove` and `…/sharing`, `GET …/changes`; reception's alone
+- [x] `/family-groups` and `/family-groups/{id}`, reached from the patient's screen: the members with their age
+      and whether they share, who asked for a child, a search to add patients, sharing and removing, the history
+- [x] `V37`: `family_group`, `family_member` and `family_group_change`
+- [x] 13 unit and 7 integration tests. 435 unit and 516 integration tests, 951 in total
+
+**Verified with:** every new test failing when the code it covers was broken on purpose — 79 breakages, all
+caught: both ages' boundaries, each rule of joining, of adding a child — a child joining, an adolescent added
+as one, twice, a requester out of the group or an adolescent, no relation, no proof, starting to share — of
+removing and of sharing, a child's sharing read before and after 13 and without a date of birth, the name's
+length and spaces, removing or sharing for everyone, the change's action, the group's and the member's and
+the change's invariants, the history or the group not kept, each argument of the use cases mixed up, each
+query and order of the storage, each field kept, each mapping and validation of the API, and each label,
+refusal, message, button, link and search of the screens. One first survived — a change of the group's
+creation about a member —, and a unit test now covers that invariant. Found on the way: the screen named a
+member who had left as "un paciente que ya no está", since it read only the members' names; it reads now
+everyone the history names. Taken out (D-14), since nothing reaches them: the fallbacks for a patient who is
+not there (patients are never deleted), "el paciente (web)" in the history (nobody changes a group from the
+web until part 5b), the name's `@NotBlank` and the relation's `@NotNull` (the group's rules answer both). The
+history's order is tested by moving two entries' times, since the tests' clock stands still. The run was
+stopped once by the machine's lack of memory; the fault left planted was restored, every file checked against
+its state before, and the rest run in batches of seven. `mvnw clean verify` with the PostgreSQL tests running
+V37.
+
+**Verified with the application running** on a throwaway PostgreSQL and a throwaway Mailpit: taken to V104 by
+the previous commit's build, with a family registered — Jorge, 48; Valentina, 15; Benjamín, 10; Nora, with no
+date of birth —, and started on this one: V37 applied out of order. From Jorge's screen, *Grupos familiares*
+led to "Familia Medina", created. Jorge joined sharing; Nora was refused for her date of birth, Benjamín for
+being under 13; Valentina joined with her appointments private, and only Jorge was offered to ask for a child.
+Benjamín was added at his request, "A pedido de Jorge Medina (padre)", "Siempre (menor de 13)". Valentina
+started sharing; Jorge left, and Benjamín stayed. The history read the six changes, the most recent first,
+naming Jorge after he left. Over the API, a second group with Laura took Benjamín as her child — refused
+first without the proof — and he was in both. The practitioner, the admin and the waiting room were refused
+the routes. Found on the way: every staff screen also showed the patients' header, since part 1 — the fix
+above.
+
+#### Part 5b — The members act for each other on the web `[ ]`
 - [ ] An adult member books, cancels and sees the appointments of the members who share theirs; a member
       under 18 acts only for themselves; nobody reads another's data
 - [ ] From 13 an adolescent's appointments are private until they share them, from their account or at

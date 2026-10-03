@@ -718,8 +718,9 @@ come. As every screen, they are thin and meant to be thrown away (D-02).
    three at most; the email that confirms it; the web's appointments marked as such.
 4. Cancelling, from the web and from the link of the reminder and of the confirmation, in the
    cancellation log.
-5. The family group: forming it at reception, children and adults; booking, cancelling and seeing the
-   members' appointments; the adolescents' privacy.
+5. The family group, in two: reception forms it, children and adults, with who shares their
+   appointments (5a); the members book, cancel and see each other's appointments on the web, with the
+   adolescents' privacy (5b).
 6. Recovering the password by email, and locking the account after five failed logins.
 
 Not in this phase: registering a patient, or opening an account, from the web; an account for someone

@@ -1,0 +1,34 @@
+<!DOCTYPE html>
+<html lang="es" xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{fragments :: head('Grupos familiares')}"></head>
+<body>
+<header th:replace="~{fragments :: staffHeader}"></header>
+<main>
+    <h1 th:if="${patient}">Grupos familiares de <a th:href="@{/patients/{id}(id=${patient.id})}"
+                                                   th:text="${patient.fullName}">Ana Pérez</a></h1>
+    <h1 th:unless="${patient}">Grupos familiares</h1>
+    <div th:replace="~{fragments :: messages}"></div>
+
+    <p th:if="${groups.isEmpty()}" class="muted">No hay grupos.</p>
+    <table th:unless="${groups.isEmpty()}">
+        <thead><tr><th>Grupo</th><th>Miembros</th></tr></thead>
+        <tbody>
+        <tr th:each="g : ${groups}">
+            <td><a th:href="@{/family-groups/{id}(id=${g.id})}" th:text="${g.name}">Familia Pérez</a></td>
+            <td th:text="${g.members.size()}">3</td>
+        </tr>
+        </tbody>
+    </table>
+
+    <h2>Nuevo grupo</h2>
+    <form class="card bar" method="post" th:action="@{/family-groups}">
+        <label>Nombre
+            <input type="text" name="name" required maxlength="100" placeholder="Familia Pérez">
+        </label>
+        <button type="submit" class="primary">Crear grupo</button>
+    </form>
+    <p class="muted">Después se agregan los miembros: quien tiene 13 años o más entra presente y aceptando; un menor
+        de 13, a pedido de su madre, padre o tutor del grupo, con la documentación a la vista.</p>
+</main>
+</body>
+</html>
