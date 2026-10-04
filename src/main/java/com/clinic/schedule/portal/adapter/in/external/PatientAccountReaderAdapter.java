@@ -1,5 +1,7 @@
 package com.clinic.schedule.portal.adapter.in.external;
 
+import java.time.Clock;
+import java.time.LocalDateTime;
 import java.util.Optional;
 import java.util.UUID;
 
@@ -21,9 +23,11 @@ import com.clinic.schedule.portal.domain.AccountStatus;
 class PatientAccountReaderAdapter implements PatientAccountReader {
 
     private final FindAccountUseCase accounts;
+    private final Clock clock;
 
-    PatientAccountReaderAdapter(FindAccountUseCase accounts) {
+    PatientAccountReaderAdapter(FindAccountUseCase accounts, Clock clock) {
         this.accounts = accounts;
+        this.clock = clock;
     }
 
     @Override
@@ -35,6 +39,7 @@ class PatientAccountReaderAdapter implements PatientAccountReader {
     public Optional<LoginAccount> findActiveForLogin(UUID patientId) {
         return accounts.byPatient(patientId)
                 .filter(account -> account.status() == AccountStatus.ACTIVE)
-                .map(account -> new LoginAccount(account.id(), account.patientId(), account.passwordHash()));
+                .map(account -> new LoginAccount(account.id(), account.patientId(), account.passwordHash(),
+                        account.isLockedAt(LocalDateTime.now(clock))));
     }
 }

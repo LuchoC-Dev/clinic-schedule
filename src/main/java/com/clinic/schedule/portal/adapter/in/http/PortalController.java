@@ -21,10 +21,12 @@ import com.clinic.schedule.portal.application.usecase.ActivateAccountUseCase;
 import com.clinic.schedule.portal.application.usecase.BookOnWebUseCase;
 import com.clinic.schedule.portal.application.usecase.CancelLinkUseCase;
 import com.clinic.schedule.portal.application.usecase.CancelOwnAppointmentUseCase;
+import com.clinic.schedule.portal.application.usecase.ChangeOwnPasswordUseCase;
 import com.clinic.schedule.portal.application.usecase.ChangeOwnConsentUseCase;
 import com.clinic.schedule.portal.application.usecase.ChangeOwnContactUseCase;
 import com.clinic.schedule.portal.application.usecase.ListOwnAppointmentsUseCase;
 import com.clinic.schedule.portal.application.usecase.ManageOwnFamilyUseCase;
+import com.clinic.schedule.portal.application.usecase.RecoverPasswordUseCase;
 import com.clinic.schedule.portal.application.usecase.ViewFamilyUseCase;
 import com.clinic.schedule.portal.application.usecase.ViewOwnDataUseCase;
 import com.clinic.schedule.portal.application.usecase.ViewWebBookingUseCase;
@@ -53,12 +55,15 @@ class PortalController {
     private final CancelLinkUseCase cancelLinks;
     private final ViewFamilyUseCase family;
     private final ManageOwnFamilyUseCase ownFamily;
+    private final RecoverPasswordUseCase recovery;
+    private final ChangeOwnPasswordUseCase ownPassword;
     private final PractitionerReader practitioners;
 
     PortalController(ActivateAccountUseCase activate, ListOwnAppointmentsUseCase appointments, ViewOwnDataUseCase data,
             ChangeOwnContactUseCase contact, ChangeOwnConsentUseCase consent, ViewWebBookingUseCase booking,
             BookOnWebUseCase book, CancelOwnAppointmentUseCase cancel, CancelLinkUseCase cancelLinks,
-            ViewFamilyUseCase family, ManageOwnFamilyUseCase ownFamily, PractitionerReader practitioners) {
+            ViewFamilyUseCase family, ManageOwnFamilyUseCase ownFamily, RecoverPasswordUseCase recovery,
+            ChangeOwnPasswordUseCase ownPassword, PractitionerReader practitioners) {
         this.activate = activate;
         this.appointments = appointments;
         this.data = data;
@@ -70,6 +75,8 @@ class PortalController {
         this.cancelLinks = cancelLinks;
         this.family = family;
         this.ownFamily = ownFamily;
+        this.recovery = recovery;
+        this.ownPassword = ownPassword;
         this.practitioners = practitioners;
     }
 
@@ -135,6 +142,30 @@ class PortalController {
                 .map(PractitionerSummary::fullName)
                 .findFirst()
                 .orElse(null));
+    }
+
+    /**
+     * Sends the link to choose a new password to the account's email (D-86). Always the same answer, so it tells
+     * nobody whether the document has an account.
+     */
+    @PostMapping("/api/portal/password-recovery")
+    ResponseEntity<Void> recoverPassword(@RequestBody PasswordRequests.Recovery request) {
+        recovery.ask(request.documentType(), request.documentNumber());
+        return ResponseEntity.noContent().build();
+    }
+
+    /** With the token of the email's link, and the new password. */
+    @PostMapping("/api/portal/password-reset")
+    ResponseEntity<Void> resetPassword(@RequestBody PasswordRequests.Reset request) {
+        recovery.reset(request.token(), request.password());
+        return ResponseEntity.noContent().build();
+    }
+
+    /** The patient logged in changes their password, giving the current one. */
+    @PostMapping("/api/portal/password")
+    ResponseEntity<Void> changePassword(@RequestBody PasswordRequests.Change request) {
+        ownPassword.handle(request.currentPassword(), request.newPassword());
+        return ResponseEntity.noContent().build();
     }
 
     /** The patient's family groups, by name (D-85). */

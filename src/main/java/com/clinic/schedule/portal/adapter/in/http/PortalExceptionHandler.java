@@ -8,9 +8,11 @@ import org.springframework.web.bind.annotation.RestControllerAdvice;
 import com.clinic.schedule.portal.application.exception.AccountNotFoundException;
 import com.clinic.schedule.portal.application.exception.FamilyGroupNotFoundException;
 import com.clinic.schedule.portal.application.exception.InvalidActivationLinkException;
+import com.clinic.schedule.portal.application.exception.InvalidResetLinkException;
 import com.clinic.schedule.portal.application.exception.NotYourAppointmentException;
 import com.clinic.schedule.portal.application.exception.NotYourFamilyMemberException;
 import com.clinic.schedule.portal.application.exception.OwnDataRefusedException;
+import com.clinic.schedule.portal.application.exception.OwnPasswordRefusedException;
 import com.clinic.schedule.portal.application.exception.UnknownPatientException;
 import com.clinic.schedule.portal.domain.exception.AccountRefusedException;
 import com.clinic.schedule.portal.domain.exception.AccountStateException;
@@ -58,11 +60,13 @@ class PortalExceptionHandler {
     }
 
     /**
-     * A patient who does not exist, a link that activates nothing, an email that cannot be one, a password
-     * too short or too long, or a patient's own data refused: the request is malformed.
+     * A patient who does not exist, a link that activates or resets nothing, an email that cannot be one, a
+     * password too short or too long, a wrong current password, or a patient's own data refused: the request is
+     * malformed.
      */
     @ExceptionHandler({UnknownPatientException.class, InvalidActivationLinkException.class,
-            OwnDataRefusedException.class, IllegalArgumentException.class})
+            InvalidResetLinkException.class, OwnPasswordRefusedException.class, OwnDataRefusedException.class,
+            IllegalArgumentException.class})
     ResponseEntity<ErrorResponse> malformedRequest(RuntimeException e) {
         return ResponseEntity.badRequest().body(ErrorResponse.of(400, "Bad request", e.getMessage()));
     }

@@ -1,5 +1,9 @@
 package com.clinic.schedule.portal.adapter.in.screen;
 
+import com.clinic.schedule.portal.application.usecase.RecoverPasswordUseCase;
+import com.clinic.schedule.portal.application.usecase.ChangeOwnPasswordUseCase;
+import com.clinic.schedule.portal.application.exception.OwnPasswordRefusedException;
+import com.clinic.schedule.portal.application.exception.InvalidResetLinkException;
 import com.clinic.schedule.portal.domain.exception.FamilyRefusedException;
 import com.clinic.schedule.portal.domain.AgeBand;
 import com.clinic.schedule.portal.domain.AccountHolder;
@@ -61,7 +65,8 @@ import com.clinic.schedule.practitioner.api.PractitionerSummary;
  * activating their account from the email's link, their appointments, their data, which they change
  * themselves (D-81), booking an appointment (D-82) and cancelling one, from their account or from an email's
  * link with nobody logged in (D-83), and their family: the appointments of the members they act for, booked and
- * cancelled as their own, and the groups they are in (D-85). Thin and throwaway, as every screen (D-02): the
+ * cancelled as their own, and the groups they are in (D-85); and their password, changed or recovered by
+ * email (D-86). Thin and throwaway, as every screen (D-02): the
  * patients' single-page application will replace them.
  */
 @Controller
@@ -84,6 +89,8 @@ class PortalViewController {
     private final CancelLinkUseCase cancelLinks;
     private final ViewFamilyUseCase family;
     private final ManageOwnFamilyUseCase ownFamily;
+    private final RecoverPasswordUseCase recovery;
+    private final ChangeOwnPasswordUseCase ownPassword;
     private final PatientReader patients;
     private final PractitionerReader practitioners;
     private final Clock clock;
@@ -93,7 +100,8 @@ class PortalViewController {
             ViewOwnDataUseCase data, ChangeOwnContactUseCase contact, ChangeOwnConsentUseCase consent,
             ViewWebBookingUseCase booking, BookOnWebUseCase book, CancelOwnAppointmentUseCase cancel,
             CancelLinkUseCase cancelLinks, ViewFamilyUseCase family, ManageOwnFamilyUseCase ownFamily,
-            PatientReader patients, PractitionerReader practitioners, Clock clock,
+            RecoverPasswordUseCase recovery, ChangeOwnPasswordUseCase ownPassword, PatientReader patients,
+            PractitionerReader practitioners, Clock clock,
             @Value("${app.portal.cancel-hours-before}") int cancelHoursBefore) {
         this.activate = activate;
         this.appointments = appointments;
@@ -106,6 +114,8 @@ class PortalViewController {
         this.cancelLinks = cancelLinks;
         this.family = family;
         this.ownFamily = ownFamily;
+        this.recovery = recovery;
+        this.ownPassword = ownPassword;
         this.patients = patients;
         this.practitioners = practitioners;
         this.clock = clock;
@@ -150,6 +160,78 @@ class PortalViewController {
             model.addAttribute("error", "La contraseña tiene de 10 a 72 caracteres.");
             return "portal-activation";
         }
+    }
+
+    /** Asking for the link to choose a new password, with the document (D-86). */
+    @GetMapping("/portal/password-recovery")
+    String passwordRecovery(Model model) {
+        model.addAttribute("documentTypes", patients.documentTypes());
+        return "portal-password-recovery";
+    }
+
+    /** The same answer whether the document has an account or not. */
+    @PostMapping("/portal/password-recovery")
+    String recoverPassword(@RequestParam String documentType, @RequestParam String documentNumber,
+            RedirectAttributes redirect) {
+        recovery.ask(documentType, documentNumber);
+        redirect.addFlashAttribute("message", "Si ese documento tiene una cuenta, le mandamos un link al email de "
+                + "la cuenta para elegir una contraseña nueva. Vale una hora.");
+        return "redirect:/portal/password-recovery";
+    }
+
+    @GetMapping("/portal/password-reset")
+    String passwordReset(@RequestParam(required = false) String token, Model model) {
+        model.addAttribute("token", token);
+        model.addAttribute("usable", recovery.isUsable(token));
+        return "portal-password-reset";
+    }
+
+    /** The password is asked twice, as on activating the account. */
+    @PostMapping("/portal/password-reset")
+    String resetPassword(@RequestParam String token, @RequestParam String password,
+            @RequestParam String repeatedPassword, Model model) {
+        model.addAttribute("token", token);
+        model.addAttribute("usable", true);
+        if (!password.equals(repeatedPassword)) {
+            model.addAttribute("error", "Las dos contraseñas no coinciden.");
+            return "portal-password-reset";
+        }
+        try {
+            recovery.reset(token, password);
+            return "redirect:/portal/login?reset";
+        } catch (InvalidResetLinkException e) {
+            model.addAttribute("usable", false);
+            return "portal-password-reset";
+        } catch (IllegalArgumentException e) {
+            model.addAttribute("error", "La contraseña tiene de 10 a 72 caracteres.");
+            return "portal-password-reset";
+        }
+    }
+
+    @GetMapping("/portal/password")
+    String password() {
+        return "portal-password";
+    }
+
+    @PostMapping("/portal/password")
+    String changePassword(@RequestParam String currentPassword, @RequestParam String newPassword,
+            @RequestParam String repeatedPassword, RedirectAttributes redirect) {
+        if (!newPassword.equals(repeatedPassword)) {
+            redirect.addFlashAttribute("error", "Las dos contraseñas nuevas no coinciden.");
+            return "redirect:/portal/password";
+        }
+        try {
+            ownPassword.handle(currentPassword, newPassword);
+            redirect.addFlashAttribute("message", "Tu contraseña quedó cambiada.");
+        } catch (OwnPasswordRefusedException e) {
+            redirect.addFlashAttribute("error", switch (e.reason()) {
+                case WRONG_CURRENT -> "La contraseña actual no es esa.";
+                case SAME -> "La contraseña nueva es igual a la actual: elegí otra.";
+            });
+        } catch (IllegalArgumentException e) {
+            redirect.addFlashAttribute("error", "La contraseña tiene de 10 a 72 caracteres.");
+        }
+        return "redirect:/portal/password";
     }
 
     @GetMapping("/portal/appointments")

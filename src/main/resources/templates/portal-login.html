@@ -5,10 +5,13 @@
 <main style="max-width: 22rem">
     <h1>Consultorio</h1>
     <p class="muted">Tus turnos, con tu documento y tu contraseña.</p>
-    <p class="error" th:if="${param.error}">Documento o contraseña incorrectos.</p>
+    <p class="error" th:if="${param.error}">No pudimos ingresarte: revisá el documento y la contraseña. Después de
+        5 intentos fallidos la cuenta se bloquea 15 minutos; si no la recordás, recuperala.</p>
     <p class="ok" th:if="${param.logout}">Sesión cerrada.</p>
     <p class="ok" th:if="${param.activated}">Cuenta activada: ingresá con tu documento y tu contraseña.</p>
-    <p class="error" th:if="${param.expired}">Tu sesión se cerró: tu cuenta fue desactivada.</p>
+    <p class="ok" th:if="${param.reset}">Tu contraseña quedó cambiada: ingresá con la nueva.</p>
+    <p class="error" th:if="${param.expired}">Tu sesión se cerró: tu cuenta fue desactivada o cambió su
+        contraseña.</p>
     <form class="card" method="post" th:action="@{/portal/login}">
         <p><label>Tipo de documento
             <select name="documentType" required>
@@ -23,6 +26,7 @@
         </label></p>
         <button type="submit" class="primary">Ingresar</button>
     </form>
+    <p><a th:href="@{/portal/password-recovery}">¿Olvidaste tu contraseña?</a></p>
     <p class="muted">¿No tenés cuenta? Pedila en recepción.</p>
 </main>
 </body>

@@ -27,11 +27,17 @@ public class PatientAccountDetails implements UserDetails {
     private final UUID accountId;
     private final UUID patientId;
     private final String passwordHash;
+    private final boolean locked;
 
     PatientAccountDetails(LoginAccount account) {
         this.accountId = account.accountId();
         this.patientId = account.patientId();
         this.passwordHash = account.passwordHash();
+        this.locked = account.locked();
+    }
+
+    UUID accountId() {
+        return accountId;
     }
 
     UUID patientId() {
@@ -51,5 +57,11 @@ public class PatientAccountDetails implements UserDetails {
     @Override
     public String getUsername() {
         return PatientUsername.of(accountId);
+    }
+
+    /** Refused before the password is looked at, while too many failed logins keep it locked (D-86). */
+    @Override
+    public boolean isAccountNonLocked() {
+        return !locked;
     }
 }

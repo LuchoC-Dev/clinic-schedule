@@ -86,9 +86,9 @@ class PatientAccountTest {
         UUID id = UUID.randomUUID();
         UUID patient = UUID.randomUUID();
         assertThatIllegalArgumentException().isThrownBy(() -> PatientAccount.restore(id, patient, "ana@mail.com",
-                "$2a$10$hash", AccountStatus.PENDING, OPENED));
+                "$2a$10$hash", AccountStatus.PENDING, OPENED, 0, null));
         assertThatIllegalArgumentException().isThrownBy(() -> PatientAccount.restore(id, patient, "ana@mail.com",
-                null, AccountStatus.ACTIVE, OPENED));
+                null, AccountStatus.ACTIVE, OPENED, 0, null));
     }
 
     @Test

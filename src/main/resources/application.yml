@@ -88,6 +88,12 @@ app:
     booking-days-ahead: 30
     # Up to how many hours before an appointment a patient cancels it on the web or from an email's link (D-83).
     cancel-hours-before: 24
+    # How many failed logins in a row lock an account, and for how long (D-86).
+    login-attempts: 5
+    lock-for: PT15M
+    # How long the link to choose a new password lasts, and how soon another may be sent to the same account.
+    recovery-valid-for: PT1H
+    recovery-every: PT5M
 
 logging:
   level:

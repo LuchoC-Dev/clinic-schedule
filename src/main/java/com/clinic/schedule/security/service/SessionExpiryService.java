@@ -8,12 +8,14 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.event.TransactionalEventListener;
 
 import com.clinic.schedule.portal.api.PatientAccountDeactivated;
+import com.clinic.schedule.portal.api.PatientPasswordReset;
 import com.clinic.schedule.security.api.PatientUsername;
 import com.clinic.schedule.user.api.UserDeactivated;
 
 /**
  * Ends the open sessions of a user who was deactivated, so they lose access at once rather than
- * when their session runs out (D-68), and so of a patient's web account (D-79). A session ended here is
+ * when their session runs out (D-68), and so of a patient's web account (D-79), and of one whose password
+ * was reset from the email's link (D-86). A session ended here is
  * refused on its next request, which is sent to the login form.
  *
  * <p>Only once the deactivation commits: a refused one ends nothing. The API needs none of this —
@@ -43,6 +45,12 @@ class SessionExpiryService {
     @TransactionalEventListener
     void on(PatientAccountDeactivated deactivated) {
         expire(patients, PatientUsername.of(deactivated.accountId()));
+    }
+
+    /** Whoever else was logged in is the reason a patient resets their password (D-86). */
+    @TransactionalEventListener
+    void on(PatientPasswordReset reset) {
+        expire(patients, PatientUsername.of(reset.accountId()));
     }
 
     private static void expire(SessionRegistry sessions, String name) {

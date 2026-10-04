@@ -1520,9 +1520,48 @@ pedido del paciente", and a booking for Valentina forced from the page was refus
 listed the four with their age bands and sharing; Laura stopped sharing and still saw Benjamín's and Jorge's,
 then left, and Benjamín stayed in the group. Reception's history read both changes as "el paciente (web)".
 
-#### Part 6 — Recovering the password, and locking the account `[ ]`
-- [ ] A link to the account's email, valid for an hour; asking says the same for any document
-- [ ] Five failed logins in a row lock the account for 15 minutes; the staff's users are not locked
+#### Part 6 — Recovering the password, and locking the account `[x]`
+- [x] Five failed logins in a row lock the account for 15 minutes, both settings; trying while locked neither
+      counts nor lengthens it; a login that goes through starts the count again; the form's and the API's
+      alike, through `PatientAuthenticationProvider`, which tells `portal/api/PatientLoginWriter`; the
+      staff's users are not locked (D-86)
+- [x] The login says the same of every failure, the lock included, and offers "¿Olvidaste tu contraseña?"
+- [x] A link to the account's email, valid for an hour, to an account in use only and not twice within
+      five minutes; asking says the same for any document; choosing the new password ends the link, lifts a
+      lock and ends the account's open sessions
+- [x] The patient changes their own password with the staff's rules, under *Contraseña*
+- [x] The account's history records `RECOVERY_SENT`, `PASSWORD_RESET`, `PASSWORD_CHANGED` and `LOCKED`
+      with nobody at reception; reception reads "pedido desde la web", "el paciente", or nothing for a lock
+- [x] `POST /api/portal/password-recovery`, `/password-reset` and `/password`; `/portal/password-recovery`,
+      `/portal/password-reset` and `/portal/password`
+- [x] `V38`: the count and the lock on the account, `patient_account_password_reset`, and the history's new
+      actions and who did them
+- [x] 9 unit and 12 integration tests. 450 unit and 535 integration tests, 985 in total
+
+**Verified with:** every new test failing when the code it covers was broken on purpose — 71 breakages, all
+caught: each rule of the lock — never over, counted while locked, at six, a minute longer, the count or an old
+lock kept, a success that clears nothing —, a reset that keeps the lock, a change that clears the count, each
+state a password is recovered or changed in, a blank password, a count below none, a lock recorded by
+reception, the link's times and hash, the lock or a failure or a success not kept, a link for any state or too
+soon again, not kept, unrecorded or kept though it did not go out, reused, expired, of an inactive account or
+always usable, the open sessions left, any current password, the same, any length, the change unrecorded, the
+login never locked, the failures or successes untold, the routes needing a login, each route and mapping of
+the API, each message, label and link of the screens and of reception's history, and both checks of V38.
+Before the run, the tests were made to cover a link that did not go out, an account deactivated after asking,
+V38's checks and the sessions ended by a reset. An unreachable check of the number of attempts was taken out
+(D-14). The run was stopped once by the machine's lack of memory; the fault left planted was restored, every
+file checked against its state before, and the rest run in batches of seven or fewer. `mvnw clean verify`
+with the PostgreSQL tests running V38.
+
+**Verified with the application running** on a throwaway PostgreSQL and a throwaway Mailpit: taken to V104 by
+the previous commit's build, where three wrong passwords for the development patient counted nothing, and
+started on this one: V38 applied out of order, her account with no failures. Laura logged in on the browser;
+five wrong passwords over the API locked her account for 15 minutes, and the right one was refused too.
+Asking twice for the link, from the browser, said the same both times and sent one email to her account's
+address, valid for an hour. The link let her choose a new password, which logged in while the old one did not;
+the link no longer worked; and the browser's open session was sent to the login, which said the session had
+closed because the account was deactivated or its password changed. The history kept `LOCKED`,
+`RECOVERY_SENT` and `PASSWORD_RESET`, with nobody at reception.
 
 ---
 

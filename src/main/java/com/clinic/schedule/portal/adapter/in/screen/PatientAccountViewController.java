@@ -197,7 +197,15 @@ class PatientAccountViewController {
                 case EMAIL_CHANGED -> "Email cambiado";
                 case DEACTIVATED -> "Desactivada";
                 case REACTIVATED -> "Reactivada";
-            }, change.by() == null ? "el paciente" : change.by());
+                case RECOVERY_SENT -> "Link para elegir contraseña enviado";
+                case PASSWORD_RESET -> "Contraseña nueva desde el link";
+                case PASSWORD_CHANGED -> "Contraseña cambiada";
+                case LOCKED -> "Bloqueada por intentos fallidos";
+            }, change.by() != null ? change.by() : switch (change.action()) {
+                case RECOVERY_SENT -> "pedido desde la web";
+                case LOCKED -> "";
+                default -> "el paciente";
+            });
         }
     }
 }

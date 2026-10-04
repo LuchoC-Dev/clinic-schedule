@@ -92,7 +92,7 @@
 </header>
 <!--
   The patients' header, on their own screens (D-80): their appointments, booking one (D-82), their family
-  (D-85), their data (D-81) and logging out, and nothing of the staff's.
+  (D-85), their data (D-81), their password (D-86) and logging out, and nothing of the staff's.
 -->
 <header th:fragment="portalHeader">
     <strong>Consultorio</strong>
@@ -100,6 +100,7 @@
     <a th:href="@{/portal/booking}">Sacar turno</a>
     <a th:href="@{/portal/family}">Mi familia</a>
     <a th:href="@{/portal/profile}">Mis datos</a>
+    <a th:href="@{/portal/password}">Contraseña</a>
     <form class="inline" method="post" th:action="@{/portal/logout}">
         <button type="submit">Salir</button>
     </form>

@@ -3188,3 +3188,54 @@ patient reads their own); only the members' upcoming appointments (the patient s
 own); recording which account booked an appointment (reception's bookings do not record who either, and
 the confirmation goes to it); the members' dates of birth on *Mi familia* (the age band says what the rules
 need); a member under 18 acting for a younger sibling (only parents and adults act for others).
+
+## D-86 — Patients' passwords: locked after five failures, recovered by email, changed by themselves
+**Date:** 2026-10-03 · **Status:** accepted
+
+v2, phase 6, part 6. The patients' login faces the internet with a document anyone may know (D-80), so it is
+locked after failures; a forgotten password is recovered without reception; and a patient changes theirs.
+The staff's users are neither locked nor recover theirs by email (phase 3).
+
+**Five failed logins in a row lock the account for 15 minutes**, `app.portal.login-attempts` and
+`app.portal.lock-for`. The account keeps the count and until when it is locked (`V38`); `PatientAccount`
+counts a failure, locks on the fifth — recorded as `LOCKED` —, and a login that goes through starts the count
+again. A locked account is refused before its password is looked at, and trying while it is locked neither
+counts nor lengthens it; once it is over, the count starts again. The security module counts through
+`PatientAuthenticationProvider`, Spring's own provider telling `portal/api/PatientLoginWriter` of each login to
+an account in use, the form's and the API's alike; it is not a bean, since Spring Boot would make a lone
+provider bean everyone's, the staff's logins included. A document with no account has nothing to count.
+
+**The login says the same of every failure**: "No pudimos ingresarte: revisá el documento y la contraseña",
+with the lock and how to recover the password. Saying that an account is locked would tell anyone that the
+document has one, without its password, since the lock is checked first.
+
+**A forgotten password is chosen again from a link to the account's email**, valid for an hour,
+`app.portal.recovery-valid-for`. Asking, with the document, answers the same whether it has an account or not;
+only an account in use gets the link, and not twice within five minutes, `app.portal.recovery-every`, so the
+form cannot flood a mailbox. The link is a `SecretToken` kept as its hash, one per account, a new one
+replacing the last, as the activation's (D-79), in `patient_account_password_reset` (`V38`). Choosing the new
+password ends the link, lifts a lock — the patient proved the email is theirs — and ends the account's open
+sessions, through the event the deactivation's uses (D-79): whoever else was in it is the reason to reset
+it. A link that did not go out is neither kept nor recorded.
+
+**The patient changes their own password** with the staff's rules (D-69): the current one, a new one from 10
+to 72 characters, not the same. Their session goes on, and the count of failed logins is left as it was.
+
+**The history records it all with nobody at reception**: `RECOVERY_SENT`, `PASSWORD_RESET`,
+`PASSWORD_CHANGED` and `LOCKED`, as `ACTIVATED` already was. The account itself would be the only name to
+give, and its own history needs none. Reception reads "pedido desde la web" for a link asked for, "el
+paciente" for the rest, and nothing for a lock. It has no button to unlock: the lock runs out, or the patient
+recovers the password.
+
+**Routes and screens.** `POST /api/portal/password-recovery` (`{documentType, documentNumber}`, always 204),
+`POST /api/portal/password-reset` (`{token, password}`) and `POST /api/portal/password`
+(`{currentPassword, newPassword}`, logged in). `/portal/password-recovery` and `/portal/password-reset`, open
+to anyone, reached from "¿Olvidaste tu contraseña?" on the login; `/portal/password`, "Contraseña" in the
+patients' header.
+
+*Rejected:* saying that an account is locked (it tells who has one); a button for reception to unlock (the
+lock runs out, and the patient can recover the password); recording the account as who did it (its own
+history needs no name); a link for a pending account (reception sends the activation again); a link for every
+request (the form would flood a mailbox); ending the session when the patient changes their password
+themselves (they are the one in it); counting a wrong current password as a failed login (the patient is
+logged in already).

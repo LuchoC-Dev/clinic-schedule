@@ -27,6 +27,11 @@ class AccountHolderAdapter implements AccountHolderPort {
     }
 
     @Override
+    public Optional<UUID> findByDocument(String documentType, String documentNumber) {
+        return patients.findIdByDocument(documentType, documentNumber);
+    }
+
+    @Override
     public List<AccountHolder> findAll(Collection<UUID> patientIds) {
         return patients.findAll(patientIds).stream()
                 .map(patient -> new AccountHolder(patient.id(), patient.fullName(), patient.identityVerified(),

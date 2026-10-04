@@ -73,7 +73,9 @@ Spanish, for the staff.
 **The patients' screens** — at http://localhost:8080/portal/login, apart from the staff's. A patient whom
 reception opened a web account for — from *Cuenta web* on the patient's screen, for a verified patient of
 13 or older — gets a link by email to activate it and choose a password, logs in with their document and
-reads their appointments: those ahead and those of the last year, never reception's note. Under *Mis turnos* they cancel an appointment up to a
+reads their appointments: those ahead and those of the last year, never reception's note. Five failed logins in a
+row lock the account for 15 minutes; "¿Olvidaste tu contraseña?" sends a link to the account's email to choose
+a new one, and *Contraseña* changes it. Under *Mis turnos* they cancel an appointment up to a
 day before it, as anyone does from the link in its reminder or in a booking's confirmation; under *Sacar turno*
 they book the reasons reception opened to the web — "Se reserva por la web" on the practitioners' screen —, under
 *Mi familia* they see their family groups and choose whether each sees their appointments, and from 18 they see,
@@ -144,6 +146,9 @@ document as its type and number, such as `DNI 27333444`. Errors share one body:
 | `POST` | `/api/family-groups/{id}/members/{patientId}/remove`, `/sharing` | take a member out; a member of 13 or older starts or stops sharing — `{shares}` |
 | `GET` | `/api/family-groups/{id}/changes` | what happened to the group, the most recent first, and by whom |
 | `POST` | `/api/portal/activation` | the patient activates their account — `{token, password}`, the token from the email's link; no login |
+| `POST` | `/api/portal/password-recovery` | `{documentType, documentNumber}`: sends a link to choose a new password to the account's email, valid for an hour; always 204, account or not; no login |
+| `POST` | `/api/portal/password-reset` | `{token, password}`: the new password, with the token from that link; it lifts a lock and ends the account's open sessions; no login |
+| `POST` | `/api/portal/password` | `{currentPassword, newPassword}`: the patient logged in changes their password |
 | `GET` | `/api/portal/appointments` | the patient logged in reads their appointments: those ahead and those of the last 12 months, without the note; from 18, also those of each family member who shares theirs, under `family` |
 | `GET` | `/api/portal/profile` | the patient's own data: name, document and date of birth, their phone and email with whose each is and its consent, and their health insurance |
 | `PUT` | `/api/portal/profile/details` | the patient sets their phone, email and health insurance, with reception's rules; one left out is cleared |

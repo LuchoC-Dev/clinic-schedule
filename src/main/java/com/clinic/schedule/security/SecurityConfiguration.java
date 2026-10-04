@@ -19,6 +19,7 @@ import org.springframework.security.web.authentication.UsernamePasswordAuthentic
 import org.springframework.security.web.context.HttpSessionSecurityContextRepository;
 import org.springframework.security.web.session.HttpSessionEventPublisher;
 
+import com.clinic.schedule.portal.api.PatientLoginWriter;
 import com.clinic.schedule.security.presentation.TemporaryPasswordFilter;
 import com.clinic.schedule.security.presentation.http.ApiSecurityErrorHandler;
 import com.clinic.schedule.security.presentation.screen.DocumentLoginFilter;
@@ -26,6 +27,7 @@ import com.clinic.schedule.security.presentation.screen.ScreenAccessDeniedHandle
 import com.clinic.schedule.security.service.AppUserDetails;
 import com.clinic.schedule.security.service.AppUserDetailsService;
 import com.clinic.schedule.security.service.PatientAccountDetailsService;
+import com.clinic.schedule.security.service.PatientAuthenticationProvider;
 import com.clinic.schedule.user.api.Role;
 
 /**
@@ -65,19 +67,22 @@ class SecurityConfiguration {
 
     /**
      * Activating an account is done before there is one to log in with, and cancelling from an email's link
-     * with nobody logged in (D-83): the link is what says whose.
+     * with nobody logged in (D-83), as asking for a new password and choosing it (D-86): the link is what says
+     * whose. Patients log in through {@link PatientAuthenticationProvider}, which counts their failed logins.
      */
     @Bean
     @Order(1)
     SecurityFilterChain portalApiChain(HttpSecurity http, ApiSecurityErrorHandler errors,
-            PatientAccountDetailsService patients) throws Exception {
+            PatientAccountDetailsService patients, PasswordEncoder passwordEncoder, PatientLoginWriter logins)
+            throws Exception {
         return http
                 .securityMatcher("/api/portal/**")
                 .csrf(AbstractHttpConfigurer::disable)
                 .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
-                .userDetailsService(patients)
+                .authenticationProvider(new PatientAuthenticationProvider(patients, passwordEncoder, logins))
                 .authorizeHttpRequests(routes -> routes
-                        .requestMatchers(HttpMethod.POST, "/api/portal/activation").permitAll()
+                        .requestMatchers(HttpMethod.POST, "/api/portal/activation", "/api/portal/password-recovery",
+                                "/api/portal/password-reset").permitAll()
                         .requestMatchers("/api/portal/cancel-links/**").permitAll()
                         .anyRequest().hasRole(PATIENT))
                 .httpBasic(basic -> basic.authenticationEntryPoint(errors))
@@ -95,16 +100,17 @@ class SecurityConfiguration {
     @Order(2)
     SecurityFilterChain portalScreenChain(HttpSecurity http,
             @Qualifier("patientSessionRegistry") SessionRegistry sessions, ScreenAccessDeniedHandler denied,
-            PatientAccountDetailsService patients) throws Exception {
+            PatientAccountDetailsService patients, PasswordEncoder passwordEncoder, PatientLoginWriter attempts)
+            throws Exception {
         HttpSessionSecurityContextRepository logins = new HttpSessionSecurityContextRepository();
         logins.setSpringSecurityContextKey("PORTAL_SECURITY_CONTEXT");
         return http
                 .securityMatcher("/portal/**")
-                .userDetailsService(patients)
+                .authenticationProvider(new PatientAuthenticationProvider(patients, passwordEncoder, attempts))
                 .securityContext(context -> context.securityContextRepository(logins))
                 .authorizeHttpRequests(routes -> routes
-                        .requestMatchers("/portal/login", "/portal/activation", "/portal/cancel", "/portal/cancel/done")
-                                .permitAll()
+                        .requestMatchers("/portal/login", "/portal/activation", "/portal/cancel", "/portal/cancel/done",
+                                "/portal/password-recovery", "/portal/password-reset").permitAll()
                         .anyRequest().hasRole(PATIENT))
                 .addFilterBefore(new DocumentLoginFilter("/portal/login"), UsernamePasswordAuthenticationFilter.class)
                 .formLogin(login -> login.loginPage("/portal/login").defaultSuccessUrl("/portal/appointments", true)

@@ -37,6 +37,12 @@ class PatientAccountRow {
     @Column(name = "opened_at", nullable = false)
     private LocalDateTime openedAt;
 
+    @Column(name = "failed_logins", nullable = false)
+    private int failedLogins;
+
+    @Column(name = "locked_until")
+    private LocalDateTime lockedUntil;
+
     protected PatientAccountRow() {
         // required by JPA
     }
@@ -49,10 +55,13 @@ class PatientAccountRow {
         row.passwordHash = account.passwordHash();
         row.status = account.status();
         row.openedAt = account.openedAt();
+        row.failedLogins = account.failedLogins();
+        row.lockedUntil = account.lockedUntil();
         return row;
     }
 
     PatientAccount toAccount() {
-        return PatientAccount.restore(id, patientId, email, passwordHash, status, openedAt);
+        return PatientAccount.restore(id, patientId, email, passwordHash, status, openedAt, failedLogins,
+                lockedUntil);
     }
 }
