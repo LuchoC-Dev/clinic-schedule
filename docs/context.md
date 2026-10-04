@@ -79,8 +79,8 @@ The minimum record needed to book an appointment:
 
 v2 is built in phases, each one scoped here before it starts and closed on its own. The first,
 the clinical record, is closed, and so are the second, the arrival queue, and the third, users
-and security, the fourth, the patient's extra data, and the fifth, reminders and the cancellation
-log. The sixth, web booking for patients, is under way. Each next one is chosen from the planned
+and security, the fourth, the patient's extra data, the fifth, reminders and the cancellation log,
+and the sixth, web booking for patients. Each next one is chosen from the planned
 evolution below, and its scope is written here before any code.
 
 ## v2, phase 1 — the clinical record (closed)
@@ -587,7 +587,7 @@ confirming from the reminder (web booking); telling the patient of a cancellatio
 times an appointment was moved; a list of cancellation reasons; practitioners reading the cancellation
 log; the practitioner's speciality and consulting room in the reminder.
 
-## v2, phase 6 — web booking for patients
+## v2, phase 6 — web booking for patients (closed)
 
 ### What changes
 
@@ -738,7 +738,7 @@ v2 are chosen from here.
 
 1. **Arrival queue**: v2, phase 2, above — closed. **Users and security**: v2, phase 3, above — closed.
    **Extra patient data**: v2, phase 4, above — closed. **Reminders and the cancellation log**: v2,
-   phase 5, above — closed. **Web booking**: v2, phase 6, above.
+   phase 5, above — closed. **Web booking**: v2, phase 6, above — closed.
 2. **Later on**: attendance with more states, structured clinical items, printing, and a cash desk.
 3. **Reminders by other channels**: WhatsApp or SMS, each one more adapter behind the reminders'
    port, with whether a phone takes WhatsApp; the practitioner's speciality and consulting room in the

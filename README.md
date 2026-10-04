@@ -8,9 +8,9 @@ agenda, and records what happened in each consultation in the patients' clinical
 It was built in stages, adding nothing before the stage that used it. The functional scope is
 in [`docs/context.md`](docs/context.md), every technical decision and its reasoning in
 [`docs/decisions.md`](docs/decisions.md), and the progress in [`docs/build.md`](docs/build.md).
-**Version 1 is complete. Version 2 is built in phases; five are closed — the clinical record, the
-arrival queue, users and security, the patient's extra data, and reminders with the cancellation log —
-the sixth, web booking for patients, is under way, and v2 is not finished.**
+**Version 1 is complete. Version 2 is built in phases; six are closed — the clinical record, the
+arrival queue, users and security, the patient's extra data, reminders with the cancellation log, and web
+booking for patients — and v2 is not finished.**
 
 ## Running it
 

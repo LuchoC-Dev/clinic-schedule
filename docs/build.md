@@ -1251,7 +1251,7 @@ never telling a parent of an adolescent's visit the adolescent did not agree to 
 happened to each reminder — the address only as a hash — for reception to call whoever was not reached.
 What it left for later is listed below.
 
-### Phase 6 — Web booking for patients `[ ]`
+### Phase 6 — Web booking for patients `[x]`
 
 Scope in `docs/context.md`, section "v2, phase 6 — web booking for patients". Delivered in parts; each
 one is usable on its own. The technical design of each part is agreed before it is coded.
@@ -1563,17 +1563,40 @@ the link no longer worked; and the browser's open session was sent to the login,
 closed because the account was deactivated or its password changed. The history kept `LOCKED`,
 `RECOVERY_SENT` and `PASSWORD_RESET`, with nobody at reception.
 
+**Phase 6 of v2, web booking for patients, is closed.** Reception opens a web account for a verified
+patient of 13 or older, who activates it from the email's link and logs in with their document, on a
+login, a session and routes of their own. They read their appointments and change their own contact,
+consent and health insurance; they book the reasons reception opens to the web, from tomorrow to 30 days on
+and three ahead at most, and cancel up to a day before, as anyone does from the link in a reminder or a
+confirmation, the cancellation log saying the patient asked and how. Reception forms family groups, and
+from 18 a member sees, books and cancels the appointments of those who share theirs, a child's always, an
+adolescent's only if they choose. Five failed logins lock an account for a while, a forgotten password is
+chosen again from a link to the account's email, and every action on an account is in its history. What it
+left for later is listed below.
+
 ---
 
 ## Explicitly postponed
 
 These are not oversights: they are decided and waiting for their moment.
 
+From v2, phase 6:
+
+- Registering a patient, or opening an account, from the web, and accounts for people who are not patients
+  (see D-79).
+- Moving an appointment on the web, booking today's appointments on the web, and confirming an appointment
+  (see D-82, D-83).
+- The patients reading what the law lets them ask for of their clinical record (see the context).
+- Recording which account booked an appointment (see D-85).
+- Telling the patient that the practice cancelled their appointment (see the context).
+- Recovering a password by email and locking the account after failed logins for the staff's users, and
+  two-factor authentication (see D-86).
+
 From v2, phase 5:
 
 - Reminders by WhatsApp or SMS, each one more adapter of the sending port, and marking a phone as
   WhatsApp (see D-78).
-- Cancelling or confirming an appointment from its reminder, with web booking (see D-78).
+- Confirming an appointment from its reminder (see D-78); cancelling from it came with phase 6 (D-83).
 - Telling the patient that their appointment was cancelled, and a history of the times an appointment was
   moved (see the context).
 - A list of cancellation reasons, and practitioners reading the cancellations of their own appointments
