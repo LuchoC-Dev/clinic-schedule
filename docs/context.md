@@ -80,8 +80,8 @@ The minimum record needed to book an appointment:
 v2 is built in phases, each one scoped here before it starts and closed on its own. The first,
 the clinical record, is closed, and so are the second, the arrival queue, and the third, users
 and security, the fourth, the patient's extra data, the fifth, reminders and the cancellation log,
-and the sixth, web booking for patients. Each next one is chosen from the planned
-evolution below, and its scope is written here before any code.
+and the sixth, web booking for patients. The seventh, the cash desk, is in progress. Each next one
+is chosen from the planned evolution below, and its scope is written here before any code.
 
 ## v2, phase 1 — the clinical record (closed)
 
@@ -731,6 +731,77 @@ who booked each appointment beyond where; recovering a password by email and loc
 staff; two-factor authentication; telling the patient of a cancellation the practice made; and anything
 of the cash desk or of reminders by WhatsApp or SMS.
 
+## v2, phase 7 — the cash desk
+
+### What changes
+
+Until now the application knew nothing of money: whoever was seen paid, or not, outside of it. From this
+phase on **reception charges each visit before the patient goes into a queue**, records every charge,
+and closes the day's cash desk. It grows in the order the money does at the desk: first a private
+patient paying in cash, then the other ways of paying, and last the visits covered by a health insurance.
+
+### A visit is charged before it is seen, except an emergency
+
+- **A visit is each time reception puts a patient into a queue** (phase 2). A patient waiting in two
+  queues makes two visits, and pays two. Giving the patient to another practitioner of the queue, or
+  calling them again after "No ingresó", is the same visit.
+- **Reception records the charge when it puts the patient into the queue**, in the same step: without
+  it the patient does not go in. It is the only way into a queue, so nobody is seen unpaid by mistake.
+- **An emergency goes in without being charged.** Its charge is left pending, and reception records it
+  later, or never. The duty to assist comes before the payment in an emergency (Ley 26.529, art. 2 a;
+  Código Penal, art. 108); outside of one, a private practice may ask to be paid first.
+- **Nobody is asked who they are to pay** (phase 2): a patient under an alias pays as anyone does.
+- The visits already in a queue when this phase arrives are not charged.
+
+### A charge
+
+- The **amount** reception types — there is no price list —, in pesos, greater than zero, with
+  two decimals at most; the **means** of payment; who recorded it and when, by the `Clock`.
+- **It is never changed nor deleted.** What went wrong is undone with a refund (part 1b) and charged
+  again, so the day's cash desk always adds up to what moved.
+- **A refund** is a movement of its own, apart from the charge it gives back: its amount, up to what is
+  left of that charge, who recorded it, when, and why. A patient who paid and was not seen — who left
+  without being seen, did not show up, or was still waiting when the queue closed — is owed their money
+  back (Ley 24.240); the application never decides it alone: reception records it.
+
+### The day's cash desk
+
+- **The day's movements** — charges and refunds, with the patient, the means, the amount, who recorded
+  each and when — and their **totals**: charged, refunded, and what is left, by means of payment and by
+  who recorded them. Only cash counts for what should be in the drawer.
+- **The pending visits**: the emergencies not charged yet.
+- **Reception** reads and writes all of it. **Admins** read the day's cash desk, its movements and
+  totals, without the patients: they read nothing of the patients (phase 4). **Practitioners** read
+  none of it.
+
+### Ways of paying, and the health insurance
+
+- **Part 1** knows one means of payment: **cash**, and one way of paying: **privately**.
+- **Part 2** adds the other means: debit card, credit card, bank transfer and QR. The day's cash desk
+  separates them.
+- **Part 3** adds the visits **covered by a health insurance** — an obra social or a prepaid plan —:
+  the patient's insurance (phase 4), the **token** the insurer asks for that visit, which is the visit's
+  and not the patient's, and a **copay** charged by any means of part 2, or none.
+
+### The invoice
+
+The application **records** what is charged; it does not issue the invoice, which ARCA requires and is
+still made outside of it, as today. Nothing printed out of it is an invoice.
+
+### Delivered in parts
+
+1. Charging privately in cash, in two steps:
+   - **1a** — the charge when the patient goes into a queue, an emergency's pending charge, and the
+     day's cash desk.
+   - **1b** — refunds, as movements of their own.
+2. The other means of payment: debit, credit, transfer and QR.
+3. The visits covered by a health insurance: the token and the copay. It may be split in two when it
+   is scoped in detail.
+
+Not in this phase: issuing invoices with ARCA; billing the insurers each month; a price list; an opening
+float or counting the drawer at the close; printing receipts; charging a visit the patient never came
+to; practitioners reading the cash desk; and changing or deleting a charge.
+
 ## Planned evolution (DO NOT implement yet)
 
 Documented so today's decisions do not close doors, not to bring code forward. The next phases of
@@ -738,13 +809,14 @@ v2 are chosen from here.
 
 1. **Arrival queue**: v2, phase 2, above — closed. **Users and security**: v2, phase 3, above — closed.
    **Extra patient data**: v2, phase 4, above — closed. **Reminders and the cancellation log**: v2,
-   phase 5, above — closed. **Web booking**: v2, phase 6, above — closed.
+   phase 5, above — closed. **Web booking**: v2, phase 6, above — closed. **Cash desk**: v2, phase 7,
+   above — in progress.
 2. **Later on**: attendance with more states, structured clinical items, printing, and a cash desk.
 3. **Reminders by other channels**: WhatsApp or SMS, each one more adapter behind the reminders'
    port, with whether a phone takes WhatsApp; the practitioner's speciality and consulting room in the
    reminder, once the application knows them.
-4. **Cash desk**: how each consultation is paid — health insurance, prepaid plan or privately —
-   becomes required for every consultation, with the token an insurer asks for each visit.
+4. **Cash desk, further on**: issuing invoices with ARCA, billing the insurers each month, a price
+   list, printing receipts.
 5. **Web booking, further on**: registering new patients from the web, and accounts for people who
    are not patients; moving an appointment from the web; the patients reading what the law lets them
    ask for of their record.

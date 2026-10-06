@@ -1574,6 +1574,32 @@ adolescent's only if they choose. Five failed logins lock an account for a while
 chosen again from a link to the account's email, and every action on an account is in its history. What it
 left for later is listed below.
 
+### Phase 7 — The cash desk `[~]`
+
+Scope in `docs/context.md`, section "v2, phase 7 — the cash desk". Delivered in parts; each one is
+usable on its own. The technical design of each part is agreed before it is coded.
+
+#### Part 1a — Charging privately in cash `[ ]`
+- [x] `docs/context.md`: the scope of phase 7
+- [ ] Reception charges a visit when it puts the patient into a queue, in the same step: the amount it
+      types, in cash; without it the patient does not go in
+- [ ] An emergency goes in uncharged, its charge pending, recorded later or never
+- [ ] A charge is never changed nor deleted, and records who and when
+- [ ] The day's cash desk: its movements and totals, by who recorded them, and the pending visits;
+      reception reads it whole, the admins without the patients, the practitioners not at all
+
+#### Part 1b — Refunds `[ ]`
+- [ ] A refund is a movement of its own, up to what is left of its charge, with who, when and why
+- [ ] The day's cash desk subtracts it
+
+#### Part 2 — The other means of payment `[ ]`
+- [ ] Debit card, credit card, bank transfer and QR; the day's cash desk separates them, and only cash
+      counts for the drawer
+
+#### Part 3 — The visits covered by a health insurance `[ ]`
+- [ ] A visit paid by the patient's obra social or prepaid plan, with the token of that visit
+- [ ] A copay charged by any means, or none
+
 ---
 
 ## Explicitly postponed
