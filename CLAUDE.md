@@ -17,7 +17,7 @@ Read these before proposing design or code:
 Maven · Java 21 · Spring Boot 3.5 · Spring Security · Spring Data JPA · Flyway ·
 PostgreSQL 18 (docker-compose) · Thymeleaf. The integration tests run on H2 in PostgreSQL mode.
 
-`JAVA_HOME` must point at JDK 21: this machine defaults to JDK 25. See `README.md`.
+`JAVA_HOME` must point at JDK 21: the `java` on the `PATH` may be 25. See `README.md`.
 
 ## Working rules
 

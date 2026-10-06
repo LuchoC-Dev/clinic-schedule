@@ -14,11 +14,13 @@ booking for patients — and v2 is not finished.**
 
 ## Running it
 
-- **JDK 21.** On this machine it is at `C:\Program Files\Java\jdk-21`, while the `java` on the
-  `PATH` is 25, so point `JAVA_HOME` at 21 first:
+- **JDK 21**, with `JAVA_HOME` pointing at it: the wrapper uses `JAVA_HOME`, not the `java` on
+  the `PATH`, which may be a newer JDK. The Temurin installer sets `JAVA_HOME` for the whole
+  machine; if it is not set, or points at another JDK, set it for the session:
 
   ```powershell
-  $env:JAVA_HOME = "C:\Program Files\Java\jdk-21"
+  winget install --id EclipseAdoptium.Temurin.21.JDK -e   # if there is no JDK 21 yet
+  $env:JAVA_HOME = "C:\Program Files\Eclipse Adoptium\jdk-21.0.12.101-hotspot"
   ```
 
 - Maven does not need to be installed: the repository ships the wrapper.
