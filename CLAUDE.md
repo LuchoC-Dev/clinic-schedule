@@ -33,10 +33,10 @@ PostgreSQL 18 (docker-compose) · Thymeleaf. The integration tests run on H2 in 
 - **Undecided technical questions:** propose the simplest option and explain it before
   treating it as agreed. Once accepted, add it to `docs/decisions.md`.
 - **Module boundaries:** `patient/`, `practitioner/`, `appointment/`, `clinicalrecord/`,
-  `arrival/`, `reminder/`, `portal/`, `security/`, `user/`. A module only uses another module's `api/` package
+  `arrival/`, `reminder/`, `portal/`, `cashdesk/`, `security/`, `user/`. A module only uses another module's `api/` package
   (interface plus DTOs); `ArchitectureTest` checks it. Never import entities or repositories from another
-  module. Each module is laid out by its own architecture: `appointment`, `clinicalrecord`, `reminder` and
-  `portal` as hexagons (D-41, D-47, D-78, D-79), `arrival` by subdomain with event sourcing and CQRS (D-62), the
+  module. Each module is laid out by its own architecture: `appointment`, `clinicalrecord`, `reminder`,
+  `portal` and `cashdesk` as hexagons (D-41, D-47, D-78, D-79, D-87), `arrival` by subdomain with event sourcing and CQRS (D-62), the
   others by layer (D-42).
 - **An appointment is only a booking.** What happens once the patient is at the practice —
   arrival, consultation, what comes after — belongs to other modules, and a consultation does
@@ -88,3 +88,4 @@ patient · practitioner · appointment (`BOOKED`/`CANCELLED`/`ABSENT`) · reason
 weekly schedule · break · time off · arrival · queue · session · reschedule · reception
 · consultation · item (prescription) · check · result · order · addendum · clinical record ·
 access period · access grant · attachment · web account (`PENDING`/`ACTIVE`/`INACTIVE`) · activation
+· visit · charge · means · cash desk

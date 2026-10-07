@@ -95,7 +95,7 @@ class AppointmentArrivalIT {
 
     private ResultActions arrives(String appointment) throws Exception {
         return mockMvc.perform(post("/api/appointment-arrivals").contentType(MediaType.APPLICATION_JSON)
-                .content("{\"appointmentId\": \"" + appointment + "\"}"));
+                .content("{\"appointmentId\": \"" + appointment + "\", \"amount\": 15000}"));
     }
 
     private JsonNode session() throws Exception {
@@ -128,7 +128,7 @@ class AppointmentArrivalIT {
     void appointmentsComeBeforeWhoCameWithoutOne() throws Exception {
         UUID walkIn = patients.newPatient();
         mockMvc.perform(post("/api/queues/" + queue + "/session/patients").contentType(MediaType.APPLICATION_JSON)
-                .content("{\"patientId\": \"" + walkIn + "\"}"));
+                .content("{\"patientId\": \"" + walkIn + "\", \"amount\": 15000}"));
         UUID ana = patients.newPatient();
         arrives(book(ana, "2026-03-10T10:00:00"));
 

@@ -71,7 +71,7 @@ class QueueAttendanceIT {
         }
         mockMvc.perform(post("/api/queues/" + queue + "/open")).andExpect(status().isOk());
         mockMvc.perform(post("/api/queues/" + queue + "/session/patients").contentType(MediaType.APPLICATION_JSON)
-                .content("{\"patientId\": \"" + patient + "\"}")).andExpect(status().isCreated());
+                .content("{\"patientId\": \"" + patient + "\", \"amount\": 15000}")).andExpect(status().isCreated());
     }
 
     private ResultActions read(RequestPostProcessor as) throws Exception {

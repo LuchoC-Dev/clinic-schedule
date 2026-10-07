@@ -83,7 +83,7 @@ class SessionApiIT {
 
     private ResultActions arrives(UUID patient, boolean emergency) throws Exception {
         return mockMvc.perform(post("/api/queues/" + queue + "/session/patients").contentType(MediaType.APPLICATION_JSON)
-                .content("{\"patientId\": \"" + patient + "\", \"emergency\": " + emergency + "}"));
+                .content("{\"patientId\": \"" + patient + "\", \"emergency\": " + emergency + ", \"amount\": 15000}"));
     }
 
     private ResultActions mine(String action) throws Exception {
@@ -214,7 +214,8 @@ class SessionApiIT {
     void aClosedQueueLeavesNoNamelessPatientBehind() throws Exception {
         int before = jdbc.queryForObject("select count(*) from patient where alias is not null", Integer.class);
 
-        mockMvc.perform(post("/api/queues/" + queue + "/session/unidentified")).andExpect(status().isConflict());
+        mockMvc.perform(post("/api/queues/" + queue + "/session/unidentified").contentType(MediaType.APPLICATION_JSON)
+                .content("{\"amount\": 15000}")).andExpect(status().isConflict());
 
         assertThat(jdbc.queryForObject("select count(*) from patient where alias is not null", Integer.class))
                 .isEqualTo(before);

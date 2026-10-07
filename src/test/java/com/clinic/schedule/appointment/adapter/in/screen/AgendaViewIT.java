@@ -118,7 +118,7 @@ class AgendaViewIT {
 
         // "Llegó" is the queues' (D-65): back to the same agenda, with the patient in the queue.
         mockMvc.perform(post("/arrivals/appointment-arrivals/" + id).with(csrf())
-                        .param("practitionerId", arias.id().toString()).param("date", DAY))
+                        .param("practitionerId", arias.id().toString()).param("date", DAY).param("amount", "15000"))
                 .andExpect(redirectedUrlPattern("/agenda?*"))
                 .andExpect(flash().attribute("message", "Llegó: está en la cola de su profesional."));
 

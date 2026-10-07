@@ -1,5 +1,6 @@
 package com.clinic.schedule.arrival.session.command;
 
+import java.math.BigDecimal;
 import java.util.UUID;
 
 import org.springframework.stereotype.Service;
@@ -11,11 +12,14 @@ import com.clinic.schedule.arrival.session.command.AppointmentArrivalRefusedExce
 import com.clinic.schedule.arrival.session.domain.QueueSession;
 import com.clinic.schedule.arrival.session.domain.QueueSessionService;
 import com.clinic.schedule.arrival.session.domain.SessionEvent.AppointmentArrived;
+import com.clinic.schedule.cashdesk.api.VisitCashier;
 
 /**
  * A patient with an appointment today arrives (D-64): they come into the queue of the appointment's
  * practitioner, kept for them, and are placed by the later of the appointment's time and now. The
  * appointment has to be booked and today, and its practitioner has to serve an open queue.
+ *
+ * <p>The visit is charged in the same step and transaction, or the patient does not come in (D-87).
  */
 @Service
 public class AppointmentArrivesUseCase {
@@ -23,16 +27,20 @@ public class AppointmentArrivesUseCase {
     private final QueueSessionService sessions;
     private final SessionCommands commands;
     private final AppointmentReader appointments;
+    private final VisitCashier cashier;
 
-    AppointmentArrivesUseCase(QueueSessionService sessions, SessionCommands commands, AppointmentReader appointments) {
+    AppointmentArrivesUseCase(QueueSessionService sessions, SessionCommands commands, AppointmentReader appointments,
+            VisitCashier cashier) {
         this.sessions = sessions;
         this.commands = commands;
         this.appointments = appointments;
+        this.cashier = cashier;
     }
 
     /**
      * @return the queue they came into
      * @throws AppointmentArrivalRefusedException when that appointment brings nobody in today
+     * @throws com.clinic.schedule.cashdesk.api.ChargeRefusedException when the visit cannot be charged so
      */
     @Transactional
     public UUID handle(Command command) {
@@ -46,10 +54,12 @@ public class AppointmentArrivesUseCase {
         QueueSession session = commands.openSessionOf(queue);
         AppointmentArrived arrived = sessions.arriveWithAppointment(session, appointment.patientId(), appointment.id(),
                 appointment.practitionerId(), appointment.startsAt(), commands.now());
+        cashier.visitStarted(arrived.entryId(), appointment.patientId(), false, command.amount());
         commands.record(session, arrived);
         return queue;
     }
 
-    public record Command(UUID appointmentId) {
+    /** @param amount the pesos charged: a patient with an appointment does not come in as an emergency */
+    public record Command(UUID appointmentId, BigDecimal amount) {
     }
 }

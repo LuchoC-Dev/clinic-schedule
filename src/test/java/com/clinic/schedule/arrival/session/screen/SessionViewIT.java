@@ -85,7 +85,8 @@ class SessionViewIT {
         mockMvc.perform(post("/arrivals/" + queue + "/patients").with(csrf())
                         .param("patientId", patient).param("emergency", "true"))
                 .andExpect(flash().attribute("message", "Paciente sumado como urgencia."));
-        mockMvc.perform(post("/arrivals/" + queue + "/patients").with(csrf()).param("patientId", patient))
+        mockMvc.perform(post("/arrivals/" + queue + "/patients").with(csrf()).param("patientId", patient)
+                        .param("amount", "15000"))
                 .andExpect(flash().attribute("error", "Ese paciente ya está esperando en esta cola."));
 
         mockMvc.perform(get(screen))
@@ -95,14 +96,15 @@ class SessionViewIT {
 
     @Test
     void aClosedQueueTakesNobodyIn() throws Exception {
-        mockMvc.perform(post("/arrivals/" + queue + "/unidentified").with(csrf()))
+        mockMvc.perform(post("/arrivals/" + queue + "/unidentified").with(csrf()).param("amount", "15000"))
                 .andExpect(flash().attribute("error", "La cola está cerrada: abrila primero."));
     }
 
     @Test
     void thePractitionerCallsFinishesAndSaysWhoDidNotComeIn() throws Exception {
         mockMvc.perform(post("/arrivals/" + queue + "/open").with(csrf()));
-        mockMvc.perform(post("/arrivals/" + queue + "/patients").with(csrf()).param("patientId", patient()));
+        mockMvc.perform(post("/arrivals/" + queue + "/patients").with(csrf()).param("patientId", patient())
+                .param("amount", "15000"));
 
         mockMvc.perform(get("/my-queue").with(asArias))
                 .andExpect(status().isOk())

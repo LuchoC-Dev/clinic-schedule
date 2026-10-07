@@ -27,7 +27,8 @@ import com.clinic.schedule.arrival.session.query.ViewQueueSessionUseCase;
 
 /**
  * A queue at work, for reception (D-63): opening and closing it, keeping it open past its day,
- * bringing patients in, making one an emergency, saying one left. Each command is run and the
+ * bringing patients in — charged in the same step, unless an emergency (D-87) —, making one an emergency,
+ * saying one left. Each command is run and the
  * session read back, so the answer is what the reads see.
  */
 @RestController
@@ -88,7 +89,7 @@ class SessionController {
     @PostMapping("/api/queues/{id}/session/patients")
     @ResponseStatus(HttpStatus.CREATED)
     SessionResponse addPatient(@PathVariable UUID id, @Valid @RequestBody AddPatientRequest request) {
-        addPatient.handle(new AddPatientUseCase.Command(id, request.patientId(), request.isEmergency()));
+        addPatient.handle(new AddPatientUseCase.Command(id, request.patientId(), request.isEmergency(), request.amount()));
         return session(id);
     }
 
@@ -96,7 +97,8 @@ class SessionController {
     @PostMapping("/api/queues/{id}/session/unidentified")
     @ResponseStatus(HttpStatus.CREATED)
     SessionResponse addUnidentified(@PathVariable UUID id, @RequestBody(required = false) AddUnidentifiedRequest request) {
-        addUnidentified.handle(new AddUnidentifiedPatientUseCase.Command(id, request != null && request.isEmergency()));
+        addUnidentified.handle(new AddUnidentifiedPatientUseCase.Command(id, request != null && request.isEmergency(),
+                request == null ? null : request.amount()));
         return session(id);
     }
 
@@ -104,7 +106,7 @@ class SessionController {
     @PostMapping("/api/appointment-arrivals")
     @ResponseStatus(HttpStatus.CREATED)
     SessionResponse appointmentArrives(@Valid @RequestBody AppointmentArrivalRequest request) {
-        UUID queue = appointmentArrives.handle(new AppointmentArrivesUseCase.Command(request.appointmentId()));
+        UUID queue = appointmentArrives.handle(new AppointmentArrivesUseCase.Command(request.appointmentId(), request.amount()));
         return session(queue);
     }
 

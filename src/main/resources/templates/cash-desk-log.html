@@ -1,0 +1,50 @@
+<!DOCTYPE html>
+<html lang="es" xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{fragments :: head('Caja')}"></head>
+<body>
+<header th:replace="~{fragments :: staffHeader}"></header>
+<main class="wide">
+    <h1>Caja del día</h1>
+    <p class="muted">Los cobros de ese día y quién los registró. Nunca el paciente.</p>
+    <div th:replace="~{fragments :: messages}"></div>
+
+    <form class="card bar" method="get" th:action="@{/cash-desk-log}">
+        <label>Día
+            <input type="date" name="date" th:value="${date}">
+        </label>
+        <button type="submit" class="primary">Ver</button>
+    </form>
+
+    <h2>Totales</h2>
+    <table>
+        <thead><tr><th>Registró</th><th>Cobros</th><th>Importe</th></tr></thead>
+        <tbody>
+        <tr th:each="r : ${byRecorder}">
+            <td th:text="${r.user}">recepcion</td>
+            <td th:text="${r.count}">3</td>
+            <td th:text="${r.amount}">$ 45.000,00</td>
+        </tr>
+        <tr>
+            <th>Total</th>
+            <th th:text="${count}">3</th>
+            <th th:text="${total}">$ 45.000,00</th>
+        </tr>
+        </tbody>
+    </table>
+
+    <h2>Cobros</h2>
+    <p th:if="${rows.isEmpty()}" class="muted">No hay cobros ese día.</p>
+    <table th:unless="${rows.isEmpty()}">
+        <thead><tr><th>Hora</th><th>Medio</th><th>Importe</th><th>Registró</th></tr></thead>
+        <tbody>
+        <tr th:each="r : ${rows}">
+            <td th:text="${r.time}">10:15</td>
+            <td th:text="${r.means}">Efectivo</td>
+            <td th:text="${r.amount}">$ 15.000,00</td>
+            <td th:text="${r.user}">recepcion</td>
+        </tr>
+        </tbody>
+    </table>
+</main>
+</body>
+</html>

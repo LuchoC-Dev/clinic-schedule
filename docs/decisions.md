@@ -3239,3 +3239,75 @@ history needs no name); a link for a pending account (reception sends the activa
 request (the form would flood a mailbox); ending the session when the patient changes their password
 themselves (they are the one in it); counting a wrong current password as a failed login (the patient is
 logged in already).
+
+---
+
+## D-87 — The cash desk: each visit charged as it comes into a queue, in one transaction
+**Date:** 2026-10-06 · **Status:** accepted; refunds follow in part 1b
+
+v2, phase 7, part 1a. Until now the application knew nothing of money. From this part reception charges each
+visit privately, in cash, in the same step that puts the patient into a queue; an emergency goes in uncharged;
+and the day's cash desk adds it all up.
+
+**A module of its own, `cashdesk`, as a hexagon** (D-41): its domain, ports to the other modules — who is
+using the application — and to storage, and adapters in and out, as `reminder` and `portal`. The charges are
+facts that never change, but a table only ever inserted into says that without an event store, so the
+module does not follow `arrival` (D-62).
+
+**A visit is each time reception puts a patient into a queue**, and its id is the queue's entry: giving the
+patient to another practitioner, or calling them again after "No ingresó", is the same visit; a patient
+waiting in two queues makes two. `Visit` is the aggregate: `Visit.arrive` is the one way to start one, and
+refuses a visit that is not an emergency without a charge (`CHARGE_REQUIRED`); an emergency may be charged
+then or left pending, and `charge` records it later, once (`ALREADY_CHARGED`). The rules need nothing the
+visit does not have — whether it is an emergency comes with it — so there is no domain service (D-17).
+`Charge` is the amount, the means, who recorded it — the username — and when, by the `Clock`; nothing changes
+it. The visits already in a queue when this part arrives are not charged: they have no visit.
+
+**The amount** is typed: there is no price list. `Amount` is pesos greater than zero with two decimals at
+most (`INVALID_AMOUNT`), and a typed one is held to a ceiling, `app.cash-desk.max-amount`, by default
+99999999.99 — one hundred million is refused (`AMOUNT_TOO_HIGH`). The ceiling is a rule of the business, not
+of the column: an amount with too many digits is refused with a 400 and a message reception reads, never cut
+by the database with a 500. `AmountCeiling` refuses a setting the column, NUMERIC(12,2), could not keep. An
+amount read back is not held to the ceiling, so lowering it does not undo what was charged under the old one.
+The screens leave the ceiling to the server rather than repeat it in the form.
+
+**The charge and the entry, in one transaction, with the dependency one way.** `cashdesk/api/VisitCashier`
+is what the queues tell the cash desk; the three ways into a queue — `AddPatientUseCase`,
+`AddUnidentifiedPatientUseCase` and `AppointmentArrivesUseCase` — call it inside their transaction, after the
+session decides the entry and before its events are recorded. A refused charge, `cashdesk/api/
+ChargeRefusedException` with its reason and the ceiling, rolls back the whole step: no event, no visit, and no
+nameless patient registered, as a closed queue already did (D-63). The queues depend on the cash desk, which
+knows nothing of queues. Those three are the only ways into a queue, so nobody goes in unpaid by mistake. An
+appointment never comes in as an emergency, so it is always charged; making a waiting patient an emergency
+changes nothing, since they paid when they came in.
+
+**Storage** (`V39`): `cash_visit` — the patient, when, whether an emergency — and `cash_charge` — the amount,
+the means, who and when —, both only ever inserted, their rows `@Immutable`. A pending visit is a visit with
+no charge. A unique key on the charge's visit refuses a second charge that two requests at once could let
+through, refused as `ALREADY_CHARGED`, a 409; checks keep the amount above zero and the means known, the
+means' named `ck_cash_charge_means` so part 2 drops and adds it again in portable SQL. No trigger forbids
+changing a row in PostgreSQL: nothing in the application can (D-14).
+
+**The day's cash desk** goes by the day each charge was recorded, today unless another is asked for: each
+charge, the total and the total by who recorded them — all cash in this part, so what should be in the
+drawer — and the emergencies that came that day still uncharged. One charged a day later shows in that day's
+cash desk.
+
+**Who reads it is the route's to say** (D-34), each with an answer of its own, as D-76. Reception reads it
+whole, the patients and the pending visits included: `GET /api/cash-desk?date=` and `/cash-desk`. The admins
+read the charges and the totals, with no place for the patients nor the pending visits, which are patients
+waiting to pay: `GET /api/cash-desk-log?date=` and `/cash-desk-log`. Practitioners reach neither, a 403
+(D-50). Reception charges a pending emergency with `POST /api/visits/{id}/charge` (`{amount}`), and with
+"Cobrar" on its screen.
+
+**Coming in asks for the amount.** `POST /api/queues/{id}/session/patients`, `/session/unidentified` and
+`POST /api/appointment-arrivals` take `amount`, which only an emergency may leave out; `means` will join it in
+part 2 without breaking it. "Sumar", "Sumar como urgencia", "Llegó con turno", the nameless patient and the
+agenda's "Llegó" each have an "Importe" field. Refusals say "Falta el importe del cobro", "El importe debe ser
+mayor que cero, con dos decimales como mucho" and "El importe no puede superar $ 99.999.999,99".
+
+*Rejected:* the cash desk deciding the entry and calling the queues (two ways into a queue, one of them
+without a charge); a domain service for rules the visit can answer alone; event sourcing again (the facts
+never change, and a table says that already); one row per visit updated once charged (a charge is never
+changed); the ceiling in the form too (two places to keep a setting); a trigger forbidding changes in
+PostgreSQL (no path in the application changes a row); the pending visits for the admins (they are patients).

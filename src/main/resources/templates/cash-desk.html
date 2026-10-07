@@ -1,0 +1,73 @@
+<!DOCTYPE html>
+<html lang="es" xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{fragments :: head('Caja')}"></head>
+<body>
+<header th:replace="~{fragments :: staffHeader}"></header>
+<main class="wide">
+    <h1>Caja del día</h1>
+    <p class="muted">Lo cobrado ese día, en efectivo: es lo que debería haber en la caja. La factura se sigue
+        haciendo aparte.</p>
+    <div th:replace="~{fragments :: messages}"></div>
+
+    <form class="card bar" method="get" th:action="@{/cash-desk}">
+        <label>Día
+            <input type="date" name="date" th:value="${date}">
+        </label>
+        <button type="submit" class="primary">Ver</button>
+    </form>
+
+    <h2>Totales</h2>
+    <table>
+        <thead><tr><th>Registró</th><th>Cobros</th><th>Importe</th></tr></thead>
+        <tbody>
+        <tr th:each="r : ${byRecorder}">
+            <td th:text="${r.user}">recepcion</td>
+            <td th:text="${r.count}">3</td>
+            <td th:text="${r.amount}">$ 45.000,00</td>
+        </tr>
+        <tr>
+            <th>Total</th>
+            <th th:text="${count}">3</th>
+            <th th:text="${total}">$ 45.000,00</th>
+        </tr>
+        </tbody>
+    </table>
+
+    <h2>Cobros</h2>
+    <p th:if="${rows.isEmpty()}" class="muted">No hay cobros ese día.</p>
+    <table th:unless="${rows.isEmpty()}">
+        <thead><tr><th>Hora</th><th>Paciente</th><th>Medio</th><th>Importe</th><th>Registró</th></tr></thead>
+        <tbody>
+        <tr th:each="r : ${rows}">
+            <td th:text="${r.time}">10:15</td>
+            <td><span th:text="${r.patient}">Ana Pérez</span> <span class="muted" th:if="${r.emergency}">(urgencia)</span></td>
+            <td th:text="${r.means}">Efectivo</td>
+            <td th:text="${r.amount}">$ 15.000,00</td>
+            <td th:text="${r.user}">recepcion</td>
+        </tr>
+        </tbody>
+    </table>
+
+    <h2>Urgencias sin cobrar</h2>
+    <p class="muted">Entraron sin cobro ese día. Se cobran cuando se pueda, o nunca.</p>
+    <p th:if="${pending.isEmpty()}" class="muted">No hay urgencias pendientes de cobro.</p>
+    <table th:unless="${pending.isEmpty()}">
+        <thead><tr><th>Llegó</th><th>Paciente</th><th></th></tr></thead>
+        <tbody>
+        <tr th:each="p : ${pending}">
+            <td th:text="${p.arrivedAt}">09:40</td>
+            <td th:text="${p.patient}">NN-4821</td>
+            <td class="actions">
+                <form class="inline" method="post" th:action="@{/cash-desk/visits/{id}/charge(id=${p.visitId})}">
+                    <input type="hidden" name="date" th:value="${date}">
+                    <input type="number" name="amount" step="0.01" min="0.01" placeholder="Importe $"
+                           aria-label="Importe" required>
+                    <button type="submit" class="primary">Cobrar</button>
+                </form>
+            </td>
+        </tr>
+        </tbody>
+    </table>
+</main>
+</body>
+</html>

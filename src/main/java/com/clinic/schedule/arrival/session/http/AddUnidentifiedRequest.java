@@ -1,7 +1,12 @@
 package com.clinic.schedule.arrival.session.http;
 
-/** Whether a patient who gives no name comes in as an emergency; the body may be left out. */
-record AddUnidentifiedRequest(Boolean emergency) {
+import java.math.BigDecimal;
+
+/**
+ * Whether a patient who gives no name comes in as an emergency, and the pesos charged, which only an
+ * emergency may leave out (D-87). An emergency may leave the body out.
+ */
+record AddUnidentifiedRequest(Boolean emergency, BigDecimal amount) {
 
     boolean isEmergency() {
         return Boolean.TRUE.equals(emergency);

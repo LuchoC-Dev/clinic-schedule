@@ -64,7 +64,9 @@ identity is corrected and verified, with its history, and their date of birth, p
 recorded, each saying whose it is, and their health insurance, and who agreed to be reminded on each, with a history of their own — each patient's appointments, their family groups — formed at the desk, a child at a parent's request, with who shares their appointments and a history —, cancelled ones included, a practitioners screen to set
 up their reasons and week and record their absences, a queues screen to set up the arrival
 queues and who serves each, the arrivals screen, where queues are opened and closed and patients
-brought in, and the waiting-room screen, which names nobody. The queue screens show each change as
+brought in — each visit charged in cash as the patient comes in, an emergency's left pending —, the day's
+cash desk, with its charges, their totals by who recorded them and the emergencies still to charge, and the
+waiting-room screen, which names nobody. The queue screens show each change as
 it happens. A practitioner gets their own agenda,
 read-only, with today's patients linked to their clinical record and *Empezar consulta* once
 they arrived: a form beside the record, sent once and never changed, and completed afterwards
@@ -120,9 +122,12 @@ document as its type and number, such as `DNI 27333444`. Errors share one body:
 | `DELETE` | `/api/queues/{id}/practitioners/{practitionerId}` | a practitioner stops serving it; the queue stays |
 | `POST` | `/api/queues/{id}/open`, `/close`, `/auto-close-off` | open a queue — a new session —, close it, keep it open past its day |
 | `GET` | `/api/queues/{id}/session` | the open session: who waits, in the order they will be called, who was called, who is done |
-| `POST` | `/api/queues/{id}/session/patients`, `/session/unidentified` | bring a patient in, or one who gives no name, as an emergency or not |
+| `POST` | `/api/queues/{id}/session/patients`, `/session/unidentified` | bring a patient in, or one who gives no name, as an emergency or not, with the `amount` charged in cash — which only an emergency may leave out, pending |
 | `POST` | `/api/queue-entries/{id}/emergency`, `/left` | make a waiting patient an emergency, or say they left |
-| `POST` | `/api/appointment-arrivals` | a patient with an appointment today arrives: into their practitioner's queue, kept for them; the appointment answers when, as `arrivedAt` |
+| `POST` | `/api/appointment-arrivals` | a patient with an appointment today arrives, paying the `amount`: into their practitioner's queue, kept for them; the appointment answers when, as `arrivedAt` |
+| `GET` | `/api/cash-desk?date=` | a day's cash desk, today by default: each charge with its patient, the totals by who recorded them, and the emergencies of that day not charged yet |
+| `POST` | `/api/visits/{id}/charge` | `{amount}`: charge an emergency's pending visit, once |
+| `GET` | `/api/cash-desk-log?date=` | the same for the admins, without the patients and the pending visits |
 | `POST` | `/api/queue-entries/{id}/reassign`, `/lift-reservation` | give a waiting patient to another practitioner of the queue, or to anyone |
 | `GET` | `/api/my-queue` | a practitioner's own queue |
 | `POST` | `/api/my-queue/call-next`, `/finish`, `/did-not-come-in` | call the next patient, finish with them, or say they did not come in |
@@ -172,7 +177,8 @@ record is `app.clinical-record.access-period`, a year by default. Reminders go o
 patients whose email has their consent — a responsible person's only for a patient under 13; the
 practice's name, address and phone are `app.practice.*`, its sender `app.mail.from`, and the SMTP server
 `spring.mail.*`. The links in the patients' emails point at `app.portal.base-url`, and an activation lasts
-`app.portal.activation-valid-for`, 72 hours by default.
+`app.portal.activation-valid-for`, 72 hours by default. A charge is pesos above zero with two decimals at
+most, up to `app.cash-desk.max-amount`, $ 99.999.999,99 by default; it is never changed nor deleted.
 
 ## How it is built
 
@@ -193,6 +199,7 @@ src/main/java/com/clinic/schedule/
 │       └── out/              driven: the ports' implementations
 │           ├── persistence/  JPA
 │           └── external/     the other modules, through their api/
+├── cashdesk/                 hexagonal: each visit's charge, and the day's cash desk
 ├── clinicalrecord/           hexagonal too: consultations, checks, orders, attachments, and who may read a record
 ├── patient/                  layered: presentation/ (http, screen), service/, entity/,
 │                             persistence/ — and api/, its only door for other modules
@@ -206,7 +213,7 @@ src/main/java/com/clinic/schedule/
 
 A module reaches another only through its `api/` package, and in the layered modules each layer
 is reached only by the one above it; `ArchitectureTest` checks both on every build (D-05, D-42).
-The domains of `appointment`, `clinicalrecord`, `portal` and `reminder` have no framework annotations and are tested
+The domains of `appointment`, `cashdesk`, `clinicalrecord`, `portal` and `reminder` have no framework annotations and are tested
 without Spring. The whole repository is in English; on-screen text is in Spanish (D-13).
 
 ## Deliberately postponed

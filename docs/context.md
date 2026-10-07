@@ -822,4 +822,6 @@ v2 are chosen from here.
    ask for of their record.
 6. **Future user interface**: two separate single-page applications, one for
    reception/practitioners and one for patients. This is why the REST API is the main
-   contract from v1 onwards.
+   contract from v1 onwards. The cash desk's screens there ask reception to confirm an amount a
+   second time when it is very large, before sending it: the server only refuses what goes above
+   its ceiling (D-87), so an amount with one zero too many that stays below it goes through.

@@ -54,6 +54,10 @@ app:
   # all; after the last one they are taken out of the queue as not having shown up (D-63).
   arrival:
     calls-before-no-show: 3
+  # The most a single charge may be, in pesos (D-87): an amount above it is refused, so one typed with too many
+  # digits never reaches the database, whose column keeps up to 9999999999.99.
+  cash-desk:
+    max-amount: 99999999.99
   # How long after they last saw a patient - a consultation, or a check - a practitioner may still
   # read the patient's clinical record: an ISO-8601 period (D-49, D-53).
   clinical-record:

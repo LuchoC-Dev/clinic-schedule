@@ -13,12 +13,13 @@ import com.clinic.schedule.arrival.session.command.QueueNotOpenException;
 import com.clinic.schedule.arrival.session.command.UnknownPatientException;
 import com.clinic.schedule.arrival.session.domain.exception.SessionRuleViolationException;
 import com.clinic.schedule.arrival.setup.QueueNotFoundException;
+import com.clinic.schedule.cashdesk.api.ChargeRefusedException;
 import com.clinic.schedule.shared.http.ErrorResponse;
 
 /**
  * The refusals of a queue at work, in the uniform error body: an unknown queue or entry is 404, a
  * rule broken, a closed queue, a practitioner with no queue or a change made meanwhile is 409, and
- * an unknown patient is 400.
+ * an unknown patient or a charge refused is 400 (D-87).
  */
 @RestControllerAdvice(assignableTypes = {SessionController.class, MyQueueController.class})
 class SessionExceptionHandler {
@@ -34,7 +35,7 @@ class SessionExceptionHandler {
         return ResponseEntity.status(HttpStatus.CONFLICT).body(ErrorResponse.of(409, "Conflict", e.getMessage()));
     }
 
-    @ExceptionHandler({UnknownPatientException.class, IllegalArgumentException.class})
+    @ExceptionHandler({UnknownPatientException.class, ChargeRefusedException.class, IllegalArgumentException.class})
     ResponseEntity<ErrorResponse> badRequest(RuntimeException e) {
         return ResponseEntity.badRequest().body(ErrorResponse.of(400, "Bad request", e.getMessage()));
     }

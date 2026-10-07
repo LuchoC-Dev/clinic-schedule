@@ -18,7 +18,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
  * A patient with an appointment today arrives and is called, through the endpoints, as the
  * practice does it since the queues took the arrival over (D-65): the appointment's practitioner
  * gets a queue if they serve none, it is opened if it is closed, the patient comes in with the
- * appointment, and the practitioner calls them. What the check-in of the appointment used to do for
+ * appointment, paying for the visit (D-87), and the practitioner calls them. What the check-in of the appointment used to do for
  * the tests of the clinical record — let the practitioner write it — a call does now.
  *
  * <p>Reception's part runs as the test's own user, which is reception in these tests.
@@ -40,7 +40,7 @@ public final class ArrivalFixture {
                 UUID.fromString(appointmentId));
         openQueueFor(practitioner);
         mockMvc.perform(post("/api/appointment-arrivals").contentType(MediaType.APPLICATION_JSON)
-                .content("{\"appointmentId\": \"" + appointmentId + "\"}")).andExpect(status().isCreated());
+                .content("{\"appointmentId\": \"" + appointmentId + "\", \"amount\": 15000}")).andExpect(status().isCreated());
     }
 
     /**

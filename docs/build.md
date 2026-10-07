@@ -1579,14 +1579,47 @@ left for later is listed below.
 Scope in `docs/context.md`, section "v2, phase 7 — the cash desk". Delivered in parts; each one is
 usable on its own. The technical design of each part is agreed before it is coded.
 
-#### Part 1a — Charging privately in cash `[ ]`
+#### Part 1a — Charging privately in cash `[x]`
 - [x] `docs/context.md`: the scope of phase 7
-- [ ] Reception charges a visit when it puts the patient into a queue, in the same step: the amount it
+- [x] A new hexagonal module, `cashdesk`, with `api/VisitCashier`: the three ways into a queue call it in
+      their own transaction, so a refused charge leaves no event, no visit and no nameless patient (D-87)
+- [x] Reception charges a visit when it puts the patient into a queue, in the same step: the amount it
       types, in cash; without it the patient does not go in
-- [ ] An emergency goes in uncharged, its charge pending, recorded later or never
-- [ ] A charge is never changed nor deleted, and records who and when
-- [ ] The day's cash desk: its movements and totals, by who recorded them, and the pending visits;
+- [x] The amount: pesos above zero, two decimals at most, up to `app.cash-desk.max-amount`, $ 99.999.999,99
+      by default, refused with a 400 and its message, never cut by the database
+- [x] An emergency goes in uncharged, its charge pending, recorded later or never — or paid as it comes in
+- [x] A charge is never changed nor deleted, and records who and when; a visit is charged once, and two
+      requests at once are refused by the unique key as one charged already
+- [x] The day's cash desk: its movements and totals, by who recorded them, and the pending visits;
       reception reads it whole, the admins without the patients, the practitioners not at all
+- [x] `GET /api/cash-desk`, `POST /api/visits/{id}/charge`, `GET /api/cash-desk-log`; `/cash-desk` and
+      `/cash-desk-log`; an "Importe" field wherever reception brings a patient in, the agenda's "Llegó" included
+- [x] `V39`: `cash_visit` and `cash_charge`, only ever inserted, with `ck_cash_charge_means` named for part 2
+- [x] 26 unit and 18 integration tests, and `cashdesk` in `ArchitectureTest`. 477 unit and 553 integration
+      tests, 1030 in total
+
+**Verified with:** every new test failing when the code it covers was broken on purpose — 75 breakages, all
+caught: each rule of the amount — above zero, two decimals, kept in cents, the ceiling ignored, exclusive or
+not said —, each rule of the ceiling's setting, a visit started uncharged, charged twice, at the wrong time or
+by someone else, a charge with nobody, the day's order, checks and totals, the ceiling skipped by either use
+case, an emergency taken for none or the other way, the day asked ignored, a charge two requests at once let
+through, the pending query and the day's range, what storage keeps and reads back, the reasons and the ceiling
+handed to the queues, each status and field of the API, the admins' day, each message, amount, link and field
+of the screens, the admins' routes, each of the three ways into a queue left uncharged or with the amount
+dropped, each check, key and foreign key of V39, and the setting. Two gaps were found and closed first: the
+patient's name in the API, and a charge's amount on reception's screen, which a total could hide. A control
+that changed only a comment was not caught. The run was stopped once by the machine's lack of memory; the
+fault left planted was restored, and the rest run in batches of four or fewer. `mvnw clean test` and
+`mvnw verify`, and the seven `*PostgresIT` on PostgreSQL 18, which ran V39.
+
+**Verified with the application running** on a throwaway PostgreSQL, taken from empty to V104: reception opened
+Arias's queue and brought Ana in over the API without an amount, with zero and with one hundred million — each
+refused with a 400 and its message, nobody in the queue — and then with $ 15.000,50; Juan came in as an
+emergency without paying and was left pending. Charging him $ 5.000 took him off the pending list, and a second
+charge was refused with a 409. Reception's `/cash-desk` showed both charges with their patients, the second as an
+emergency, and $ 20.000,50 in all; the admin read the same charges and total without a name, over the API and on
+`/cash-desk-log`, and was refused reception's; Arias was refused both. In the database the charges kept their
+cents, and V39's checks, unique key and foreign key were there by name.
 
 #### Part 1b — Refunds `[ ]`
 - [ ] A refund is a movement of its own, up to what is left of its charge, with who, when and why

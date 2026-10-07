@@ -66,7 +66,7 @@ class LiveQueuesIT {
 
         mockMvc.perform(post("/api/queues/" + queue + "/open")).andExpect(status().isOk());
         mockMvc.perform(post("/api/queues/" + queue + "/session/patients").contentType(MediaType.APPLICATION_JSON)
-                .content("{\"patientId\": \"" + new PatientFixture(mockMvc, json).newPatient() + "\"}"));
+                .content("{\"patientId\": \"" + new PatientFixture(mockMvc, json).newPatient() + "\", \"amount\": 15000}"));
 
         assertThat(heard(stream).split("data:" + queue, -1)).hasSize(4);
         assertThat(heard(stream)).doesNotContain("patientId");
@@ -114,7 +114,7 @@ class LiveQueuesIT {
         mockMvc.perform(post("/api/queues/" + queue + "/open"));
         UUID patient = new PatientFixture(mockMvc, json).newPatient();
         mockMvc.perform(post("/api/queues/" + queue + "/session/patients").contentType(MediaType.APPLICATION_JSON)
-                .content("{\"patientId\": \"" + patient + "\"}"));
+                .content("{\"patientId\": \"" + patient + "\", \"amount\": 15000}"));
         String patientName = json.readTree(mockMvc.perform(get("/api/patients/" + patient))
                 .andReturn().getResponse().getContentAsString()).get("fullName").asText();
 
