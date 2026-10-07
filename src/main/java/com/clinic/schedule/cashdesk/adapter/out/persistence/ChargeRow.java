@@ -2,6 +2,7 @@ package com.clinic.schedule.cashdesk.adapter.out.persistence;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
+import java.util.List;
 import java.util.UUID;
 
 import org.hibernate.annotations.Immutable;
@@ -9,6 +10,7 @@ import org.hibernate.annotations.Immutable;
 import com.clinic.schedule.cashdesk.domain.Amount;
 import com.clinic.schedule.cashdesk.domain.Charge;
 import com.clinic.schedule.cashdesk.domain.Means;
+import com.clinic.schedule.cashdesk.domain.Refund;
 
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
@@ -18,8 +20,9 @@ import jakarta.persistence.Id;
 import jakarta.persistence.Table;
 
 /**
- * A charge as a row (D-87). Only ever inserted, never changed nor deleted. A visit has one at most: the
- * unique key on the visit refuses a second that two requests at once could let through.
+ * A charge as a row (D-87). Only ever inserted, never changed nor deleted. Its number is its place among the
+ * visit's charges (D-88): two requests at once charging the visit take the same one, and the unique key on
+ * the pair refuses the second. Its refunds are rows of their own.
  */
 @Entity
 @Immutable
@@ -31,6 +34,9 @@ class ChargeRow {
 
     @Column(name = "visit_id", nullable = false)
     private UUID visitId;
+
+    @Column(name = "charge_no", nullable = false)
+    private int number;
 
     @Column(nullable = false, precision = 12, scale = 2)
     private BigDecimal amount;
@@ -49,10 +55,12 @@ class ChargeRow {
         // required by JPA
     }
 
-    static ChargeRow from(UUID visitId, Charge charge) {
+    /** @param number its place among the visit's charges, from 1 */
+    static ChargeRow from(UUID visitId, int number, Charge charge) {
         ChargeRow row = new ChargeRow();
         row.id = charge.id();
         row.visitId = visitId;
+        row.number = number;
         row.amount = charge.amount().value();
         row.means = charge.means();
         row.recordedBy = charge.recordedBy();
@@ -60,11 +68,20 @@ class ChargeRow {
         return row;
     }
 
+    UUID id() {
+        return id;
+    }
+
     UUID visitId() {
         return visitId;
     }
 
-    Charge toCharge() {
-        return new Charge(id, new Amount(amount), means, recordedBy, recordedAt);
+    int number() {
+        return number;
+    }
+
+    /** @param refunds its refunds, in the order they were recorded */
+    Charge toCharge(List<Refund> refunds) {
+        return new Charge(id, new Amount(amount), means, recordedBy, recordedAt, refunds);
     }
 }

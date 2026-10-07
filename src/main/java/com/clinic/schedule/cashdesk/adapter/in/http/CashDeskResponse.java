@@ -8,20 +8,25 @@ import java.util.Map;
 import java.util.UUID;
 
 import com.clinic.schedule.cashdesk.domain.CashDeskDay;
-import com.clinic.schedule.cashdesk.domain.Charge;
+import com.clinic.schedule.cashdesk.domain.CashDeskDay.Kind;
 import com.clinic.schedule.cashdesk.domain.Means;
 import com.clinic.schedule.cashdesk.domain.Visit;
 import com.clinic.schedule.patient.api.PatientSummary;
 
 /**
- * A day of the cash desk as reception gets it (D-87): each charge with its patient, the totals, overall and
- * by who recorded them, and the emergencies of that day not charged yet.
+ * A day of the cash desk as reception gets it (D-87, D-88): each charge and refund with its patient — a
+ * refund with why, a charge with what is left of it —, the totals, overall and by who recorded them, and the
+ * emergencies of that day never charged.
  */
-record CashDeskResponse(LocalDate date, List<Movement> movements, Total total, List<RecorderTotal> byRecorder,
-        List<Pending> pending) {
+record CashDeskResponse(LocalDate date, List<Movement> movements, Totals.Total total,
+        List<Totals.RecorderTotal> byRecorder, List<Pending> pending) {
 
-    record Movement(UUID visitId, Patient patient, boolean emergency, BigDecimal amount, Means means,
-            String recordedBy, LocalDateTime recordedAt) {
+    /**
+     * @param left what is left of the charge now; null for a refund
+     * @param reason why it was given back; null for a charge
+     */
+    record Movement(Kind kind, UUID visitId, Patient patient, boolean emergency, BigDecimal amount, Means means,
+            BigDecimal left, String reason, String recordedBy, LocalDateTime recordedAt) {
     }
 
     record Pending(UUID visitId, Patient patient, LocalDateTime arrivedAt) {
@@ -31,28 +36,21 @@ record CashDeskResponse(LocalDate date, List<Movement> movements, Total total, L
     record Patient(UUID id, String fullName, String document) {
     }
 
-    record Total(int count, BigDecimal amount) {
-    }
-
-    record RecorderTotal(String recordedBy, int count, BigDecimal amount) {
-    }
-
     static CashDeskResponse of(CashDeskDay day, Map<UUID, PatientSummary> patients) {
         return new CashDeskResponse(day.date(),
-                day.charged().stream().map(visit -> movement(visit, patients)).toList(),
-                new Total(day.total().count(), day.total().amount()),
-                day.byRecorder().stream()
-                        .map(each -> new RecorderTotal(each.recordedBy(), each.total().count(), each.total().amount()))
-                        .toList(),
+                day.movements().stream().map(movement -> movement(movement, patients)).toList(),
+                Totals.Total.of(day.total()), Totals.byRecorder(day),
                 day.pending().stream()
                         .map(visit -> new Pending(visit.id(), patient(visit, patients), visit.arrivedAt()))
                         .toList());
     }
 
-    private static Movement movement(Visit visit, Map<UUID, PatientSummary> patients) {
-        Charge charge = visit.charge().orElseThrow();
-        return new Movement(visit.id(), patient(visit, patients), visit.emergency(), charge.amount().value(),
-                charge.means(), charge.recordedBy(), charge.recordedAt());
+    private static Movement movement(CashDeskDay.Movement movement, Map<UUID, PatientSummary> patients) {
+        Visit visit = movement.visit();
+        return new Movement(movement.kind(), visit.id(), patient(visit, patients), visit.emergency(),
+                movement.amount().value(), movement.means(),
+                movement.kind() == Kind.CHARGE ? movement.charge().left() : null, movement.reason(),
+                movement.recordedBy(), movement.recordedAt());
     }
 
     private static Patient patient(Visit visit, Map<UUID, PatientSummary> patients) {

@@ -93,9 +93,17 @@ class CashDeskApiIT {
         throw new AssertionError("The patient is not waiting");
     }
 
+    /** The visit's first charge recorded that day. */
     private JsonNode movementOf(JsonNode day, String visit) {
+        return movementOf(day, visit, "CHARGE", 0);
+    }
+
+    /** The visit's movement of that kind recorded that day, by its place among them. */
+    private JsonNode movementOf(JsonNode day, String visit, String kind, int place) {
+        int seen = 0;
         for (JsonNode movement : day.get("movements")) {
-            if (movement.get("visitId").asText().equals(visit)) {
+            if (movement.get("visitId").asText().equals(visit) && movement.get("kind").asText().equals(kind)
+                    && seen++ == place) {
                 return movement;
             }
         }
@@ -258,19 +266,31 @@ class CashDeskApiIT {
         arrives(patients.newPatient(), ", \"emergency\": true").andExpect(status().isCreated());
 
         JsonNode after = today();
-        assertThat(after.get("total").get("count").asInt()).isEqualTo(before.get("total").get("count").asInt() + 2);
-        assertThat(after.get("total").get("amount").decimalValue().subtract(before.get("total").get("amount").decimalValue()))
+        assertThat(after.get("total").get("charged").get("count").asInt())
+                .isEqualTo(before.get("total").get("charged").get("count").asInt() + 2);
+        assertThat(total(after, "charged").subtract(total(before, "charged"))).isEqualByComparingTo("3500.25");
+        assertThat(after.get("total").get("left").decimalValue().subtract(before.get("total").get("left").decimalValue()))
                 .isEqualByComparingTo("3500.25");
         assertThat(recorded(after, "recepcion").subtract(recorded(before, "recepcion"))).isEqualByComparingTo("3500.25");
     }
 
     private BigDecimal recorded(JsonNode day, String user) {
+        return recorded(day, user, "charged");
+    }
+
+    /** What the user recorded that day of a kind: charged or refunded, as a sum, or what is left. */
+    private BigDecimal recorded(JsonNode day, String user, String what) {
         for (JsonNode each : day.get("byRecorder")) {
             if (each.get("recordedBy").asText().equals(user)) {
-                return each.get("amount").decimalValue();
+                JsonNode value = each.get(what);
+                return value.isObject() ? value.get("amount").decimalValue() : value.decimalValue();
             }
         }
         return BigDecimal.ZERO;
+    }
+
+    private BigDecimal total(JsonNode day, String what) {
+        return day.get("total").get(what).get("amount").decimalValue();
     }
 
     @Test
@@ -280,7 +300,7 @@ class CashDeskApiIT {
         mockMvc.perform(get("/api/cash-desk").param("date", "2026-03-09")).andExpect(status().isOk())
                 .andExpect(jsonPath("$.date").value("2026-03-09"))
                 .andExpect(jsonPath("$.movements").isEmpty())
-                .andExpect(jsonPath("$.total.count").value(0));
+                .andExpect(jsonPath("$.total.charged.count").value(0));
     }
 
     @Test
@@ -292,7 +312,7 @@ class CashDeskApiIT {
         String body = mockMvc.perform(get("/api/cash-desk-log").with(ADMIN)).andExpect(status().isOk())
                 .andExpect(jsonPath("$.date").value("2026-03-10"))
                 .andExpect(jsonPath("$.movements[0].means").value("CASH"))
-                .andExpect(jsonPath("$.total.count").isNumber())
+                .andExpect(jsonPath("$.total.charged.count").isNumber())
                 .andExpect(jsonPath("$.byRecorder[0].recordedBy").exists())
                 .andReturn().getResponse().getContentAsString();
 
@@ -313,5 +333,114 @@ class CashDeskApiIT {
         mockMvc.perform(post("/api/visits/" + UUID.randomUUID() + "/charge").with(asArias)
                 .contentType(MediaType.APPLICATION_JSON).content("{\"amount\": 1}")).andExpect(status().isForbidden());
         mockMvc.perform(get("/api/cash-desk-log")).andExpect(status().isForbidden());
+    }
+
+    private ResultActions refund(String visit, String body) throws Exception {
+        return mockMvc.perform(post("/api/visits/" + visit + "/refund").contentType(MediaType.APPLICATION_JSON)
+                .content(body));
+    }
+
+    @Test
+    void someOrAllOfAChargeIsGivenBackAsAMovementOfItsOwnAndTheVisitIsChargedAgain() throws Exception {
+        UUID ana = patients.newPatient();
+        arrives(ana, ", \"amount\": 15000").andExpect(status().isCreated());
+        String visit = visitOf(ana);
+        JsonNode before = today();
+
+        refund(visit, "{\"amount\": 5000}").andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.message").value("A refund says why"));
+        refund(visit, "{\"amount\": 5000, \"reason\": \"" + "x".repeat(201) + "\"}")
+                .andExpect(status().isBadRequest());
+        refund(visit, "{\"amount\": 0, \"reason\": \"error\"}").andExpect(status().isBadRequest());
+        JsonNode day = read(mockMvc.perform(post("/api/visits/" + visit + "/refund").with(OTHER_RECEPTIONIST)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"amount\": 5000, \"reason\": \" cobrado de m\u00e1s \"}"))
+                .andExpect(status().isOk()));
+
+        JsonNode given = movementOf(day, visit, "REFUND", 0);
+        assertThat(given.get("amount").decimalValue()).isEqualByComparingTo("5000");
+        assertThat(given.get("reason").asText()).isEqualTo("cobrado de m\u00e1s");
+        assertThat(given.get("recordedBy").asText()).isEqualTo("otra");
+        assertThat(given.get("means").asText()).isEqualTo("CASH");
+        assertThat(given.get("left").isNull()).isTrue();
+        assertThat(given.get("patient").get("id").asText()).isEqualTo(ana.toString());
+        assertThat(movementOf(day, visit).get("left").decimalValue()).isEqualByComparingTo("10000");
+        assertThat(movementOf(day, visit).get("reason").isNull()).isTrue();
+        assertThat(total(day, "refunded").subtract(total(before, "refunded"))).isEqualByComparingTo("5000");
+        assertThat(day.get("total").get("refunded").get("count").asInt())
+                .isEqualTo(before.get("total").get("refunded").get("count").asInt() + 1);
+        assertThat(before.get("total").get("left").decimalValue().subtract(day.get("total").get("left").decimalValue()))
+                .isEqualByComparingTo("5000");
+        assertThat(recorded(day, "otra", "refunded").subtract(recorded(before, "otra", "refunded")))
+                .isEqualByComparingTo("5000");
+
+        refund(visit, "{\"amount\": 10000.01, \"reason\": \"se fue\"}").andExpect(status().isConflict())
+                .andExpect(jsonPath("$.message").value("A refund may not be above what is left of the charge, 10000.00"));
+        mockMvc.perform(post("/api/visits/" + visit + "/charge").contentType(MediaType.APPLICATION_JSON)
+                .content("{\"amount\": 1}")).andExpect(status().isConflict());
+        refund(visit, "{\"amount\": 10000, \"reason\": \"importe equivocado\"}").andExpect(status().isOk());
+        refund(visit, "{\"amount\": 1, \"reason\": \"error\"}").andExpect(status().isConflict())
+                .andExpect(jsonPath("$.message").value("There is nothing left to give back"));
+
+        day = read(mockMvc.perform(post("/api/visits/" + visit + "/charge").contentType(MediaType.APPLICATION_JSON)
+                .content("{\"amount\": 1500}")).andExpect(status().isOk()));
+        assertThat(movementOf(day, visit, "CHARGE", 1).get("amount").decimalValue()).isEqualByComparingTo("1500");
+        assertThat(movementOf(day, visit, "CHARGE", 1).get("left").decimalValue()).isEqualByComparingTo("1500");
+        assertThat(movementOf(day, visit).get("left").decimalValue()).isEqualByComparingTo("0");
+        assertThat(jdbc.queryForObject("select count(*) from cash_refund r join cash_charge c on c.id = r.charge_id "
+                + "where c.visit_id = ?", Integer.class, UUID.fromString(visit))).isEqualTo(2);
+        refund(UUID.randomUUID().toString(), "{\"amount\": 1, \"reason\": \"error\"}").andExpect(status().isNotFound());
+    }
+
+    @Test
+    void nothingIsGivenBackOfAnEmergencyNeverCharged() throws Exception {
+        UUID ana = patients.newPatient();
+        arrives(ana, ", \"emergency\": true").andExpect(status().isCreated());
+
+        refund(visitOf(ana), "{\"amount\": 1, \"reason\": \"error\"}").andExpect(status().isConflict());
+        assertThat(isPending(today(), visitOf(ana))).isTrue();
+    }
+
+    @Test
+    void aRefundCountsTheDayItIsRecordedWhateverDayItsChargeWas() throws Exception {
+        UUID visit = UUID.randomUUID();
+        UUID charge = UUID.randomUUID();
+        jdbc.update("insert into cash_visit (id, patient_id, arrived_at, emergency) values (?, ?, ?, false)", visit,
+                patients.newPatient(), java.sql.Timestamp.valueOf("2026-03-09 18:00:00"));
+        jdbc.update("insert into cash_charge (id, visit_id, charge_no, amount, means, recorded_by, recorded_at) "
+                + "values (?, ?, 1, 3000, 'CASH', 'recepcion', ?)", charge, visit,
+                java.sql.Timestamp.valueOf("2026-03-09 18:00:00"));
+
+        JsonNode day = read(refund(visit.toString(), "{\"amount\": 3000, \"reason\": \"no fue atendido\"}")
+                .andExpect(status().isOk()));
+
+        assertThat(movementOf(day, visit.toString(), "REFUND", 0)).isNotNull();
+        assertThat(movementOf(day, visit.toString())).isNull();
+        JsonNode yesterday = read(mockMvc.perform(get("/api/cash-desk").param("date", "2026-03-09")));
+        assertThat(movementOf(yesterday, visit.toString()).get("left").decimalValue()).isEqualByComparingTo("0");
+        assertThat(movementOf(yesterday, visit.toString(), "REFUND", 0)).isNull();
+    }
+
+    @Test
+    void theAdminsReadTheRefundsWithoutWhy() throws Exception {
+        UUID ana = patients.newPatient();
+        arrives(ana, ", \"amount\": 2222").andExpect(status().isCreated());
+        refund(visitOf(ana), "{\"amount\": 1111, \"reason\": \"motivo-que-no-ven\"}").andExpect(status().isOk());
+
+        String body = mockMvc.perform(get("/api/cash-desk-log").with(ADMIN)).andExpect(status().isOk())
+                .andExpect(jsonPath("$.total.refunded.count").isNumber())
+                .andExpect(jsonPath("$.total.left").isNumber())
+                .andExpect(jsonPath("$.byRecorder[0].refunded").exists())
+                .andExpect(jsonPath("$.movements[*].left").isEmpty())
+                .andReturn().getResponse().getContentAsString();
+
+        assertThat(body).contains("\"kind\":\"REFUND\"").contains("1111").doesNotContain("motivo-que-no-ven")
+                .doesNotContain("reason");
+        mockMvc.perform(post("/api/visits/" + visitOf(ana) + "/refund").with(ADMIN)
+                .contentType(MediaType.APPLICATION_JSON).content("{\"amount\": 1, \"reason\": \"x\"}"))
+                .andExpect(status().isForbidden());
+        mockMvc.perform(post("/api/visits/" + visitOf(ana) + "/refund").with(asArias)
+                .contentType(MediaType.APPLICATION_JSON).content("{\"amount\": 1, \"reason\": \"x\"}"))
+                .andExpect(status().isForbidden());
     }
 }

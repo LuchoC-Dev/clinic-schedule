@@ -5,6 +5,7 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
+import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 
@@ -17,34 +18,50 @@ class VisitTest {
 
     private static final LocalDateTime NINE = LocalDateTime.of(2026, 3, 10, 9, 0);
     private static final LocalDateTime TEN = LocalDateTime.of(2026, 3, 10, 10, 0);
+    private static final LocalDateTime ELEVEN = LocalDateTime.of(2026, 3, 10, 11, 0);
     private static final Amount FIFTEEN_THOUSAND = new Amount(new BigDecimal("15000"));
 
     private final UUID id = UUID.randomUUID();
     private final UUID patient = UUID.randomUUID();
 
+    private Visit charged() {
+        return Visit.arrive(id, patient, false, Optional.of(FIFTEEN_THOUSAND), "recepcion", NINE);
+    }
+
+    private static Amount pesos(String value) {
+        return new Amount(new BigDecimal(value));
+    }
+
+    private static void refused(Runnable action, Reason reason) {
+        assertThatThrownBy(action::run).isInstanceOfSatisfying(ChargeRuleViolationException.class,
+                e -> assertThat(e.reason()).isEqualTo(reason));
+    }
+
     @Test
     void aVisitIsChargedAsItStarts() {
-        Visit visit = Visit.arrive(id, patient, false, Optional.of(FIFTEEN_THOUSAND), "recepcion", NINE);
+        Visit visit = charged();
 
         assertThat(visit.pending()).isFalse();
-        Charge charge = visit.charge().orElseThrow();
+        Charge charge = visit.current().orElseThrow();
+        assertThat(visit.charges()).containsExactly(charge);
         assertThat(charge.amount()).isEqualTo(FIFTEEN_THOUSAND);
         assertThat(charge.means()).isEqualTo(Means.CASH);
         assertThat(charge.recordedBy()).isEqualTo("recepcion");
         assertThat(charge.recordedAt()).isEqualTo(NINE);
+        assertThat(charge.refunds()).isEmpty();
+        assertThat(charge.left()).isEqualByComparingTo("15000");
         assertThat(visit.arrivedAt()).isEqualTo(NINE);
     }
 
     @Test
     void withoutBeingChargedOnlyAnEmergencyStarts() {
-        assertThatThrownBy(() -> Visit.arrive(id, patient, false, Optional.empty(), "recepcion", NINE))
-                .isInstanceOfSatisfying(ChargeRuleViolationException.class,
-                        e -> assertThat(e.reason()).isEqualTo(Reason.CHARGE_REQUIRED));
+        refused(() -> Visit.arrive(id, patient, false, Optional.empty(), "recepcion", NINE), Reason.CHARGE_REQUIRED);
 
         Visit emergency = Visit.arrive(id, patient, true, Optional.empty(), "recepcion", NINE);
 
         assertThat(emergency.pending()).isTrue();
-        assertThat(emergency.charge()).isEmpty();
+        assertThat(emergency.charges()).isEmpty();
+        assertThat(emergency.current()).isEmpty();
     }
 
     @Test
@@ -61,8 +78,8 @@ class VisitTest {
 
         Visit charged = pending.charge(FIFTEEN_THOUSAND, "otra", TEN);
 
-        assertThat(charged.charge().orElseThrow().recordedBy()).isEqualTo("otra");
-        assertThat(charged.charge().orElseThrow().recordedAt()).isEqualTo(TEN);
+        assertThat(charged.current().orElseThrow().recordedBy()).isEqualTo("otra");
+        assertThat(charged.current().orElseThrow().recordedAt()).isEqualTo(TEN);
         assertThat(charged.arrivedAt()).isEqualTo(NINE);
         assertThat(charged.id()).isEqualTo(id);
         assertThat(charged.patientId()).isEqualTo(patient);
@@ -70,23 +87,93 @@ class VisitTest {
     }
 
     @Test
-    void aVisitIsChargedOnce() {
-        Visit charged = Visit.arrive(id, patient, false, Optional.of(FIFTEEN_THOUSAND), "recepcion", NINE);
+    void aVisitWithSomethingLeftOfItsChargeIsNotChargedAgain() {
+        refused(() -> charged().charge(FIFTEEN_THOUSAND, "recepcion", TEN), Reason.ALREADY_CHARGED);
+        Visit partly = charged().refund(pesos("5000"), "cobrado de más", "recepcion", TEN);
+        refused(() -> partly.charge(FIFTEEN_THOUSAND, "recepcion", ELEVEN), Reason.ALREADY_CHARGED);
+    }
 
-        assertThatThrownBy(() -> charged.charge(FIFTEEN_THOUSAND, "recepcion", TEN))
-                .isInstanceOfSatisfying(ChargeRuleViolationException.class,
-                        e -> assertThat(e.reason()).isEqualTo(Reason.ALREADY_CHARGED));
+    @Test
+    void someOfAChargeIsGivenBackAsAMovementOfItsOwn() {
+        Visit visit = charged();
+
+        Visit after = visit.refund(pesos("5000"), "  cobrado de más  ", "otra", TEN);
+
+        Charge charge = after.current().orElseThrow();
+        assertThat(charge.id()).isEqualTo(visit.current().orElseThrow().id());
+        assertThat(charge.amount()).isEqualTo(FIFTEEN_THOUSAND);
+        assertThat(charge.left()).isEqualByComparingTo("10000");
+        Refund refund = charge.refunds().getFirst();
+        assertThat(refund.amount()).isEqualTo(pesos("5000"));
+        assertThat(refund.reason()).isEqualTo("cobrado de más");
+        assertThat(refund.recordedBy()).isEqualTo("otra");
+        assertThat(refund.recordedAt()).isEqualTo(TEN);
+        assertThat(visit.current().orElseThrow().refunds()).isEmpty();
+    }
+
+    @Test
+    void noMoreIsGivenBackThanIsLeft() {
+        Visit partly = charged().refund(pesos("5000"), "cobrado de más", "recepcion", TEN);
+
+        assertThatThrownBy(() -> partly.refund(pesos("10000.01"), "se fue", "recepcion", ELEVEN))
+                .isInstanceOfSatisfying(ChargeRuleViolationException.class, e -> {
+                    assertThat(e.reason()).isEqualTo(Reason.REFUND_TOO_HIGH);
+                    assertThat(e.limit()).isEqualByComparingTo("10000");
+                });
+
+        Visit whole = partly.refund(pesos("10000"), "se fue sin ser atendido", "recepcion", ELEVEN);
+        assertThat(whole.current()).isEmpty();
+        assertThat(whole.charges().getFirst().refunds()).hasSize(2);
+        assertThat(whole.pending()).isFalse();
+    }
+
+    @Test
+    void nothingIsGivenBackOfAVisitWithNothingLeft() {
+        refused(() -> Visit.arrive(id, patient, true, Optional.empty(), "recepcion", NINE)
+                .refund(pesos("1"), "error", "recepcion", TEN), Reason.NOTHING_TO_REFUND);
+        Visit whole = charged().refund(FIFTEEN_THOUSAND, "error", "recepcion", TEN);
+        refused(() -> whole.refund(pesos("1"), "error", "recepcion", ELEVEN), Reason.NOTHING_TO_REFUND);
+    }
+
+    @Test
+    void aVisitGivenBackWholeIsChargedAgain() {
+        Visit whole = charged().refund(FIFTEEN_THOUSAND, "importe equivocado", "recepcion", TEN);
+
+        Visit again = whole.charge(pesos("1500"), "recepcion", ELEVEN);
+
+        assertThat(again.charges()).hasSize(2);
+        assertThat(again.current().orElseThrow().amount()).isEqualTo(pesos("1500"));
+        assertThat(again.current().orElseThrow().recordedAt()).isEqualTo(ELEVEN);
+        assertThat(again.charges().getFirst().left()).isEqualByComparingTo("0");
+        assertThat(again.refund(pesos("1500"), "otra vez", "recepcion", ELEVEN).current()).isEmpty();
+    }
+
+    @Test
+    void aRefundSaysWhyInTwoHundredCharactersAtMost() {
+        refused(() -> charged().refund(pesos("1"), "   ", "recepcion", TEN), Reason.REASON_REQUIRED);
+        refused(() -> charged().refund(pesos("1"), null, "recepcion", TEN), Reason.REASON_REQUIRED);
+        refused(() -> charged().refund(pesos("1"), "x".repeat(201), "recepcion", TEN), Reason.REASON_TOO_LONG);
+
+        assertThat(charged().refund(pesos("1"), "x".repeat(200), "recepcion", TEN).current().orElseThrow()
+                .refunds().getFirst().reason()).hasSize(200);
     }
 
     @Test
     void aVisitReadBackObeysTheSameRules() {
-        assertThatThrownBy(() -> Visit.recorded(id, patient, NINE, false, null))
-                .isInstanceOf(ChargeRuleViolationException.class);
+        refused(() -> Visit.recorded(id, patient, NINE, false, List.of()), Reason.CHARGE_REQUIRED);
+        Charge open = charged().current().orElseThrow();
+        assertThatThrownBy(() -> Visit.recorded(id, patient, NINE, false, List.of(open, open)))
+                .isInstanceOf(IllegalArgumentException.class);
+        Refund tooMuch = new Refund(UUID.randomUUID(), pesos("15000.01"), "error", "recepcion", TEN);
+        assertThatThrownBy(() -> new Charge(UUID.randomUUID(), FIFTEEN_THOUSAND, Means.CASH, "recepcion", NINE,
+                List.of(tooMuch))).isInstanceOf(IllegalArgumentException.class);
     }
 
     @Test
-    void aChargeSaysWhoRecordedIt() {
+    void aMovementSaysWhoRecordedIt() {
         assertThatThrownBy(() -> Visit.arrive(id, patient, false, Optional.of(FIFTEEN_THOUSAND), " ", NINE))
+                .isInstanceOf(IllegalArgumentException.class);
+        assertThatThrownBy(() -> charged().refund(pesos("1"), "error", " ", TEN))
                 .isInstanceOf(IllegalArgumentException.class);
     }
 }

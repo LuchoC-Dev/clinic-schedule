@@ -1,6 +1,8 @@
 package com.clinic.schedule.cashdesk.domain;
 
 import java.time.LocalDateTime;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 
@@ -8,12 +10,15 @@ import com.clinic.schedule.cashdesk.domain.exception.ChargeRuleViolationExceptio
 import com.clinic.schedule.cashdesk.domain.exception.ChargeRuleViolationException.Reason;
 
 /**
- * Each time reception puts a patient into a queue, and what was charged for it (D-87). Its id is the
- * queue's entry, so giving the patient to another practitioner, or calling them again, is the same visit.
+ * Each time reception puts a patient into a queue, and what was charged and given back for it (D-87, D-88).
+ * Its id is the queue's entry, so giving the patient to another practitioner, or calling them again, is the
+ * same visit.
  *
  * <p>A visit that is not an emergency is charged as it starts, or it does not start. An emergency may be
- * charged then, or is left pending and charged later, or never. Immutable: charging answers a new visit
- * (D-17).
+ * charged then, or is left pending and charged later, or never. What went wrong is given back, some or all of
+ * it; a visit given back whole may be charged again. So a visit has its charges in the order they were
+ * recorded, and only the last may have something left of it: that is the current one. Immutable: charging
+ * and giving back answer a new visit (D-17).
  */
 public final class Visit {
 
@@ -21,21 +26,24 @@ public final class Visit {
     private final UUID patientId;
     private final LocalDateTime arrivedAt;
     private final boolean emergency;
-    private final Charge charge;
+    private final List<Charge> charges;
 
-    private Visit(UUID id, UUID patientId, LocalDateTime arrivedAt, boolean emergency, Charge charge) {
-        if (id == null || patientId == null || arrivedAt == null) {
+    private Visit(UUID id, UUID patientId, LocalDateTime arrivedAt, boolean emergency, List<Charge> charges) {
+        if (id == null || patientId == null || arrivedAt == null || charges == null) {
             throw new IllegalArgumentException("A visit needs its id, its patient and when it started");
         }
-        if (!emergency && charge == null) {
+        if (!emergency && charges.isEmpty()) {
             throw new ChargeRuleViolationException(Reason.CHARGE_REQUIRED,
                     "A visit that is not an emergency is charged when the patient comes in");
+        }
+        if (charges.stream().limit(Math.max(charges.size() - 1, 0)).anyMatch(charge -> !charge.settled())) {
+            throw new IllegalArgumentException("A visit is charged again only once what it was charged is given back");
         }
         this.id = id;
         this.patientId = patientId;
         this.arrivedAt = arrivedAt;
         this.emergency = emergency;
-        this.charge = charge;
+        this.charges = List.copyOf(charges);
     }
 
     /**
@@ -46,20 +54,33 @@ public final class Visit {
      */
     public static Visit arrive(UUID id, UUID patientId, boolean emergency, Optional<Amount> amount, String by,
             LocalDateTime at) {
-        return new Visit(id, patientId, at, emergency, amount.map(paid -> Charge.inCash(paid, by, at)).orElse(null));
+        return new Visit(id, patientId, at, emergency,
+                amount.map(paid -> List.of(Charge.inCash(paid, by, at))).orElse(List.of()));
     }
 
-    /** A visit as it was recorded, read back. */
-    public static Visit recorded(UUID id, UUID patientId, LocalDateTime arrivedAt, boolean emergency, Charge charge) {
-        return new Visit(id, patientId, arrivedAt, emergency, charge);
+    /** A visit as it was recorded, read back, its charges in the order they were. */
+    public static Visit recorded(UUID id, UUID patientId, LocalDateTime arrivedAt, boolean emergency,
+            List<Charge> charges) {
+        return new Visit(id, patientId, arrivedAt, emergency, charges);
     }
 
-    /** An emergency's pending charge, recorded. */
+    /** An emergency's pending charge, or a visit given back whole charged again. */
     public Visit charge(Amount amount, String by, LocalDateTime at) {
-        if (charge != null) {
+        if (current().isPresent()) {
             throw new ChargeRuleViolationException(Reason.ALREADY_CHARGED, "The visit was charged already");
         }
-        return new Visit(id, patientId, arrivedAt, emergency, Charge.inCash(amount, by, at));
+        List<Charge> after = new ArrayList<>(charges);
+        after.add(Charge.inCash(amount, by, at));
+        return new Visit(id, patientId, arrivedAt, emergency, after);
+    }
+
+    /** Some or all of what is left of the current charge, given back. */
+    public Visit refund(Amount amount, String reason, String by, LocalDateTime at) {
+        Charge charge = current().orElseThrow(() -> new ChargeRuleViolationException(Reason.NOTHING_TO_REFUND,
+                "There is nothing left to give back"));
+        List<Charge> after = new ArrayList<>(charges);
+        after.set(after.size() - 1, charge.refund(amount, reason, by, at));
+        return new Visit(id, patientId, arrivedAt, emergency, after);
     }
 
     public UUID id() {
@@ -78,12 +99,18 @@ public final class Visit {
         return emergency;
     }
 
-    public Optional<Charge> charge() {
-        return Optional.ofNullable(charge);
+    /** Every charge, in the order they were recorded. */
+    public List<Charge> charges() {
+        return charges;
     }
 
-    /** Not charged yet: an emergency's, only. */
+    /** The charge with something left of it, if any: the last one. */
+    public Optional<Charge> current() {
+        return charges.isEmpty() || charges.getLast().settled() ? Optional.empty() : Optional.of(charges.getLast());
+    }
+
+    /** Never charged yet: an emergency's, only. */
     public boolean pending() {
-        return charge == null;
+        return charges.isEmpty();
     }
 }

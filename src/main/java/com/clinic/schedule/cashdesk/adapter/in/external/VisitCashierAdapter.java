@@ -32,9 +32,10 @@ class VisitCashierAdapter implements VisitCashier {
                 case CHARGE_REQUIRED -> ChargeRefusedException.Reason.CHARGE_REQUIRED;
                 case INVALID_AMOUNT -> ChargeRefusedException.Reason.INVALID_AMOUNT;
                 case AMOUNT_TOO_HIGH -> ChargeRefusedException.Reason.AMOUNT_TOO_HIGH;
-                // A visit starts uncharged, so it cannot have been charged already.
-                case ALREADY_CHARGED -> throw new IllegalStateException("A visit starting was charged already", e);
-            }, e.getMessage(), e.ceiling());
+                // A visit starts with no charge, so nothing else of its charges can be refused yet.
+                case ALREADY_CHARGED, NOTHING_TO_REFUND, REFUND_TOO_HIGH, REASON_REQUIRED, REASON_TOO_LONG,
+                        CHANGED_MEANWHILE -> throw new IllegalStateException("A visit starting was refused so", e);
+            }, e.getMessage(), e.limit());
         }
     }
 }

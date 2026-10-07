@@ -187,4 +187,76 @@ class CashDeskViewIT {
         mockMvc.perform(get("/cash-desk-log")).andExpect(status().isForbidden());
         mockMvc.perform(get("/cash-desk")).andExpect(content().string(containsString("href=\"/cash-desk\"")));
     }
+
+    @Test
+    void receptionGivesBackFromAChargeAndChargesAgainFromTheCashDesk() throws Exception {
+        UUID ana = patients.newPatient();
+        mockMvc.perform(post("/arrivals/" + queue + "/patients").with(csrf()).param("patientId", ana.toString())
+                .param("amount", "15000.37"));
+        UUID visit = visitOf(ana);
+        String refund = "/cash-desk/visits/" + visit + "/refund";
+
+        mockMvc.perform(get("/cash-desk"))
+                .andExpect(content().string(containsString("Devolver (queda $ 15.000,37)")))
+                .andExpect(content().string(containsString("value=\"15000.37\"")));
+
+        mockMvc.perform(post(refund).with(csrf()).param("amount", "5000").param("date", DAY))
+                .andExpect(redirectedUrl("/cash-desk?date=" + DAY))
+                .andExpect(flash().attribute("error", "Falta el motivo de la devolución."));
+        mockMvc.perform(post(refund).with(csrf()).param("amount", "5000").param("reason", "x".repeat(201)))
+                .andExpect(flash().attribute("error", "El motivo no puede superar los 200 caracteres."));
+        mockMvc.perform(post(refund).with(csrf()).param("amount", "15000.38").param("reason", "se fue"))
+                .andExpect(flash().attribute("error", "No se puede devolver más de lo que queda: $ 15.000,37."));
+        mockMvc.perform(post(refund).with(csrf()).param("amount", "5000").param("reason", "cobrado de más"))
+                .andExpect(redirectedUrl("/cash-desk"))
+                .andExpect(flash().attribute("message", "Devolución registrada."));
+
+        mockMvc.perform(get("/cash-desk"))
+                .andExpect(content().string(containsString("Devolución")))
+                .andExpect(content().string(containsString("— cobrado de más")))
+                .andExpect(content().string(containsString("−$ 5.000,00")))
+                .andExpect(content().string(containsString("Devolver (queda $ 10.000,37)")))
+                .andExpect(content().string(not(containsString("/cash-desk/visits/" + visit + "/charge"))));
+
+        mockMvc.perform(post(refund).with(csrf()).param("amount", "10000.37").param("reason", "importe equivocado"))
+                .andExpect(flash().attribute("message", "Devolución registrada."));
+        mockMvc.perform(post(refund).with(csrf()).param("amount", "1").param("reason", "error"))
+                .andExpect(flash().attribute("error", "No queda nada por devolver de ese cobro."));
+        mockMvc.perform(get("/cash-desk"))
+                .andExpect(content().string(containsString("/cash-desk/visits/" + visit + "/charge")))
+                .andExpect(content().string(containsString("Cobrar de nuevo")))
+                .andExpect(content().string(not(containsString(refund))));
+
+        mockMvc.perform(post("/cash-desk/visits/" + visit + "/charge").with(csrf()).param("amount", "1500.37"))
+                .andExpect(flash().attribute("message", "Cobro registrado."));
+        mockMvc.perform(get("/cash-desk"))
+                .andExpect(content().string(containsString("Devolver (queda $ 1.500,37)")));
+        mockMvc.perform(post("/cash-desk/visits/" + UUID.randomUUID() + "/refund").with(csrf()).param("amount", "1")
+                        .param("reason", "error"))
+                .andExpect(flash().attribute("error", "Esa visita no existe."));
+    }
+
+    @Test
+    void theAdminsReadTheRefundsWithoutWhy() throws Exception {
+        // A receptionist of their own, so their totals are this test's alone.
+        RequestPostProcessor cajera = user("cajera").roles("RECEPTION");
+        UUID ana = patients.newPatient();
+        mockMvc.perform(post("/arrivals/" + queue + "/patients").with(cajera).with(csrf())
+                .param("patientId", ana.toString()).param("amount", "7777"));
+        mockMvc.perform(post("/cash-desk/visits/" + visitOf(ana) + "/refund").with(cajera).with(csrf())
+                .param("amount", "777").param("reason", "motivo-que-no-ven"));
+        // Their row of the totals, with the screen's spacing left out: charged, given back, and what is left.
+        String totals = "<td>cajera</td><td>1</td><td>$7.777,00</td><td>1</td><td>$777,00</td><td>$7.000,00</td>";
+
+        assertThat(mockMvc.perform(get("/cash-desk")).andReturn().getResponse().getContentAsString()
+                .replaceAll("\\s", "")).contains(totals);
+        assertThat(mockMvc.perform(get("/cash-desk-log").with(ADMIN)).andReturn().getResponse().getContentAsString()
+                .replaceAll("\\s", "")).contains(totals);
+        mockMvc.perform(get("/cash-desk-log").with(ADMIN))
+                .andExpect(content().string(containsString("Devolución")))
+                .andExpect(content().string(containsString("−$ 777,00")))
+                .andExpect(content().string(containsString("Devuelto")))
+                .andExpect(content().string(not(containsString("motivo-que-no-ven"))))
+                .andExpect(content().string(not(containsString("Devolver"))));
+    }
 }

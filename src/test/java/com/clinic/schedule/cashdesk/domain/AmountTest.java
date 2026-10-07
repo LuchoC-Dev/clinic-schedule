@@ -46,7 +46,7 @@ class AmountTest {
         assertThatThrownBy(() -> Amount.typed(new BigDecimal("100000000"), CEILING))
                 .isInstanceOfSatisfying(ChargeRuleViolationException.class, e -> {
                     assertThat(e.reason()).isEqualTo(Reason.AMOUNT_TOO_HIGH);
-                    assertThat(e.ceiling()).isEqualTo(new BigDecimal("99999999.99"));
+                    assertThat(e.limit()).isEqualTo(new BigDecimal("99999999.99"));
                 });
     }
 

@@ -17,7 +17,10 @@ import com.clinic.schedule.cashdesk.domain.Visit;
 import com.clinic.schedule.cashdesk.domain.exception.ChargeRuleViolationException;
 import com.clinic.schedule.cashdesk.domain.exception.ChargeRuleViolationException.Reason;
 
-/** Reception records an emergency's pending charge, after it went in (D-87). */
+/**
+ * Reception records an emergency's pending charge, after it went in (D-87), or charges again a visit whose
+ * charge was given back whole (D-88).
+ */
 @Service
 public class ChargeVisitUseCase {
 

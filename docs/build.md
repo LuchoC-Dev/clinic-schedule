@@ -1621,9 +1621,47 @@ emergency, and $ 20.000,50 in all; the admin read the same charges and total wit
 `/cash-desk-log`, and was refused reception's; Arias was refused both. In the database the charges kept their
 cents, and V39's checks, unique key and foreign key were there by name.
 
-#### Part 1b — Refunds `[ ]`
-- [ ] A refund is a movement of its own, up to what is left of its charge, with who, when and why
-- [ ] The day's cash desk subtracts it
+#### Part 1b — Refunds `[x]`
+- [x] A refund is a movement of its own, up to what is left of its charge, with who, when and why — free text,
+      required, up to 200 characters; never changed nor deleted (D-88)
+- [x] A visit given back whole is charged again; a visit has its charges in order, and only the last may have
+      something left
+- [x] Two requests at once charging again or giving back are refused by the unique keys, so no more is ever
+      given back than was charged
+- [x] The day's cash desk subtracts it: each charge and refund recorded that day, and what was charged, given
+      back and is left, overall and by who recorded them; a refund counts the day it is recorded
+- [x] The admins read the refunds without why and without the patients; the practitioners, none of it
+- [x] `POST /api/visits/{id}/refund`; "Devolver" and "Cobrar de nuevo" on `/cash-desk`; both days' answers say
+      each movement's kind and the totals charged, refunded and left
+- [x] `V40`: `cash_refund`, and `charge_no` with the unique key on the visit and the number
+- [x] 5 unit and 9 integration tests more, and the 1a's rewritten for the new shape. 482 unit and 562
+      integration tests, 1044 in total
+
+**Verified with:** every new test failing when the code it covers was broken on purpose — 62 breakages, all
+caught: each rule of a refund — why required, trimmed, at most 200, who recorded it, never more than what is
+left, how much is left said —, what is left subtracting, a refund's time, a visit never charged again, a refund
+added as a charge, a charge with something left before the last, the current charge ignoring what was given
+back, each reason refused, the day's refunds and charges of other days, their order, the refunded total and
+what is left, a refund's reason and who recorded it, each number and refusal of storage when two requests run
+at once, the day found by its refunds, the order charges and refunds are read back, what a refund keeps, each
+status, field and total of the API, each message, amount, link and total of the screens, and each key, check
+and foreign key of V40, the old unique key kept included. A test's own check that could not tell a movement's
+remainder from a total was replaced first, and a test was added for each user's totals on both screens. A
+control that changed only a comment was not caught. The faults ran in batches of four to ten. `mvnw clean
+test` and `mvnw verify`, with the seven `*PostgresIT` on PostgreSQL 18, which ran V40.
+
+**Verified with the application running** on a throwaway PostgreSQL taken to V39 alone, with a charge of
+$ 15.000,50 kept as part 1a kept it; started on this part, V40 made it its visit's first charge and left no
+default behind. Over the API reception was refused a refund without why, one above what was left, and a second
+charge while something was left; it gave the charge back in four refunds, the last "cobrado de más" sent in
+UTF-8, was then refused a fifth, charged the visit again with $ 1.500 and was refused $ 1.500,01 of it. Arias
+and the admin were refused the refund route. Reception's `/cash-desk` showed each refund as a row of its own
+with its reason and a minus, and "Devolver (queda $ 1.500,00)" on the new charge alone; the admin read the
+same refunds and totals over the API and on `/cash-desk-log`, without a reason or a name.
+
+**Part 1 of phase 7 is done:** reception charges each visit privately in cash as the patient comes into a
+queue, an emergency's later or never, and gives back what went wrong or what is owed, as movements of their
+own that never change; the day's cash desk adds them up by who recorded them. Parts 2 and 3 follow.
 
 #### Part 2 — The other means of payment `[ ]`
 - [ ] Debit card, credit card, bank transfer and QR; the day's cash desk separates them, and only cash

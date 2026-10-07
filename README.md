@@ -65,7 +65,8 @@ recorded, each saying whose it is, and their health insurance, and who agreed to
 up their reasons and week and record their absences, a queues screen to set up the arrival
 queues and who serves each, the arrivals screen, where queues are opened and closed and patients
 brought in — each visit charged in cash as the patient comes in, an emergency's left pending —, the day's
-cash desk, with its charges, their totals by who recorded them and the emergencies still to charge, and the
+cash desk, with its charges and refunds — some or all of a charge given back, saying why, and a visit given
+back whole charged again —, their totals by who recorded them and the emergencies still to charge, and the
 waiting-room screen, which names nobody. The queue screens show each change as
 it happens. A practitioner gets their own agenda,
 read-only, with today's patients linked to their clinical record and *Empezar consulta* once
@@ -125,9 +126,10 @@ document as its type and number, such as `DNI 27333444`. Errors share one body:
 | `POST` | `/api/queues/{id}/session/patients`, `/session/unidentified` | bring a patient in, or one who gives no name, as an emergency or not, with the `amount` charged in cash — which only an emergency may leave out, pending |
 | `POST` | `/api/queue-entries/{id}/emergency`, `/left` | make a waiting patient an emergency, or say they left |
 | `POST` | `/api/appointment-arrivals` | a patient with an appointment today arrives, paying the `amount`: into their practitioner's queue, kept for them; the appointment answers when, as `arrivedAt` |
-| `GET` | `/api/cash-desk?date=` | a day's cash desk, today by default: each charge with its patient, the totals by who recorded them, and the emergencies of that day not charged yet |
-| `POST` | `/api/visits/{id}/charge` | `{amount}`: charge an emergency's pending visit, once |
-| `GET` | `/api/cash-desk-log?date=` | the same for the admins, without the patients and the pending visits |
+| `GET` | `/api/cash-desk?date=` | a day's cash desk, today by default: each charge and refund with its patient — a refund with why, a charge with what is left of it —, what was charged, given back and is left, overall and by who recorded them, and the emergencies of that day never charged |
+| `POST` | `/api/visits/{id}/charge` | `{amount}`: charge an emergency's pending visit, or one given back whole again |
+| `POST` | `/api/visits/{id}/refund` | `{amount, reason}`: give back some or all of what is left of the visit's charge, saying why |
+| `GET` | `/api/cash-desk-log?date=` | the same for the admins, without the patients, the refunds' reasons and the pending visits |
 | `POST` | `/api/queue-entries/{id}/reassign`, `/lift-reservation` | give a waiting patient to another practitioner of the queue, or to anyone |
 | `GET` | `/api/my-queue` | a practitioner's own queue |
 | `POST` | `/api/my-queue/call-next`, `/finish`, `/did-not-come-in` | call the next patient, finish with them, or say they did not come in |
@@ -178,7 +180,8 @@ patients whose email has their consent — a responsible person's only for a pat
 practice's name, address and phone are `app.practice.*`, its sender `app.mail.from`, and the SMTP server
 `spring.mail.*`. The links in the patients' emails point at `app.portal.base-url`, and an activation lasts
 `app.portal.activation-valid-for`, 72 hours by default. A charge is pesos above zero with two decimals at
-most, up to `app.cash-desk.max-amount`, $ 99.999.999,99 by default; it is never changed nor deleted.
+most, up to `app.cash-desk.max-amount`, $ 99.999.999,99 by default; it is never changed nor deleted, and what
+went wrong is given back as a refund of its own.
 
 ## How it is built
 
@@ -199,7 +202,7 @@ src/main/java/com/clinic/schedule/
 │       └── out/              driven: the ports' implementations
 │           ├── persistence/  JPA
 │           └── external/     the other modules, through their api/
-├── cashdesk/                 hexagonal: each visit's charge, and the day's cash desk
+├── cashdesk/                 hexagonal: each visit's charges and refunds, and the day's cash desk
 ├── clinicalrecord/           hexagonal too: consultations, checks, orders, attachments, and who may read a record
 ├── patient/                  layered: presentation/ (http, screen), service/, entity/,
 │                             persistence/ — and api/, its only door for other modules

@@ -1,6 +1,7 @@
 package com.clinic.schedule.cashdesk.adapter.out.persistence;
 
 import java.time.LocalDateTime;
+import java.util.List;
 import java.util.UUID;
 
 import org.hibernate.annotations.Immutable;
@@ -13,7 +14,7 @@ import jakarta.persistence.Entity;
 import jakarta.persistence.Id;
 import jakarta.persistence.Table;
 
-/** A visit as a row (D-87). Only ever inserted: its charge is a row of its own, added once. */
+/** A visit as a row (D-87). Only ever inserted: its charges and their refunds are rows of their own. */
 @Entity
 @Immutable
 @Table(name = "cash_visit")
@@ -48,8 +49,8 @@ class VisitRow {
         return id;
     }
 
-    /** @param charge its charge; null when it has none yet */
-    Visit toVisit(Charge charge) {
-        return Visit.recorded(id, patientId, arrivedAt, emergency, charge);
+    /** @param charges its charges, in the order they were recorded; none when it was never charged */
+    Visit toVisit(List<Charge> charges) {
+        return Visit.recorded(id, patientId, arrivedAt, emergency, charges);
     }
 }

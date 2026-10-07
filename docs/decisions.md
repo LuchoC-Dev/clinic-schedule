@@ -3243,7 +3243,7 @@ logged in already).
 ---
 
 ## D-87 — The cash desk: each visit charged as it comes into a queue, in one transaction
-**Date:** 2026-10-06 · **Status:** accepted; refunds follow in part 1b
+**Date:** 2026-10-06 · **Status:** accepted; refunds, and a charge numbered among its visit's, in D-88
 
 v2, phase 7, part 1a. Until now the application knew nothing of money. From this part reception charges each
 visit privately, in cash, in the same step that puts the patient into a queue; an emergency goes in uncharged;
@@ -3311,3 +3311,57 @@ without a charge); a domain service for rules the visit can answer alone; event 
 never change, and a table says that already); one row per visit updated once charged (a charge is never
 changed); the ceiling in the form too (two places to keep a setting); a trigger forbidding changes in
 PostgreSQL (no path in the application changes a row); the pending visits for the admins (they are patients).
+
+---
+
+## D-88 — Refunds: movements of their own, up to what is left of a charge, and a visit given back whole charged again
+**Date:** 2026-10-07 · **Status:** accepted
+
+v2, phase 7, part 1b. A charge is never changed nor deleted (D-87), so what went wrong is undone with a refund,
+and charged again; and a patient who paid and was not seen is owed their money back (Ley 24.240). The
+application never decides that alone: reception records it.
+
+**A refund is a movement of its own**, inside `cashdesk`: its amount — pesos above zero, two decimals at most,
+and no more than what is left of its charge (`REFUND_TOO_HIGH`, which says how much is left) —, why — free
+text, required, trimmed, up to 200 characters (`REASON_REQUIRED`, `REASON_TOO_LONG`) —, who recorded it and
+when, by the `Clock`. It is never changed nor deleted. No ceiling holds it: what is left of the charge is
+lower.
+
+**A visit has its charges, and each charge its refunds**, in the order they were recorded. `Charge` knows what
+is left of it, and refuses to have given back more than it charged. Only the last charge of a visit may have
+something left: that is the current one. `Visit.refund` gives back some or all of what is left of it, and
+refuses a visit with nothing left (`NOTHING_TO_REFUND`); `Visit.charge` now charges a visit given back whole
+again, as it charges an emergency's pending visit, and refuses one whose current charge has something left
+(`ALREADY_CHARGED`). The rules need nothing the visit does not have, so there is still no domain service
+(D-17). A visit given back whole is not pending: pending is an emergency never charged.
+
+**Storage** (`V40`): `cash_refund` — the charge, its number, the amount, why, who and when —, only ever
+inserted, with `ck_cash_refund_amount` above zero. A charge is numbered by its place among its visit's,
+`charge_no`, and the unique key on the visit alone becomes one on the pair; the charges kept so far are each
+their visit's first. Two requests at once charging a visit again, or giving back from a charge, take the same
+number, and the unique keys refuse the second: as `ALREADY_CHARGED`, or as `CHANGED_MEANWHILE` for a refund,
+which may have fitted on its own — "La caja cambió mientras tanto". So a visit never has two charges with
+something left, and no more is ever given back than was charged.
+
+**The day's cash desk** lists each charge and each refund recorded that day, in the order they were, and adds
+up what was charged, what was given back and what is left, overall and by who recorded them. A refund counts
+the day it is recorded, whatever day its charge was: that is when the money left the drawer. A charge of
+another day is found with `?date=` and given back from there.
+
+**Routes and screens.** `POST /api/visits/{id}/refund` (`{amount, reason}`), reception's; `POST
+/api/visits/{id}/charge` also charges again a visit given back whole. Both days' answers change shape, which
+part 1a had not let out of its branch: each movement says its `kind`, `CHARGE` or `REFUND`; reception's says
+why a refund was given and what is left of a charge; and `total` and `byRecorder` say `charged`, `refunded` and
+`left`. The admins read the refunds without why — it may say something of the patient, as the cancellations'
+note (D-76) — and without the patients. On `/cash-desk` the current charge offers "Devolver", with what is left
+filled in and the reason required; a visit given back whole offers "Cobrar de nuevo"; a refund is a row of its
+own, "Devolución", with its reason and a minus. Refusals say "No queda nada por devolver de ese cobro", "No se
+puede devolver más de lo que queda: $ X", "Falta el motivo de la devolución" and "El motivo no puede superar
+los 200 caracteres".
+
+*Rejected:* changing or deleting a charge (D-87); a list of reasons (free text says what is needed so far); the
+reason for the admins (it may speak of the patient); refunds only on the day of their charge (the money leaves
+the drawer the day it is given back); the cash desk telling who paid and was not seen (it would ask the queues,
+and reception knows it already); one table for charges and refunds (each is a different thing, with its own
+rule); `NOTHING_TO_REFUND` for two refunds at once (the second may have fitted, so it says the cash desk
+changed).
