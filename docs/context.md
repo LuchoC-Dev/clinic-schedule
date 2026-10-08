@@ -80,8 +80,8 @@ The minimum record needed to book an appointment:
 v2 is built in phases, each one scoped here before it starts and closed on its own. The first,
 the clinical record, is closed, and so are the second, the arrival queue, and the third, users
 and security, the fourth, the patient's extra data, the fifth, reminders and the cancellation log,
-and the sixth, web booking for patients, and the seventh, the cash desk. The eighth, registering
-from the web, is in progress. Each next one is chosen from the planned evolution below, and its scope is written here before any code.
+and the sixth, web booking for patients, the seventh, the cash desk, and the eighth, registering
+from the web. Each next one is chosen from the planned evolution below, and its scope is written here before any code.
 
 ## v2, phase 1 — the clinical record (closed)
 
@@ -825,7 +825,7 @@ Not in this phase: issuing invoices with ARCA; billing the insurers each month; 
 float or counting the drawer at the close; printing receipts; charging a visit the patient never came
 to; practitioners reading the cash desk; and changing or deleting a charge.
 
-## v2, phase 8 — registering from the web
+## v2, phase 8 — registering from the web (closed)
 
 ### What changes
 
@@ -896,7 +896,7 @@ v2 are chosen from here.
    reminder, once the application knows them.
 4. **Cash desk, further on**: issuing invoices with ARCA, billing the insurers each month, a price
    list, printing receipts.
-5. **Web booking, further on**: registering from the web is v2, phase 8, above — in progress. Then:
+5. **Web booking, further on**: registering from the web is v2, phase 8, above — closed. Then:
    - **moving an appointment from the web**, with the rules of booking and cancelling — up to 24 hours
      before, to a suggested time from tomorrow to 30 days ahead, with the same practitioner and reason —,
      for the family group too;

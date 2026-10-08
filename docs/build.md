@@ -1775,7 +1775,7 @@ day's cash desk adds up what was charged, given back and is left, by means and b
 should be in the drawer; reception reads it whole, the admins without the patients, the practitioners not at all.
 The application records the money and issues no invoice. What it left for later is listed below.
 
-### Phase 8 — Registering from the web `[~]`
+### Phase 8 — Registering from the web `[x]`
 
 Scope in `docs/context.md`, section "v2, phase 8 — registering from the web". Delivered in parts; each one
 is usable on its own. The technical design of each part is agreed before it is coded.
@@ -1916,11 +1916,27 @@ account, into a family group with the relation not proved, acting for them one a
 the practice knows registers nothing and is answered the same; reception verifies the children and proves the
 relation at the desk, and then the usual rules apply.
 
+**Phase 8 of v2, registering from the web, is closed.** An adult of 18 or older registers themselves on the web,
+and their children under 13 with them or later from their account, confirmed from a link to the account's email;
+a document the practice already knows registers nothing and gets the same answer, so nobody learns from the web
+who is a patient — only the email, sent to whoever typed it, says to come to reception. Everyone registered on the
+web is unverified, and a child's relation with the adult is not proved: until reception sees them at the desk,
+each has one appointment ahead at most, and only the adult who registered a child acts for them. Once reception
+verifies the identity and proves the relation, the rules of phase 6 apply. An account for someone who is not a
+patient is still a patient with no visits. What it left for later is listed below.
+
 ---
 
 ## Explicitly postponed
 
 These are not oversights: they are decided and waiting for their moment.
+
+From v2, phase 8:
+
+- Adolescents registering themselves on the web, and registering anyone but one's own children (see the
+  context).
+- Proving the identity remotely, and a check against bots beyond the email's confirmation (see D-91).
+- Merging a web registration with a record the practice had under another document or none (see D-60).
 
 From v2, phase 7:
 
