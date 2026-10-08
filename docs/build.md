@@ -1775,6 +1775,28 @@ day's cash desk adds up what was charged, given back and is left, by means and b
 should be in the drawer; reception reads it whole, the admins without the patients, the practitioners not at all.
 The application records the money and issues no invoice. What it left for later is listed below.
 
+### Phase 8 — Registering from the web `[~]`
+
+Scope in `docs/context.md`, section "v2, phase 8 — registering from the web". Delivered in parts; each one
+is usable on its own. The technical design of each part is agreed before it is coded.
+
+#### Part 1 — An adult registers themselves `[ ]`
+- [x] `docs/context.md`: the scope of phase 8
+- [ ] An adult of 18 or older registers on the web with their name, document, date of birth and the
+      account's email and password; the registration is confirmed from a link to that email, and one never
+      confirmed is forgotten after a while
+- [ ] A document the practice already knows opens nothing: the same answer on the screen, and the email
+      sends them to reception
+- [ ] The patient is unverified and marked as registered on the web; one appointment ahead at most until
+      reception verifies them
+
+#### Part 2 — Their children under 13 `[ ]`
+- [ ] With the registration or later from the account: each child's name, document, date of birth and
+      relation
+- [ ] A family group with the relation not proved; the adult acts for the children, one appointment ahead
+      each until reception verifies them
+- [ ] Reception verifies the identity and proves the relation at the desk; from then on, the usual rules
+
 ---
 
 ## Explicitly postponed

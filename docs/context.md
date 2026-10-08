@@ -80,8 +80,8 @@ The minimum record needed to book an appointment:
 v2 is built in phases, each one scoped here before it starts and closed on its own. The first,
 the clinical record, is closed, and so are the second, the arrival queue, and the third, users
 and security, the fourth, the patient's extra data, the fifth, reminders and the cancellation log,
-and the sixth, web booking for patients, and the seventh, the cash desk. Each next one
-is chosen from the planned evolution below, and its scope is written here before any code.
+and the sixth, web booking for patients, and the seventh, the cash desk. The eighth, registering
+from the web, is in progress. Each next one is chosen from the planned evolution below, and its scope is written here before any code.
 
 ## v2, phase 1 — the clinical record (closed)
 
@@ -825,6 +825,62 @@ Not in this phase: issuing invoices with ARCA; billing the insurers each month; 
 float or counting the drawer at the close; printing receipts; charging a visit the patient never came
 to; practitioners reading the cash desk; and changing or deleting a charge.
 
+## v2, phase 8 — registering from the web
+
+### What changes
+
+Until now only reception registered a patient and opened their account (phase 6): someone the practice
+did not know had to call or come before booking on the web. From this phase on **an adult registers
+themselves on the web, and their children under 13**, opens their account and books, and reception
+verifies who they are when they come.
+
+### Who registers, and what
+
+- **An adult, 18 or older, registers themselves**: their name, their document — its type and number,
+  required, since the account logs in with it —, their date of birth, and the account's email and
+  password, with the rules of phase 6. A phone is optional.
+- **And, if they want, their children under 13**: each one's name, document and date of birth, and the
+  relation — mother, father or guardian. An adolescent from 13 is still registered at reception, where
+  they decide on their own privacy (phase 6).
+- **The registration is confirmed from a link to the account's email**, as an activation is; until then
+  nobody is registered. A registration never confirmed is forgotten after a while, a setting.
+- **A document the practice already knows** — the adult's or a child's — opens nothing: the screen says
+  the same as for any registration, and the email asks them to come to reception. Nobody learns from the
+  web whether someone is a patient (D-79).
+
+### Unverified until reception sees them
+
+- **Everyone registered on the web is a patient whose identity is not verified** (phase 2), and the
+  patient's screen says they registered on the web. A child's relation with the adult is **not proved**
+  either.
+- **Until reception verifies them, each one has one appointment ahead at most**, booked on the web, by the
+  rules of phase 6: the reasons open to the web, from tomorrow to 30 days, at the suggested times. Reception
+  books beyond it, as always.
+- **The adult acts for their children** — sees, books and cancels their appointments — in a family group
+  the registration forms, as a parent does in phase 6, with the relation marked as not proved.
+- **Reception verifies them at the desk**: the identity with the document in sight, as in phase 2, and the
+  relation with what proves it, as in phase 6. From then on the usual rules apply: three appointments ahead,
+  and the group as any other.
+- **Nothing else waits on it**: a patient registered on the web is seen as anyone is, verified or not
+  (phase 2), and goes into a queue covered by an insurance only once verified (phase 7).
+
+### Accounts for someone who is not a patient
+
+An account is still a patient's (D-79): a mother who is never seen registers as a patient with no visits,
+from the web now, or at reception as before. There is no account of another kind.
+
+### Delivered in parts
+
+1. An adult registers themselves on the web, confirms the email, and books one appointment ahead until
+   reception verifies them.
+2. Their children under 13, registered with them or later from their account, in a family group with the
+   relation not proved, and one appointment ahead each until reception verifies them.
+
+Not in this phase: adolescents registering themselves; registering someone else than one's children;
+proving the identity remotely; merging a web registration with a record the practice had under another
+document or none (D-60); moving an appointment from the web; asking for a copy of the clinical record; a
+captcha or any check against bots beyond the email's confirmation.
+
 ## Planned evolution (DO NOT implement yet)
 
 Documented so today's decisions do not close doors, not to bring code forward. The next phases of
@@ -840,9 +896,14 @@ v2 are chosen from here.
    reminder, once the application knows them.
 4. **Cash desk, further on**: issuing invoices with ARCA, billing the insurers each month, a price
    list, printing receipts.
-5. **Web booking, further on**: registering new patients from the web, and accounts for people who
-   are not patients; moving an appointment from the web; the patients reading what the law lets them
-   ask for of their record.
+5. **Web booking, further on**: registering from the web is v2, phase 8, above — in progress. Then:
+   - **moving an appointment from the web**, with the rules of booking and cancelling — up to 24 hours
+     before, to a suggested time from tomorrow to 30 days ahead, with the same practitioner and reason —,
+     for the family group too;
+   - **asking for a copy of the clinical record from the web** (Ley 26.529, art. 14): the patient asks
+     from their account, the application keeps the 48 hours it must be handed in, and the practice hands
+     it authenticated. Reading the record online is not offered: clinical content stays the
+     practitioners' (D-51).
 6. **Future user interface**: two separate single-page applications, one for
    reception/practitioners and one for patients. This is why the REST API is the main
    contract from v1 onwards. The cash desk's screens there ask reception to confirm an amount a
