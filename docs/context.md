@@ -783,6 +783,23 @@ patient paying in cash, then the other ways of paying, and last the visits cover
   the patient's insurance (phase 4), the **token** the insurer asks for that visit, which is the visit's
   and not the patient's, and a **copay** charged by any means of part 2, or none.
 
+### A visit covered by a health insurance
+
+- **Only a patient with an insurance recorded and a verified identity** (phases 2 and 4) goes in covered:
+  the insurer validates who the patient is. Anyone else pays privately.
+- **The insurer is asked outside the application**, on its own system or app, before the patient goes in;
+  if it says no, the patient pays privately, and nothing of it is recorded. The application keeps the
+  outcome: that the visit is covered, by which insurer, member number and plan as they were that day.
+- **The token is optional.** The practice keeps no list of insurers (phase 4), so the application cannot
+  know which ask for one: the insurer's check says so, and reception types it when it does.
+- **A copay**, when the insurer asks for one, is a charge as any other — any means, refunded the same way
+  —, and counts in the day's cash desk. A covered visit with no copay moves no money, and the day's cash
+  desk does not show it: the cash desk is money only.
+- **An approved visit stays covered.** Once the insurer approved it, it cannot reject it at the desk; what
+  it may discount later, auditing the month's billing, belongs to billing the insurers, not to this phase.
+- An emergency goes in uncharged, as in part 1, and reception records later whether it was covered or
+  paid privately.
+
 ### The invoice
 
 The application **records** what is charged; it does not issue the invoice, which ARCA requires and is

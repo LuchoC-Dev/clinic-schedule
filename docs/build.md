@@ -1706,8 +1706,13 @@ V41's check was there by name, and it refused a means it does not know.
 cash desk separates them, counting only cash for what should be in the drawer. Part 3 follows.
 
 #### Part 3 — The visits covered by a health insurance `[ ]`
-- [ ] A visit paid by the patient's obra social or prepaid plan, with the token of that visit
-- [ ] A copay charged by any means, or none
+- [ ] A visit covered by the patient's obra social or prepaid plan, only with an insurance recorded and a
+      verified identity, keeping the insurance as it was that day
+- [ ] The token of that visit, optional: the insurer's check, outside the application, says whether it asks
+      for one
+- [ ] A copay charged by any means, or none; the day's cash desk shows the copays, not the visits that
+      moved no money
+- [ ] An emergency's pending visit recorded later as covered or private
 
 ---
 
