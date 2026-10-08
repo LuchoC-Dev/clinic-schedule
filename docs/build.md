@@ -1574,7 +1574,7 @@ adolescent's only if they choose. Five failed logins lock an account for a while
 chosen again from a link to the account's email, and every action on an account is in its history. What it
 left for later is listed below.
 
-### Phase 7 — The cash desk `[~]`
+### Phase 7 — The cash desk `[x]`
 
 Scope in `docs/context.md`, section "v2, phase 7 — the cash desk". Delivered in parts; each one is
 usable on its own. The technical design of each part is agreed before it is coded.
@@ -1765,11 +1765,28 @@ copay, and V42's keys were there by name.
 copay, an emergency's pending visit is covered later, and a coverage marked by mistake is withdrawn as a fact of its
 own; the day's cash desk counts the copays and lists the covered visits apart.
 
+**Phase 7 of v2, the cash desk, is closed.** Reception charges each visit in the same step that puts the patient
+into a queue, so nobody is seen unpaid by mistake, and an emergency goes in uncharged, its charge pending. A visit
+is paid privately — in cash, by debit or credit card, transfer or QR — or covered by the patient's health
+insurance, for a verified patient with one recorded, keeping the insurance as it was that day, the token when the
+insurer's check asks for one, and a copay charged as any other. Nothing is changed nor deleted: a charge is given
+back with a refund of its own and charged again, and a coverage marked by mistake is withdrawn, saying why. The
+day's cash desk adds up what was charged, given back and is left, by means and by who recorded it, with what
+should be in the drawer; reception reads it whole, the admins without the patients, the practitioners not at all.
+The application records the money and issues no invoice. What it left for later is listed below.
+
 ---
 
 ## Explicitly postponed
 
 These are not oversights: they are decided and waiting for their moment.
+
+From v2, phase 7:
+
+- Issuing invoices with ARCA, and printing receipts (see the context).
+- Billing the insurers each month, with the discounts their audit may make (see the context).
+- A price list, an opening float and counting the drawer at the close (see the context).
+- Charging a visit the patient never came to (see the context).
 
 From v2, phase 6:
 

@@ -80,7 +80,7 @@ The minimum record needed to book an appointment:
 v2 is built in phases, each one scoped here before it starts and closed on its own. The first,
 the clinical record, is closed, and so are the second, the arrival queue, and the third, users
 and security, the fourth, the patient's extra data, the fifth, reminders and the cancellation log,
-and the sixth, web booking for patients. The seventh, the cash desk, is in progress. Each next one
+and the sixth, web booking for patients, and the seventh, the cash desk. Each next one
 is chosen from the planned evolution below, and its scope is written here before any code.
 
 ## v2, phase 1 — the clinical record (closed)
@@ -731,7 +731,7 @@ who booked each appointment beyond where; recovering a password by email and loc
 staff; two-factor authentication; telling the patient of a cancellation the practice made; and anything
 of the cash desk or of reminders by WhatsApp or SMS.
 
-## v2, phase 7 — the cash desk
+## v2, phase 7 — the cash desk (closed)
 
 ### What changes
 
@@ -818,8 +818,8 @@ still made outside of it, as today. Nothing printed out of it is an invoice.
      day's cash desk.
    - **1b** — refunds, as movements of their own.
 2. The other means of payment: debit, credit, transfer and QR.
-3. The visits covered by a health insurance: the token and the copay. It may be split in two when it
-   is scoped in detail.
+3. The visits covered by a health insurance: the token and the copay, and withdrawing a coverage
+   marked by mistake.
 
 Not in this phase: issuing invoices with ARCA; billing the insurers each month; a price list; an opening
 float or counting the drawer at the close; printing receipts; charging a visit the patient never came
@@ -833,8 +833,8 @@ v2 are chosen from here.
 1. **Arrival queue**: v2, phase 2, above — closed. **Users and security**: v2, phase 3, above — closed.
    **Extra patient data**: v2, phase 4, above — closed. **Reminders and the cancellation log**: v2,
    phase 5, above — closed. **Web booking**: v2, phase 6, above — closed. **Cash desk**: v2, phase 7,
-   above — in progress.
-2. **Later on**: attendance with more states, structured clinical items, printing, and a cash desk.
+   above — closed.
+2. **Later on**: attendance with more states, structured clinical items, and printing.
 3. **Reminders by other channels**: WhatsApp or SMS, each one more adapter behind the reminders'
    port, with whether a phone takes WhatsApp; the practitioner's speciality and consulting room in the
    reminder, once the application knows them.
