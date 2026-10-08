@@ -99,6 +99,7 @@
                         <input type="hidden" name="date" th:value="${date}">
                         <input type="hidden" name="view" th:value="${view}">
                         <input type="number" name="amount" step="0.01" min="0.01" placeholder="Importe $" aria-label="Importe" required>
+                        <select th:replace="~{fragments :: meansSelect}"></select>
                         <button type="submit" class="primary">Llegó</button>
                     </form>
                     <form class="inline" method="post" th:unless="${row.arrived or row.lateNotice}"

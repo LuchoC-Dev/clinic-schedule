@@ -10,6 +10,7 @@ import com.clinic.schedule.arrival.session.domain.EntryId;
 import com.clinic.schedule.arrival.session.domain.QueueSession;
 import com.clinic.schedule.arrival.session.domain.QueueSessionService;
 import com.clinic.schedule.arrival.session.domain.SessionEvent.PatientArrived;
+import com.clinic.schedule.cashdesk.api.Means;
 import com.clinic.schedule.cashdesk.api.VisitCashier;
 import com.clinic.schedule.patient.api.PatientWriter;
 
@@ -40,12 +41,16 @@ public class AddUnidentifiedPatientUseCase {
         QueueSession session = commands.openSessionOf(command.queueId());
         PatientArrived arrived = sessions.arrive(session, patients.registerUnidentified(), command.emergency(),
                 commands.now());
-        cashier.visitStarted(arrived.entryId(), arrived.patientId(), command.emergency(), command.amount());
+        cashier.visitStarted(arrived.entryId(), arrived.patientId(), command.emergency(), command.amount(),
+                command.means());
         commands.record(session, arrived);
         return new EntryId(arrived.entryId());
     }
 
-    /** @param amount the pesos charged; null only for an emergency, whose charge is left pending */
-    public record Command(UUID queueId, boolean emergency, BigDecimal amount) {
+    /**
+     * @param amount the pesos charged; null only for an emergency, whose charge is left pending
+     * @param means how they were paid; null for cash
+     */
+    public record Command(UUID queueId, boolean emergency, BigDecimal amount, Means means) {
     }
 }

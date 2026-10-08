@@ -13,13 +13,14 @@ import com.clinic.schedule.cashdesk.application.port.StaffUserPort;
 import com.clinic.schedule.cashdesk.application.port.VisitRepository;
 import com.clinic.schedule.cashdesk.domain.Amount;
 import com.clinic.schedule.cashdesk.domain.AmountCeiling;
+import com.clinic.schedule.cashdesk.domain.Means;
 import com.clinic.schedule.cashdesk.domain.Visit;
 import com.clinic.schedule.cashdesk.domain.exception.ChargeRuleViolationException;
 import com.clinic.schedule.cashdesk.domain.exception.ChargeRuleViolationException.Reason;
 
 /**
  * Reception records an emergency's pending charge, after it went in (D-87), or charges again a visit whose
- * charge was given back whole (D-88).
+ * charge was given back whole (D-88). A charge whose means is not said is cash, as part 1 had it (D-89).
  */
 @Service
 public class ChargeVisitUseCase {
@@ -47,10 +48,12 @@ public class ChargeVisitUseCase {
         if (command.amount() == null) {
             throw new ChargeRuleViolationException(Reason.CHARGE_REQUIRED, "A charge needs its amount");
         }
-        visits.save(visit.charge(Amount.typed(command.amount(), ceiling), currentUser.username(),
+        visits.save(visit.charge(Amount.typed(command.amount(), ceiling),
+                command.means() != null ? command.means() : Means.CASH, currentUser.username(),
                 LocalDateTime.now(clock)));
     }
 
-    public record Command(UUID visitId, BigDecimal amount) {
+    /** @param means how it was paid; null for cash */
+    public record Command(UUID visitId, BigDecimal amount, Means means) {
     }
 }

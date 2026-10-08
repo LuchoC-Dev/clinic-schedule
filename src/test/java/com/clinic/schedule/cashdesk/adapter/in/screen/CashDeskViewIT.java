@@ -77,6 +77,20 @@ class CashDeskViewIT {
         return jdbc.queryForObject("select id from cash_visit where patient_id = ?", UUID.class, patient);
     }
 
+    private String meansOf(UUID patient) {
+        return jdbc.queryForObject("select c.means from cash_charge c join cash_visit v on v.id = c.visit_id "
+                + "where v.patient_id = ?", String.class, patient);
+    }
+
+    private String appointmentFor(UUID patient, String at) throws Exception {
+        return json.readTree(mockMvc.perform(post("/api/appointments")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {"patientId": "%s", "practitionerId": "%s", "reasonId": "%s", "startsAt": "%sT%s"}
+                                """.formatted(patient, arias.id(), arias.consulta(), DAY, at)))
+                .andReturn().getResponse().getContentAsString()).get("id").asText();
+    }
+
     @Test
     void receptionTypesTheAmountWhereItBringsAPatientIn() throws Exception {
         UUID ana = patients.newPatient();
@@ -163,6 +177,78 @@ class CashDeskViewIT {
         mockMvc.perform(get("/cash-desk").param("date", DAY))
                 .andExpect(content().string(not(containsString("/cash-desk/visits/" + visit + "/charge"))))
                 .andExpect(content().string(containsString("(urgencia)")));
+    }
+
+    @Test
+    void receptionPicksTheMeansWhereverItCharges() throws Exception {
+        UUID ana = patients.newPatient();
+        UUID eva = patients.newPatient();
+        UUID pablo = patients.newPatient();
+        UUID juan = patients.newPatient();
+        String evasAppointment = appointmentFor(eva, "11:00:00");
+        String pablosAppointment = appointmentFor(pablo, "11:30:00");
+
+        mockMvc.perform(get("/arrivals").param("queueId", queue).param("query", nameOf(ana)))
+                .andExpect(content().string(containsString("name=\"means\"")))
+                .andExpect(content().string(containsString("<option value=\"TRANSFER\">Transferencia</option>")));
+        mockMvc.perform(get("/agenda").param("practitionerId", arias.id().toString()).param("date", DAY))
+                .andExpect(content().string(containsString("name=\"means\"")));
+
+        mockMvc.perform(post("/arrivals/" + queue + "/patients").with(csrf()).param("patientId", ana.toString())
+                        .param("amount", "100").param("means", "DEBIT"))
+                .andExpect(flash().attribute("message", "Paciente sumado a la cola."));
+        mockMvc.perform(post("/arrivals/appointment-arrivals/" + evasAppointment).with(csrf())
+                        .param("practitionerId", arias.id().toString()).param("date", DAY)
+                        .param("amount", "100").param("means", "TRANSFER"))
+                .andExpect(flash().attribute("message", "Llegó: está en la cola de su profesional."));
+        mockMvc.perform(post("/arrivals/" + queue + "/appointments/" + pablosAppointment).with(csrf())
+                        .param("amount", "100").param("means", "QR"))
+                .andExpect(flash().attribute("message", "Paciente con turno sumado a la cola de su profesional."));
+        int byQr = jdbc.queryForObject("select count(*) from cash_charge where means = 'QR'", Integer.class);
+        mockMvc.perform(post("/arrivals/" + queue + "/unidentified").with(csrf()).param("amount", "100")
+                        .param("means", "QR"))
+                .andExpect(flash().attribute("message", "Paciente sin datos registrado y sumado a la cola."));
+        mockMvc.perform(post("/arrivals/" + queue + "/patients").with(csrf()).param("patientId", juan.toString())
+                .param("emergency", "true").param("amount", "").param("means", "CASH"));
+        mockMvc.perform(get("/cash-desk")).andExpect(content().string(containsString("name=\"means\"")));
+        mockMvc.perform(post("/cash-desk/visits/" + visitOf(juan) + "/charge").with(csrf()).param("amount", "100")
+                        .param("means", "CREDIT"))
+                .andExpect(flash().attribute("message", "Cobro registrado."));
+
+        assertThat(meansOf(ana)).isEqualTo("DEBIT");
+        assertThat(meansOf(eva)).isEqualTo("TRANSFER");
+        assertThat(meansOf(pablo)).isEqualTo("QR");
+        assertThat(jdbc.queryForObject("select count(*) from cash_charge where means = 'QR'", Integer.class))
+                .isEqualTo(byQr + 1);
+        assertThat(meansOf(juan)).isEqualTo("CREDIT");
+        mockMvc.perform(get("/cash-desk")).andExpect(content().string(containsString("Crédito")));
+    }
+
+    @Test
+    void theTotalsShowEachMeansAndWhatShouldBeInTheDrawer() throws Exception {
+        // A receptionist of their own, so their totals are this test's alone.
+        RequestPostProcessor cajero = user("cajero").roles("RECEPTION");
+        UUID ana = patients.newPatient();
+        mockMvc.perform(post("/arrivals/" + queue + "/patients").with(cajero).with(csrf())
+                .param("patientId", patients.newPatient().toString()).param("amount", "7000").param("means", "CASH"));
+        mockMvc.perform(post("/arrivals/" + queue + "/patients").with(cajero).with(csrf())
+                .param("patientId", ana.toString()).param("amount", "3000").param("means", "DEBIT"));
+        mockMvc.perform(post("/cash-desk/visits/" + visitOf(ana) + "/refund").with(cajero).with(csrf())
+                .param("amount", "1000").param("reason", "cobrado de más"));
+        // Their rows of the totals, with the screen's spacing left out: overall — with what should be in the
+        // drawer, their cash alone —, and by each means they took.
+        String totals = "<tr><td>cajero</td><td>2</td><td>$10.000,00</td><td>1</td><td>$1.000,00</td>"
+                + "<td>$9.000,00</td><td>$7.000,00</td></tr>"
+                + "<trclass=\"muted\"><td>·Efectivo</td><td>1</td><td>$7.000,00</td><td>0</td><td>$0,00</td>"
+                + "<td>$7.000,00</td><td></td></tr>"
+                + "<trclass=\"muted\"><td>·Débito</td><td>1</td><td>$3.000,00</td><td>1</td><td>$1.000,00</td>"
+                + "<td>$2.000,00</td><td></td></tr>";
+
+        assertThat(mockMvc.perform(get("/cash-desk")).andReturn().getResponse().getContentAsString()
+                .replaceAll("\\s", "")).contains(totals).contains("<th>Enelcajón</th>");
+        assertThat(mockMvc.perform(get("/cash-desk-log").with(ADMIN)).andReturn().getResponse().getContentAsString()
+                .replaceAll("\\s", "")).contains(totals).contains("<th>Enelcajón</th>");
+        mockMvc.perform(get("/cash-desk-log").with(ADMIN)).andExpect(content().string(containsString("Débito")));
     }
 
     @Test

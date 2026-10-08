@@ -50,12 +50,13 @@ public final class Visit {
      * The patient came into a queue.
      *
      * @param amount what reception charged; empty only for an emergency, whose charge is left pending
+     * @param means how it was paid; unused when nothing was charged
      * @param by the username of whoever brought them in
      */
-    public static Visit arrive(UUID id, UUID patientId, boolean emergency, Optional<Amount> amount, String by,
-            LocalDateTime at) {
+    public static Visit arrive(UUID id, UUID patientId, boolean emergency, Optional<Amount> amount, Means means,
+            String by, LocalDateTime at) {
         return new Visit(id, patientId, at, emergency,
-                amount.map(paid -> List.of(Charge.inCash(paid, by, at))).orElse(List.of()));
+                amount.map(paid -> List.of(Charge.of(paid, means, by, at))).orElse(List.of()));
     }
 
     /** A visit as it was recorded, read back, its charges in the order they were. */
@@ -65,12 +66,12 @@ public final class Visit {
     }
 
     /** An emergency's pending charge, or a visit given back whole charged again. */
-    public Visit charge(Amount amount, String by, LocalDateTime at) {
+    public Visit charge(Amount amount, Means means, String by, LocalDateTime at) {
         if (current().isPresent()) {
             throw new ChargeRuleViolationException(Reason.ALREADY_CHARGED, "The visit was charged already");
         }
         List<Charge> after = new ArrayList<>(charges);
-        after.add(Charge.inCash(amount, by, at));
+        after.add(Charge.of(amount, means, by, at));
         return new Visit(id, patientId, arrivedAt, emergency, after);
     }
 

@@ -24,6 +24,10 @@ final class CashDeskWords {
     static String means(Means means) {
         return switch (means) {
             case CASH -> "Efectivo";
+            case DEBIT -> "Débito";
+            case CREDIT -> "Crédito";
+            case TRANSFER -> "Transferencia";
+            case QR -> "QR";
         };
     }
 

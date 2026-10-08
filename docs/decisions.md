@@ -3315,7 +3315,7 @@ PostgreSQL (no path in the application changes a row); the pending visits for th
 ---
 
 ## D-88 — Refunds: movements of their own, up to what is left of a charge, and a visit given back whole charged again
-**Date:** 2026-10-07 · **Status:** accepted
+**Date:** 2026-10-07 · **Status:** accepted; the means a refund goes out by, in D-89
 
 v2, phase 7, part 1b. A charge is never changed nor deleted (D-87), so what went wrong is undone with a refund,
 and charged again; and a patient who paid and was not seen is owed their money back (Ley 24.240). The
@@ -3365,3 +3365,56 @@ the drawer the day it is given back); the cash desk telling who paid and was not
 and reception knows it already); one table for charges and refunds (each is a different thing, with its own
 rule); `NOTHING_TO_REFUND` for two refunds at once (the second may have fitted, so it says the cash desk
 changed).
+
+---
+
+## D-89 — The other means of payment: chosen as the visit is charged, a refund by its charge's, and only cash in the drawer
+**Date:** 2026-10-08 · **Status:** accepted
+
+v2, phase 7, part 2. Besides cash, a visit is paid with a debit or a credit card, a bank transfer or a QR code,
+and the day's cash desk separates them: only cash goes into the drawer.
+
+**`Means` is `CASH`, `DEBIT`, `CREDIT`, `TRANSFER` or `QR`**, short enough for the column V39 gave it,
+`varchar(10)`, so the column does not change. Reception picks it wherever it charges: as a patient comes into a
+queue, as an emergency's pending visit is charged, and as a visit given back whole is charged again.
+`Visit.arrive` and `Visit.charge` take it, and `Charge` keeps it; no rule of the visit changes with it, so there
+is still no domain service (D-17).
+
+**A charge whose means is not said is cash**, as part 1 had it, so whatever sent `amount` alone keeps working
+(D-87). The two use cases that charge, `StartVisitUseCase` and `ChargeVisitUseCase`, say it, in one place; an
+emergency left pending has no charge, and its means is not used.
+
+**A refund goes out by its charge's means**, not by one reception picks: a card charge is given back on the card,
+cash in cash, so `cash_refund` does not change. Should money charged by one means be given back by another, a
+refund would take a means of its own then, with its column.
+
+**No means asks for anything more.** The instalments of a credit card are the patient's and the card's: what
+reception types is what was charged, any surcharge in it. An operation's number would serve to reconcile the
+desk with the bank or the card terminal, which, as issuing invoices and billing the insurers, is outside this
+phase (D-14).
+
+**`cashdesk/api/Means`** is the queues' word for it: the queues read only the cash desk's api, so it has its own
+enum, as `ChargeRefusedException.Reason` has, and `VisitCashierAdapter` turns it into the domain's. `VisitCashier.
+visitStarted` takes it, null for cash.
+
+**The day's totals are split by means**, overall and for each user: what was charged, given back and is left by
+each means with a movement that day, in the order the means are declared, and the **drawer** — what is left in
+cash, the only means that goes into it, there being no opening float (D-87). A refund counts in its charge's
+means.
+
+**Storage** (`V41`): `ck_cash_charge_means`, named for this in V39, is dropped and added again with the five
+means, in portable SQL.
+
+**Routes and screens.** `POST /api/queues/{id}/session/patients`, `/session/unidentified`, `POST
+/api/appointment-arrivals` and `POST /api/visits/{id}/charge` take `means` beside `amount`; an unknown one is a
+400. `total` and each `byRecorder` of both days' answers add `byMeans` — each with `means`, `charged`,
+`refunded` and `left` — and `drawer`; nothing they had changes. Every "Importe" field where reception charges
+has a "Medio de pago" beside it — Efectivo, Débito, Crédito, Transferencia, QR —, cash chosen; "Devolver" has
+none. `/cash-desk` and `/cash-desk-log` show each user's and the overall totals with a row for each means under
+them, and "En el cajón".
+
+*Rejected:* reception picking the means of a refund (no case of it so far, and a column for it when there is);
+the instalments or an operation's number (nothing in the phase reads them); requiring `means` (it would break
+what sent `amount` alone); `DEBIT_CARD` and `CREDIT_CARD` (a wider column for the same meaning); the domain's
+`Means` in the api (the queues would read the cash desk's domain); a row for every means even with no movement
+(five rows of zeros a day).

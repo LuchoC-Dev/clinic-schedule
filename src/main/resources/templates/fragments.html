@@ -111,6 +111,62 @@
     <p class="ok" th:if="${message}" th:text="${message}"></p>
     <p class="error" th:if="${error}" th:text="${error}"></p>
 </div>
+<!-- How a charge is paid (D-89), next to its amount: cash unless reception says otherwise. -->
+<select th:fragment="meansSelect" name="means" aria-label="Medio de pago">
+    <option value="CASH" selected>Efectivo</option>
+    <option value="DEBIT">Débito</option>
+    <option value="CREDIT">Crédito</option>
+    <option value="TRANSFER">Transferencia</option>
+    <option value="QR">QR</option>
+</select>
+<!--
+  A day's totals (D-88, D-89), overall and by who recorded them, each split by means under it; only what is left
+  in cash is what should be in the drawer.
+-->
+<table th:fragment="cashTotals">
+    <thead><tr><th>Registró</th><th>Cobros</th><th>Cobrado</th><th>Devoluciones</th><th>Devuelto</th><th>Queda</th>
+        <th>En el cajón</th></tr></thead>
+    <tbody>
+    <th:block th:each="r : ${byRecorder}">
+        <tr>
+            <td th:text="${r.user}">recepcion</td>
+            <td th:text="${r.charges}">3</td>
+            <td th:text="${r.charged}">$ 45.000,00</td>
+            <td th:text="${r.refunds}">1</td>
+            <td th:text="${r.refunded}">$ 15.000,00</td>
+            <td th:text="${r.left}">$ 30.000,00</td>
+            <td th:text="${r.drawer}">$ 20.000,00</td>
+        </tr>
+        <tr class="muted" th:each="m : ${r.byMeans}">
+            <td th:text="'· ' + ${m.user}">· Efectivo</td>
+            <td th:text="${m.charges}">2</td>
+            <td th:text="${m.charged}">$ 30.000,00</td>
+            <td th:text="${m.refunds}">1</td>
+            <td th:text="${m.refunded}">$ 10.000,00</td>
+            <td th:text="${m.left}">$ 20.000,00</td>
+            <td></td>
+        </tr>
+    </th:block>
+    <tr>
+        <th>Total</th>
+        <th th:text="${total.charges}">3</th>
+        <th th:text="${total.charged}">$ 45.000,00</th>
+        <th th:text="${total.refunds}">1</th>
+        <th th:text="${total.refunded}">$ 15.000,00</th>
+        <th th:text="${total.left}">$ 30.000,00</th>
+        <th th:text="${total.drawer}">$ 20.000,00</th>
+    </tr>
+    <tr class="muted" th:each="m : ${total.byMeans}">
+        <td th:text="'· ' + ${m.user}">· Efectivo</td>
+        <td th:text="${m.charges}">2</td>
+        <td th:text="${m.charged}">$ 30.000,00</td>
+        <td th:text="${m.refunds}">1</td>
+        <td th:text="${m.refunded}">$ 10.000,00</td>
+        <td th:text="${m.left}">$ 20.000,00</td>
+        <td></td>
+    </tr>
+    </tbody>
+</table>
 <!--
   A field marked data-refresh sends its form as soon as it changes, through the form's button
   marked data-refresh-button when it has one. What is on screen then always matches what was

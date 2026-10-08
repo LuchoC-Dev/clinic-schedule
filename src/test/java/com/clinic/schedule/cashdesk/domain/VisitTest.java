@@ -25,7 +25,7 @@ class VisitTest {
     private final UUID patient = UUID.randomUUID();
 
     private Visit charged() {
-        return Visit.arrive(id, patient, false, Optional.of(FIFTEEN_THOUSAND), "recepcion", NINE);
+        return Visit.arrive(id, patient, false, Optional.of(FIFTEEN_THOUSAND), Means.CASH, "recepcion", NINE);
     }
 
     private static Amount pesos(String value) {
@@ -55,9 +55,10 @@ class VisitTest {
 
     @Test
     void withoutBeingChargedOnlyAnEmergencyStarts() {
-        refused(() -> Visit.arrive(id, patient, false, Optional.empty(), "recepcion", NINE), Reason.CHARGE_REQUIRED);
+        refused(() -> Visit.arrive(id, patient, false, Optional.empty(), Means.CASH, "recepcion", NINE),
+                Reason.CHARGE_REQUIRED);
 
-        Visit emergency = Visit.arrive(id, patient, true, Optional.empty(), "recepcion", NINE);
+        Visit emergency = Visit.arrive(id, patient, true, Optional.empty(), Means.CASH, "recepcion", NINE);
 
         assertThat(emergency.pending()).isTrue();
         assertThat(emergency.charges()).isEmpty();
@@ -66,7 +67,7 @@ class VisitTest {
 
     @Test
     void anEmergencyMayBeChargedAsItStarts() {
-        Visit emergency = Visit.arrive(id, patient, true, Optional.of(FIFTEEN_THOUSAND), "recepcion", NINE);
+        Visit emergency = Visit.arrive(id, patient, true, Optional.of(FIFTEEN_THOUSAND), Means.CASH, "recepcion", NINE);
 
         assertThat(emergency.pending()).isFalse();
         assertThat(emergency.emergency()).isTrue();
@@ -74,9 +75,9 @@ class VisitTest {
 
     @Test
     void anEmergencysPendingChargeIsRecordedLaterByWhoeverChargesIt() {
-        Visit pending = Visit.arrive(id, patient, true, Optional.empty(), "recepcion", NINE);
+        Visit pending = Visit.arrive(id, patient, true, Optional.empty(), Means.CASH, "recepcion", NINE);
 
-        Visit charged = pending.charge(FIFTEEN_THOUSAND, "otra", TEN);
+        Visit charged = pending.charge(FIFTEEN_THOUSAND, Means.CASH, "otra", TEN);
 
         assertThat(charged.current().orElseThrow().recordedBy()).isEqualTo("otra");
         assertThat(charged.current().orElseThrow().recordedAt()).isEqualTo(TEN);
@@ -88,9 +89,9 @@ class VisitTest {
 
     @Test
     void aVisitWithSomethingLeftOfItsChargeIsNotChargedAgain() {
-        refused(() -> charged().charge(FIFTEEN_THOUSAND, "recepcion", TEN), Reason.ALREADY_CHARGED);
+        refused(() -> charged().charge(FIFTEEN_THOUSAND, Means.CASH, "recepcion", TEN), Reason.ALREADY_CHARGED);
         Visit partly = charged().refund(pesos("5000"), "cobrado de más", "recepcion", TEN);
-        refused(() -> partly.charge(FIFTEEN_THOUSAND, "recepcion", ELEVEN), Reason.ALREADY_CHARGED);
+        refused(() -> partly.charge(FIFTEEN_THOUSAND, Means.CASH, "recepcion", ELEVEN), Reason.ALREADY_CHARGED);
     }
 
     @Test
@@ -129,7 +130,7 @@ class VisitTest {
 
     @Test
     void nothingIsGivenBackOfAVisitWithNothingLeft() {
-        refused(() -> Visit.arrive(id, patient, true, Optional.empty(), "recepcion", NINE)
+        refused(() -> Visit.arrive(id, patient, true, Optional.empty(), Means.CASH, "recepcion", NINE)
                 .refund(pesos("1"), "error", "recepcion", TEN), Reason.NOTHING_TO_REFUND);
         Visit whole = charged().refund(FIFTEEN_THOUSAND, "error", "recepcion", TEN);
         refused(() -> whole.refund(pesos("1"), "error", "recepcion", ELEVEN), Reason.NOTHING_TO_REFUND);
@@ -139,13 +140,27 @@ class VisitTest {
     void aVisitGivenBackWholeIsChargedAgain() {
         Visit whole = charged().refund(FIFTEEN_THOUSAND, "importe equivocado", "recepcion", TEN);
 
-        Visit again = whole.charge(pesos("1500"), "recepcion", ELEVEN);
+        Visit again = whole.charge(pesos("1500"), Means.CASH, "recepcion", ELEVEN);
 
         assertThat(again.charges()).hasSize(2);
         assertThat(again.current().orElseThrow().amount()).isEqualTo(pesos("1500"));
         assertThat(again.current().orElseThrow().recordedAt()).isEqualTo(ELEVEN);
         assertThat(again.charges().getFirst().left()).isEqualByComparingTo("0");
         assertThat(again.refund(pesos("1500"), "otra vez", "recepcion", ELEVEN).current()).isEmpty();
+    }
+
+    @Test
+    void aVisitIsChargedByTheMeansReceptionSays() {
+        Visit card = Visit.arrive(id, patient, false, Optional.of(FIFTEEN_THOUSAND), Means.CREDIT, "recepcion", NINE);
+        assertThat(card.current().orElseThrow().means()).isEqualTo(Means.CREDIT);
+
+        Visit pending = Visit.arrive(id, patient, true, Optional.empty(), Means.QR, "recepcion", NINE);
+        assertThat(pending.charge(FIFTEEN_THOUSAND, Means.TRANSFER, "recepcion", TEN).current().orElseThrow().means())
+                .isEqualTo(Means.TRANSFER);
+
+        Visit again = card.refund(FIFTEEN_THOUSAND, "importe equivocado", "recepcion", TEN)
+                .charge(pesos("1500"), Means.DEBIT, "recepcion", ELEVEN);
+        assertThat(again.charges()).extracting(Charge::means).containsExactly(Means.CREDIT, Means.DEBIT);
     }
 
     @Test
@@ -171,7 +186,7 @@ class VisitTest {
 
     @Test
     void aMovementSaysWhoRecordedIt() {
-        assertThatThrownBy(() -> Visit.arrive(id, patient, false, Optional.of(FIFTEEN_THOUSAND), " ", NINE))
+        assertThatThrownBy(() -> Visit.arrive(id, patient, false, Optional.of(FIFTEEN_THOUSAND), Means.CASH, " ", NINE))
                 .isInstanceOf(IllegalArgumentException.class);
         assertThatThrownBy(() -> charged().refund(pesos("1"), "error", " ", TEN))
                 .isInstanceOf(IllegalArgumentException.class);

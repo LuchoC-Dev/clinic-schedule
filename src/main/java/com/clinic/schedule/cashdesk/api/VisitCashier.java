@@ -12,8 +12,9 @@ public interface VisitCashier {
 
     /**
      * @param visitId the patient's entry in the queue: the visit is that entry
-     * @param amount the pesos charged, in cash; null only for an emergency, whose charge is left pending
+     * @param amount the pesos charged; null only for an emergency, whose charge is left pending
+     * @param means how they were paid; null for cash (D-89)
      * @throws ChargeRefusedException when the visit cannot start with that charge
      */
-    void visitStarted(UUID visitId, UUID patientId, boolean emergency, BigDecimal amount);
+    void visitStarted(UUID visitId, UUID patientId, boolean emergency, BigDecimal amount, Means means);
 }

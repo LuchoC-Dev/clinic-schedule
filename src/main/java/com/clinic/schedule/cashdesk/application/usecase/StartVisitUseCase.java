@@ -13,12 +13,13 @@ import com.clinic.schedule.cashdesk.application.port.StaffUserPort;
 import com.clinic.schedule.cashdesk.application.port.VisitRepository;
 import com.clinic.schedule.cashdesk.domain.Amount;
 import com.clinic.schedule.cashdesk.domain.AmountCeiling;
+import com.clinic.schedule.cashdesk.domain.Means;
 import com.clinic.schedule.cashdesk.domain.Visit;
 
 /**
  * Reception put a patient into a queue: a visit starts, charged in the same step, or left pending when it
  * is an emergency (D-87). Called by the queues, inside their transaction, so a refused charge keeps the
- * patient out of the queue.
+ * patient out of the queue. A charge whose means is not said is cash, as part 1 had it (D-89).
  */
 @Service
 public class StartVisitUseCase {
@@ -40,10 +41,14 @@ public class StartVisitUseCase {
     public void handle(Command command) {
         Optional<Amount> amount = Optional.ofNullable(command.amount()).map(typed -> Amount.typed(typed, ceiling));
         visits.save(Visit.arrive(command.visitId(), command.patientId(), command.emergency(), amount,
-                currentUser.username(), LocalDateTime.now(clock)));
+                command.means() != null ? command.means() : Means.CASH, currentUser.username(),
+                LocalDateTime.now(clock)));
     }
 
-    /** @param amount what reception charged; null for an emergency left pending */
-    public record Command(UUID visitId, UUID patientId, boolean emergency, BigDecimal amount) {
+    /**
+     * @param amount what reception charged; null for an emergency left pending
+     * @param means how it was paid; null for cash
+     */
+    public record Command(UUID visitId, UUID patientId, boolean emergency, BigDecimal amount, Means means) {
     }
 }

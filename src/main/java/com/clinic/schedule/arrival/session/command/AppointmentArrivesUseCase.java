@@ -12,6 +12,7 @@ import com.clinic.schedule.arrival.session.command.AppointmentArrivalRefusedExce
 import com.clinic.schedule.arrival.session.domain.QueueSession;
 import com.clinic.schedule.arrival.session.domain.QueueSessionService;
 import com.clinic.schedule.arrival.session.domain.SessionEvent.AppointmentArrived;
+import com.clinic.schedule.cashdesk.api.Means;
 import com.clinic.schedule.cashdesk.api.VisitCashier;
 
 /**
@@ -54,12 +55,15 @@ public class AppointmentArrivesUseCase {
         QueueSession session = commands.openSessionOf(queue);
         AppointmentArrived arrived = sessions.arriveWithAppointment(session, appointment.patientId(), appointment.id(),
                 appointment.practitionerId(), appointment.startsAt(), commands.now());
-        cashier.visitStarted(arrived.entryId(), appointment.patientId(), false, command.amount());
+        cashier.visitStarted(arrived.entryId(), appointment.patientId(), false, command.amount(), command.means());
         commands.record(session, arrived);
         return queue;
     }
 
-    /** @param amount the pesos charged: a patient with an appointment does not come in as an emergency */
-    public record Command(UUID appointmentId, BigDecimal amount) {
+    /**
+     * @param amount the pesos charged: a patient with an appointment does not come in as an emergency
+     * @param means how they were paid; null for cash
+     */
+    public record Command(UUID appointmentId, BigDecimal amount, Means means) {
     }
 }

@@ -16,6 +16,7 @@ import org.springframework.jdbc.core.JdbcTemplate;
 
 import com.clinic.schedule.cashdesk.application.port.VisitRepository;
 import com.clinic.schedule.cashdesk.domain.Amount;
+import com.clinic.schedule.cashdesk.domain.Means;
 import com.clinic.schedule.cashdesk.domain.Visit;
 import com.clinic.schedule.cashdesk.domain.exception.ChargeRuleViolationException;
 import com.clinic.schedule.cashdesk.domain.exception.ChargeRuleViolationException.Reason;
@@ -43,14 +44,15 @@ class VisitStorageIT {
     }
 
     private Visit keptPending() {
-        Visit pending = Visit.arrive(UUID.randomUUID(), UUID.randomUUID(), true, Optional.empty(), "recepcion", NINE);
+        Visit pending = Visit.arrive(UUID.randomUUID(), UUID.randomUUID(), true, Optional.empty(), Means.CASH,
+                "recepcion", NINE);
         visits.save(pending);
         return pending;
     }
 
     private Visit keptCharged(String amount) {
         Visit charged = Visit.arrive(UUID.randomUUID(), UUID.randomUUID(), false, Optional.of(pesos(amount)),
-                "recepcion", NINE);
+                Means.CASH, "recepcion", NINE);
         visits.save(charged);
         return charged;
     }
@@ -63,8 +65,8 @@ class VisitStorageIT {
     @Test
     void aVisitChargedMeanwhileIsRefusedAsChargedAlready() {
         Visit pending = keptPending();
-        Visit first = pending.charge(pesos("5000"), "recepcion", NINE.plusHours(1));
-        Visit second = pending.charge(pesos("6000"), "otra", NINE.plusHours(1));
+        Visit first = pending.charge(pesos("5000"), Means.CASH, "recepcion", NINE.plusHours(1));
+        Visit second = pending.charge(pesos("6000"), Means.CASH, "otra", NINE.plusHours(1));
 
         visits.save(first);
 
@@ -77,8 +79,8 @@ class VisitStorageIT {
     void aVisitChargedAgainMeanwhileIsRefusedAsChargedAlready() {
         Visit given = keptCharged("100").refund(pesos("100"), "importe equivocado", "recepcion", NINE.plusHours(1));
         visits.save(given);
-        Visit first = given.charge(pesos("1000"), "recepcion", NINE.plusHours(2));
-        Visit second = given.charge(pesos("2000"), "otra", NINE.plusHours(2));
+        Visit first = given.charge(pesos("1000"), Means.CASH, "recepcion", NINE.plusHours(2));
+        Visit second = given.charge(pesos("2000"), Means.CASH, "otra", NINE.plusHours(2));
 
         visits.save(first);
 
@@ -104,7 +106,7 @@ class VisitStorageIT {
         Visit visit = keptCharged("1234.5")
                 .refund(pesos("34.5"), "cobrado de más", "recepcion", NINE.plusHours(1))
                 .refund(pesos("1200"), "importe equivocado", "otra", NINE.plusHours(2))
-                .charge(pesos("10"), "recepcion", NINE.plusHours(3))
+                .charge(pesos("10"), Means.CASH, "recepcion", NINE.plusHours(3))
                 .refund(pesos("1"), "error", "recepcion", NINE.plusHours(4));
 
         visits.save(visit);
@@ -137,6 +139,31 @@ class VisitStorageIT {
         jdbc.update(insert, UUID.randomUUID(), pending.id(), 1, BigDecimal.ONE, "CASH", FAR);
         jdbc.update(insert, UUID.randomUUID(), pending.id(), 2, BigDecimal.ONE, "CASH", FAR);
         assertThatThrownBy(() -> jdbc.update(insert, UUID.randomUUID(), pending.id(), 2, BigDecimal.ONE, "CASH", FAR))
+                .isInstanceOf(DataIntegrityViolationException.class);
+    }
+
+    @Test
+    void eachMeansIsKeptAndReadBack() {
+        for (Means means : Means.values()) {
+            Visit visit = Visit.arrive(UUID.randomUUID(), UUID.randomUUID(), false, Optional.of(pesos("10")), means,
+                    "recepcion", NINE);
+            visits.save(visit);
+
+            assertThat(visits.findById(visit.id()).orElseThrow().current().orElseThrow().means()).isEqualTo(means);
+        }
+    }
+
+    @Test
+    void theDatabaseKnowsTheFiveMeans() {
+        Visit pending = keptPending();
+        String insert = "insert into cash_charge (id, visit_id, charge_no, amount, means, recorded_by, recorded_at) "
+                + "values (?, ?, ?, 1, ?, 'recepcion', ?)";
+        int number = 1;
+        for (String means : new String[] {"CASH", "DEBIT", "CREDIT", "TRANSFER", "QR"}) {
+            jdbc.update(insert, UUID.randomUUID(), pending.id(), number++, means, FAR);
+        }
+        int next = number;
+        assertThatThrownBy(() -> jdbc.update(insert, UUID.randomUUID(), pending.id(), next, "CHECK", FAR))
                 .isInstanceOf(DataIntegrityViolationException.class);
     }
 

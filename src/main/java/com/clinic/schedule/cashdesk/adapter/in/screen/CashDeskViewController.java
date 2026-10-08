@@ -3,6 +3,7 @@ package com.clinic.schedule.cashdesk.adapter.in.screen;
 import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
+import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 import java.util.function.Function;
@@ -25,8 +26,10 @@ import com.clinic.schedule.cashdesk.application.usecase.RefundVisitUseCase;
 import com.clinic.schedule.cashdesk.application.usecase.ViewCashDeskDayUseCase;
 import com.clinic.schedule.cashdesk.domain.CashDeskDay;
 import com.clinic.schedule.cashdesk.domain.CashDeskDay.Kind;
+import com.clinic.schedule.cashdesk.domain.CashDeskDay.MeansTotal;
 import com.clinic.schedule.cashdesk.domain.CashDeskDay.Movement;
 import com.clinic.schedule.cashdesk.domain.CashDeskDay.Total;
+import com.clinic.schedule.cashdesk.domain.Means;
 import com.clinic.schedule.cashdesk.domain.Visit;
 import com.clinic.schedule.cashdesk.domain.exception.ChargeRuleViolationException;
 import com.clinic.schedule.patient.api.PatientReader;
@@ -35,9 +38,10 @@ import com.clinic.schedule.patient.api.PatientSummary;
 /**
  * The day's cash desk (D-87, D-88). Reception's screen, {@code /cash-desk}, shows it whole: it charges the
  * pending emergencies, gives back from a charge — some or all of what is left, saying why — and charges again
- * a visit given back whole. The admins', {@code /cash-desk-log}, shows the charges, the refunds and the
- * totals without the patients, the refunds' reasons and the pending visits. Which role reaches which is the
- * route's to say (D-34).
+ * a visit given back whole, by the means reception picks (D-89). The admins', {@code /cash-desk-log}, shows the
+ * charges, the refunds and the totals without the patients, the refunds' reasons and the pending visits. Both
+ * split the totals by means, and say what should be in the drawer. Which role reaches which is the route's to
+ * say (D-34).
  */
 @Controller
 class CashDeskViewController {
@@ -88,9 +92,10 @@ class CashDeskViewController {
     /** An emergency's pending charge, or a visit given back whole charged again; back to the day it was on. */
     @PostMapping("/cash-desk/visits/{visitId}/charge")
     String charge(@PathVariable UUID visitId, @RequestParam(required = false) BigDecimal amount,
-            @RequestParam(required = false) String date, RedirectAttributes flash) {
+            @RequestParam(required = false) Means means, @RequestParam(required = false) String date,
+            RedirectAttributes flash) {
         return attempt(date, flash, "Cobro registrado.",
-                () -> charge.handle(new ChargeVisitUseCase.Command(visitId, amount)));
+                () -> charge.handle(new ChargeVisitUseCase.Command(visitId, amount, means)));
     }
 
     /** Some or all of what is left of the visit's charge, given back; back to the day it was on. */
@@ -175,13 +180,28 @@ class CashDeskViewController {
     record PendingRow(UUID visitId, String patient, String arrivedAt) {
     }
 
-    /** What one user, or everyone, recorded: charged, given back, and what is left. */
-    record TotalRow(String user, int charges, String charged, int refunds, String refunded, String left) {
+    /**
+     * What one user, or everyone, recorded — charged, given back, and what is left —, or what was by one means.
+     *
+     * @param user who recorded it, or the means
+     * @param drawer what is left in cash; null for a means' row
+     * @param byMeans the same by each means; empty for a means' row
+     */
+    record TotalRow(String user, int charges, String charged, int refunds, String refunded, String left,
+            String drawer, List<TotalRow> byMeans) {
 
         static TotalRow of(String user, Total total) {
             return new TotalRow(user, total.charged().count(), CashDeskWords.pesos(total.charged().amount()),
                     total.refunded().count(), CashDeskWords.pesos(total.refunded().amount()),
-                    CashDeskWords.pesos(total.left()));
+                    CashDeskWords.pesos(total.left()), CashDeskWords.pesos(total.drawer()),
+                    total.byMeans().stream().map(TotalRow::of).toList());
+        }
+
+        static TotalRow of(MeansTotal total) {
+            return new TotalRow(CashDeskWords.means(total.means()), total.charged().count(),
+                    CashDeskWords.pesos(total.charged().amount()), total.refunded().count(),
+                    CashDeskWords.pesos(total.refunded().amount()), CashDeskWords.pesos(total.left()), null,
+                    List.of());
         }
     }
 }

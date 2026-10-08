@@ -1663,9 +1663,47 @@ same refunds and totals over the API and on `/cash-desk-log`, without a reason o
 queue, an emergency's later or never, and gives back what went wrong or what is owed, as movements of their
 own that never change; the day's cash desk adds them up by who recorded them. Parts 2 and 3 follow.
 
-#### Part 2 — The other means of payment `[ ]`
-- [ ] Debit card, credit card, bank transfer and QR; the day's cash desk separates them, and only cash
-      counts for the drawer
+#### Part 2 — The other means of payment `[x]`
+- [x] Debit card, credit card, bank transfer and QR, besides cash: reception picks the means wherever it charges
+      — as a patient comes in, as an emergency's pending visit is charged, and as a visit given back whole is
+      charged again —; left out, it is cash, so what sent `amount` alone keeps working (D-89)
+- [x] A refund goes out by its charge's means; no means asks for anything more — no instalments, no operation
+      number
+- [x] The day's cash desk splits its totals by means, overall and for each user, and says what should be in the
+      drawer: what is left in cash alone
+- [x] `cashdesk/api/Means` for the queues, turned into the domain's by `VisitCashierAdapter`
+- [x] `means` beside `amount` in the three ways into a queue and `POST /api/visits/{id}/charge`; `byMeans` and
+      `drawer` in `total` and each `byRecorder` of both days' answers; a "Medio de pago" beside every "Importe",
+      cash chosen; a row for each means and "En el cajón" in the totals of `/cash-desk` and `/cash-desk-log`
+- [x] `V41`: `ck_cash_charge_means` dropped and added again with the five means, in portable SQL
+- [x] 4 unit and 6 integration tests more, and the part 1's given their means. 486 unit and 568 integration
+      tests, 1054 in total
+
+**Verified with:** every new test failing when the code it covers was broken on purpose — 47 breakages, all
+caught: a charge, a visit arriving or charged again keeping cash whatever the means, the totals by means in
+another order, a refund counted as a charge or not subtracted, the drawer counting every means, what was
+charged, or the whole when there is no cash, cash taken by default for another means or the means ignored by
+either use case, each means turned into another or dropped by the queues' adapter, the drawer and each means'
+remainder of the API, a user without their means or with the total for a drawer, the means dropped by each
+route of the API, by each of the three ways into a queue and by each of the five forms of the screens, each
+means' word swapped, the screens' drawer, a means' row and the rows themselves, the means field left out of the
+arrivals, the agenda and the cash desk, an option's word, the drawer's column and header, a user's means rows,
+the admins' totals, and V41 forgetting QR or letting any means in. A control that changed only a comment was not
+caught. The faults ran one at a time. `mvnw clean verify`, with the seven `*PostgresIT` on PostgreSQL 18, which
+ran V41.
+
+**Verified with the application running** on a throwaway PostgreSQL taken from empty to V104: over the API
+reception was refused a means it does not know with a 400 and nobody in the queue, brought Ana in paying
+$ 15.000 by debit and Juan $ 8.000 without saying the means, which was cash, and a nameless emergency in pending,
+and charged it $ 5.000 by transfer. It gave back $ 5.000 of Ana's, which went out by debit, and $ 500 of Juan's,
+in cash: the day said $ 22.500 left and $ 7.500 in the drawer, each means apart, for reception and the admin
+alike; Arias was refused. On the screens reception brought in a nameless patient paying $ 1.200 by QR, and
+charged by credit again a visit given back whole; `/cash-desk` and `/cash-desk-log` showed each means under the
+user and the total, and "En el cajón", the admin's without a name. In the database each charge kept its means,
+V41's check was there by name, and it refused a means it does not know.
+
+**Part 2 of phase 7 is done:** reception charges each visit by the means the patient pays with, and the day's
+cash desk separates them, counting only cash for what should be in the drawer. Part 3 follows.
 
 #### Part 3 — The visits covered by a health insurance `[ ]`
 - [ ] A visit paid by the patient's obra social or prepaid plan, with the token of that visit

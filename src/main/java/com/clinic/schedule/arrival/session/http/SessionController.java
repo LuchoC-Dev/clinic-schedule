@@ -89,7 +89,8 @@ class SessionController {
     @PostMapping("/api/queues/{id}/session/patients")
     @ResponseStatus(HttpStatus.CREATED)
     SessionResponse addPatient(@PathVariable UUID id, @Valid @RequestBody AddPatientRequest request) {
-        addPatient.handle(new AddPatientUseCase.Command(id, request.patientId(), request.isEmergency(), request.amount()));
+        addPatient.handle(new AddPatientUseCase.Command(id, request.patientId(), request.isEmergency(), request.amount(),
+                request.means()));
         return session(id);
     }
 
@@ -98,7 +99,7 @@ class SessionController {
     @ResponseStatus(HttpStatus.CREATED)
     SessionResponse addUnidentified(@PathVariable UUID id, @RequestBody(required = false) AddUnidentifiedRequest request) {
         addUnidentified.handle(new AddUnidentifiedPatientUseCase.Command(id, request != null && request.isEmergency(),
-                request == null ? null : request.amount()));
+                request == null ? null : request.amount(), request == null ? null : request.means()));
         return session(id);
     }
 
@@ -106,7 +107,8 @@ class SessionController {
     @PostMapping("/api/appointment-arrivals")
     @ResponseStatus(HttpStatus.CREATED)
     SessionResponse appointmentArrives(@Valid @RequestBody AppointmentArrivalRequest request) {
-        UUID queue = appointmentArrives.handle(new AppointmentArrivesUseCase.Command(request.appointmentId(), request.amount()));
+        UUID queue = appointmentArrives.handle(new AppointmentArrivesUseCase.Command(request.appointmentId(), request.amount(),
+                request.means()));
         return session(queue);
     }
 

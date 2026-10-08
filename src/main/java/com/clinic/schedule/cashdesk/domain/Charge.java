@@ -11,7 +11,8 @@ import com.clinic.schedule.cashdesk.domain.exception.ChargeRuleViolationExceptio
 /**
  * What was charged for a visit (D-87): the amount, the means, who recorded it and when, and what was given
  * back of it since, in the order it was (D-88). It is never changed nor deleted: a refund is a movement of its
- * own, and giving one back answers a new charge with it added. Never more is given back than was charged.
+ * own, and giving one back answers a new charge with it added. Never more is given back than was charged, and
+ * what is given back goes out by the charge's means (D-89).
  *
  * @param recordedBy the username of whoever recorded it
  */
@@ -29,9 +30,9 @@ public record Charge(UUID id, Amount amount, Means means, String recordedBy, Loc
         }
     }
 
-    /** A new charge in cash, the one means of part 1, with nothing given back. */
-    static Charge inCash(Amount amount, String recordedBy, LocalDateTime at) {
-        return new Charge(UUID.randomUUID(), amount, Means.CASH, recordedBy, at, List.of());
+    /** A new charge, with nothing given back. */
+    static Charge of(Amount amount, Means means, String recordedBy, LocalDateTime at) {
+        return new Charge(UUID.randomUUID(), amount, means, recordedBy, at, List.of());
     }
 
     /** What is left of it: what was charged, less what was given back. */

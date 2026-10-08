@@ -5,8 +5,8 @@
 <header th:replace="~{fragments :: staffHeader}"></header>
 <main class="wide">
     <h1>Caja del día</h1>
-    <p class="muted">Lo cobrado y lo devuelto ese día, en efectivo: lo que queda es lo que debería haber en la caja.
-        La factura se sigue haciendo aparte.</p>
+    <p class="muted">Lo cobrado y lo devuelto ese día, por medio de pago. Lo que queda en efectivo es lo que debería
+        haber en el cajón; una devolución sale por el medio de su cobro. La factura se sigue haciendo aparte.</p>
     <div th:replace="~{fragments :: messages}"></div>
 
     <form class="card bar" method="get" th:action="@{/cash-desk}">
@@ -17,27 +17,7 @@
     </form>
 
     <h2>Totales</h2>
-    <table>
-        <thead><tr><th>Registró</th><th>Cobros</th><th>Cobrado</th><th>Devoluciones</th><th>Devuelto</th><th>Queda</th></tr></thead>
-        <tbody>
-        <tr th:each="r : ${byRecorder}">
-            <td th:text="${r.user}">recepcion</td>
-            <td th:text="${r.charges}">3</td>
-            <td th:text="${r.charged}">$ 45.000,00</td>
-            <td th:text="${r.refunds}">1</td>
-            <td th:text="${r.refunded}">$ 15.000,00</td>
-            <td th:text="${r.left}">$ 30.000,00</td>
-        </tr>
-        <tr>
-            <th>Total</th>
-            <th th:text="${total.charges}">3</th>
-            <th th:text="${total.charged}">$ 45.000,00</th>
-            <th th:text="${total.refunds}">1</th>
-            <th th:text="${total.refunded}">$ 15.000,00</th>
-            <th th:text="${total.left}">$ 30.000,00</th>
-        </tr>
-        </tbody>
-    </table>
+    <table th:replace="~{fragments :: cashTotals}"></table>
 
     <h2>Movimientos</h2>
     <p th:if="${rows.isEmpty()}" class="muted">No hay movimientos ese día.</p>
@@ -71,6 +51,7 @@
                     <input type="hidden" name="date" th:value="${date}">
                     <input type="number" name="amount" step="0.01" min="0.01" placeholder="Importe $"
                            aria-label="Importe" required>
+                    <select th:replace="~{fragments :: meansSelect}"></select>
                     <button type="submit">Cobrar de nuevo</button>
                 </form>
             </td>
@@ -92,6 +73,7 @@
                     <input type="hidden" name="date" th:value="${date}">
                     <input type="number" name="amount" step="0.01" min="0.01" placeholder="Importe $"
                            aria-label="Importe" required>
+                    <select th:replace="~{fragments :: meansSelect}"></select>
                     <button type="submit" class="primary">Cobrar</button>
                 </form>
             </td>

@@ -39,6 +39,7 @@ import com.clinic.schedule.arrival.session.query.SessionView;
 import com.clinic.schedule.arrival.session.query.ViewQueueSessionUseCase;
 import com.clinic.schedule.arrival.setup.query.ListQueuesUseCase;
 import com.clinic.schedule.arrival.setup.query.QueueView;
+import com.clinic.schedule.cashdesk.api.Means;
 import com.clinic.schedule.patient.api.PatientReader;
 import com.clinic.schedule.patient.api.PatientSummary;
 import com.clinic.schedule.practitioner.api.PractitionerReader;
@@ -160,17 +161,19 @@ class ArrivalViewController {
     @PostMapping("/arrivals/{queueId}/patients")
     String addPatient(@PathVariable UUID queueId, @RequestParam UUID patientId,
             @RequestParam(defaultValue = "false") boolean emergency, @RequestParam(required = false) BigDecimal amount,
-            RedirectAttributes flash) {
+            @RequestParam(required = false) Means means, RedirectAttributes flash) {
         return attempt(queueId, flash, emergency ? "Paciente sumado como urgencia." : "Paciente sumado a la cola.",
-                () -> addPatient.handle(new AddPatientUseCase.Command(queueId, patientId, emergency, amount)));
+                () -> addPatient.handle(new AddPatientUseCase.Command(queueId, patientId, emergency, amount, means)));
     }
 
     /** Nobody is turned away for lack of a name: registered under an alias and brought in (D-60). */
     @PostMapping("/arrivals/{queueId}/unidentified")
     String addUnidentified(@PathVariable UUID queueId, @RequestParam(defaultValue = "false") boolean emergency,
-            @RequestParam(required = false) BigDecimal amount, RedirectAttributes flash) {
+            @RequestParam(required = false) BigDecimal amount, @RequestParam(required = false) Means means,
+            RedirectAttributes flash) {
         return attempt(queueId, flash, "Paciente sin datos registrado y sumado a la cola.",
-                () -> addUnidentified.handle(new AddUnidentifiedPatientUseCase.Command(queueId, emergency, amount)));
+                () -> addUnidentified.handle(new AddUnidentifiedPatientUseCase.Command(queueId, emergency, amount,
+                        means)));
     }
 
     /**
@@ -181,9 +184,9 @@ class ArrivalViewController {
     String appointmentArrivesFromTheAgenda(@PathVariable UUID appointmentId,
             @RequestParam(required = false) UUID practitionerId, @RequestParam(required = false) String date,
             @RequestParam(required = false) String view, @RequestParam(required = false) BigDecimal amount,
-            RedirectAttributes flash) {
+            @RequestParam(required = false) Means means, RedirectAttributes flash) {
         try {
-            appointmentArrives.handle(new AppointmentArrivesUseCase.Command(appointmentId, amount));
+            appointmentArrives.handle(new AppointmentArrivesUseCase.Command(appointmentId, amount, means));
             flash.addFlashAttribute("message", "Llegó: está en la cola de su profesional.");
         } catch (RuntimeException e) {
             flash.addFlashAttribute("error", ScreenRefusals.of(e));
@@ -203,9 +206,10 @@ class ArrivalViewController {
 
     @PostMapping("/arrivals/{queueId}/appointments/{appointmentId}")
     String appointmentArrives(@PathVariable UUID queueId, @PathVariable UUID appointmentId,
-            @RequestParam(required = false) BigDecimal amount, RedirectAttributes flash) {
+            @RequestParam(required = false) BigDecimal amount, @RequestParam(required = false) Means means,
+            RedirectAttributes flash) {
         return attempt(queueId, flash, "Paciente con turno sumado a la cola de su profesional.",
-                () -> appointmentArrives.handle(new AppointmentArrivesUseCase.Command(appointmentId, amount)));
+                () -> appointmentArrives.handle(new AppointmentArrivesUseCase.Command(appointmentId, amount, means)));
     }
 
     @PostMapping("/arrivals/{queueId}/entries/{entryId}/reassign")

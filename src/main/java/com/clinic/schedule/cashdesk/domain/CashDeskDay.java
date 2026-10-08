@@ -5,6 +5,7 @@ import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.Comparator;
+import java.util.EnumMap;
 import java.util.List;
 import java.util.Map;
 import java.util.TreeMap;
@@ -13,8 +14,9 @@ import java.util.UUID;
 /**
  * A day of the cash desk (D-87, D-88): the charges and the refunds recorded that day, in the order they were
  * recorded, what they add up to — charged, given back, and what is left —, overall and by who recorded each,
- * and the emergencies that came that day and were never charged. A refund counts the day it is recorded,
- * whatever day its charge was. In part 1 everything is cash, so what is left is what should be in the drawer.
+ * each split by means (D-89), and the emergencies that came that day and were never charged. A refund counts the
+ * day it is recorded, whatever day its charge was, and goes out by its charge's means. Only what is left in
+ * cash is what should be in the drawer.
  *
  * @param visits the visits with a charge or a refund recorded that day, whole
  * @param pending the emergencies that came that day, never charged
@@ -103,14 +105,48 @@ public record CashDeskDay(LocalDate date, List<Visit> visits, List<Visit> pendin
         }
     }
 
-    /** Some charges and refunds: how many of each, what each adds up to, and what is left. */
-    public record Total(Sum charged, Sum refunded) {
+    /**
+     * Some charges and refunds: how many of each, what each adds up to, and what is left, overall and by means.
+     *
+     * @param byMeans the same, for each means with a movement, in the order the means are declared
+     */
+    public record Total(Sum charged, Sum refunded, List<MeansTotal> byMeans) {
+
+        public Total {
+            byMeans = List.copyOf(byMeans);
+        }
 
         static Total of(List<Movement> movements) {
-            return new Total(Sum.of(movements, Kind.CHARGE), Sum.of(movements, Kind.REFUND));
+            Map<Means, List<Movement>> split = new EnumMap<>(Means.class);
+            for (Movement movement : movements) {
+                split.computeIfAbsent(movement.means(), means -> new ArrayList<>()).add(movement);
+            }
+            return new Total(Sum.of(movements, Kind.CHARGE), Sum.of(movements, Kind.REFUND),
+                    split.entrySet().stream()
+                            .map(entry -> new MeansTotal(entry.getKey(), Sum.of(entry.getValue(), Kind.CHARGE),
+                                    Sum.of(entry.getValue(), Kind.REFUND)))
+                            .toList());
         }
 
         /** What was charged, less what was given back. */
+        public BigDecimal left() {
+            return charged.amount().subtract(refunded.amount());
+        }
+
+        /** What should be in the drawer: what is left in cash, the only means that goes into it. */
+        public BigDecimal drawer() {
+            return byMeans.stream()
+                    .filter(each -> each.means() == Means.CASH)
+                    .map(MeansTotal::left)
+                    .findFirst()
+                    .orElse(BigDecimal.ZERO.setScale(2));
+        }
+    }
+
+    /** What was charged and given back by one means. */
+    public record MeansTotal(Means means, Sum charged, Sum refunded) {
+
+        /** What was charged by it, less what was given back by it. */
         public BigDecimal left() {
             return charged.amount().subtract(refunded.amount());
         }

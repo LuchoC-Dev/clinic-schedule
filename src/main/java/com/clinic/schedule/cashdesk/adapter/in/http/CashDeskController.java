@@ -68,7 +68,7 @@ class CashDeskController {
      */
     @PostMapping("/api/visits/{id}/charge")
     CashDeskResponse charge(@PathVariable UUID id, @RequestBody ChargeRequest request) {
-        charge.handle(new ChargeVisitUseCase.Command(id, request.amount()));
+        charge.handle(new ChargeVisitUseCase.Command(id, request.amount(), request.means()));
         return forReception(null);
     }
 

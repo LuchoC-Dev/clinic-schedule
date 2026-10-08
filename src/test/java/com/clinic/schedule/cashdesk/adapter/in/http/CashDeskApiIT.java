@@ -8,6 +8,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 import java.math.BigDecimal;
+import java.util.Set;
 import java.util.UUID;
 
 import org.junit.jupiter.api.BeforeEach;
@@ -291,6 +292,109 @@ class CashDeskApiIT {
 
     private BigDecimal total(JsonNode day, String what) {
         return day.get("total").get(what).get("amount").decimalValue();
+    }
+
+    @Test
+    void eachWayInChargesByTheMeansReceptionSaysAndWithoutOneInCash() throws Exception {
+        UUID ana = patients.newPatient();
+        UUID juan = patients.newPatient();
+        UUID eva = patients.newPatient();
+        UUID luis = patients.newPatient();
+        String appointment = read(mockMvc.perform(post("/api/appointments").contentType(MediaType.APPLICATION_JSON)
+                .content("""
+                        {"patientId": "%s", "practitionerId": "%s", "reasonId": "%s", "startsAt": "2026-03-10T11:00:00"}
+                        """.formatted(eva, arias.id(), arias.consulta())))
+                .andExpect(status().isCreated())).get("id").asText();
+
+        arrives(ana, ", \"amount\": 100, \"means\": \"CHEQUE\"").andExpect(status().isBadRequest());
+        assertThat(countFor(ana, "cash_visit")).isZero();
+        arrives(ana, ", \"amount\": 100, \"means\": \"DEBIT\"").andExpect(status().isCreated());
+        arrives(juan, ", \"amount\": 100").andExpect(status().isCreated());
+        mockMvc.perform(post("/api/appointment-arrivals").contentType(MediaType.APPLICATION_JSON)
+                .content("{\"appointmentId\": \"" + appointment + "\", \"amount\": 100, \"means\": \"TRANSFER\"}"))
+                .andExpect(status().isCreated());
+        arrives(luis, ", \"emergency\": true, \"means\": \"QR\"").andExpect(status().isCreated());
+        String later = visitOf(luis);
+        assertThat(isPending(today(), later)).isTrue();
+        mockMvc.perform(post("/api/visits/" + later + "/charge").contentType(MediaType.APPLICATION_JSON)
+                .content("{\"amount\": 100, \"means\": \"CREDIT\"}")).andExpect(status().isOk());
+        mockMvc.perform(post("/api/queues/" + queue + "/session/unidentified").contentType(MediaType.APPLICATION_JSON)
+                .content("{\"amount\": 100, \"means\": \"QR\"}")).andExpect(status().isCreated());
+        UUID nameless = null;
+        for (JsonNode entry : read(mockMvc.perform(get("/api/queues/" + queue + "/session"))).get("waiting")) {
+            UUID patient = UUID.fromString(entry.get("patientId").asText());
+            if (!Set.of(ana, juan, eva, luis).contains(patient)) {
+                nameless = patient;
+            }
+        }
+
+        JsonNode day = today();
+        assertThat(movementOf(day, visitOf(ana)).get("means").asText()).isEqualTo("DEBIT");
+        assertThat(movementOf(day, visitOf(juan)).get("means").asText()).isEqualTo("CASH");
+        assertThat(movementOf(day, visitOf(eva)).get("means").asText()).isEqualTo("TRANSFER");
+        assertThat(movementOf(day, later).get("means").asText()).isEqualTo("CREDIT");
+        assertThat(movementOf(day, visitOf(nameless)).get("means").asText()).isEqualTo("QR");
+    }
+
+    @Test
+    void theTotalsAreSplitByMeansAndOnlyCashCountsForTheDrawer() throws Exception {
+        JsonNode before = today();
+        JsonNode logBefore = read(mockMvc.perform(get("/api/cash-desk-log").with(ADMIN)));
+        UUID ana = patients.newPatient();
+
+        arrives(patients.newPatient(), ", \"amount\": 1000, \"means\": \"CASH\"").andExpect(status().isCreated());
+        arrives(ana, ", \"amount\": 3000, \"means\": \"DEBIT\"").andExpect(status().isCreated());
+        JsonNode day = read(refund(visitOf(ana), "{\"amount\": 1000, \"reason\": \"cobrado de más\"}")
+                .andExpect(status().isOk()));
+
+        assertThat(movementOf(day, visitOf(ana), "REFUND", 0).get("means").asText()).isEqualTo("DEBIT");
+        assertThat(byMeans(day.get("total"), "DEBIT", "left")
+                .subtract(byMeans(before.get("total"), "DEBIT", "left"))).isEqualByComparingTo("2000");
+        assertThat(byMeans(day.get("total"), "DEBIT", "refunded")
+                .subtract(byMeans(before.get("total"), "DEBIT", "refunded"))).isEqualByComparingTo("1000");
+        assertThat(byMeans(day.get("total"), "CASH", "charged")
+                .subtract(byMeans(before.get("total"), "CASH", "charged"))).isEqualByComparingTo("1000");
+        assertThat(day.get("total").get("drawer").decimalValue()
+                .subtract(before.get("total").get("drawer").decimalValue())).isEqualByComparingTo("1000");
+        assertThat(day.get("total").get("left").decimalValue()
+                .subtract(before.get("total").get("left").decimalValue())).isEqualByComparingTo("3000");
+        assertThat(recorded(day, "recepcion", "drawer").subtract(recorded(before, "recepcion", "drawer")))
+                .isEqualByComparingTo("1000");
+        assertThat(byMeans(recorder(day, "recepcion"), "DEBIT", "left")
+                .subtract(byMeans(recorder(before, "recepcion"), "DEBIT", "left"))).isEqualByComparingTo("2000");
+
+        JsonNode log = read(mockMvc.perform(get("/api/cash-desk-log").with(ADMIN)).andExpect(status().isOk()));
+        assertThat(log.get("total").get("drawer").decimalValue()
+                .subtract(logBefore.get("total").get("drawer").decimalValue())).isEqualByComparingTo("1000");
+        assertThat(byMeans(log.get("total"), "DEBIT", "left")
+                .subtract(byMeans(logBefore.get("total"), "DEBIT", "left"))).isEqualByComparingTo("2000");
+        assertThat(byMeans(recorder(log, "recepcion"), "DEBIT", "left")
+                .subtract(byMeans(recorder(logBefore, "recepcion"), "DEBIT", "left"))).isEqualByComparingTo("2000");
+        assertThat(recorded(log, "recepcion", "drawer").subtract(recorded(logBefore, "recepcion", "drawer")))
+                .isEqualByComparingTo("1000");
+    }
+
+    /** What a total, or a user's, says of one means: charged or refunded, as a sum, or what is left; zero if none. */
+    private static BigDecimal byMeans(JsonNode total, String means, String what) {
+        if (total == null) {
+            return BigDecimal.ZERO;
+        }
+        for (JsonNode each : total.get("byMeans")) {
+            if (each.get("means").asText().equals(means)) {
+                JsonNode value = each.get(what);
+                return value.isObject() ? value.get("amount").decimalValue() : value.decimalValue();
+            }
+        }
+        return BigDecimal.ZERO;
+    }
+
+    private static JsonNode recorder(JsonNode day, String user) {
+        for (JsonNode each : day.get("byRecorder")) {
+            if (each.get("recordedBy").asText().equals(user)) {
+                return each;
+            }
+        }
+        return null;
     }
 
     @Test
