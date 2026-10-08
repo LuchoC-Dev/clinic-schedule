@@ -13,6 +13,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 import java.math.BigDecimal;
+import java.util.Random;
 import java.util.UUID;
 
 import org.junit.jupiter.api.BeforeEach;
@@ -99,7 +100,8 @@ class CashDeskViewIT {
                 .andExpect(content().string(containsString("Importe $ (opcional)")));
 
         mockMvc.perform(post("/arrivals/" + queue + "/patients").with(csrf()).param("patientId", ana.toString()))
-                .andExpect(flash().attribute("error", "Falta el importe del cobro: sin cobro, solo entra una urgencia."));
+                .andExpect(flash().attribute("error",
+                        "Falta el importe del cobro: sin cobro ni cobertura, solo entra una urgencia."));
         mockMvc.perform(post("/arrivals/" + queue + "/patients").with(csrf()).param("patientId", ana.toString())
                         .param("amount", "0"))
                 .andExpect(flash().attribute("error", "El importe debe ser mayor que cero, con dos decimales como mucho."));
@@ -107,7 +109,8 @@ class CashDeskViewIT {
                         .param("amount", "100000000"))
                 .andExpect(flash().attribute("error", "El importe no puede superar $ 99.999.999,99."));
         mockMvc.perform(post("/arrivals/" + queue + "/unidentified").with(csrf()).param("amount", ""))
-                .andExpect(flash().attribute("error", "Falta el importe del cobro: sin cobro, solo entra una urgencia."));
+                .andExpect(flash().attribute("error",
+                        "Falta el importe del cobro: sin cobro ni cobertura, solo entra una urgencia."));
 
         mockMvc.perform(post("/arrivals/" + queue + "/patients").with(csrf()).param("patientId", ana.toString())
                         .param("amount", "15000.50"))
@@ -139,7 +142,8 @@ class CashDeskViewIT {
                 .andExpect(content().string(containsString("name=\"amount\"")));
         mockMvc.perform(post("/arrivals/appointment-arrivals/" + appointment).with(csrf())
                         .param("practitionerId", arias.id().toString()).param("date", DAY))
-                .andExpect(flash().attribute("error", "Falta el importe del cobro: sin cobro, solo entra una urgencia."));
+                .andExpect(flash().attribute("error",
+                        "Falta el importe del cobro: sin cobro ni cobertura, solo entra una urgencia."));
         mockMvc.perform(post("/arrivals/" + queue + "/appointments/" + appointment).with(csrf()).param("amount", "8000"))
                 .andExpect(flash().attribute("message", "Paciente con turno sumado a la cola de su profesional."));
 
@@ -344,5 +348,145 @@ class CashDeskViewIT {
                 .andExpect(content().string(containsString("Devuelto")))
                 .andExpect(content().string(not(containsString("motivo-que-no-ven"))))
                 .andExpect(content().string(not(containsString("Devolver"))));
+    }
+
+    // --- visits covered by a health insurance (D-90) -------------------------------------------
+
+    /** A patient registered with an insurance, whose document reception saw or not. */
+    private UUID insuredPatient(boolean verified) throws Exception {
+        return UUID.fromString(json.readTree(mockMvc.perform(post("/api/patients")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {"fullName": "Asegurado %s", "documentType": "DNI", "documentNumber": "%d",
+                                 "documentSeen": %b,
+                                 "insurance": {"insurer": "OSDE", "memberNumber": "61234567801", "plan": "310"}}
+                                """.formatted(UUID.randomUUID().toString().substring(0, 8),
+                                10_000_000 + new Random().nextInt(89_999_999), verified)))
+                .andReturn().getResponse().getContentAsString()).get("id").asText());
+    }
+
+    private String tokenOf(UUID patient) {
+        return jdbc.queryForObject("select k.token from cash_coverage k join cash_visit v on v.id = k.visit_id "
+                + "where v.patient_id = ?", String.class, patient);
+    }
+
+    @Test
+    void receptionBringsInACoveredPatientWhereverItBringsThemIn() throws Exception {
+        UUID ana = insuredPatient(true);
+        UUID eva = insuredPatient(true);
+        UUID pablo = insuredPatient(true);
+        String pablosAppointment = appointmentFor(pablo, "12:00:00");
+
+        mockMvc.perform(get("/arrivals").param("queueId", queue).param("query", nameOf(ana)))
+                .andExpect(content().string(containsString("name=\"covered\"")))
+                .andExpect(content().string(containsString("Con cobertura")))
+                .andExpect(content().string(containsString("name=\"token\"")));
+        mockMvc.perform(get("/agenda").param("practitionerId", arias.id().toString()).param("date", DAY))
+                .andExpect(content().string(containsString("name=\"token\"")));
+
+        mockMvc.perform(post("/arrivals/" + queue + "/patients").with(csrf())
+                        .param("patientId", patients.newPatient().toString()).param("covered", "true"))
+                .andExpect(flash().attribute("error", "El paciente no tiene obra social cargada: paga como particular."));
+        mockMvc.perform(post("/arrivals/" + queue + "/patients").with(csrf())
+                        .param("patientId", insuredPatient(false).toString()).param("covered", "true"))
+                .andExpect(flash().attribute("error",
+                        "La identidad del paciente no está verificada: paga como particular."));
+        mockMvc.perform(post("/arrivals/" + queue + "/patients").with(csrf()).param("patientId", ana.toString())
+                        .param("token", "x".repeat(51)))
+                .andExpect(flash().attribute("error", "El token no puede superar los 50 caracteres."));
+        mockMvc.perform(post("/arrivals/" + queue + "/patients").with(csrf()).param("patientId", ana.toString())
+                        .param("covered", "true").param("amount", "").param("token", ""))
+                .andExpect(flash().attribute("message", "Paciente sumado a la cola."));
+        mockMvc.perform(post("/arrivals/" + queue + "/patients").with(csrf()).param("patientId", eva.toString())
+                        .param("amount", "1500").param("means", "DEBIT").param("token", "4455"))
+                .andExpect(flash().attribute("message", "Paciente sumado a la cola."));
+        mockMvc.perform(post("/arrivals/appointment-arrivals/" + pablosAppointment).with(csrf())
+                        .param("practitionerId", arias.id().toString()).param("date", DAY).param("covered", "true")
+                        .param("token", "6677"))
+                .andExpect(flash().attribute("message", "Llegó: está en la cola de su profesional."));
+
+        assertThat(tokenOf(ana)).isNull();
+        assertThat(tokenOf(eva)).isEqualTo("4455");
+        assertThat(meansOf(eva)).isEqualTo("DEBIT");
+        assertThat(tokenOf(pablo)).isEqualTo("6677");
+        assertThat(jdbc.queryForObject("select count(*) from cash_charge c join cash_visit v on v.id = c.visit_id "
+                + "where v.patient_id = ?", Integer.class, ana)).isZero();
+    }
+
+    @Test
+    void aPendingEmergencyIsCoveredOnlyForAnInsuredAndVerifiedPatient() throws Exception {
+        UUID uninsured = patients.newPatient();
+        UUID unverified = insuredPatient(false);
+        UUID ana = insuredPatient(true);
+        for (UUID patient : new UUID[] {uninsured, unverified, ana}) {
+            mockMvc.perform(post("/arrivals/" + queue + "/patients").with(csrf()).param("patientId", patient.toString())
+                    .param("emergency", "true").param("amount", ""));
+        }
+
+        mockMvc.perform(post("/cash-desk/visits/" + visitOf(uninsured) + "/coverage").with(csrf()))
+                .andExpect(flash().attribute("error", "El paciente no tiene obra social cargada: paga como particular."));
+        mockMvc.perform(post("/cash-desk/visits/" + visitOf(unverified) + "/coverage").with(csrf()))
+                .andExpect(flash().attribute("error",
+                        "La identidad del paciente no está verificada: paga como particular."));
+        mockMvc.perform(post("/cash-desk/visits/" + visitOf(ana) + "/coverage").with(csrf())
+                        .param("token", "x".repeat(51)))
+                .andExpect(flash().attribute("error", "El token no puede superar los 50 caracteres."));
+        mockMvc.perform(post("/cash-desk/visits/" + UUID.randomUUID() + "/coverage").with(csrf()))
+                .andExpect(flash().attribute("error", "Esa visita no existe."));
+        mockMvc.perform(get("/cash-desk"))
+                .andExpect(content().string(containsString("/cash-desk/visits/" + visitOf(ana) + "/coverage")));
+    }
+
+    @Test
+    void receptionCoversAPendingEmergencyAndWithdrawsACoverageMarkedByMistake() throws Exception {
+        UUID ana = insuredPatient(true);
+        mockMvc.perform(post("/arrivals/" + queue + "/patients").with(csrf()).param("patientId", ana.toString())
+                .param("emergency", "true").param("amount", ""));
+        UUID visit = visitOf(ana);
+        String coverage = "/cash-desk/visits/" + visit + "/coverage";
+        String withdrawal = coverage + "/withdrawal";
+
+        mockMvc.perform(get("/cash-desk"))
+                .andExpect(content().string(containsString(coverage)))
+                .andExpect(content().string(containsString("Registrar con cobertura")));
+        mockMvc.perform(post(coverage).with(csrf()).param("token", "555").param("copay", "1200").param("means", "QR")
+                        .param("date", DAY))
+                .andExpect(redirectedUrl("/cash-desk?date=" + DAY))
+                .andExpect(flash().attribute("message", "Cobertura registrada."));
+        mockMvc.perform(post(coverage).with(csrf()))
+                .andExpect(flash().attribute("error", "Esa visita ya tiene cobertura."));
+        mockMvc.perform(get("/cash-desk"))
+                .andExpect(content().string(containsString("OSDE · plan 310 · afiliado 61234567801")))
+                .andExpect(content().string(containsString("<td>555</td>")))
+                .andExpect(content().string(containsString("<span>Coseguro</span>")))
+                .andExpect(content().string(containsString(withdrawal)))
+                .andExpect(content().string(not(containsString(coverage + "\""))));
+
+        mockMvc.perform(post(withdrawal).with(csrf()).param("reason", "no era de la obra social"))
+                .andExpect(flash().attribute("error", "Primero devolvé el coseguro; después se quita la cobertura."));
+        mockMvc.perform(post("/cash-desk/visits/" + visit + "/refund").with(csrf()).param("amount", "1200")
+                .param("reason", "cobertura equivocada"));
+        mockMvc.perform(post(withdrawal).with(csrf()).param("reason", " "))
+                .andExpect(flash().attribute("error", "Falta el motivo para quitar la cobertura."));
+        mockMvc.perform(post(withdrawal).with(csrf()).param("reason", "no era de la obra social").param("date", DAY))
+                .andExpect(redirectedUrl("/cash-desk?date=" + DAY))
+                .andExpect(flash().attribute("message", "Cobertura quitada. Cobrá la visita como particular."));
+        mockMvc.perform(post(withdrawal).with(csrf()).param("reason", "otra vez"))
+                .andExpect(flash().attribute("error", "Esa visita no tiene cobertura para quitar."));
+        String page = mockMvc.perform(get("/cash-desk"))
+                .andExpect(content().string(containsString("cobertura quitada: no era de la obra social (recepcion)")))
+                .andExpect(content().string(not(containsString(withdrawal))))
+                .andReturn().getResponse().getContentAsString();
+        // Charged privately from the covered visits, besides charging again the copay given back whole.
+        assertThat(page.split("/cash-desk/visits/" + visit + "/charge", -1)).hasSize(3);
+
+        mockMvc.perform(post("/cash-desk/visits/" + visit + "/charge").with(csrf()).param("amount", "9000"))
+                .andExpect(flash().attribute("message", "Cobro registrado."));
+        mockMvc.perform(get("/cash-desk"))
+                .andExpect(content().string(not(containsString("/cash-desk/visits/" + visit + "/charge"))));
+        mockMvc.perform(get("/cash-desk-log").with(ADMIN))
+                .andExpect(content().string(not(containsString("OSDE"))))
+                .andExpect(content().string(not(containsString("Con cobertura"))))
+                .andExpect(content().string(not(containsString("Coseguro"))));
     }
 }

@@ -1,15 +1,21 @@
 package com.clinic.schedule.cashdesk.adapter.in.http;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.hamcrest.Matchers.hasItem;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.user;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 import java.math.BigDecimal;
+import java.time.LocalDateTime;
+import java.util.Random;
 import java.util.Set;
 import java.util.UUID;
+import java.util.concurrent.CountDownLatch;
+import java.util.function.UnaryOperator;
 
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -23,10 +29,14 @@ import org.springframework.security.test.context.support.WithMockUser;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.ResultActions;
 import org.springframework.test.web.servlet.request.RequestPostProcessor;
+import org.springframework.transaction.support.TransactionTemplate;
 
 import com.clinic.schedule.appointment.PatientFixture;
 import com.clinic.schedule.appointment.PractitionerFixture;
 import com.clinic.schedule.appointment.PractitionerFixture.CreatedPractitioner;
+import com.clinic.schedule.cashdesk.application.port.VisitRepository;
+import com.clinic.schedule.cashdesk.domain.Amount;
+import com.clinic.schedule.cashdesk.domain.Visit;
 import com.clinic.schedule.clinicalrecord.PractitionerUserFixture;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -57,6 +67,12 @@ class CashDeskApiIT {
 
     @Autowired
     private UserDetailsService userDetails;
+
+    @Autowired
+    private VisitRepository visits;
+
+    @Autowired
+    private TransactionTemplate transaction;
 
     private PatientFixture patients;
     private CreatedPractitioner arias;
@@ -154,8 +170,8 @@ class CashDeskApiIT {
     void withoutAChargeThePatientDoesNotComeIn() throws Exception {
         UUID ana = patients.newPatient();
 
-        arrives(ana, "").andExpect(status().isBadRequest())
-                .andExpect(jsonPath("$.message").value("A visit that is not an emergency is charged when the patient comes in"));
+        arrives(ana, "").andExpect(status().isBadRequest()).andExpect(jsonPath("$.message")
+                .value("A visit that is not an emergency is charged, or covered, when the patient comes in"));
 
         assertThat(read(mockMvc.perform(get("/api/queues/" + queue + "/session"))).get("waiting")).isEmpty();
         assertThat(countFor(ana, "cash_visit")).isZero();
@@ -415,7 +431,8 @@ class CashDeskApiIT {
 
         String body = mockMvc.perform(get("/api/cash-desk-log").with(ADMIN)).andExpect(status().isOk())
                 .andExpect(jsonPath("$.date").value("2026-03-10"))
-                .andExpect(jsonPath("$.movements[0].means").value("CASH"))
+                // Every movement is at the same instant by the tests' clock, so their order says nothing.
+                .andExpect(jsonPath("$.movements[*].means", hasItem("CASH")))
                 .andExpect(jsonPath("$.total.charged.count").isNumber())
                 .andExpect(jsonPath("$.byRecorder[0].recordedBy").exists())
                 .andReturn().getResponse().getContentAsString();
@@ -511,8 +528,8 @@ class CashDeskApiIT {
         UUID charge = UUID.randomUUID();
         jdbc.update("insert into cash_visit (id, patient_id, arrived_at, emergency) values (?, ?, ?, false)", visit,
                 patients.newPatient(), java.sql.Timestamp.valueOf("2026-03-09 18:00:00"));
-        jdbc.update("insert into cash_charge (id, visit_id, charge_no, amount, means, recorded_by, recorded_at) "
-                + "values (?, ?, 1, 3000, 'CASH', 'recepcion', ?)", charge, visit,
+        jdbc.update("insert into cash_charge (id, visit_id, charge_no, amount, means, copay, recorded_by, recorded_at) "
+                + "values (?, ?, 1, 3000, 'CASH', false, 'recepcion', ?)", charge, visit,
                 java.sql.Timestamp.valueOf("2026-03-09 18:00:00"));
 
         JsonNode day = read(refund(visit.toString(), "{\"amount\": 3000, \"reason\": \"no fue atendido\"}")
@@ -546,5 +563,262 @@ class CashDeskApiIT {
         mockMvc.perform(post("/api/visits/" + visitOf(ana) + "/refund").with(asArias)
                 .contentType(MediaType.APPLICATION_JSON).content("{\"amount\": 1, \"reason\": \"x\"}"))
                 .andExpect(status().isForbidden());
+    }
+
+    // --- visits covered by a health insurance (D-90) -------------------------------------------
+
+    /** A patient registered with an insurance, whose document reception saw or not. */
+    private UUID insuredPatient(boolean verified) throws Exception {
+        return UUID.fromString(read(mockMvc.perform(post("/api/patients").contentType(MediaType.APPLICATION_JSON)
+                .content("""
+                        {"fullName": "Asegurada %s", "documentType": "DNI", "documentNumber": "%d", "documentSeen": %b,
+                         "insurance": {"insurer": "OSDE", "memberNumber": "61234567801", "plan": "310"}}
+                        """.formatted(UUID.randomUUID().toString().substring(0, 8),
+                        10_000_000 + new Random().nextInt(89_999_999), verified)))
+                .andExpect(status().isCreated())).get("id").asText());
+    }
+
+    /** The visit among those covered that day, or null. */
+    private JsonNode coveredOf(JsonNode day, String visit) {
+        for (JsonNode covered : day.get("covered")) {
+            if (covered.get("visitId").asText().equals(visit)) {
+                return covered;
+            }
+        }
+        return null;
+    }
+
+    private ResultActions cover(String visit, String body) throws Exception {
+        return mockMvc.perform(post("/api/visits/" + visit + "/coverage").contentType(MediaType.APPLICATION_JSON)
+                .content(body));
+    }
+
+    private ResultActions withdraw(String visit, String body) throws Exception {
+        return mockMvc.perform(post("/api/visits/" + visit + "/coverage/withdrawal")
+                .contentType(MediaType.APPLICATION_JSON).content(body));
+    }
+
+    @Test
+    void aCoveredVisitMovesNoMoneyAndKeepsTheInsuranceAsItWasThatDay() throws Exception {
+        JsonNode before = today();
+        UUID ana = insuredPatient(true);
+
+        arrives(ana, ", \"coverage\": {\"token\": \" 123456 \"}").andExpect(status().isCreated());
+
+        String visit = visitOf(ana);
+        mockMvc.perform(put("/api/patients/" + ana + "/details").contentType(MediaType.APPLICATION_JSON)
+                .content("{\"insurance\": {\"insurer\": \"PAMI\", \"memberNumber\": \"15012345678900\"}}"))
+                .andExpect(status().isOk());
+        JsonNode day = today();
+        JsonNode covered = coveredOf(day, visit);
+        assertThat(covered).isNotNull();
+        assertThat(covered.get("insurer").asText()).isEqualTo("OSDE");
+        assertThat(covered.get("memberNumber").asText()).isEqualTo("61234567801");
+        assertThat(covered.get("plan").asText()).isEqualTo("310");
+        assertThat(covered.get("token").asText()).isEqualTo("123456");
+        assertThat(covered.get("recordedBy").asText()).isEqualTo("recepcion");
+        assertThat(covered.get("recordedAt").asText()).isEqualTo("2026-03-10T00:00:00");
+        assertThat(covered.get("patient").get("id").asText()).isEqualTo(ana.toString());
+        assertThat(covered.get("patient").get("fullName").asText())
+                .isEqualTo(jdbc.queryForObject("select full_name from patient where id = ?", String.class, ana));
+        assertThat(covered.get("withdrawal").isNull()).isTrue();
+        assertThat(movementOf(day, visit)).isNull();
+        assertThat(isPending(day, visit)).isFalse();
+        assertThat(day.get("total").get("charged").get("count").asInt())
+                .isEqualTo(before.get("total").get("charged").get("count").asInt());
+        assertThat(jdbc.queryForObject("select insurer from cash_coverage where visit_id = ?", String.class,
+                UUID.fromString(visit))).isEqualTo("OSDE");
+    }
+
+    @Test
+    void aCopayIsAChargeAsAnyOtherAndTheAdminsReadNothingOfTheCoverage() throws Exception {
+        JsonNode before = today();
+        UUID ana = insuredPatient(true);
+
+        arrives(ana, ", \"amount\": 2000, \"means\": \"DEBIT\", \"coverage\": {}").andExpect(status().isCreated());
+
+        String visit = visitOf(ana);
+        JsonNode day = read(refund(visit, "{\"amount\": 500, \"reason\": \"coseguro de más\"}")
+                .andExpect(status().isOk()));
+        JsonNode copay = movementOf(day, visit);
+        assertThat(copay.get("copay").asBoolean()).isTrue();
+        assertThat(copay.get("means").asText()).isEqualTo("DEBIT");
+        assertThat(copay.get("left").decimalValue()).isEqualByComparingTo("1500");
+        assertThat(movementOf(day, visit, "REFUND", 0).get("copay").asBoolean()).isTrue();
+        assertThat(coveredOf(day, visit).get("token").isNull()).isTrue();
+        assertThat(byMeans(day.get("total"), "DEBIT", "left")
+                .subtract(byMeans(before.get("total"), "DEBIT", "left"))).isEqualByComparingTo("1500");
+        UUID juan = patients.newPatient();
+        arrives(juan, ", \"amount\": 100").andExpect(status().isCreated());
+        assertThat(movementOf(today(), visitOf(juan)).get("copay").asBoolean()).isFalse();
+
+        String log = mockMvc.perform(get("/api/cash-desk-log").with(ADMIN)).andExpect(status().isOk())
+                .andReturn().getResponse().getContentAsString();
+        assertThat(log).doesNotContain("OSDE").doesNotContain("covered").doesNotContain("copay")
+                .doesNotContain("61234567801");
+    }
+
+    @Test
+    void onlyAPatientWithAnInsuranceAndAVerifiedIdentityGoesInCovered() throws Exception {
+        UUID uninsured = patients.newPatient();
+        UUID unverified = insuredPatient(false);
+        UUID ana = insuredPatient(true);
+
+        arrives(uninsured, ", \"coverage\": {}").andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.message").value("The patient has no health insurance recorded"));
+        arrives(unverified, ", \"amount\": 1000, \"coverage\": {}").andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.message").value("Only a patient whose identity was verified goes in covered"));
+        arrives(ana, ", \"coverage\": {\"token\": \"" + "1".repeat(51) + "\"}").andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.message").value("A token is up to 50 characters"));
+
+        assertThat(read(mockMvc.perform(get("/api/queues/" + queue + "/session"))).get("waiting")).isEmpty();
+        assertThat(countFor(uninsured, "cash_visit") + countFor(unverified, "cash_visit") + countFor(ana, "cash_visit"))
+                .isZero();
+
+        String appointment = read(mockMvc.perform(post("/api/appointments").contentType(MediaType.APPLICATION_JSON)
+                .content("""
+                        {"patientId": "%s", "practitionerId": "%s", "reasonId": "%s", "startsAt": "2026-03-10T12:00:00"}
+                        """.formatted(ana, arias.id(), arias.consulta())))
+                .andExpect(status().isCreated())).get("id").asText();
+        mockMvc.perform(post("/api/appointment-arrivals").contentType(MediaType.APPLICATION_JSON)
+                .content("{\"appointmentId\": \"" + appointment + "\", \"coverage\": {\"token\": \"9876\"}}"))
+                .andExpect(status().isCreated());
+        assertThat(coveredOf(today(), visitOf(ana)).get("token").asText()).isEqualTo("9876");
+    }
+
+    @Test
+    void anEmergencysPendingVisitIsRecordedLaterAsCoveredOnce() throws Exception {
+        UUID ana = insuredPatient(true);
+        UUID juan = insuredPatient(true);
+        arrives(ana, ", \"emergency\": true").andExpect(status().isCreated());
+        arrives(juan, ", \"emergency\": true").andExpect(status().isCreated());
+        String visit = visitOf(ana);
+        assertThat(isPending(today(), visit)).isTrue();
+
+        mockMvc.perform(post("/api/visits/" + visit + "/coverage").with(ADMIN).contentType(MediaType.APPLICATION_JSON)
+                .content("{}")).andExpect(status().isForbidden());
+        mockMvc.perform(post("/api/visits/" + visit + "/coverage").with(asArias)
+                .contentType(MediaType.APPLICATION_JSON).content("{}")).andExpect(status().isForbidden());
+        JsonNode day = read(cover(visit, "{\"token\": \"777\", \"copay\": 1500, \"means\": \"QR\"}")
+                .andExpect(status().isOk()));
+
+        assertThat(isPending(day, visit)).isFalse();
+        assertThat(coveredOf(day, visit).get("emergency").asBoolean()).isTrue();
+        assertThat(coveredOf(day, visit).get("token").asText()).isEqualTo("777");
+        JsonNode copay = movementOf(day, visit);
+        assertThat(copay.get("copay").asBoolean()).isTrue();
+        assertThat(copay.get("means").asText()).isEqualTo("QR");
+        assertThat(copay.get("amount").decimalValue()).isEqualByComparingTo("1500");
+        cover(visit, "{}").andExpect(status().isConflict())
+                .andExpect(jsonPath("$.message").value("The visit was covered already"));
+
+        String charged = visitOf(juan);
+        mockMvc.perform(post("/api/visits/" + charged + "/charge").contentType(MediaType.APPLICATION_JSON)
+                .content("{\"amount\": 5000}")).andExpect(status().isOk());
+        cover(charged, "{}").andExpect(status().isConflict());
+        cover(UUID.randomUUID().toString(), "{}").andExpect(status().isNotFound());
+        UUID uninsured = patients.newPatient();
+        arrives(uninsured, ", \"emergency\": true").andExpect(status().isCreated());
+        cover(visitOf(uninsured), "{}").andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.message").value("The patient has no health insurance recorded"));
+        UUID unverified = insuredPatient(false);
+        arrives(unverified, ", \"emergency\": true").andExpect(status().isCreated());
+        cover(visitOf(unverified), "{\"token\": \"" + "1".repeat(51) + "\"}").andExpect(status().isBadRequest());
+        cover(visitOf(unverified), "{}").andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.message").value("Only a patient whose identity was verified goes in covered"));
+        assertThat(coveredOf(today(), charged)).isNull();
+    }
+
+    @Test
+    void aCoverageMarkedByMistakeIsWithdrawnOnceItsCopayIsGivenBackAndTheVisitIsChargedPrivately() throws Exception {
+        UUID ana = insuredPatient(true);
+        arrives(ana, ", \"amount\": 1000, \"coverage\": {}").andExpect(status().isCreated());
+        String visit = visitOf(ana);
+
+        withdraw(visit, "{\"reason\": \"no era de la obra social\"}").andExpect(status().isConflict())
+                .andExpect(jsonPath("$.message").value("The copay is given back whole before the coverage is withdrawn"));
+        refund(visit, "{\"amount\": 1000, \"reason\": \"cobertura equivocada\"}").andExpect(status().isOk());
+        withdraw(visit, "{\"reason\": \"  \"}").andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.message").value("A coverage withdrawn says why"));
+        mockMvc.perform(post("/api/visits/" + visit + "/coverage/withdrawal").with(ADMIN)
+                .contentType(MediaType.APPLICATION_JSON).content("{\"reason\": \"x\"}"))
+                .andExpect(status().isForbidden());
+        JsonNode day = read(withdraw(visit, "{\"reason\": \" no era de la obra social \"}")
+                .andExpect(status().isOk()));
+
+        JsonNode withdrawal = coveredOf(day, visit).get("withdrawal");
+        assertThat(withdrawal.get("reason").asText()).isEqualTo("no era de la obra social");
+        assertThat(withdrawal.get("recordedBy").asText()).isEqualTo("recepcion");
+        withdraw(visit, "{\"reason\": \"otra vez\"}").andExpect(status().isConflict())
+                .andExpect(jsonPath("$.message").value("The visit has no coverage to withdraw"));
+
+        day = read(mockMvc.perform(post("/api/visits/" + visit + "/charge").contentType(MediaType.APPLICATION_JSON)
+                .content("{\"amount\": 15000}")).andExpect(status().isOk()));
+        JsonNode privately = movementOf(day, visit, "CHARGE", 1);
+        assertThat(privately.get("copay").asBoolean()).isFalse();
+        assertThat(privately.get("amount").decimalValue()).isEqualByComparingTo("15000");
+        assertThat(movementOf(day, visit).get("copay").asBoolean()).isTrue();
+
+        UUID juan = patients.newPatient();
+        arrives(juan, ", \"amount\": 100").andExpect(status().isCreated());
+        withdraw(visitOf(juan), "{\"reason\": \"x\"}").andExpect(status().isConflict());
+    }
+
+    /**
+     * Another receptionist changes the visit while holding it, for a moment, in a thread of their own: whatever
+     * this one asks meanwhile waits for that change, and answers after it.
+     */
+    private Thread whileHeldByAnother(String visit, UnaryOperator<Visit> change) throws InterruptedException {
+        CountDownLatch held = new CountDownLatch(1);
+        Thread other = new Thread(() -> {
+            try {
+                transaction.executeWithoutResult(status -> {
+                    Visit kept = visits.findByIdForUpdate(UUID.fromString(visit)).orElseThrow();
+                    held.countDown();
+                    try {
+                        Thread.sleep(300);
+                    } catch (InterruptedException e) {
+                        Thread.currentThread().interrupt();
+                    }
+                    visits.save(change.apply(kept));
+                });
+            } finally {
+                held.countDown();
+            }
+        });
+        other.start();
+        held.await();
+        return other;
+    }
+
+    @Test
+    void aPendingVisitChargedMeanwhileIsNotCoveredToo() throws Exception {
+        UUID ana = insuredPatient(true);
+        arrives(ana, ", \"emergency\": true").andExpect(status().isCreated());
+        String visit = visitOf(ana);
+
+        Thread other = whileHeldByAnother(visit, kept -> kept.charge(new Amount(new BigDecimal("5000")),
+                com.clinic.schedule.cashdesk.domain.Means.CASH, "otra", LocalDateTime.of(2026, 3, 10, 0, 0)));
+        cover(visit, "{}").andExpect(status().isConflict())
+                .andExpect(jsonPath("$.message").value("The visit was charged privately already"));
+        other.join();
+
+        assertThat(coveredOf(today(), visit)).isNull();
+    }
+
+    @Test
+    void aCopayChargedMeanwhileKeepsTheCoverage() throws Exception {
+        UUID ana = insuredPatient(true);
+        arrives(ana, ", \"amount\": 1000, \"coverage\": {}").andExpect(status().isCreated());
+        String visit = visitOf(ana);
+        refund(visit, "{\"amount\": 1000, \"reason\": \"coseguro equivocado\"}").andExpect(status().isOk());
+
+        Thread other = whileHeldByAnother(visit, kept -> kept.charge(new Amount(new BigDecimal("800")),
+                com.clinic.schedule.cashdesk.domain.Means.CASH, "otra", LocalDateTime.of(2026, 3, 10, 0, 0)));
+        withdraw(visit, "{\"reason\": \"no era de la obra social\"}").andExpect(status().isConflict())
+                .andExpect(jsonPath("$.message").value("The copay is given back whole before the coverage is withdrawn"));
+        other.join();
+
+        assertThat(coveredOf(today(), visit).get("withdrawal").isNull()).isTrue();
     }
 }

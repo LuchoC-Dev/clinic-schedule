@@ -21,11 +21,14 @@ class VisitTest {
     private static final LocalDateTime ELEVEN = LocalDateTime.of(2026, 3, 10, 11, 0);
     private static final Amount FIFTEEN_THOUSAND = new Amount(new BigDecimal("15000"));
 
+    /** No coverage: paid privately. */
+    private static final Optional<Coverage> PRIVATE = Optional.empty();
+
     private final UUID id = UUID.randomUUID();
     private final UUID patient = UUID.randomUUID();
 
     private Visit charged() {
-        return Visit.arrive(id, patient, false, Optional.of(FIFTEEN_THOUSAND), Means.CASH, "recepcion", NINE);
+        return Visit.arrive(id, patient, false, PRIVATE, Optional.of(FIFTEEN_THOUSAND), Means.CASH, "recepcion", NINE);
     }
 
     private static Amount pesos(String value) {
@@ -55,10 +58,10 @@ class VisitTest {
 
     @Test
     void withoutBeingChargedOnlyAnEmergencyStarts() {
-        refused(() -> Visit.arrive(id, patient, false, Optional.empty(), Means.CASH, "recepcion", NINE),
+        refused(() -> Visit.arrive(id, patient, false, PRIVATE, Optional.empty(), Means.CASH, "recepcion", NINE),
                 Reason.CHARGE_REQUIRED);
 
-        Visit emergency = Visit.arrive(id, patient, true, Optional.empty(), Means.CASH, "recepcion", NINE);
+        Visit emergency = Visit.arrive(id, patient, true, PRIVATE, Optional.empty(), Means.CASH, "recepcion", NINE);
 
         assertThat(emergency.pending()).isTrue();
         assertThat(emergency.charges()).isEmpty();
@@ -67,7 +70,8 @@ class VisitTest {
 
     @Test
     void anEmergencyMayBeChargedAsItStarts() {
-        Visit emergency = Visit.arrive(id, patient, true, Optional.of(FIFTEEN_THOUSAND), Means.CASH, "recepcion", NINE);
+        Visit emergency = Visit.arrive(id, patient, true, PRIVATE, Optional.of(FIFTEEN_THOUSAND), Means.CASH, "recepcion",
+                NINE);
 
         assertThat(emergency.pending()).isFalse();
         assertThat(emergency.emergency()).isTrue();
@@ -75,7 +79,7 @@ class VisitTest {
 
     @Test
     void anEmergencysPendingChargeIsRecordedLaterByWhoeverChargesIt() {
-        Visit pending = Visit.arrive(id, patient, true, Optional.empty(), Means.CASH, "recepcion", NINE);
+        Visit pending = Visit.arrive(id, patient, true, PRIVATE, Optional.empty(), Means.CASH, "recepcion", NINE);
 
         Visit charged = pending.charge(FIFTEEN_THOUSAND, Means.CASH, "otra", TEN);
 
@@ -130,7 +134,7 @@ class VisitTest {
 
     @Test
     void nothingIsGivenBackOfAVisitWithNothingLeft() {
-        refused(() -> Visit.arrive(id, patient, true, Optional.empty(), Means.CASH, "recepcion", NINE)
+        refused(() -> Visit.arrive(id, patient, true, PRIVATE, Optional.empty(), Means.CASH, "recepcion", NINE)
                 .refund(pesos("1"), "error", "recepcion", TEN), Reason.NOTHING_TO_REFUND);
         Visit whole = charged().refund(FIFTEEN_THOUSAND, "error", "recepcion", TEN);
         refused(() -> whole.refund(pesos("1"), "error", "recepcion", ELEVEN), Reason.NOTHING_TO_REFUND);
@@ -151,10 +155,11 @@ class VisitTest {
 
     @Test
     void aVisitIsChargedByTheMeansReceptionSays() {
-        Visit card = Visit.arrive(id, patient, false, Optional.of(FIFTEEN_THOUSAND), Means.CREDIT, "recepcion", NINE);
+        Visit card = Visit.arrive(id, patient, false, PRIVATE, Optional.of(FIFTEEN_THOUSAND), Means.CREDIT, "recepcion",
+                NINE);
         assertThat(card.current().orElseThrow().means()).isEqualTo(Means.CREDIT);
 
-        Visit pending = Visit.arrive(id, patient, true, Optional.empty(), Means.QR, "recepcion", NINE);
+        Visit pending = Visit.arrive(id, patient, true, PRIVATE, Optional.empty(), Means.QR, "recepcion", NINE);
         assertThat(pending.charge(FIFTEEN_THOUSAND, Means.TRANSFER, "recepcion", TEN).current().orElseThrow().means())
                 .isEqualTo(Means.TRANSFER);
 
@@ -175,18 +180,19 @@ class VisitTest {
 
     @Test
     void aVisitReadBackObeysTheSameRules() {
-        refused(() -> Visit.recorded(id, patient, NINE, false, List.of()), Reason.CHARGE_REQUIRED);
+        refused(() -> Visit.recorded(id, patient, NINE, false, null, List.of()), Reason.CHARGE_REQUIRED);
         Charge open = charged().current().orElseThrow();
-        assertThatThrownBy(() -> Visit.recorded(id, patient, NINE, false, List.of(open, open)))
+        assertThatThrownBy(() -> Visit.recorded(id, patient, NINE, false, null, List.of(open, open)))
                 .isInstanceOf(IllegalArgumentException.class);
         Refund tooMuch = new Refund(UUID.randomUUID(), pesos("15000.01"), "error", "recepcion", TEN);
-        assertThatThrownBy(() -> new Charge(UUID.randomUUID(), FIFTEEN_THOUSAND, Means.CASH, "recepcion", NINE,
+        assertThatThrownBy(() -> new Charge(UUID.randomUUID(), FIFTEEN_THOUSAND, Means.CASH, false, "recepcion", NINE,
                 List.of(tooMuch))).isInstanceOf(IllegalArgumentException.class);
     }
 
     @Test
     void aMovementSaysWhoRecordedIt() {
-        assertThatThrownBy(() -> Visit.arrive(id, patient, false, Optional.of(FIFTEEN_THOUSAND), Means.CASH, " ", NINE))
+        assertThatThrownBy(() -> Visit.arrive(id, patient, false, PRIVATE, Optional.of(FIFTEEN_THOUSAND), Means.CASH,
+                " ", NINE))
                 .isInstanceOf(IllegalArgumentException.class);
         assertThatThrownBy(() -> charged().refund(pesos("1"), "error", " ", TEN))
                 .isInstanceOf(IllegalArgumentException.class);

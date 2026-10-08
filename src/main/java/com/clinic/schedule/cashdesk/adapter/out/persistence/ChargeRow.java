@@ -22,7 +22,7 @@ import jakarta.persistence.Table;
 /**
  * A charge as a row (D-87). Only ever inserted, never changed nor deleted. Its number is its place among the
  * visit's charges (D-88): two requests at once charging the visit take the same one, and the unique key on
- * the pair refuses the second. Its refunds are rows of their own.
+ * the pair refuses the second. Its refunds are rows of their own. Whether it was a copay is kept with it (D-90).
  */
 @Entity
 @Immutable
@@ -45,6 +45,9 @@ class ChargeRow {
     @Column(nullable = false, length = 10)
     private Means means;
 
+    @Column(nullable = false)
+    private boolean copay;
+
     @Column(name = "recorded_by", nullable = false, length = 50)
     private String recordedBy;
 
@@ -63,6 +66,7 @@ class ChargeRow {
         row.number = number;
         row.amount = charge.amount().value();
         row.means = charge.means();
+        row.copay = charge.copay();
         row.recordedBy = charge.recordedBy();
         row.recordedAt = charge.recordedAt();
         return row;
@@ -82,6 +86,6 @@ class ChargeRow {
 
     /** @param refunds its refunds, in the order they were recorded */
     Charge toCharge(List<Refund> refunds) {
-        return new Charge(id, new Amount(amount), means, recordedBy, recordedAt, refunds);
+        return new Charge(id, new Amount(amount), means, copay, recordedBy, recordedAt, refunds);
     }
 }

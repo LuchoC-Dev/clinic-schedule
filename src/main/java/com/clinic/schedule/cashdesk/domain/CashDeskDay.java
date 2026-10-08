@@ -18,20 +18,32 @@ import java.util.UUID;
  * day it is recorded, whatever day its charge was, and goes out by its charge's means. Only what is left in
  * cash is what should be in the drawer.
  *
+ * <p>The visits covered that day are listed apart, as the pending ones are, so reception can set a coverage
+ * marked by mistake right (D-90). They are not money: a covered visit with no copay has no movement and adds
+ * nothing, and a copay is a charge as any other.
+ *
  * @param visits the visits with a charge or a refund recorded that day, whole
- * @param pending the emergencies that came that day, never charged
+ * @param pending the emergencies that came that day, never charged nor covered
+ * @param covered the visits whose coverage was recorded that day, whole, withdrawn or not
  */
-public record CashDeskDay(LocalDate date, List<Visit> visits, List<Visit> pending) {
+public record CashDeskDay(LocalDate date, List<Visit> visits, List<Visit> pending, List<Visit> covered) {
 
     public CashDeskDay {
-        if (date == null || visits == null || pending == null) {
-            throw new IllegalArgumentException("A day of the cash desk needs its date, its visits and its pending ones");
+        if (date == null || visits == null || pending == null || covered == null) {
+            throw new IllegalArgumentException(
+                    "A day of the cash desk needs its date, its visits, its pending ones and its covered ones");
         }
         if (pending.stream().anyMatch(visit -> !visit.pending())) {
-            throw new IllegalArgumentException("A pending visit was never charged");
+            throw new IllegalArgumentException("A pending visit was never charged nor covered");
+        }
+        if (covered.stream().anyMatch(visit -> visit.coverage().isEmpty())) {
+            throw new IllegalArgumentException("A covered visit has its coverage");
         }
         visits = List.copyOf(visits);
         pending = pending.stream().sorted(Comparator.comparing(Visit::arrivedAt)).toList();
+        covered = covered.stream()
+                .sorted(Comparator.comparing(visit -> visit.coverage().orElseThrow().recordedAt()))
+                .toList();
     }
 
     /** What happened at the desk that day: each charge and refund recorded on it, in order. */
@@ -102,6 +114,11 @@ public record CashDeskDay(LocalDate date, List<Visit> visits, List<Visit> pendin
 
         public Means means() {
             return charge.means();
+        }
+
+        /** The copay of a covered visit, or given back from one (D-90). */
+        public boolean copay() {
+            return charge.copay();
         }
     }
 

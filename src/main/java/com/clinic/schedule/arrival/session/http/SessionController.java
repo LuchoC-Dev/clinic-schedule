@@ -27,9 +27,8 @@ import com.clinic.schedule.arrival.session.query.ViewQueueSessionUseCase;
 
 /**
  * A queue at work, for reception (D-63): opening and closing it, keeping it open past its day,
- * bringing patients in — charged in the same step, unless an emergency (D-87) —, making one an emergency,
- * saying one left. Each command is run and the
- * session read back, so the answer is what the reads see.
+ * bringing patients in — charged or covered in the same step, unless an emergency (D-87, D-90) —, making one an
+ * emergency, saying one left. Each command is run and the session read back, so the answer is what the reads see.
  */
 @RestController
 class SessionController {
@@ -90,7 +89,7 @@ class SessionController {
     @ResponseStatus(HttpStatus.CREATED)
     SessionResponse addPatient(@PathVariable UUID id, @Valid @RequestBody AddPatientRequest request) {
         addPatient.handle(new AddPatientUseCase.Command(id, request.patientId(), request.isEmergency(), request.amount(),
-                request.means()));
+                request.means(), request.coverage()));
         return session(id);
     }
 
@@ -108,7 +107,7 @@ class SessionController {
     @ResponseStatus(HttpStatus.CREATED)
     SessionResponse appointmentArrives(@Valid @RequestBody AppointmentArrivalRequest request) {
         UUID queue = appointmentArrives.handle(new AppointmentArrivesUseCase.Command(request.appointmentId(), request.amount(),
-                request.means()));
+                request.means(), request.coverage()));
         return session(queue);
     }
 

@@ -769,7 +769,9 @@ patient paying in cash, then the other ways of paying, and last the visits cover
 - **The day's movements** — charges and refunds, with the patient, the means, the amount, who recorded
   each and when — and their **totals**: charged, refunded, and what is left, by means of payment and by
   who recorded them. Only cash counts for what should be in the drawer.
-- **The pending visits**: the emergencies not charged yet.
+- **The pending visits**: the emergencies not charged nor covered yet.
+- **The covered visits** (part 3): those covered that day, which move no money, listed apart so reception can
+  set right a coverage marked by mistake.
 - **Reception** reads and writes all of it. **Admins** read the day's cash desk, its movements and
   totals, without the patients: they read nothing of the patients (phase 4). **Practitioners** read
   none of it.
@@ -793,12 +795,16 @@ patient paying in cash, then the other ways of paying, and last the visits cover
 - **The token is optional.** The practice keeps no list of insurers (phase 4), so the application cannot
   know which ask for one: the insurer's check says so, and reception types it when it does.
 - **A copay**, when the insurer asks for one, is a charge as any other — any means, refunded the same way
-  —, and counts in the day's cash desk. A covered visit with no copay moves no money, and the day's cash
-  desk does not show it: the cash desk is money only.
+  —, and counts in the day's cash desk. A covered visit with no copay moves no money, so it is not among the
+  day's movements nor in its totals: those are money only. Reception's day lists the visits covered that day
+  apart, as it lists the pending ones.
 - **An approved visit stays covered.** Once the insurer approved it, it cannot reject it at the desk; what
   it may discount later, auditing the month's billing, belongs to billing the insurers, not to this phase.
 - An emergency goes in uncharged, as in part 1, and reception records later whether it was covered or
   paid privately.
+- **A visit marked covered by mistake** is set right as the charges are: nothing is changed nor deleted.
+  Reception withdraws the coverage, saying why, once its copay, if any, is given back whole, and charges the
+  visit privately.
 
 ### The invoice
 

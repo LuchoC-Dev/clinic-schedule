@@ -10,6 +10,7 @@ import com.clinic.schedule.arrival.session.domain.EntryId;
 import com.clinic.schedule.arrival.session.domain.QueueSession;
 import com.clinic.schedule.arrival.session.domain.QueueSessionService;
 import com.clinic.schedule.arrival.session.domain.SessionEvent.PatientArrived;
+import com.clinic.schedule.cashdesk.api.Coverage;
 import com.clinic.schedule.cashdesk.api.Means;
 import com.clinic.schedule.cashdesk.api.VisitCashier;
 import com.clinic.schedule.patient.api.PatientReader;
@@ -49,15 +50,18 @@ public class AddPatientUseCase {
         }
         PatientArrived arrived = sessions.arrive(session, command.patientId(), command.emergency(), commands.now());
         cashier.visitStarted(arrived.entryId(), command.patientId(), command.emergency(), command.amount(),
-                command.means());
+                command.means(), command.coverage());
         commands.record(session, arrived);
         return new EntryId(arrived.entryId());
     }
 
     /**
-     * @param amount the pesos charged; null only for an emergency, whose charge is left pending
+     * @param amount the pesos charged, the copay when covered; null only for an emergency, whose charge is left
+     *        pending, or a covered visit with no copay
      * @param means how they were paid; null for cash
+     * @param coverage null when the patient pays privately (D-90)
      */
-    public record Command(UUID queueId, UUID patientId, boolean emergency, BigDecimal amount, Means means) {
+    public record Command(UUID queueId, UUID patientId, boolean emergency, BigDecimal amount, Means means,
+            Coverage coverage) {
     }
 }

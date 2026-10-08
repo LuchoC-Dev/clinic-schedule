@@ -3369,7 +3369,7 @@ changed).
 ---
 
 ## D-89 — The other means of payment: chosen as the visit is charged, a refund by its charge's, and only cash in the drawer
-**Date:** 2026-10-08 · **Status:** accepted
+**Date:** 2026-10-08 · **Status:** accepted; a covered visit's copay, by any of them, in D-90
 
 v2, phase 7, part 2. Besides cash, a visit is paid with a debit or a credit card, a bank transfer or a QR code,
 and the day's cash desk separates them: only cash goes into the drawer.
@@ -3418,3 +3418,82 @@ the instalments or an operation's number (nothing in the phase reads them); requ
 what sent `amount` alone); `DEBIT_CARD` and `CREDIT_CARD` (a wider column for the same meaning); the domain's
 `Means` in the api (the queues would read the cash desk's domain); a row for every means even with no movement
 (five rows of zeros a day).
+
+---
+
+## D-90 — Visits covered by a health insurance: the outcome kept with the visit, the copay a charge, and a coverage marked by mistake withdrawn
+**Date:** 2026-10-08 · **Status:** accepted
+
+v2, phase 7, part 3. Besides paying privately, a visit goes in covered by the patient's obra social or prepaid
+plan. The insurer is asked outside the application, on its own system, before the patient goes in; the
+application keeps the outcome.
+
+**Only a patient with an insurance recorded and a verified identity goes in covered** (D-60, D-74), since the
+insurer validates who the patient is: `NOT_INSURED` and `IDENTITY_NOT_VERIFIED` otherwise, a 400 — the patient
+pays privately. Someone who gives no name is never verified, so the nameless patient's form has no coverage. The
+cash desk learns it through a port of its own, `InsuredPatientPort`, answered by `InsuredPatientAdapter` with
+`PatientReader.findAll`, whose `PatientSummary` already says both: `patient/api` does not change.
+
+**`Coverage` keeps the outcome**: the insurance — insurer, member number and plan — as it was that day, so a later
+change to the patient's leaves it as it was; the token, optional, trimmed, up to 50 characters (`TOKEN_TOO_LONG`),
+since the practice keeps no list of insurers and only the insurer's check says whether it asks for one; and who
+recorded it and when, by the `Clock`. `Coverage.claim` is the one way to a new one, and holds the patient to the
+rule; the visit takes it. The rules still need nothing the visit and the patient's standing, passed in, do not
+have, so there is still no domain service (D-17).
+
+**A visit is charged, covered, or an emergency left pending.** `Visit.arrive` takes the coverage beside the
+amount: a visit that is not an emergency needs one or the other (`CHARGE_REQUIRED`), and with a coverage the
+amount is the copay, or none. A **copay** is a charge as any other — any means, given back the same way —, which
+says it is one (`Charge.copay`): every charge of a covered visit is, so a copay given back whole and charged again
+is one still. A covered visit with no copay has no charge and moves no money: it is not among the day's movements
+nor in its totals. An approved visit stays covered: there is no rejection at the desk, and what an insurer
+discounts auditing the month's billing belongs to billing the insurers, outside this phase.
+
+**An emergency's pending visit is recorded later as covered**, with its copay if any: `Visit.cover`, which refuses
+a visit charged already (`ALREADY_CHARGED`) or covered already (`ALREADY_COVERED`), a 409. Paid privately
+instead, it is charged as before (D-87). A pending visit is an emergency neither charged nor covered.
+
+**A coverage marked by mistake is withdrawn**, as a fact of its own, as a refund is (D-88): nothing is changed
+nor deleted. `Visit.withdrawCoverage` says why — required, trimmed, up to 200 characters, as a refund's reason —,
+who and when; only once nothing is left of the copay (`COPAY_LEFT`, a 409), so a visit never has a copay left
+with no coverage, and only once (`NOT_COVERED`). The visit is then charged privately with `POST
+/api/visits/{id}/charge`, as one given back whole. A visit charged privately by mistake is not covered
+afterwards: no case of it has come up, and it would need a coverage numbered among the visit's.
+
+**The visit is held while it is written.** Charging a pending visit and covering it write different tables,
+which no unique key holds together, so two receptionists at once could do both. `VisitRepository.
+findByIdForUpdate` locks the visit's row with standard JPA (`PESSIMISTIC_WRITE`, a `select ... for update` on
+H2 and PostgreSQL alike) in the use cases that charge, cover and withdraw; giving back keeps to its unique keys
+(D-88), since it never races with those three.
+
+**Storage** (`V42`): `cash_coverage` — keyed by its visit, with the insurer, member number, plan, token, who and
+when — and `cash_coverage_withdrawal` — keyed by its visit, with why, who and when —, both only ever inserted.
+Their keys refuse a second coverage or withdrawal that two requests at once could let through; a row kept already
+is compared rather than saved again, since saving a row keyed by its visit would leave the kept one as it was and
+say nothing. `cash_charge` gains `copay`, false for the charges kept so far. The insurance's columns are as wide
+as the patient's (V30).
+
+**Routes and screens.** `POST /api/queues/{id}/session/patients` and `POST /api/appointment-arrivals` take
+`coverage: {token?}`, null for a private visit, so what was sent so far keeps working; `cashdesk/api/Coverage` is
+the queues' word for it, and `ChargeRefusedException` adds the three reasons a visit cannot start covered. `POST
+/api/visits/{id}/coverage` (`{token, copay, means}`) covers a pending emergency, and `POST
+/api/visits/{id}/coverage/withdrawal` (`{reason}`) withdraws. Reception's day says whether each movement was a
+`copay`, and lists the visits `covered` that day apart, as the pending ones, with the insurance as it was, the
+token and any withdrawal: they are not money, but reception needs to see them to set a mistake right. The admins'
+day does not change: the insurance is the patient's. Every form that brings a known patient in has "Con
+cobertura" and "Token" beside "Importe", which is no longer required there — a token typed makes the visit a
+covered one —; a pending emergency offers "Con cobertura" beside "Cobrar"; and `/cash-desk` shows a copay as
+"Coseguro" and lists "Con cobertura", with "Quitar cobertura" and then "Cobrar". Refusals say "El paciente no
+tiene obra social cargada: paga como particular.", "La identidad del paciente no está verificada: paga como
+particular.", "El token no puede superar los 50 caracteres.", "Esa visita ya tiene cobertura.", "Primero devolvé
+el coseguro; después se quita la cobertura." and "Esa visita no tiene cobertura para quitar."
+
+*Rejected:* a rejection by the insurer at the desk (an approved visit stays covered; the month's discounts are
+billing's); recording a refusal by the insurer (the patient just pays privately); keeping the token with the
+patient (D-74: it is the visit's); the insurance read back from the patient (it changes; the visit keeps the
+day's); a list of insurers, or a rule of which ask for a token (the practice keeps none); covering a visit given
+back whole after a private charge (no case of it, and a coverage numbered among the visit's); leaving the mistake
+uncorrected (the money the patient then pays could not be recorded); the covered visits in the admins' day (they
+are patients); a new method on `PatientReader` (its summary already says both); one table for a coverage and its
+withdrawal (a withdrawal is a fact of its own, as a refund); relying on unique keys alone (a charge and a
+coverage are different rows).

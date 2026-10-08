@@ -20,7 +20,8 @@ import com.clinic.schedule.cashdesk.domain.exception.ChargeRuleViolationExceptio
 
 /**
  * Reception records an emergency's pending charge, after it went in (D-87), or charges again a visit whose
- * charge was given back whole (D-88). A charge whose means is not said is cash, as part 1 had it (D-89).
+ * charge was given back whole (D-88), or whose coverage was withdrawn (D-90). A charge whose means is not said is
+ * cash, as part 1 had it (D-89). The visit is held meanwhile, so nobody covers it at the same time.
  */
 @Service
 public class ChargeVisitUseCase {
@@ -44,7 +45,8 @@ public class ChargeVisitUseCase {
      */
     @Transactional
     public void handle(Command command) {
-        Visit visit = visits.findById(command.visitId()).orElseThrow(() -> new VisitNotFoundException(command.visitId()));
+        Visit visit = visits.findByIdForUpdate(command.visitId())
+                .orElseThrow(() -> new VisitNotFoundException(command.visitId()));
         if (command.amount() == null) {
             throw new ChargeRuleViolationException(Reason.CHARGE_REQUIRED, "A charge needs its amount");
         }

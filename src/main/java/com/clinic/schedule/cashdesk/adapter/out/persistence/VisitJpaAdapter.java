@@ -12,17 +12,21 @@ import java.util.UUID;
 import java.util.stream.Collectors;
 
 import org.springframework.dao.DataIntegrityViolationException;
+import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.stereotype.Repository;
 
 import com.clinic.schedule.cashdesk.application.port.VisitRepository;
 import com.clinic.schedule.cashdesk.domain.Charge;
+import com.clinic.schedule.cashdesk.domain.Coverage;
+import com.clinic.schedule.cashdesk.domain.CoverageWithdrawal;
 import com.clinic.schedule.cashdesk.domain.Visit;
 import com.clinic.schedule.cashdesk.domain.exception.ChargeRuleViolationException;
 import com.clinic.schedule.cashdesk.domain.exception.ChargeRuleViolationException.Reason;
 
 /**
- * Implements the port over JPA, inserting and never updating (D-87, D-88): a new visit is added, and so is
- * each charge and refund it did not have kept, numbered by its place.
+ * Implements the port over JPA, inserting and never updating (D-87, D-88, D-90): a new visit is added, and so is
+ * each charge and refund it did not have kept, numbered by its place, and its coverage and the coverage's
+ * withdrawal.
  */
 @Repository
 class VisitJpaAdapter implements VisitRepository {
@@ -30,20 +34,41 @@ class VisitJpaAdapter implements VisitRepository {
     private final VisitRowRepository visits;
     private final ChargeRowRepository charges;
     private final RefundRowRepository refunds;
+    private final CoverageRowRepository coverages;
+    private final CoverageWithdrawalRowRepository withdrawals;
 
-    VisitJpaAdapter(VisitRowRepository visits, ChargeRowRepository charges, RefundRowRepository refunds) {
+    VisitJpaAdapter(VisitRowRepository visits, ChargeRowRepository charges, RefundRowRepository refunds,
+            CoverageRowRepository coverages, CoverageWithdrawalRowRepository withdrawals) {
         this.visits = visits;
         this.charges = charges;
         this.refunds = refunds;
+        this.coverages = coverages;
+        this.withdrawals = withdrawals;
     }
 
     /**
      * Every row is immutable: saving one already kept leaves it as it was. Each is flushed as it is saved, so
-     * a charge or a refund another request added meanwhile, taking the same number, is refused here.
+     * a charge or a refund another request added meanwhile, taking the same number, is refused here, and so is a
+     * coverage or a withdrawal other than the one the visit has kept (D-90).
      */
     @Override
     public void save(Visit visit) {
         visits.save(VisitRow.from(visit));
+        visit.coverage().ifPresent(coverage -> {
+            CoverageRow coverageRow = CoverageRow.from(visit.id(), coverage);
+            Optional<CoverageRow> kept = coverages.findById(visit.id());
+            if (kept.isPresent() ? !kept.get().sameAs(coverageRow) : !inserted(coverages, coverageRow)) {
+                throw new ChargeRuleViolationException(Reason.ALREADY_COVERED, "The visit was covered already");
+            }
+            if (coverage.withdrawal() != null) {
+                CoverageWithdrawalRow withdrawalRow = CoverageWithdrawalRow.from(visit.id(), coverage.withdrawal());
+                Optional<CoverageWithdrawalRow> withdrawn = withdrawals.findById(visit.id());
+                if (withdrawn.isPresent() ? !withdrawn.get().sameAs(withdrawalRow)
+                        : !inserted(withdrawals, withdrawalRow)) {
+                    throw new ChargeRuleViolationException(Reason.NOT_COVERED, "The coverage was withdrawn already");
+                }
+            }
+        });
         List<Charge> all = visit.charges();
         for (int c = 0; c < all.size(); c++) {
             Charge charge = all.get(c);
@@ -63,9 +88,28 @@ class VisitJpaAdapter implements VisitRepository {
         }
     }
 
+    /**
+     * Adds a row keyed by its visit, false when another request added one meanwhile. A row kept already is
+     * compared rather than saved again: being keyed by the visit, saving would leave the one kept as it was, and
+     * say nothing of a different one.
+     */
+    private static <T> boolean inserted(JpaRepository<T, UUID> rows, T row) {
+        try {
+            rows.saveAndFlush(row);
+            return true;
+        } catch (DataIntegrityViolationException e) {
+            return false;
+        }
+    }
+
     @Override
     public Optional<Visit> findById(UUID id) {
         return visits.findById(id).map(row -> whole(List.of(row)).getFirst());
+    }
+
+    @Override
+    public Optional<Visit> findByIdForUpdate(UUID id) {
+        return visits.findForUpdate(id).map(row -> whole(List.of(row)).getFirst());
     }
 
     @Override
@@ -81,10 +125,18 @@ class VisitJpaAdapter implements VisitRepository {
 
     @Override
     public List<Visit> findPendingArrivedBetween(LocalDateTime from, LocalDateTime until) {
-        return visits.findPendingArrivedBetween(from, until).stream().map(row -> row.toVisit(List.of())).toList();
+        return visits.findPendingArrivedBetween(from, until).stream()
+                .map(row -> row.toVisit(null, List.of()))
+                .toList();
     }
 
-    /** The visits with their charges and refunds, each in the order they were recorded. */
+    @Override
+    public List<Visit> findCoveredBetween(LocalDateTime from, LocalDateTime until) {
+        return whole(visits.findAllById(coverages.findByRecordedAtGreaterThanEqualAndRecordedAtLessThan(from, until)
+                .stream().map(CoverageRow::visitId).toList()));
+    }
+
+    /** The visits with their coverage, and their charges and refunds, each in the order they were recorded. */
     private List<Visit> whole(Collection<VisitRow> rows) {
         List<UUID> ids = rows.stream().map(VisitRow::id).toList();
         if (ids.isEmpty()) {
@@ -102,6 +154,14 @@ class VisitJpaAdapter implements VisitRepository {
                                 .map(RefundRow::toRefund)
                                 .toList()),
                         Collectors.toList())));
-        return rows.stream().map(row -> row.toVisit(chargesByVisit.getOrDefault(row.id(), List.of()))).toList();
+        Map<UUID, CoverageWithdrawal> withdrawalByVisit = withdrawals.findAllById(ids).stream()
+                .collect(Collectors.toMap(CoverageWithdrawalRow::visitId, CoverageWithdrawalRow::toWithdrawal));
+        Map<UUID, Coverage> coverageByVisit = coverages.findAllById(ids).stream()
+                .collect(Collectors.toMap(CoverageRow::visitId,
+                        row -> row.toCoverage(withdrawalByVisit.get(row.visitId()))));
+        return rows.stream()
+                .map(row -> row.toVisit(coverageByVisit.get(row.id()),
+                        chargesByVisit.getOrDefault(row.id(), List.of())))
+                .toList();
     }
 }

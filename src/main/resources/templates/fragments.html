@@ -120,6 +120,15 @@
     <option value="QR">QR</option>
 </select>
 <!--
+  Whether the patient's insurance covers the visit (D-90): the insurer was asked outside the application and said
+  yes. The token, when the insurer's check asks for one; a token typed makes the visit a covered one. The amount
+  beside it is then the copay, or nothing.
+-->
+<th:block th:fragment="coverageFields">
+    <label><input type="checkbox" name="covered" value="true"> Con cobertura</label>
+    <input type="text" name="token" maxlength="50" placeholder="Token (si lo pide)" aria-label="Token">
+</th:block>
+<!--
   A day's totals (D-88, D-89), overall and by who recorded them, each split by means under it; only what is left
   in cash is what should be in the drawer.
 -->

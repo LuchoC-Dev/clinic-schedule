@@ -43,9 +43,12 @@ final class ScreenRefusals {
                 case NO_QUEUE -> "El profesional de ese turno no atiende ninguna cola.";
             };
             case ChargeRefusedException refused -> switch (refused.reason()) {
-                case CHARGE_REQUIRED -> "Falta el importe del cobro: sin cobro, solo entra una urgencia.";
+                case CHARGE_REQUIRED -> "Falta el importe del cobro: sin cobro ni cobertura, solo entra una urgencia.";
                 case INVALID_AMOUNT -> "El importe debe ser mayor que cero, con dos decimales como mucho.";
                 case AMOUNT_TOO_HIGH -> "El importe no puede superar " + pesos(refused.ceiling()) + ".";
+                case NOT_INSURED -> "El paciente no tiene obra social cargada: paga como particular.";
+                case IDENTITY_NOT_VERIFIED -> "La identidad del paciente no está verificada: paga como particular.";
+                case TOKEN_TOO_LONG -> "El token no puede superar los 50 caracteres.";
             };
             case QueueNotOpenException closed -> "La cola está cerrada: abrila primero.";
             case NoQueueServedException none -> "No atendés ninguna cola.";

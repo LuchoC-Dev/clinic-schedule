@@ -6,6 +6,7 @@ import java.text.DecimalFormatSymbols;
 import java.util.Locale;
 
 import com.clinic.schedule.cashdesk.domain.CashDeskDay;
+import com.clinic.schedule.cashdesk.domain.Insurance;
 import com.clinic.schedule.cashdesk.domain.Means;
 import com.clinic.schedule.cashdesk.domain.exception.ChargeRuleViolationException;
 
@@ -49,6 +50,30 @@ final class CashDeskWords {
             case REASON_REQUIRED -> "Falta el motivo de la devolución.";
             case REASON_TOO_LONG -> "El motivo no puede superar los 200 caracteres.";
             case CHANGED_MEANWHILE -> "La caja cambió mientras tanto. Revisala y probá de nuevo.";
+            case NOT_INSURED -> "El paciente no tiene obra social cargada: paga como particular.";
+            case IDENTITY_NOT_VERIFIED -> "La identidad del paciente no está verificada: paga como particular.";
+            case TOKEN_TOO_LONG -> "El token no puede superar los 50 caracteres.";
+            case ALREADY_COVERED -> "Esa visita ya tiene cobertura.";
+            case NOT_COVERED -> "Esa visita no tiene cobertura para quitar.";
+            case COPAY_LEFT -> "Primero devolvé el coseguro; después se quita la cobertura.";
         };
+    }
+
+    /** A coverage withdrawn says why, as a refund does, in words of its own (D-90). */
+    static String withdrawalRefusal(ChargeRuleViolationException e) {
+        return e.reason() == ChargeRuleViolationException.Reason.REASON_REQUIRED
+                ? "Falta el motivo para quitar la cobertura." : refusal(e);
+    }
+
+    /** The insurance as a covered visit kept it: OSDE · plan 310 · afiliado 61234567801. */
+    static String insurance(Insurance insurance) {
+        StringBuilder label = new StringBuilder(insurance.insurer());
+        if (insurance.plan() != null) {
+            label.append(" · plan ").append(insurance.plan());
+        }
+        if (insurance.memberNumber() != null) {
+            label.append(" · afiliado ").append(insurance.memberNumber());
+        }
+        return label.toString();
     }
 }

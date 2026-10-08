@@ -132,18 +132,23 @@
             <td class="actions">
                 <!--
                   With an appointment today, they come in with it: kept for its practitioner (D-64). Every visit is
-                  charged as it comes in, by the means reception picks (D-89); an emergency may leave it pending (D-87).
+                  charged as it comes in, by the means reception picks (D-89), or covered by the patient's insurance,
+                  with its copay if any (D-90); an emergency may leave it pending (D-87).
                 -->
                 <form class="inline" method="post" th:each="a : ${f.appointmentsToday}"
                       th:action="@{/arrivals/{q}/appointments/{a}(q=${queue.id},a=${a.id})}">
-                    <input type="number" name="amount" step="0.01" min="0.01" placeholder="Importe $" aria-label="Importe" required>
+                    <input type="number" name="amount" step="0.01" min="0.01" placeholder="Importe $ o coseguro"
+                           aria-label="Importe, o coseguro con cobertura">
                     <select th:replace="~{fragments :: meansSelect}"></select>
+                    <th:block th:replace="~{fragments :: coverageFields}"></th:block>
                     <button type="submit" class="primary" th:text="'Llegó con turno ' + ${a.label}">Llegó con turno 10:00</button>
                 </form>
                 <form class="inline" method="post" th:action="@{/arrivals/{id}/patients(id=${queue.id})}">
                     <input type="hidden" name="patientId" th:value="${p.id}">
-                    <input type="number" name="amount" step="0.01" min="0.01" placeholder="Importe $" aria-label="Importe" required>
+                    <input type="number" name="amount" step="0.01" min="0.01" placeholder="Importe $ o coseguro"
+                           aria-label="Importe, o coseguro con cobertura">
                     <select th:replace="~{fragments :: meansSelect}"></select>
+                    <th:block th:replace="~{fragments :: coverageFields}"></th:block>
                     <button type="submit" th:classappend="${f.appointmentsToday.isEmpty()} ? 'primary' : ''"
                             th:text="${f.appointmentsToday.isEmpty()} ? 'Sumar' : 'Sumar sin turno'">Sumar</button>
                 </form>
@@ -153,6 +158,7 @@
                     <input type="number" name="amount" step="0.01" min="0.01"
                            placeholder="Importe $ (opcional)" aria-label="Importe, opcional">
                     <select th:replace="~{fragments :: meansSelect}"></select>
+                    <th:block th:replace="~{fragments :: coverageFields}"></th:block>
                     <button type="submit">Sumar como urgencia</button>
                 </form>
             </td>

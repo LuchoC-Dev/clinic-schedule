@@ -7,6 +7,7 @@ import java.util.UUID;
 import org.hibernate.annotations.Immutable;
 
 import com.clinic.schedule.cashdesk.domain.Charge;
+import com.clinic.schedule.cashdesk.domain.Coverage;
 import com.clinic.schedule.cashdesk.domain.Visit;
 
 import jakarta.persistence.Column;
@@ -14,7 +15,10 @@ import jakarta.persistence.Entity;
 import jakarta.persistence.Id;
 import jakarta.persistence.Table;
 
-/** A visit as a row (D-87). Only ever inserted: its charges and their refunds are rows of their own. */
+/**
+ * A visit as a row (D-87). Only ever inserted: its charges and their refunds, and its coverage (D-90), are rows of
+ * their own.
+ */
 @Entity
 @Immutable
 @Table(name = "cash_visit")
@@ -49,8 +53,11 @@ class VisitRow {
         return id;
     }
 
-    /** @param charges its charges, in the order they were recorded; none when it was never charged */
-    Visit toVisit(List<Charge> charges) {
-        return Visit.recorded(id, patientId, arrivedAt, emergency, charges);
+    /**
+     * @param coverage null when it was never covered
+     * @param charges its charges, in the order they were recorded; none when it was never charged
+     */
+    Visit toVisit(Coverage coverage, List<Charge> charges) {
+        return Visit.recorded(id, patientId, arrivedAt, emergency, coverage, charges);
     }
 }

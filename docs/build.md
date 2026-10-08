@@ -1705,14 +1705,65 @@ V41's check was there by name, and it refused a means it does not know.
 **Part 2 of phase 7 is done:** reception charges each visit by the means the patient pays with, and the day's
 cash desk separates them, counting only cash for what should be in the drawer. Part 3 follows.
 
-#### Part 3 — The visits covered by a health insurance `[ ]`
-- [ ] A visit covered by the patient's obra social or prepaid plan, only with an insurance recorded and a
-      verified identity, keeping the insurance as it was that day
-- [ ] The token of that visit, optional: the insurer's check, outside the application, says whether it asks
-      for one
-- [ ] A copay charged by any means, or none; the day's cash desk shows the copays, not the visits that
-      moved no money
-- [ ] An emergency's pending visit recorded later as covered or private
+#### Part 3 — The visits covered by a health insurance `[x]`
+- [x] A visit covered by the patient's obra social or prepaid plan, only with an insurance recorded and a
+      verified identity, keeping the insurance as it was that day (D-90): `InsuredPatientPort`, answered through
+      `PatientReader`, so `patient/api` does not change
+- [x] The token of that visit, optional: the insurer's check, outside the application, says whether it asks
+      for one; trimmed, up to 50 characters
+- [x] A copay charged by any means, or none, and given back as any charge; the day's movements and totals show
+      the copays, not the visits that moved no money
+- [x] An emergency's pending visit recorded later as covered or private
+- [x] A visit marked covered by mistake: the coverage withdrawn, saying why, once its copay is given back whole,
+      and the visit charged privately; reception's day lists the visits covered that day apart, as the pending ones
+- [x] The visit held while it is charged, covered or withdrawn, since no unique key holds those together
+- [x] `coverage: {token?}` in `POST /api/queues/{id}/session/patients` and `POST /api/appointment-arrivals`; `POST
+      /api/visits/{id}/coverage` and `/coverage/withdrawal`; `copay` on each movement and `covered` in reception's
+      day; "Con cobertura" and "Token" wherever reception brings a known patient in, the agenda's "Llegó"
+      included; "Con cobertura" on a pending emergency, "Coseguro" and the list "Con cobertura" on `/cash-desk`
+- [x] `V42`: `cash_coverage` and `cash_coverage_withdrawal`, each keyed by its visit and only ever inserted, and
+      `copay` on `cash_charge`
+- [x] 11 unit and 15 integration tests more, and the earlier ones given the new shape. 497 unit and 583
+      integration tests, 1080 in total
+
+**Verified with:** every new test failing when the code it covers was broken on purpose — 100 breakages, all
+caught: who may go in covered — no insurance, an unverified identity —, each rule of the token — blank, trimmed, at
+most 50 —, a covered visit with no copay refused, a copay not said to be one as it comes in, charged again or
+covered later, a visit covered twice or covered once charged privately, a coverage withdrawn twice or with its
+copay left, a withdrawn coverage still standing, a covered emergency still pending, a withdrawal without why or not
+trimmed, the covered visits out of order or without a coverage, a movement never a copay, the coverage, the
+token, the copay or its means dropped by each use case, the queues' adapter and each of the three ways in, the
+patient taken as verified or insured, the member number for the plan, each row not kept, not read back, or taken
+for a different one, the covered visits of the day and the pending query, the copay, the token and the member
+number not kept, each status, field and list of the API, each message, label, link, list and field of the
+screens, the agenda and the arrivals without coverage, a token typed alone or "Con cobertura" ignored, each of the
+three use cases that write without holding the visit, and each key, foreign key and required column of V42. Five
+gaps were found and closed first: the covered patients' names in the API, the cash desk's refusals of a coverage over
+the API and on its screen, the copay's word on the screen, which a form's placeholder could hide, and the lock, by
+three tests of two requests at once. An older test that read the day's first movement, which the tests' clock leaves
+in no order, was made to read any, after it caught a breakage by chance. A control that changed only a comment was
+not caught. The faults ran one at a time. `mvnw clean verify`, with the seven `*PostgresIT` on PostgreSQL 18, which
+ran V42.
+
+**Verified with the application running** on a throwaway PostgreSQL taken from empty to V104: over the API reception
+was refused bringing Ana in covered without an insurance and then unverified, with nobody in the queue; once
+verified, it was refused a token of 51 characters, and brought her in covered by Galeno, plan 220, with the token
+" 123456 ", which moved no money; her insurance changed to OSDE afterwards, and the visit kept Galeno. Eva came in
+covered by PAMI with a $ 2.000 copay by debit; Luis came in as an emergency, left pending, was covered later by
+Swiss Medical with the token 777 and a $ 1.500 copay by QR, and was refused a second coverage with a 409.
+Withdrawing Eva's coverage was refused while its copay was there and without why; once it was given back whole,
+the coverage was withdrawn, refused a second time, and Eva charged $ 15.000 privately in cash: the day said
+$ 16.500 left and $ 15.000 in the drawer, the copays marked, and listed the three covered visits, Eva's withdrawn.
+Arias was refused the day and the coverage, and the admin's day said nothing of either. On the screens reception
+brought Marta in with a token typed alone and a $ 1.200 copay by transfer, was refused Juan covered with "El
+paciente no tiene obra social cargada: paga como particular.", and `/cash-desk` showed "Con cobertura" with each
+insurance as it was, the token, "Coseguro" and "Quitar cobertura"; `/cash-desk-log` showed the copays' amounts
+without a name or an insurance. In the database each coverage kept the day's insurance, each charge whether it was a
+copay, and V42's keys were there by name.
+
+**Part 3 of phase 7 is done:** a visit goes in covered by the patient's health insurance, with its token and its
+copay, an emergency's pending visit is covered later, and a coverage marked by mistake is withdrawn as a fact of its
+own; the day's cash desk counts the copays and lists the covered visits apart.
 
 ---
 

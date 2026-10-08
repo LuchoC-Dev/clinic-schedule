@@ -91,15 +91,17 @@
                     <th:block th:if="${row.booked}">
                     <!--
                       The arrival is the queues': the patient comes into their practitioner's queue (D-65), charged
-                      in the same step (D-87).
+                      in the same step (D-87), or covered by their insurance (D-90).
                     -->
                     <form class="inline" method="post" th:unless="${row.arrived}"
                           th:action="@{/arrivals/appointment-arrivals/{id}(id=${row.id})}">
                         <input type="hidden" name="practitionerId" th:value="${practitioner?.id}">
                         <input type="hidden" name="date" th:value="${date}">
                         <input type="hidden" name="view" th:value="${view}">
-                        <input type="number" name="amount" step="0.01" min="0.01" placeholder="Importe $" aria-label="Importe" required>
+                        <input type="number" name="amount" step="0.01" min="0.01" placeholder="Importe $ o coseguro"
+                               aria-label="Importe, o coseguro con cobertura">
                         <select th:replace="~{fragments :: meansSelect}"></select>
+                        <th:block th:replace="~{fragments :: coverageFields}"></th:block>
                         <button type="submit" class="primary">Llegó</button>
                     </form>
                     <form class="inline" method="post" th:unless="${row.arrived or row.lateNotice}"

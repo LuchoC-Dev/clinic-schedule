@@ -3,8 +3,9 @@ package com.clinic.schedule.cashdesk.domain.exception;
 import java.math.BigDecimal;
 
 /**
- * A charge or a refund the cash desk's rules refuse, and why (D-87, D-88). What is missing or malformed in
- * the request is a 400; what the visit's charges as they stand refuse, a 409.
+ * A charge, a refund or a coverage the cash desk's rules refuse, and why (D-87, D-88, D-90). What is missing or
+ * malformed in the request, or a patient who cannot go in covered, is a 400; what the visit's charges and coverage
+ * as they stand refuse, a 409.
  */
 public class ChargeRuleViolationException extends RuntimeException {
 
@@ -26,7 +27,19 @@ public class ChargeRuleViolationException extends RuntimeException {
         /** A refund's reason is up to 200 characters. */
         REASON_TOO_LONG,
         /** Someone else changed the visit's charges meanwhile. */
-        CHANGED_MEANWHILE
+        CHANGED_MEANWHILE,
+        /** A visit goes in covered only for a patient with a health insurance recorded (D-90). */
+        NOT_INSURED,
+        /** A visit goes in covered only for a patient whose identity was verified (D-90). */
+        IDENTITY_NOT_VERIFIED,
+        /** A token is up to 50 characters. */
+        TOKEN_TOO_LONG,
+        /** The visit is covered already, or was charged privately. */
+        ALREADY_COVERED,
+        /** The visit has no coverage standing to withdraw. */
+        NOT_COVERED,
+        /** The coverage is withdrawn only once nothing is left of its copay. */
+        COPAY_LEFT
     }
 
     private final Reason reason;

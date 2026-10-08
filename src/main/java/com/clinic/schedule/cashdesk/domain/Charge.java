@@ -14,10 +14,11 @@ import com.clinic.schedule.cashdesk.domain.exception.ChargeRuleViolationExceptio
  * own, and giving one back answers a new charge with it added. Never more is given back than was charged, and
  * what is given back goes out by the charge's means (D-89).
  *
+ * @param copay whether it was the copay of a covered visit, which is a charge as any other (D-90)
  * @param recordedBy the username of whoever recorded it
  */
-public record Charge(UUID id, Amount amount, Means means, String recordedBy, LocalDateTime recordedAt,
-        List<Refund> refunds) {
+public record Charge(UUID id, Amount amount, Means means, boolean copay, String recordedBy,
+        LocalDateTime recordedAt, List<Refund> refunds) {
 
     public Charge {
         if (id == null || amount == null || means == null || recordedBy == null || recordedBy.isBlank()
@@ -31,8 +32,8 @@ public record Charge(UUID id, Amount amount, Means means, String recordedBy, Loc
     }
 
     /** A new charge, with nothing given back. */
-    static Charge of(Amount amount, Means means, String recordedBy, LocalDateTime at) {
-        return new Charge(UUID.randomUUID(), amount, means, recordedBy, at, List.of());
+    static Charge of(Amount amount, Means means, boolean copay, String recordedBy, LocalDateTime at) {
+        return new Charge(UUID.randomUUID(), amount, means, copay, recordedBy, at, List.of());
     }
 
     /** What is left of it: what was charged, less what was given back. */
@@ -47,7 +48,7 @@ public record Charge(UUID id, Amount amount, Means means, String recordedBy, Loc
         }
         List<Refund> after = new ArrayList<>(refunds);
         after.add(new Refund(UUID.randomUUID(), given, reason, by, at));
-        return new Charge(id, amount, means, recordedBy, recordedAt, after);
+        return new Charge(id, amount, means, copay, recordedBy, recordedAt, after);
     }
 
     /** Nothing left to give back of it. */

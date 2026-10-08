@@ -22,13 +22,16 @@ import org.springframework.web.util.UriComponentsBuilder;
 
 import com.clinic.schedule.cashdesk.application.exception.VisitNotFoundException;
 import com.clinic.schedule.cashdesk.application.usecase.ChargeVisitUseCase;
+import com.clinic.schedule.cashdesk.application.usecase.CoverVisitUseCase;
 import com.clinic.schedule.cashdesk.application.usecase.RefundVisitUseCase;
 import com.clinic.schedule.cashdesk.application.usecase.ViewCashDeskDayUseCase;
+import com.clinic.schedule.cashdesk.application.usecase.WithdrawCoverageUseCase;
 import com.clinic.schedule.cashdesk.domain.CashDeskDay;
 import com.clinic.schedule.cashdesk.domain.CashDeskDay.Kind;
 import com.clinic.schedule.cashdesk.domain.CashDeskDay.MeansTotal;
 import com.clinic.schedule.cashdesk.domain.CashDeskDay.Movement;
 import com.clinic.schedule.cashdesk.domain.CashDeskDay.Total;
+import com.clinic.schedule.cashdesk.domain.Coverage;
 import com.clinic.schedule.cashdesk.domain.Means;
 import com.clinic.schedule.cashdesk.domain.Visit;
 import com.clinic.schedule.cashdesk.domain.exception.ChargeRuleViolationException;
@@ -37,11 +40,12 @@ import com.clinic.schedule.patient.api.PatientSummary;
 
 /**
  * The day's cash desk (D-87, D-88). Reception's screen, {@code /cash-desk}, shows it whole: it charges the
- * pending emergencies, gives back from a charge — some or all of what is left, saying why — and charges again
- * a visit given back whole, by the means reception picks (D-89). The admins', {@code /cash-desk-log}, shows the
- * charges, the refunds and the totals without the patients, the refunds' reasons and the pending visits. Both
- * split the totals by means, and say what should be in the drawer. Which role reaches which is the route's to
- * say (D-34).
+ * pending emergencies, or records them as covered (D-90), gives back from a charge — some or all of what is left,
+ * saying why — and charges again a visit given back whole, by the means reception picks (D-89). It lists the
+ * visits covered that day apart, so a coverage marked by mistake is withdrawn and the visit charged privately.
+ * The admins', {@code /cash-desk-log}, shows the charges, the refunds and the totals without the patients, the
+ * refunds' reasons, the pending visits and the covered ones. Both split the totals by means, and say what should
+ * be in the drawer. Which role reaches which is the route's to say (D-34).
  */
 @Controller
 class CashDeskViewController {
@@ -51,13 +55,17 @@ class CashDeskViewController {
     private final ViewCashDeskDayUseCase view;
     private final ChargeVisitUseCase charge;
     private final RefundVisitUseCase refund;
+    private final CoverVisitUseCase cover;
+    private final WithdrawCoverageUseCase withdraw;
     private final PatientReader patients;
 
     CashDeskViewController(ViewCashDeskDayUseCase view, ChargeVisitUseCase charge, RefundVisitUseCase refund,
-            PatientReader patients) {
+            CoverVisitUseCase cover, WithdrawCoverageUseCase withdraw, PatientReader patients) {
         this.view = view;
         this.charge = charge;
         this.refund = refund;
+        this.cover = cover;
+        this.withdraw = withdraw;
         this.patients = patients;
     }
 
@@ -65,8 +73,8 @@ class CashDeskViewController {
     String forReception(@RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate date,
             Model model) {
         CashDeskDay day = view.handle(date);
-        Map<UUID, PatientSummary> patientsById = patients.findAll(Stream.concat(day.visits().stream(),
-                        day.pending().stream()).map(Visit::patientId).distinct().toList())
+        Map<UUID, PatientSummary> patientsById = patients.findAll(Stream.of(day.visits(), day.pending(), day.covered())
+                        .flatMap(List::stream).map(Visit::patientId).distinct().toList())
                 .stream()
                 .collect(Collectors.toMap(PatientSummary::id, Function.identity()));
         totals(day, model);
@@ -74,6 +82,9 @@ class CashDeskViewController {
         model.addAttribute("pending", day.pending().stream()
                 .map(visit -> new PendingRow(visit.id(), patientLabel(visit, patientsById),
                         TIME.format(visit.arrivedAt())))
+                .toList());
+        model.addAttribute("covered", day.covered().stream()
+                .map(visit -> CoveredRow.of(visit, patientsById))
                 .toList());
         return "cash-desk";
     }
@@ -107,12 +118,34 @@ class CashDeskViewController {
                 () -> refund.handle(new RefundVisitUseCase.Command(visitId, amount, reason)));
     }
 
+    /** An emergency's pending visit, covered, with its copay if any; back to the day it was on. */
+    @PostMapping("/cash-desk/visits/{visitId}/coverage")
+    String cover(@PathVariable UUID visitId, @RequestParam(required = false) String token,
+            @RequestParam(required = false) BigDecimal copay, @RequestParam(required = false) Means means,
+            @RequestParam(required = false) String date, RedirectAttributes flash) {
+        return attempt(date, flash, "Cobertura registrada.",
+                () -> cover.handle(new CoverVisitUseCase.Command(visitId, token, copay, means)));
+    }
+
+    /** A coverage marked by mistake, withdrawn; back to the day it was on, to charge the visit privately. */
+    @PostMapping("/cash-desk/visits/{visitId}/coverage/withdrawal")
+    String withdraw(@PathVariable UUID visitId, @RequestParam(required = false) String reason,
+            @RequestParam(required = false) String date, RedirectAttributes flash) {
+        return attempt(date, flash, "Cobertura quitada. Cobrá la visita como particular.",
+                CashDeskWords::withdrawalRefusal, () -> withdraw.handle(new WithdrawCoverageUseCase.Command(visitId, reason)));
+    }
+
     private static String attempt(String date, RedirectAttributes flash, String done, Runnable command) {
+        return attempt(date, flash, done, CashDeskWords::refusal, command);
+    }
+
+    private static String attempt(String date, RedirectAttributes flash, String done,
+            Function<ChargeRuleViolationException, String> refusal, Runnable command) {
         try {
             command.run();
             flash.addFlashAttribute("message", done);
         } catch (ChargeRuleViolationException e) {
-            flash.addFlashAttribute("error", CashDeskWords.refusal(e));
+            flash.addFlashAttribute("error", refusal.apply(e));
         } catch (VisitNotFoundException e) {
             flash.addFlashAttribute("error", "Esa visita no existe.");
         }
@@ -158,7 +191,8 @@ class CashDeskViewController {
             boolean charge = movement.kind() == Kind.CHARGE;
             boolean current = charge && visit.current().map(movement.charge()::equals).orElse(false);
             boolean last = charge && visit.charges().getLast().equals(movement.charge());
-            return new Row(visit.id(), CashDeskWords.kind(movement.kind()), TIME.format(movement.recordedAt()),
+            return new Row(visit.id(), charge && movement.copay() ? "Coseguro" : CashDeskWords.kind(movement.kind()),
+                    TIME.format(movement.recordedAt()),
                     patientLabel(visit, patients), visit.emergency(), CashDeskWords.means(movement.means()),
                     signed(movement), movement.reason(), movement.recordedBy(),
                     current ? movement.charge().left().toPlainString() : null,
@@ -176,8 +210,28 @@ class CashDeskViewController {
         }
     }
 
-    /** An emergency never charged. */
+    /** An emergency never charged nor covered. */
     record PendingRow(UUID visitId, String patient, String arrivedAt) {
+    }
+
+    /**
+     * A visit covered that day (D-90). A coverage standing may be withdrawn; one withdrawn says why, and the visit
+     * is charged privately while nothing is left charged of it.
+     *
+     * @param token null when the insurer asked for none
+     * @param withdrawn why it was withdrawn and by whom; null while it stands
+     */
+    record CoveredRow(UUID visitId, String time, String patient, boolean emergency, String insurance, String token,
+            String user, String withdrawn, boolean withdraw, boolean charge) {
+
+        static CoveredRow of(Visit visit, Map<UUID, PatientSummary> patients) {
+            Coverage coverage = visit.coverage().orElseThrow();
+            return new CoveredRow(visit.id(), TIME.format(coverage.recordedAt()), patientLabel(visit, patients),
+                    visit.emergency(), CashDeskWords.insurance(coverage.insurance()), coverage.token(),
+                    coverage.recordedBy(), coverage.withdrawal() == null ? null
+                            : coverage.withdrawal().reason() + " (" + coverage.withdrawal().recordedBy() + ")",
+                    visit.covered(), !visit.covered() && visit.current().isEmpty());
+        }
     }
 
     /**

@@ -41,8 +41,9 @@ public class AddUnidentifiedPatientUseCase {
         QueueSession session = commands.openSessionOf(command.queueId());
         PatientArrived arrived = sessions.arrive(session, patients.registerUnidentified(), command.emergency(),
                 commands.now());
+        // Someone who gives no name is not verified, so they never go in covered (D-90).
         cashier.visitStarted(arrived.entryId(), arrived.patientId(), command.emergency(), command.amount(),
-                command.means());
+                command.means(), null);
         commands.record(session, arrived);
         return new EntryId(arrived.entryId());
     }

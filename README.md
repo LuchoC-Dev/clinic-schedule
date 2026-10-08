@@ -64,10 +64,12 @@ identity is corrected and verified, with its history, and their date of birth, p
 recorded, each saying whose it is, and their health insurance, and who agreed to be reminded on each, with a history of their own — each patient's appointments, their family groups — formed at the desk, a child at a parent's request, with who shares their appointments and a history —, cancelled ones included, a practitioners screen to set
 up their reasons and week and record their absences, a queues screen to set up the arrival
 queues and who serves each, the arrivals screen, where queues are opened and closed and patients
-brought in — each visit charged as the patient comes in, in cash, by card, transfer or QR, an emergency's
-left pending —, the day's cash desk, with its charges and refunds — some or all of a charge given back, by
-its means, saying why, and a visit given back whole charged again —, their totals by means and by who
-recorded them, with what should be in the drawer, and the emergencies still to charge, and the
+brought in — each visit charged as the patient comes in, in cash, by card, transfer or QR, or covered by
+their health insurance, with its token and copay, an emergency's left pending —, the day's cash desk, with
+its charges and refunds — some or all of a charge given back, by its means, saying why, and a visit given
+back whole charged again —, their totals by means and by who recorded them, with what should be in the
+drawer, the emergencies still to charge or cover, and the visits covered that day, where a coverage marked
+by mistake is withdrawn, and the
 waiting-room screen, which names nobody. The queue screens show each change as
 it happens. A practitioner gets their own agenda,
 read-only, with today's patients linked to their clinical record and *Empezar consulta* once
@@ -124,13 +126,15 @@ document as its type and number, such as `DNI 27333444`. Errors share one body:
 | `DELETE` | `/api/queues/{id}/practitioners/{practitionerId}` | a practitioner stops serving it; the queue stays |
 | `POST` | `/api/queues/{id}/open`, `/close`, `/auto-close-off` | open a queue — a new session —, close it, keep it open past its day |
 | `GET` | `/api/queues/{id}/session` | the open session: who waits, in the order they will be called, who was called, who is done |
-| `POST` | `/api/queues/{id}/session/patients`, `/session/unidentified` | bring a patient in, or one who gives no name, as an emergency or not, with the `amount` charged — which only an emergency may leave out, pending — and its `means`: `CASH`, the default, `DEBIT`, `CREDIT`, `TRANSFER` or `QR` |
+| `POST` | `/api/queues/{id}/session/patients`, `/session/unidentified` | bring a patient in, or one who gives no name, as an emergency or not, with the `amount` charged — which only an emergency may leave out, pending — and its `means`: `CASH`, the default, `DEBIT`, `CREDIT`, `TRANSFER` or `QR`; a known patient with an insurance and a verified identity may come in with `coverage: {token?}`, the `amount` then being the copay, if any |
 | `POST` | `/api/queue-entries/{id}/emergency`, `/left` | make a waiting patient an emergency, or say they left |
-| `POST` | `/api/appointment-arrivals` | a patient with an appointment today arrives, paying the `amount` by its `means`: into their practitioner's queue, kept for them; the appointment answers when, as `arrivedAt` |
-| `GET` | `/api/cash-desk?date=` | a day's cash desk, today by default: each charge and refund with its patient — a refund with why, a charge with what is left of it —, what was charged, given back and is left, overall and by who recorded them, each by means, with the `drawer` — what is left in cash —, and the emergencies of that day never charged |
+| `POST` | `/api/appointment-arrivals` | a patient with an appointment today arrives, paying the `amount` by its `means`, or with `coverage: {token?}` and its copay: into their practitioner's queue, kept for them; the appointment answers when, as `arrivedAt` |
+| `GET` | `/api/cash-desk?date=` | a day's cash desk, today by default: each charge and refund with its patient — a refund with why, a charge with what is left of it —, what was charged, given back and is left, overall and by who recorded them, each by means, with the `drawer` — what is left in cash —, each movement saying whether it was a `copay`, the emergencies of that day never charged nor covered, and the visits `covered` that day, with the insurance as it was then, the token and any withdrawal |
 | `POST` | `/api/visits/{id}/charge` | `{amount, means}`: charge an emergency's pending visit, or one given back whole again; cash unless `means` says otherwise |
 | `POST` | `/api/visits/{id}/refund` | `{amount, reason}`: give back some or all of what is left of the visit's charge, by its means, saying why |
-| `GET` | `/api/cash-desk-log?date=` | the same for the admins, without the patients, the refunds' reasons and the pending visits |
+| `POST` | `/api/visits/{id}/coverage` | `{token?, copay?, means?}`: record an emergency's pending visit as covered by the patient's insurance |
+| `POST` | `/api/visits/{id}/coverage/withdrawal` | `{reason}`: withdraw a coverage marked by mistake, once its copay is given back whole; the visit is then charged privately |
+| `GET` | `/api/cash-desk-log?date=` | the same for the admins, without the patients, the refunds' reasons, the pending visits and the covered ones |
 | `POST` | `/api/queue-entries/{id}/reassign`, `/lift-reservation` | give a waiting patient to another practitioner of the queue, or to anyone |
 | `GET` | `/api/my-queue` | a practitioner's own queue |
 | `POST` | `/api/my-queue/call-next`, `/finish`, `/did-not-come-in` | call the next patient, finish with them, or say they did not come in |
@@ -183,7 +187,9 @@ practice's name, address and phone are `app.practice.*`, its sender `app.mail.fr
 `app.portal.activation-valid-for`, 72 hours by default. A charge is pesos above zero with two decimals at
 most, up to `app.cash-desk.max-amount`, $ 99.999.999,99 by default; it is paid in cash, by debit or credit card,
 by transfer or by QR, is never changed nor deleted, and what went wrong is given back as a refund of its own,
-by the charge's means. Only cash counts for what should be in the drawer.
+by the charge's means. Only cash counts for what should be in the drawer. A visit goes in covered only for a
+patient with an insurance recorded and a verified identity; the insurer is asked outside the application, and
+its copay, if any, is a charge as any other.
 
 ## How it is built
 

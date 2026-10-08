@@ -12,6 +12,7 @@ import com.clinic.schedule.arrival.session.command.AppointmentArrivalRefusedExce
 import com.clinic.schedule.arrival.session.domain.QueueSession;
 import com.clinic.schedule.arrival.session.domain.QueueSessionService;
 import com.clinic.schedule.arrival.session.domain.SessionEvent.AppointmentArrived;
+import com.clinic.schedule.cashdesk.api.Coverage;
 import com.clinic.schedule.cashdesk.api.Means;
 import com.clinic.schedule.cashdesk.api.VisitCashier;
 
@@ -55,15 +56,18 @@ public class AppointmentArrivesUseCase {
         QueueSession session = commands.openSessionOf(queue);
         AppointmentArrived arrived = sessions.arriveWithAppointment(session, appointment.patientId(), appointment.id(),
                 appointment.practitionerId(), appointment.startsAt(), commands.now());
-        cashier.visitStarted(arrived.entryId(), appointment.patientId(), false, command.amount(), command.means());
+        cashier.visitStarted(arrived.entryId(), appointment.patientId(), false, command.amount(), command.means(),
+                command.coverage());
         commands.record(session, arrived);
         return queue;
     }
 
     /**
-     * @param amount the pesos charged: a patient with an appointment does not come in as an emergency
+     * @param amount the pesos charged, the copay when covered: a patient with an appointment does not come in as
+     *        an emergency, so only a covered visit with no copay leaves it out
      * @param means how they were paid; null for cash
+     * @param coverage null when the patient pays privately (D-90)
      */
-    public record Command(UUID appointmentId, BigDecimal amount, Means means) {
+    public record Command(UUID appointmentId, BigDecimal amount, Means means, Coverage coverage) {
     }
 }
