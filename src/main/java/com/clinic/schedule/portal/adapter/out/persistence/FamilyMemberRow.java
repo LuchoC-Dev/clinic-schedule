@@ -30,6 +30,9 @@ class FamilyMemberRow {
     @Column(name = "added_at", nullable = false)
     private LocalDateTime addedAt;
 
+    @Column(name = "relation_proved", nullable = false)
+    private boolean relationProved;
+
     protected FamilyMemberRow() {
         // required by JPA
     }
@@ -41,10 +44,11 @@ class FamilyMemberRow {
         row.requestedBy = member.requestedBy();
         row.relation = member.relation();
         row.addedAt = member.addedAt();
+        row.relationProved = member.relationProved();
         return row;
     }
 
     FamilyMember toMember() {
-        return new FamilyMember(patientId, shares, requestedBy, relation, addedAt);
+        return new FamilyMember(patientId, shares, requestedBy, relation, addedAt, relationProved);
     }
 }

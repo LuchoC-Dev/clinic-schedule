@@ -81,8 +81,10 @@ Spanish, for the staff.
 **The patients' screens** — at http://localhost:8080/portal/login, apart from the staff's. A patient whom
 reception opened a web account for — from *Cuenta web* on the patient's screen, for a verified patient of
 13 or older — gets a link by email to activate it and choose a password; an adult of 18 or older registers
-themselves from "Registrate" on the login, and confirms it from a link to their email, unverified and with one
-appointment ahead until reception sees their document. A patient logs in with their document and
+themselves from "Registrate" on the login, with their children under 13 if they want, and confirms it from a link to
+their email, unverified and with one appointment ahead each until reception sees their documents; an adult also
+registers a child later, from *Mi familia*. The children go into a family group with the relation not proved, which
+reception proves on the group's screen. A patient logs in with their document and
 reads their appointments: those ahead and those of the last year, never reception's note. Five failed logins in a
 row lock the account for 15 minutes; "¿Olvidaste tu contraseña?" sends a link to the account's email to choose
 a new one, and *Contraseña* changes it. Under *Mis turnos* they cancel an appointment up to a
@@ -159,10 +161,12 @@ document as its type and number, such as `DNI 27333444`. Errors share one body:
 | `GET` | `/api/family-groups`, `?patientId=`, `/api/family-groups/{id}` | the family groups by name, or a patient's, with each member and whether the group sees their appointments |
 | `POST` | `/api/family-groups/{id}/members` | someone of 13 or older joins, present and agreeing — `{patientId, shares}`, `shares` an adolescent's choice; an adult shares |
 | `POST` | `/api/family-groups/{id}/children` | a child under 13, at the request of an adult of the group — `{patientId, requestedBy, relation, proofSeen}`, `relation` `MOTHER`, `FATHER` or `GUARDIAN` |
+| `POST` | `/api/family-groups/{id}/members/{patientId}/relation-proof` | `{proofSeen}`: reception saw what proves the relation of a child an adult registered on the web |
 | `POST` | `/api/family-groups/{id}/members/{patientId}/remove`, `/sharing` | take a member out; a member of 13 or older starts or stops sharing — `{shares}` |
 | `GET` | `/api/family-groups/{id}/changes` | what happened to the group, the most recent first, and by whom |
-| `POST` | `/api/portal/registrations` | an adult of 18 or older registers themselves — `{fullName, documentType, documentNumber, birthDate, phone, email, password}` —; 202 once the email went out, the same whether the practice knows the document or not; no login |
-| `POST` | `/api/portal/registrations/confirmation` | `{token}`, from that email's link: the patient is registered, unverified, with their account in use; 409 when the document was someone's by then; no login |
+| `POST` | `/api/portal/registrations` | an adult of 18 or older registers themselves — `{fullName, documentType, documentNumber, birthDate, phone, email, password, children}`, up to five children under 13 each `{fullName, documentType, documentNumber, birthDate, relation}` —; 202 once the email went out, the same whether the practice knows a document or not; no login |
+| `POST` | `/api/portal/registrations/confirmation` | `{token}`, from that email's link: the patient is registered, unverified, with their account in use, and their children in a family group; 200 with `notRegistered`, the children it could not register; 409 when the adult's document was someone's by then; no login |
+| `POST` | `/api/portal/family/children` | the adult logged in registers a child under 13 — `{fullName, documentType, documentNumber, birthDate, relation, groupId}`, a new group without `groupId` —; 202 whether the practice knows the document or not; 429 past five a day |
 | `POST` | `/api/portal/activation` | the patient activates their account — `{token, password}`, the token from the email's link; no login |
 | `POST` | `/api/portal/password-recovery` | `{documentType, documentNumber}`: sends a link to choose a new password to the account's email, valid for an hour; always 204, account or not; no login |
 | `POST` | `/api/portal/password-reset` | `{token, password}`: the new password, with the token from that link; it lifts a lock and ends the account's open sessions; no login |
@@ -189,7 +193,8 @@ patients whose email has their consent — a responsible person's only for a pat
 practice's name, address and phone are `app.practice.*`, its sender `app.mail.from`, and the SMTP server
 `spring.mail.*`. The links in the patients' emails point at `app.portal.base-url`, and an activation lasts
 `app.portal.activation-valid-for`, 72 hours by default, as a registration made on the web waits for its
-confirmation, `app.portal.registration-valid-for`, before it is forgotten. A charge is pesos above zero with two decimals at
+confirmation, `app.portal.registration-valid-for`, before it is forgotten; an account asks to register up to
+`app.portal.children-per-day` children a day, five by default. A charge is pesos above zero with two decimals at
 most, up to `app.cash-desk.max-amount`, $ 99.999.999,99 by default; it is paid in cash, by debit or credit card,
 by transfer or by QR, is never changed nor deleted, and what went wrong is given back as a refund of its own,
 by the charge's means. Only cash counts for what should be in the drawer. A visit goes in covered only for a

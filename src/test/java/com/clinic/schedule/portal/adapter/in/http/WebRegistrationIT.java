@@ -125,7 +125,7 @@ class WebRegistrationIT {
         assertThat(jdbc.queryForObject("select token_hash from web_registration where email = ?", String.class,
                 email)).hasSize(64).isNotEqualTo(sent.token());
 
-        confirm(sent.token()).andExpect(status().isNoContent());
+        confirm(sent.token()).andExpect(status().isOk()).andExpect(jsonPath("$.notRegistered").isEmpty());
 
         logIn(dni).andExpect(status().isOk());
         JsonNode patient = patientsOf(dni).get(0);
@@ -196,7 +196,7 @@ class WebRegistrationIT {
         assertThat(waiting(first)).isOne();
         assertThat(waiting(second)).isOne();
 
-        confirm(lastRegistrationTokenTo(second)).andExpect(status().isNoContent());
+        confirm(lastRegistrationTokenTo(second)).andExpect(status().isOk());
         confirm(lastRegistrationTokenTo(first)).andExpect(status().isConflict());
 
         assertThat(waiting(first)).isZero();

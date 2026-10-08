@@ -149,7 +149,7 @@ public final class PatientAccountFixture {
                 .andExpect(status().isAccepted());
         mockMvc.perform(post("/api/portal/registrations/confirmation").contentType(MediaType.APPLICATION_JSON)
                         .content("{\"token\": \"%s\"}".formatted(lastRegistrationTokenTo(address))))
-                .andExpect(status().isNoContent());
+                .andExpect(status().isOk());
         return new Patient(read(mockMvc.perform(get("/api/patients").with(RECEPTION).param("query", dni))
                 .andExpect(status().isOk())
                 .andReturn().getResponse().getContentAsString()).get(0).get("id").asText(), dni);

@@ -426,6 +426,10 @@ class PortalViewController {
     @GetMapping("/portal/family")
     String family(Model model) {
         model.addAttribute("groups", family.groups().stream().map(FamilyRows::of).toList());
+        AccountHolder me = family.bookableFor().get(0);
+        model.addAttribute("adult", me.birthDate() != null
+                && AgeBand.of(me.birthDate(), LocalDate.now(clock)) == AgeBand.ADULT);
+        model.addAttribute("documentTypes", patients.documentTypes());
         return "portal-family";
     }
 

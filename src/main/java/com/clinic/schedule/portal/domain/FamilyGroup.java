@@ -64,6 +64,13 @@ public final class FamilyGroup {
                 shares ? FamilyChange.Action.SHARING_STARTED : FamilyChange.Action.SHARING_STOPPED, patientId, at, by);
     }
 
+    FamilyUpdate proving(UUID patientId, LocalDateTime at, String by) {
+        return update(members.stream()
+                        .map(member -> member.patientId().equals(patientId) ? member.proved() : member)
+                        .toList(),
+                FamilyChange.Action.RELATION_PROVED, patientId, at, by);
+    }
+
     private FamilyUpdate update(List<FamilyMember> changed, FamilyChange.Action action, UUID patientId,
             LocalDateTime at, String by) {
         return new FamilyUpdate(new FamilyGroup(id, name, createdAt, changed),

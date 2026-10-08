@@ -74,6 +74,13 @@ class FamilyGroupController {
                 request.proofSeen()));
     }
 
+    /** Reception saw what proves the relation of a child an adult registered on the web (D-92). */
+    @PostMapping("/api/family-groups/{id}/members/{patientId}/relation-proof")
+    FamilyGroupResponse proveRelation(@PathVariable UUID id, @PathVariable UUID patientId,
+            @RequestBody FamilyGroupRequests.RelationProof request) {
+        return respond(manage.proveRelation(id, patientId, request.proofSeen()));
+    }
+
     @PostMapping("/api/family-groups/{id}/members/{patientId}/remove")
     FamilyGroupResponse remove(@PathVariable UUID id, @PathVariable UUID patientId) {
         return respond(manage.remove(id, patientId));

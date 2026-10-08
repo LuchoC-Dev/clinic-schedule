@@ -101,6 +101,8 @@ app:
     # How long a registration made on the web waits for its confirmation from the email's link; one never
     # confirmed is forgotten afterwards (D-91).
     registration-valid-for: PT72H
+    # How many children under 13 an account asks to register in a day, from the account (D-92).
+    children-per-day: 5
 
 logging:
   level:

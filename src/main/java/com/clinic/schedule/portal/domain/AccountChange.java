@@ -8,7 +8,7 @@ import java.util.UUID;
 /**
  * One entry of a web account's history (D-79): what was done, when, and by whom — reception's username, or
  * nobody for what the patient or the web did: activating it, recovering or changing the password, a link
- * asked for, a lock (D-86), registering on the web (D-91). Only {@link PatientAccount} makes one, and nothing
+ * asked for, a lock (D-86), registering on the web (D-91), a child asked for (D-92). Only {@link PatientAccount} makes one, and nothing
  * changes one once made.
  *
  * @param by the username of whoever at reception did it; null when the patient or the web did it
@@ -18,7 +18,7 @@ public record AccountChange(UUID id, UUID accountId, AccountAction action, Local
     /** What nobody at reception does: the account's own doing has no username of the staff's. */
     private static final Set<AccountAction> BY_NOBODY = EnumSet.of(AccountAction.ACTIVATED,
             AccountAction.RECOVERY_SENT, AccountAction.PASSWORD_RESET, AccountAction.PASSWORD_CHANGED,
-            AccountAction.LOCKED, AccountAction.REGISTERED);
+            AccountAction.LOCKED, AccountAction.REGISTERED, AccountAction.CHILD_REQUESTED);
 
     public AccountChange {
         if (id == null || accountId == null || action == null || at == null) {

@@ -6,6 +6,7 @@ import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 
 import com.clinic.schedule.portal.application.exception.AccountNotFoundException;
+import com.clinic.schedule.portal.application.exception.ChildRequestsExceededException;
 import com.clinic.schedule.portal.application.exception.FamilyGroupNotFoundException;
 import com.clinic.schedule.portal.application.exception.InvalidActivationLinkException;
 import com.clinic.schedule.portal.application.exception.InvalidRegistrationException;
@@ -44,6 +45,13 @@ class PortalExceptionHandler {
             return ResponseEntity.status(HttpStatus.NOT_FOUND).body(ErrorResponse.of(404, "Not found", e.getMessage()));
         }
         return ResponseEntity.status(HttpStatus.CONFLICT).body(ErrorResponse.of(409, "Conflict", e.getMessage()));
+    }
+
+    /** An account that asked to register as many children as a day takes (D-92). */
+    @ExceptionHandler(ChildRequestsExceededException.class)
+    ResponseEntity<ErrorResponse> tooManyChildren(ChildRequestsExceededException e) {
+        return ResponseEntity.status(HttpStatus.TOO_MANY_REQUESTS)
+                .body(ErrorResponse.of(429, "Too many requests", e.getMessage()));
     }
 
     @ExceptionHandler({AccountNotFoundException.class, FamilyGroupNotFoundException.class})

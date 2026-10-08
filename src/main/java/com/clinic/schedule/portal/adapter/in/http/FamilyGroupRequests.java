@@ -33,4 +33,8 @@ final class FamilyGroupRequests {
 
     record Share(boolean shares) {
     }
+
+    /** Reception saw what proves the relation of a child registered on the web (D-92). */
+    record RelationProof(boolean proofSeen) {
+    }
 }

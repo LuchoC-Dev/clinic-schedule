@@ -20,6 +20,9 @@ import com.clinic.schedule.portal.domain.exception.FamilyRefusedException.Reason
  *   <li>nobody joins without a date of birth, since nothing could tell which of these applies.</li>
  * </ul>
  *
+ * <p>A child an adult registers on the web is added at their request with the relation not proved (D-92), and
+ * reception proves it at the desk afterwards.
+ *
  * <p>It is handed the patients' dates of birth and reads nothing itself.
  */
 public final class FamilyGroupService {
@@ -44,7 +47,7 @@ public final class FamilyGroupService {
             throw new FamilyRefusedException(Reason.A_CHILD, "A child under 13 is added at a parent's request");
         }
         requireNotAMember(group, person.patientId());
-        return group.with(new FamilyMember(person.patientId(), age == AgeBand.ADULT || shares, null, null, at),
+        return group.with(new FamilyMember(person.patientId(), age == AgeBand.ADULT || shares, null, null, at, true),
                 FamilyChange.Action.JOINED, at, by);
     }
 
@@ -57,7 +60,55 @@ public final class FamilyGroupService {
      */
     public static FamilyUpdate addChild(FamilyGroup group, FamilyPerson child, FamilyPerson requester,
             FamilyMember.Relation relation, boolean proofSeen, LocalDateTime at, String by) {
-        LocalDate today = at.toLocalDate();
+        requireChildOf(group, child, requester, at.toLocalDate());
+        if (relation == null || !proofSeen) {
+            throw new FamilyRefusedException(Reason.NO_PROOF,
+                    "A child is added once reception has seen who their parent or guardian is");
+        }
+        return group.with(new FamilyMember(child.patientId(), false, requester.patientId(), relation, at, true),
+                FamilyChange.Action.CHILD_ADDED, at, by);
+    }
+
+    /**
+     * A child under 13 an adult registered on the web, added at their request with the relation they named and not
+     * proved, until reception sees what proves it (D-92).
+     *
+     * @param requester the adult of the group who registered them
+     * @param by the account of the adult
+     * @throws FamilyRefusedException as {@link #addChild}, but for the proof
+     */
+    public static FamilyUpdate addChildUnproved(FamilyGroup group, FamilyPerson child, FamilyPerson requester,
+            FamilyMember.Relation relation, LocalDateTime at, String by) {
+        requireChildOf(group, child, requester, at.toLocalDate());
+        if (relation == null) {
+            throw new FamilyRefusedException(Reason.NO_PROOF, "A child is added with who their parent or guardian is");
+        }
+        return group.with(new FamilyMember(child.patientId(), false, requester.patientId(), relation, at, false),
+                FamilyChange.Action.CHILD_ADDED, at, by);
+    }
+
+    /**
+     * Reception saw what proves the relation of a child an adult registered on the web (D-92): from then on the
+     * child is in the group as any other.
+     *
+     * @throws FamilyRefusedException when they are not in the group, it is not seen, or there is nothing to prove
+     */
+    public static FamilyUpdate proveRelation(FamilyGroup group, UUID patientId, boolean proofSeen, LocalDateTime at,
+            String by) {
+        requireAMember(group, patientId);
+        if (group.member(patientId).orElseThrow().relationProved()) {
+            throw new FamilyRefusedException(Reason.NOTHING_TO_PROVE, "There is no relation to prove for that member");
+        }
+        if (!proofSeen) {
+            throw new FamilyRefusedException(Reason.NO_PROOF,
+                    "A relation is proved once reception has seen what proves it");
+        }
+        return group.proving(patientId, at, by);
+    }
+
+    /** A child under 13, not in the group, asked for by an adult of it. */
+    private static void requireChildOf(FamilyGroup group, FamilyPerson child, FamilyPerson requester,
+            LocalDate today) {
         if (ageOf(child, today) != AgeBand.CHILD) {
             throw new FamilyRefusedException(Reason.NOT_A_CHILD, "Whoever is 13 or older joins by themselves");
         }
@@ -66,12 +117,6 @@ public final class FamilyGroupService {
             throw new FamilyRefusedException(Reason.NOT_AN_ADULT_MEMBER,
                     "A child is added at the request of an adult of the group");
         }
-        if (relation == null || !proofSeen) {
-            throw new FamilyRefusedException(Reason.NO_PROOF,
-                    "A child is added once reception has seen who their parent or guardian is");
-        }
-        return group.with(new FamilyMember(child.patientId(), false, requester.patientId(), relation, at),
-                FamilyChange.Action.CHILD_ADDED, at, by);
     }
 
     /** @throws FamilyRefusedException when the patient is not in the group */

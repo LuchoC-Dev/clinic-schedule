@@ -8,7 +8,7 @@
     <div th:replace="~{fragments :: messages}"></div>
 
     <p th:if="${groups.isEmpty()}" class="muted">No estás en ningún grupo familiar. Los arma recepción: acercate con tu
-        documento, y con el de quien quieras sumar.</p>
+        documento, y con el de quien quieras sumar. Si registrás a un hijo desde acá, se forma uno con él.</p>
 
     <th:block th:each="g : ${groups}">
         <h2 th:text="${g.name}">Familia Medina</h2>
@@ -32,6 +32,42 @@
                 <button type="submit" class="danger">Salir del grupo</button>
             </form>
         </div>
+    </th:block>
+
+    <th:block th:if="${adult}">
+        <h2>Registrar a un hijo menor de 13</h2>
+        <p class="muted">Lo registramos al instante, en tu grupo, con el vínculo sin probar: hasta que vengan a
+            recepción con su documento y lo que prueba que sos su madre, padre o tutor, tiene un turno por delante.</p>
+        <form class="card" method="post" th:action="@{/portal/family/children}">
+            <p><label>Nombre completo
+                <input type="text" name="fullName" required maxlength="150">
+            </label></p>
+            <p><label>Tipo de documento
+                <select name="documentType">
+                    <option th:each="t : ${documentTypes}" th:value="${t}" th:text="${t}">DNI</option>
+                </select>
+            </label></p>
+            <p><label>Número
+                <input type="text" name="documentNumber" required maxlength="20">
+            </label></p>
+            <p><label>Fecha de nacimiento
+                <input type="date" name="birthDate" required>
+            </label></p>
+            <p><label>Sos su
+                <select name="relation">
+                    <option value="MOTHER">madre</option>
+                    <option value="FATHER">padre</option>
+                    <option value="GUARDIAN">tutor o tutora</option>
+                </select>
+            </label></p>
+            <p><label>En el grupo
+                <select name="groupId">
+                    <option th:each="g : ${groups}" th:value="${g.id}" th:text="${g.name}">Familia Medina</option>
+                    <option value="">Un grupo nuevo</option>
+                </select>
+            </label></p>
+            <button type="submit" class="primary">Registrar</button>
+        </form>
     </th:block>
 
     <p class="muted" th:unless="${groups.isEmpty()}">Desde los 18, sacás, cancelás y ves los turnos de quienes los

@@ -17,5 +17,7 @@ public enum AccountAction {
     /** Too many failed logins in a row locked the account for a while. */
     LOCKED,
     /** Opened, in use at once, by the patient confirming from their email the registration they made on the web. */
-    REGISTERED
+    REGISTERED,
+    /** The patient asked to register a child under 13 from their account, whatever came of it (D-92). */
+    CHILD_REQUESTED
 }

@@ -1849,12 +1849,72 @@ confirmar el registro desde la web".
 one appointment ahead until reception verifies them; a document the practice knows opens nothing and is answered
 the same, and a registration never confirmed is forgotten. Part 2 follows.
 
-#### Part 2 — Their children under 13 `[ ]`
-- [ ] With the registration or later from the account: each child's name, document, date of birth and
-      relation
-- [ ] A family group with the relation not proved; the adult acts for the children, one appointment ahead
-      each until reception verifies them
-- [ ] Reception verifies the identity and proves the relation at the desk; from then on, the usual rules
+#### Part 2 — Their children under 13 `[x]`
+- [x] With the registration or later from the account: each child's name, document, date of birth and
+      relation (D-92) — up to five with the registration, checked as it is made (`WebRegistrationPolicy.check`:
+      under 13 on the day, no document twice, the adult's included), waiting in `web_registration_child`
+- [x] A child's document the practice knows registers nothing and is answered the same: the email with the link
+      names the children it registers and those it could not, and confirming skips a document registered meanwhile,
+      the login naming them; a known adult keeps nothing, children included
+- [x] A family group "Familia de" and the adult's name, formed as it is confirmed in the account's name
+      (`AccountNamePort`), the adult sharing and each child added with the relation not proved
+      (`FamilyGroupService.addChildUnproved`, `family_member.relation_proved`)
+- [x] The adult acts for the children, one appointment ahead each until reception verifies them; until the relation
+      is proved, nobody else in the group acts for them (`FamilyAccessPolicy`)
+- [x] From the account, any adult registers a child at once, into a group of theirs or a new one
+      (`RegisterChildUseCase`); every request is recorded, `CHILD_REQUESTED`, and five a day at most,
+      `app.portal.children-per-day`
+- [x] Reception verifies the identity and proves the relation at the desk — "Vínculo sin probar · pedido desde la
+      web", "Probar vínculo", `RELATION_PROVED` —; from then on, the usual rules
+- [x] `POST /api/portal/registrations` with `children`, its confirmation 200 with `notRegistered`; `POST
+      /api/portal/family/children`; `POST /api/family-groups/{id}/members/{patientId}/relation-proof` and
+      `relationProved`; the form's three blocks, "Registrar a un hijo menor de 13" on *Mi familia*
+- [x] `V44`: `web_registration_child`, `family_member.relation_proved`, `RELATION_PROVED` and `CHILD_REQUESTED`
+- [x] 8 unit and 12 integration tests more, and part 1's given the new shapes. 520 unit and 609 integration tests,
+      1129 in total
+
+**Verified with:** every new test failing when the code it covers was broken on purpose — 76 breakages, all compiling;
+one of them, a known child's document looked up twice as it is confirmed, removed the code it broke, which was
+redundant, and of the other 75, 69 were caught: an unproved child added proved, a reception child unproved, without
+a relation or of any age; a proof without the proof seen, twice, recorded as a child added, proving nothing or losing
+the relation, sharing losing the proof, a joined member unproved; anyone or nobody acting for an unproved child; six
+children, a document twice, the adult's document for a child, a child of 13 or with no date of birth, the children
+unchecked, documents told apart by their dots or not by their type, a child without a relation or kept out of order;
+the email naming no child, nobody unregistered or joining with commas; a known child kept, the children's data
+unchecked, dropped as they wait or as they are confirmed, one registered meanwhile unnamed, a known adult's children
+named; the group in reception's name or another account's, named otherwise, without the adult, or one per child; a
+minor registering children, someone else's group, the chosen group ignored, no daily limit or one for ever, requests
+not recorded or only when they registered someone, a known child answered otherwise, the setting ignored, another
+action counted; the proof and the waiting children not kept, a child's relation lost; V44 refusing a proof or a
+request, or letting a joined member be unproved; the API dropping the children, the unregistered, the 202, the 429
+and the proof; and each message, label, block and button of the screens. Six survive, and are equivalent: an adult
+joining a group shares whatever is said; a child of 13, a document that cannot be one or someone else's group, left
+to the later rules, are refused the same and the transaction takes everything back; the proof read back for a joined
+member, always true; and V44's cascade, since JPA deletes the children first. Two gaps were found and closed first: a
+child turned 13 unproved who chose to share lost the mark, and nothing checked V44's rule that only a child has a
+relation to prove; and the double lookup was made one. The faults ran one at a time, with a control that changes only
+a comment, not caught. `mvnw clean verify`, with the seven `*PostgresIT` on PostgreSQL 18, which ran V44.
+
+**Verified with the application running** on a throwaway PostgreSQL and a throwaway Mailpit: taken to V43 and the
+seed by master's build — part 1, `13bdc8c` —, a registration left waiting there, then started on this branch, which
+applied V44 out of order and confirmed that registration (200, nobody unregistered). Carla Núñez registered with
+three children: Bruno as `55.111.222`, Ciro with the seed's `DNI 30111222` and Dana. The answer was the same 202;
+Mailpit's link named Bruno and Dana as registered and Ciro as not, sending him to reception; the database kept Bruno
+and Dana waiting, as typed. A child born in 2013 was refused (409), and a child with the adult's document (400).
+Reception registered Dana before the link was followed, and confirming answered `notRegistered: ["Dana Núñez"]`.
+Bruno was declared and registered on the web, in "Familia de Carla Núñez", MOTHER, the relation not proved; the group's
+history was all by the account. Carla booked for Bruno once and was refused a second; from her account she registered
+four more children and Ciro, which registered nothing, and was refused the sixth with a 429, five requests recorded.
+Reception was refused the proof unseen (409), proved Bruno's relation, the others still unproved, verified him, and
+Carla booked his second. V44's constraints were there by name. On the screens reception's group listed the four
+unproved children with "Vínculo sin probar · pedido desde la web" and "Probar vínculo", and "Vínculo probado — Bruno
+Núñez" by "el paciente (web)" in its history; the account's history had five "Pidió registrar a un hijo desde la web";
+Carla's *Mi familia* listed her children with the form to register another, and the registration's form three blocks.
+
+**Part 2 of phase 8 is done:** an adult registers their children under 13 with their registration or from their
+account, into a family group with the relation not proved, acting for them one appointment ahead each; a document
+the practice knows registers nothing and is answered the same; reception verifies the children and proves the
+relation at the desk, and then the usual rules apply.
 
 ---
 

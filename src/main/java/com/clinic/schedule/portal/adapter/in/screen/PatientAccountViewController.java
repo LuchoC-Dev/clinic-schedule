@@ -204,6 +204,7 @@ class PatientAccountViewController {
                 case PASSWORD_CHANGED -> "Contraseña cambiada";
                 case LOCKED -> "Bloqueada por intentos fallidos";
                 case REGISTERED -> "Abierta al confirmar el registro desde la web";
+                case CHILD_REQUESTED -> "Pidió registrar a un hijo desde la web";
             }, change.by() != null ? change.by() : switch (change.action()) {
                 case RECOVERY_SENT -> "pedido desde la web";
                 case LOCKED -> "";

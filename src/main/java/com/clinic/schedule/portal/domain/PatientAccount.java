@@ -219,6 +219,17 @@ public final class PatientAccount {
                 lockedUntil), AccountAction.PASSWORD_CHANGED, at, null);
     }
 
+    /**
+     * The entry that records the patient asking to register a child under 13 from their account (D-92), whatever
+     * came of it: the history is what tells how many they asked for in a day.
+     *
+     * @throws AccountStateException unless the account is in use
+     */
+    public AccountChange childRequested(LocalDateTime at) {
+        requireActive();
+        return AccountChange.of(id, AccountAction.CHILD_REQUESTED, at, null);
+    }
+
     private PatientAccount withLogins(int failed, LocalDateTime until) {
         return new PatientAccount(id, patientId, email, passwordHash, status, openedAt, failed, until);
     }

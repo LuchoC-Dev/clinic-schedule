@@ -18,7 +18,9 @@ public record FamilyChange(UUID id, UUID groupId, Action action, UUID patientId,
         CHILD_ADDED,
         REMOVED,
         SHARING_STARTED,
-        SHARING_STOPPED
+        SHARING_STOPPED,
+        /** Reception saw what proves the relation of a child an adult registered on the web (D-92). */
+        RELATION_PROVED
     }
 
     public FamilyChange {

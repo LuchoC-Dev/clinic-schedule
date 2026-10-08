@@ -28,6 +28,7 @@ import com.clinic.schedule.portal.application.usecase.ChangeOwnContactUseCase;
 import com.clinic.schedule.portal.application.usecase.ListOwnAppointmentsUseCase;
 import com.clinic.schedule.portal.application.usecase.ManageOwnFamilyUseCase;
 import com.clinic.schedule.portal.application.usecase.RecoverPasswordUseCase;
+import com.clinic.schedule.portal.application.usecase.RegisterChildUseCase;
 import com.clinic.schedule.portal.application.usecase.RegisterOnWebUseCase;
 import com.clinic.schedule.portal.application.usecase.ViewFamilyUseCase;
 import com.clinic.schedule.portal.application.usecase.ViewOwnDataUseCase;
@@ -62,13 +63,15 @@ class PortalController {
     private final RecoverPasswordUseCase recovery;
     private final ChangeOwnPasswordUseCase ownPassword;
     private final RegisterOnWebUseCase registration;
+    private final RegisterChildUseCase child;
     private final PractitionerReader practitioners;
 
     PortalController(ActivateAccountUseCase activate, ListOwnAppointmentsUseCase appointments, ViewOwnDataUseCase data,
             ChangeOwnContactUseCase contact, ChangeOwnConsentUseCase consent, ViewWebBookingUseCase booking,
             BookOnWebUseCase book, CancelOwnAppointmentUseCase cancel, CancelLinkUseCase cancelLinks,
             ViewFamilyUseCase family, ManageOwnFamilyUseCase ownFamily, RecoverPasswordUseCase recovery,
-            ChangeOwnPasswordUseCase ownPassword, RegisterOnWebUseCase registration, PractitionerReader practitioners) {
+            ChangeOwnPasswordUseCase ownPassword, RegisterOnWebUseCase registration, RegisterChildUseCase child,
+            PractitionerReader practitioners) {
         this.activate = activate;
         this.appointments = appointments;
         this.data = data;
@@ -83,6 +86,7 @@ class PortalController {
         this.recovery = recovery;
         this.ownPassword = ownPassword;
         this.registration = registration;
+        this.child = child;
         this.practitioners = practitioners;
     }
 
@@ -176,7 +180,12 @@ class PortalController {
     ResponseEntity<Object> register(@RequestBody RegistrationRequests.Registration request) {
         boolean sent = registration.request(new RegisterOnWebUseCase.Command(request.fullName(),
                 request.documentType(), request.documentNumber(), request.birthDate(), request.phone(),
-                request.email(), request.password()));
+                request.email(), request.password(), request.children() == null ? List.of()
+                        : request.children().stream()
+                                .map(child -> new RegisterOnWebUseCase.ChildCommand(child.fullName(),
+                                        child.documentType(), child.documentNumber(), child.birthDate(),
+                                        child.relation()))
+                                .toList()));
         if (!sent) {
             return ResponseEntity.status(HttpStatus.SERVICE_UNAVAILABLE).body(ErrorResponse.of(503,
                     "Service unavailable", "The email could not go out; nothing was kept"));
@@ -185,16 +194,29 @@ class PortalController {
     }
 
     /**
-     * With the token of the email's link: 204 once the patient is registered with their account in use; 409 when
-     * the document was someone's by then, and nothing was registered.
+     * With the token of the email's link: 200 once the patient is registered with their account in use, with the
+     * children it could not register (D-92); 409 when the adult's document was someone's by then, and nothing was
+     * registered.
      */
     @PostMapping("/api/portal/registrations/confirmation")
     ResponseEntity<Object> confirmRegistration(@RequestBody RegistrationRequests.Confirmation request) {
-        if (registration.confirm(request.token()) == RegisterOnWebUseCase.Confirmation.DOCUMENT_KNOWN) {
+        RegisterOnWebUseCase.Confirmation confirmed = registration.confirm(request.token());
+        if (confirmed.outcome() == RegisterOnWebUseCase.Outcome.DOCUMENT_KNOWN) {
             return ResponseEntity.status(HttpStatus.CONFLICT).body(ErrorResponse.of(409, "Conflict",
                     "The document is already the practice's: the registration is done at reception"));
         }
-        return ResponseEntity.noContent().build();
+        return ResponseEntity.ok(new RegistrationRequests.Confirmed(confirmed.notRegistered()));
+    }
+
+    /**
+     * The adult logged in registers a child under 13 (D-92): 202 whether or not the practice knew the document; 429
+     * once the account asked for as many as a day takes.
+     */
+    @PostMapping("/api/portal/family/children")
+    ResponseEntity<Void> registerChild(@RequestBody RegistrationRequests.AccountChild request) {
+        child.handle(new RegisterChildUseCase.Command(request.fullName(), request.documentType(),
+                request.documentNumber(), request.birthDate(), request.relation(), request.groupId()));
+        return ResponseEntity.accepted().build();
     }
 
     /** The patient logged in changes their password, giving the current one. */

@@ -16,10 +16,16 @@
             <td>
                 <a th:href="@{/patients/{id}(id=${m.patientId})}" th:text="${m.name}">Ana Pérez</a>
                 <div class="muted" th:if="${m.requestedBy}" th:text="${m.requestedBy}">A pedido de Luis Pérez (padre)</div>
+                <div class="error" th:unless="${m.relationProved}">Vínculo sin probar · pedido desde la web</div>
             </td>
             <td th:text="${m.age}">adulto</td>
             <td th:text="${m.sharing}">Comparte sus turnos</td>
             <td class="bar">
+                <form class="inline" method="post" th:unless="${m.relationProved}"
+                      th:action="@{/family-groups/{id}/members/{p}/relation-proof(id=${group.id},p=${m.patientId})}">
+                    <label><input type="checkbox" name="proofSeen" value="true" required> Vi lo que prueba el vínculo</label>
+                    <button type="submit">Probar vínculo</button>
+                </form>
                 <form class="inline" method="post" th:if="${m.decides}"
                       th:action="@{/family-groups/{id}/members/{p}/sharing(id=${group.id},p=${m.patientId})}">
                     <input type="hidden" name="shares" th:value="${!m.shares}">

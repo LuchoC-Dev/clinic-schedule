@@ -112,4 +112,24 @@ class FamilyAccessPolicyTest {
                 .containsExactly(grandmother.patientId());
         assertThat(FamilyAccessPolicy.actedFor(mother, List.of(grandmothers), birthDates, TODAY)).isEmpty();
     }
+
+    /** Until reception proves it, nobody but whoever registered the child acts for them (D-92). */
+    @Test
+    void aChildWhoseRelationIsNotProvedIsActedForOnlyByWhoeverRegisteredThem() {
+        FamilyPerson mother = person(TODAY.minusYears(40));
+        FamilyPerson partner = person(TODAY.minusYears(42));
+        FamilyPerson child = person(TODAY.minusYears(6));
+        FamilyGroup group = join(join(group(), mother, true), partner, true);
+        group = FamilyGroupService.addChildUnproved(group, child, mother, FamilyMember.Relation.MOTHER, NOW,
+                "portal:cuenta").group();
+
+        assertThat(FamilyAccessPolicy.actedFor(mother, List.of(group), birthDates, TODAY))
+                .containsExactlyInAnyOrder(child.patientId(), partner.patientId());
+        assertThat(FamilyAccessPolicy.actedFor(partner, List.of(group), birthDates, TODAY))
+                .containsExactly(mother.patientId());
+
+        group = FamilyGroupService.proveRelation(group, child.patientId(), true, NOW, "recepcion").group();
+        assertThat(FamilyAccessPolicy.actedFor(partner, List.of(group), birthDates, TODAY))
+                .containsExactlyInAnyOrder(mother.patientId(), child.patientId());
+    }
 }

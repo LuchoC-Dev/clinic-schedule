@@ -67,6 +67,18 @@ public class ManageFamilyGroupUseCase {
                 proofSeen, LocalDateTime.now(clock), currentUser.username()));
     }
 
+    /**
+     * Reception saw what proves the relation of a child an adult registered on the web (D-92).
+     *
+     * @throws com.clinic.schedule.portal.domain.exception.FamilyRefusedException when there is nothing to prove, or
+     *         it was not seen
+     */
+    @Transactional
+    public FamilyGroup proveRelation(UUID groupId, UUID patientId, boolean proofSeen) {
+        return save(FamilyGroupService.proveRelation(group(groupId), patientId, proofSeen, LocalDateTime.now(clock),
+                currentUser.username()));
+    }
+
     /** @throws com.clinic.schedule.portal.domain.exception.FamilyRefusedException when they are not in it */
     @Transactional
     public FamilyGroup remove(UUID groupId, UUID patientId) {

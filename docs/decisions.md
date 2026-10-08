@@ -3097,7 +3097,8 @@ it); moving an appointment on the web (cancel and book again); the patient's doc
 cancelled for the admins (it would lead back to the patient); telling the arrivals (unreachable a day ahead).
 
 ## D-84 — Reception forms family groups, with each member's age deciding how they join and whether they share
-**Date:** 2026-10-03 · **Status:** accepted
+**Date:** 2026-10-03 · **Status:** accepted; a child an adult registers on the web joins with the relation not
+proved, and reception proves it afterwards, in D-92
 
 v2, phase 6, part 5a. So that a family books from one account (part 5b), reception first forms the group at
 the desk. What a member then does for the others on the web is part 5b; this part only forms the groups and
@@ -3146,7 +3147,8 @@ parent (each joins as their age allows); a member's appointments shared by defau
 they say so); patients forming groups on the web (reception sees the proof).
 
 ## D-85 — From 18, a member books, cancels and sees the appointments of those who share theirs
-**Date:** 2026-10-03 · **Status:** accepted
+**Date:** 2026-10-03 · **Status:** accepted; a child whose relation is not proved is acted for only by who registered
+them, in D-92
 
 v2, phase 6, part 5b. Reception forms the family groups (D-84); this part is what their members do for each
 other on the web.
@@ -3503,7 +3505,8 @@ coverage are different rows).
 ---
 
 ## D-91 — An adult registers on the web, confirmed by email, unverified and one appointment ahead until reception sees them
-**Date:** 2026-10-08 · **Status:** accepted
+**Date:** 2026-10-08 · **Status:** accepted; with their children under 13, and the confirmation answers 200 naming
+those it could not register, in D-92
 
 v2, phase 8, part 1. Until now only reception registered a patient and opened their account (D-79). An adult of
 18 or older now registers themselves on the web, confirms it from their email, and books; reception verifies who
@@ -3588,3 +3591,82 @@ limit for every unverified patient (it would change phase 6's family groups, who
 on the account rather than the patient (reception reads it on the patient, and it outlives the account); the
 account's email as the patient's contact (D-79: they are apart); letting the patient module refuse a known document
 at confirmation (its refusal would roll the forgetting back).
+
+---
+
+## D-92 — An adult registers their children under 13 on the web, in a family group with the relation not proved
+**Date:** 2026-10-08 · **Status:** accepted
+
+v2, phase 8, part 2. An adult registers themselves on the web (D-91); now also their children under 13 — with their
+own registration, or later from their account —, so they book for them from the start, and reception verifies who
+they are and proves the relation when they come. An adolescent from 13 is still registered at reception, where they
+decide on their own privacy (D-84).
+
+**In `portal`, as the adult's registration and the family group are.** Each child is a name, a document — required —,
+a date of birth and what the adult is to them, `MOTHER`, `FATHER` or `GUARDIAN` (`RegisteredChild`). The patient
+module registers them as it registers the adult, through `WebPatient`, `checkFromWeb` and `registerFromWeb`: declared,
+marked as registered on the web, with no phone. `patient/api` does not change.
+
+**With the adult's registration.** `WebRegistrationPolicy.check` takes the children along: up to five, each under 13 on
+the day, with a date of birth and the relation, and no document twice — the adult's included —, told apart as the
+patient module tells documents, without the separators people type (`Registrant.documentKey`). Every child typed is
+checked, so the answer to the form never depends on whether the practice knows a document. The children wait with the
+registration in `web_registration_child` (`V44`), as typed and in order, and are forgotten with it.
+
+**A child's document the practice knows registers nothing, and the answer is the same.** The adult's document decides
+first: a known one keeps nothing, the children included, and gets the email of D-91 sending them to reception, since
+there would be no account to hang them on. Otherwise each child whose document the practice knows is left out of the
+registration, and the email with the link names the children it registers and, of the others, only that they could
+not be registered with that document and are to come to reception. It says nothing of who is a patient; it tells the
+holder of the email no more than D-91's does of the adult. Confirming looks again: a child whose document someone
+registered meanwhile, or who turned 13 meanwhile, is skipped, and the login names them for the adult to go to
+reception; the adult and the others are registered all the same.
+
+**A family group with the relation not proved.** Confirming, once at least one child is registered, forms a group
+"Familia de" and the adult's name, with the adult in it sharing, as an adult who joins, and each child added at
+their request with the relation named and `relationProved` false (`family_member.relation_proved`, `V44`; the children
+already in groups were added by reception with the proof seen, so the default says true of them). The group's history
+records it all in the account's name, `portal:` and its id (D-81), through `AccountNamePort`, since nobody is logged in
+as the link is followed. `FamilyGroupService.addChildUnproved` is the way in for it (D-17): the rules of `addChild` but
+the proof.
+
+**Only who registered the child acts for them until the relation is proved.** A child under 13 is acted for by every
+adult of their group (D-85). Unproved, `FamilyAccessPolicy` lets only the adult who asked for them see, book and cancel
+their appointments: otherwise a child an adult adds from the web to a group reception formed would be seen by its other
+adults with nobody having seen any proof. Once proved, the rules of D-85.
+
+**Later, from the account.** `RegisterChildUseCase`: any account holder of 18 or older — registered on the web or at
+reception, verified or not — registers a child at once, the email being proven already, into a group of theirs they
+choose or, without one, a new one formed as above. A document the practice knows registers nothing and is answered
+the same, 202. *What this does not hide:* whether the child appears in the adult's family tells them, and a logged-in
+adult could try one document after another at no cost of an email each. So every request is recorded in the account's
+history, `CHILD_REQUESTED`, by nobody at reception, whatever came of it, and at most `app.portal.children-per-day`, five,
+are taken in 24 hours, those that registered nothing included; beyond it a 429. What the form alone tells — a child of
+13, a document that cannot be one — is said and not counted.
+
+**One appointment ahead each until reception verifies them.** A child registered on the web and unverified awaits
+verification as the adult does (D-91), so the adult books one appointment ahead for each; once reception sees the
+child's document, the usual three.
+
+**Reception verifies them at the desk.** The child's identity, on their patient's screen, as any (D-60). The relation,
+on the group's screen: the child's row reads "Vínculo sin probar · pedido desde la web", beside a checkbox "Vi lo que
+prueba el vínculo" and "Probar vínculo"; `FamilyGroupService.proveRelation` records `RELATION_PROVED`, and refuses
+without the proof seen or with nothing to prove. The two are apart, as the scope says: proving the relation verifies
+nobody, and verifying a child proves no relation. With both, the group is as any other.
+
+**Routes and screens.** `POST /api/portal/registrations` takes `children`; its confirmation answers 200 with
+`notRegistered`, the children it could not register, by name — a change from D-91's 204. `POST
+/api/portal/family/children` (`{fullName, documentType, documentNumber, birthDate, relation, groupId}`, 202, 429);
+`POST /api/family-groups/{id}/members/{patientId}/relation-proof` (`{proofSeen}`), reception's, and `relationProved` on
+each member of the group's answer. The registration's form has three blocks for children; *Mi familia* has "Registrar
+a un hijo menor de 13" for an adult; reception's group screen the relation's state and its proof; and the account's
+history reads "Pidió registrar a un hijo desde la web".
+
+*Rejected:* refusing the whole registration when a child's document is known (the adult and the other children would
+pay for it, and the answer would differ); naming a child as already a patient (the email goes to whoever typed it);
+registering the children of a known adult (no account to act for them from); a confirmation by email for a child
+registered from the account (the account's email is proven, and the email would tell the same); every adult of the
+group acting for an unproved child (nobody saw the proof); no limit on the account's requests (a logged-in adult could
+look up documents one after another); counting only the requests that registered someone (the known ones are what is
+being looked up); a group of its own for each child (a family books from one group); proving the relation as
+verifying the child, or the other way round (they are different papers).

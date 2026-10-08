@@ -37,8 +37,8 @@ import com.clinic.schedule.security.api.PatientUsername;
 
 /**
  * Reception's screens of the family groups (D-84), in Spanish: the groups, and each one's members — who shares
- * their appointments, who asked for a child to be added — with the forms to form it at the desk and its
- * history. Every action answers with a redirect back, saying what happened (D-33).
+ * their appointments, who asked for a child to be added and whether that relation is proved yet (D-92) —
+ * with the forms to form it at the desk and its history. Every action answers with a redirect back, saying what happened (D-33).
  */
 @Controller
 class FamilyGroupViewController {
@@ -121,6 +121,18 @@ class FamilyGroupViewController {
                 "Menor agregado al grupo.", redirect);
     }
 
+    /** Reception saw what proves the relation of a child an adult registered on the web (D-92). */
+    @PostMapping("/family-groups/{id}/members/{patientId}/relation-proof")
+    String proveRelation(@PathVariable UUID id, @PathVariable UUID patientId,
+            @RequestParam(defaultValue = "false") boolean proofSeen, RedirectAttributes redirect) {
+        if (!proofSeen) {
+            redirect.addFlashAttribute("error", "Para probar el vínculo, mirá la documentación que lo acredita y "
+                    + "marcalo.");
+            return "redirect:/family-groups/" + id;
+        }
+        return attempt(id, () -> manage.proveRelation(id, patientId, true), "Vínculo probado.", redirect);
+    }
+
     @PostMapping("/family-groups/{id}/members/{patientId}/remove")
     String remove(@PathVariable UUID id, @PathVariable UUID patientId, RedirectAttributes redirect) {
         return attempt(id, () -> manage.remove(id, patientId), "Salió del grupo.", redirect);
@@ -157,6 +169,7 @@ class FamilyGroupViewController {
             case NOT_AN_ADULT_MEMBER -> "Un menor se agrega a pedido de un adulto del grupo.";
             case NO_PROOF -> "Para agregar un menor, mirá la documentación que acredita el vínculo y marcalo.";
             case CHILDREN_SHARE -> "Un menor de 13 comparte siempre sus turnos con su familia.";
+            case NOTHING_TO_PROVE -> "Ese miembro no tiene un vínculo por probar.";
         };
     }
 
@@ -170,7 +183,7 @@ class FamilyGroupViewController {
 
     /** A member as the screen lists them, in Spanish. */
     record MemberRow(UUID patientId, String name, String age, String sharing, String requestedBy, boolean adult,
-            boolean decides, boolean shares) {
+            boolean decides, boolean shares, boolean relationProved) {
 
         static MemberRow of(FamilyMember member, Map<UUID, PatientSummary> patients, LocalDate today) {
             PatientSummary patient = patients.get(member.patientId());
@@ -187,7 +200,7 @@ class FamilyGroupViewController {
                             : shares ? "Comparte sus turnos" : "Turnos privados",
                     member.requestedBy() == null ? null : "A pedido de "
                             + patients.get(member.requestedBy()).fullName() + " (" + relation(member.relation()) + ")",
-                    band == AgeBand.ADULT, band != null && band != AgeBand.CHILD, shares);
+                    band == AgeBand.ADULT, band != null && band != AgeBand.CHILD, shares, member.relationProved());
         }
     }
 
@@ -203,6 +216,7 @@ class FamilyGroupViewController {
                 case REMOVED -> "Salió";
                 case SHARING_STARTED -> "Empezó a compartir sus turnos";
                 case SHARING_STOPPED -> "Dejó de compartir sus turnos";
+                case RELATION_PROVED -> "Vínculo probado";
             } + who, PatientUsername.is(change.by()) ? "el paciente (web)" : change.by());
         }
     }

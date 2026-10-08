@@ -175,12 +175,12 @@ class FamilyGroupServiceTest {
     void theGroupSeesAChildsAppointmentsUntilTheyTurnThirteen() {
         LocalDate born = LocalDate.of(2013, 6, 15);
         FamilyMember child = new FamilyMember(UUID.randomUUID(), false, UUID.randomUUID(),
-                FamilyMember.Relation.MOTHER, NOW);
+                FamilyMember.Relation.MOTHER, NOW, true);
         FamilyPerson person = new FamilyPerson(child.patientId(), born);
 
         assertThat(FamilyGroupService.sharesOn(child, person, LocalDate.of(2026, 6, 14))).isTrue();
         assertThat(FamilyGroupService.sharesOn(child, person, LocalDate.of(2026, 6, 15))).isFalse();
-        FamilyMember sharing = new FamilyMember(child.patientId(), true, null, null, NOW);
+        FamilyMember sharing = new FamilyMember(child.patientId(), true, null, null, NOW, true);
         assertThat(FamilyGroupService.sharesOn(sharing, person, LocalDate.of(2026, 6, 15))).isTrue();
         assertThat(FamilyGroupService.sharesOn(sharing, new FamilyPerson(child.patientId(), null), TODAY)).isTrue();
         assertThat(FamilyGroupService.sharesOn(child, new FamilyPerson(child.patientId(), null), TODAY)).isFalse();
@@ -189,12 +189,12 @@ class FamilyGroupServiceTest {
     @Test
     void aGroupHoldsAPatientOnce() {
         UUID patient = UUID.randomUUID();
-        List<FamilyMember> twice = List.of(new FamilyMember(patient, true, null, null, NOW),
-                new FamilyMember(patient, false, null, null, NOW));
+        List<FamilyMember> twice = List.of(new FamilyMember(patient, true, null, null, NOW, true),
+                new FamilyMember(patient, false, null, null, NOW, true));
 
         assertThatThrownBy(() -> FamilyGroup.restore(UUID.randomUUID(), "Familia", NOW, twice))
                 .isInstanceOf(IllegalArgumentException.class);
-        assertThatThrownBy(() -> new FamilyMember(patient, false, UUID.randomUUID(), null, NOW))
+        assertThatThrownBy(() -> new FamilyMember(patient, false, UUID.randomUUID(), null, NOW, true))
                 .isInstanceOf(IllegalArgumentException.class);
     }
 
@@ -206,5 +206,78 @@ class FamilyGroupServiceTest {
                 UUID.randomUUID(), NOW, "recepcion")).isInstanceOf(IllegalArgumentException.class);
         assertThatThrownBy(() -> new FamilyChange(UUID.randomUUID(), group, FamilyChange.Action.JOINED, null, NOW,
                 "recepcion")).isInstanceOf(IllegalArgumentException.class);
+    }
+
+    /** A child an adult registers on the web: at their request, the relation named and not proved (D-92). */
+    @Test
+    void aChildRegisteredOnTheWebIsAddedWithTheRelationNotProved() {
+        FamilyUpdate added = FamilyGroupService.addChildUnproved(withAdult(), CHILD, ADULT,
+                FamilyMember.Relation.FATHER, NOW, "portal:cuenta");
+
+        FamilyMember child = added.group().member(CHILD.patientId()).orElseThrow();
+        assertThat(child.relationProved()).isFalse();
+        assertThat(child.requestedBy()).isEqualTo(ADULT.patientId());
+        assertThat(child.relation()).isEqualTo(FamilyMember.Relation.FATHER);
+        assertThat(added.change().action()).isEqualTo(FamilyChange.Action.CHILD_ADDED);
+        assertThat(added.change().by()).isEqualTo("portal:cuenta");
+        assertThat(FamilyGroupService.sharesOn(child, CHILD, TODAY)).isTrue();
+        // Added at the desk, it is proved; whoever joins has nothing to prove.
+        assertThat(FamilyGroupService.addChild(withAdult(), CHILD, ADULT, FamilyMember.Relation.FATHER, true, NOW,
+                "recepcion").group().member(CHILD.patientId()).orElseThrow().relationProved()).isTrue();
+        assertThat(withAdult().member(ADULT.patientId()).orElseThrow().relationProved()).isTrue();
+    }
+
+    @Test
+    void aChildRegisteredOnTheWebFollowsTheRulesOfAChildButTheProof() {
+        assertThat(refusal(() -> FamilyGroupService.addChildUnproved(withAdult(), ADOLESCENT, ADULT,
+                FamilyMember.Relation.MOTHER, NOW, "p"))).isEqualTo(Reason.NOT_A_CHILD);
+        assertThat(refusal(() -> FamilyGroupService.addChildUnproved(empty(), CHILD, ADULT,
+                FamilyMember.Relation.MOTHER, NOW, "p"))).isEqualTo(Reason.NOT_AN_ADULT_MEMBER);
+        assertThat(refusal(() -> FamilyGroupService.addChildUnproved(withAdult(), CHILD, ADULT, null, NOW, "p")))
+                .isEqualTo(Reason.NO_PROOF);
+        FamilyGroup twice = FamilyGroupService.addChildUnproved(withAdult(), CHILD, ADULT,
+                FamilyMember.Relation.MOTHER, NOW, "p").group();
+        assertThat(refusal(() -> FamilyGroupService.addChildUnproved(twice, CHILD, ADULT,
+                FamilyMember.Relation.MOTHER, NOW, "p"))).isEqualTo(Reason.ALREADY_A_MEMBER);
+        assertThat(refusal(() -> FamilyGroupService.addChildUnproved(withAdult(), person(null), ADULT,
+                FamilyMember.Relation.MOTHER, NOW, "p"))).isEqualTo(Reason.NO_BIRTH_DATE);
+    }
+
+    @Test
+    void receptionProvesTheRelationWithTheProofSeenAndOnce() {
+        FamilyGroup group = FamilyGroupService.addChildUnproved(withAdult(), CHILD, ADULT,
+                FamilyMember.Relation.MOTHER, NOW, "portal:cuenta").group();
+
+        assertThat(refusal(() -> FamilyGroupService.proveRelation(group, CHILD.patientId(), false, NOW, "recepcion")))
+                .isEqualTo(Reason.NO_PROOF);
+        FamilyUpdate proved = FamilyGroupService.proveRelation(group, CHILD.patientId(), true, NOW, "recepcion");
+        FamilyMember child = proved.group().member(CHILD.patientId()).orElseThrow();
+        assertThat(child.relationProved()).isTrue();
+        assertThat(child.requestedBy()).isEqualTo(ADULT.patientId());
+        assertThat(child.relation()).isEqualTo(FamilyMember.Relation.MOTHER);
+        assertThat(proved.change().action()).isEqualTo(FamilyChange.Action.RELATION_PROVED);
+        assertThat(proved.change().patientId()).isEqualTo(CHILD.patientId());
+        assertThat(proved.change().by()).isEqualTo("recepcion");
+
+        assertThat(refusal(() -> FamilyGroupService.proveRelation(proved.group(), CHILD.patientId(), true, NOW, "r")))
+                .isEqualTo(Reason.NOTHING_TO_PROVE);
+        assertThat(refusal(() -> FamilyGroupService.proveRelation(group, ADULT.patientId(), true, NOW, "r")))
+                .isEqualTo(Reason.NOTHING_TO_PROVE);
+        assertThat(refusal(() -> FamilyGroupService.proveRelation(group, UUID.randomUUID(), true, NOW, "r")))
+                .isEqualTo(Reason.NOT_A_MEMBER);
+        assertThatThrownBy(() -> new FamilyMember(UUID.randomUUID(), true, null, null, NOW, false))
+                .isInstanceOf(IllegalArgumentException.class);
+    }
+
+    /** Turned 13 with the relation still not proved, they choose whether to share, and it stays not proved. */
+    @Test
+    void sharingLeavesARelationNotProvedAsItWas() {
+        FamilyPerson child = person(TODAY.minusYears(12).minusDays(1));
+        FamilyGroup group = FamilyGroupService.addChildUnproved(withAdult(), child, ADULT,
+                FamilyMember.Relation.MOTHER, NOW, "portal:cuenta").group();
+
+        FamilyGroup sharing = FamilyGroupService.share(group, child, true, NOW.plusYears(1), "portal:otra").group();
+        assertThat(sharing.member(child.patientId()).orElseThrow().relationProved()).isFalse();
+        assertThat(sharing.member(child.patientId()).orElseThrow().shares()).isTrue();
     }
 }

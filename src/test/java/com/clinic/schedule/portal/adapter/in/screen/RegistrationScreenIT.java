@@ -157,7 +157,7 @@ class RegistrationScreenIT {
         register(dni(), email, "2010-01-01", PASSWORD, PASSWORD)
                 .andExpect(content().string(containsString("Desde la web se registran mayores de 18 años.")));
         register("12AB", email)
-                .andExpect(content().string(containsString("Revisá tus datos")));
+                .andExpect(content().string(containsString("Revisá los datos")));
         register(dni(), "ana-at-mail")
                 .andExpect(content().string(containsString("El email tiene la forma nombre@dominio.com")));
         register(dni(), email, "1990-05-14", "corta", "corta")

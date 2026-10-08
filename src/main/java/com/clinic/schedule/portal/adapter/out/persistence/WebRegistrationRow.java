@@ -2,11 +2,18 @@ package com.clinic.schedule.portal.adapter.out.persistence;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.UUID;
 
+import jakarta.persistence.CollectionTable;
 import jakarta.persistence.Column;
+import jakarta.persistence.ElementCollection;
 import jakarta.persistence.Entity;
+import jakarta.persistence.FetchType;
 import jakarta.persistence.Id;
+import jakarta.persistence.JoinColumn;
+import jakarta.persistence.OrderColumn;
 import jakarta.persistence.Table;
 
 import com.clinic.schedule.portal.domain.Registrant;
@@ -14,7 +21,7 @@ import com.clinic.schedule.portal.domain.WebRegistration;
 
 /**
  * A registration made on the web as a row while it waits for its confirmation (D-91), keeping only the hash of the
- * link's token and of the password.
+ * link's token and of the password, with the children registered with it in the order they were typed (D-92).
  */
 @Entity
 @Table(name = "web_registration")
@@ -53,6 +60,11 @@ class WebRegistrationRow {
     @Column(name = "expires_at", nullable = false)
     private LocalDateTime expiresAt;
 
+    @ElementCollection(fetch = FetchType.EAGER)
+    @CollectionTable(name = "web_registration_child", joinColumns = @JoinColumn(name = "registration_id"))
+    @OrderColumn(name = "position")
+    private List<WebRegistrationChildRow> children = new ArrayList<>();
+
     protected WebRegistrationRow() {
         // required by JPA
     }
@@ -71,12 +83,14 @@ class WebRegistrationRow {
         row.passwordHash = registration.passwordHash();
         row.requestedAt = registration.requestedAt();
         row.expiresAt = registration.expiresAt();
+        row.children = new ArrayList<>(registration.children().stream().map(WebRegistrationChildRow::from).toList());
         return row;
     }
 
     WebRegistration toRegistration() {
         return new WebRegistration(id, tokenHash,
-                new Registrant(fullName, documentType, documentNumber, birthDate, phoneNumber), email, passwordHash,
-                requestedAt, expiresAt);
+                new Registrant(fullName, documentType, documentNumber, birthDate, phoneNumber),
+                children.stream().map(WebRegistrationChildRow::toChild).toList(), email, passwordHash, requestedAt,
+                expiresAt);
     }
 }

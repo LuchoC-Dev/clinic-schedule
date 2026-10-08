@@ -22,7 +22,9 @@ public class FamilyRefusedException extends RuntimeException {
         /** Reception has not seen what proves the request comes from a parent or guardian. */
         NO_PROOF,
         /** A child under 13 shares always: their parents act for them. */
-        CHILDREN_SHARE
+        CHILDREN_SHARE,
+        /** The member's relation is proved already, or they joined by themselves with none to prove (D-92). */
+        NOTHING_TO_PROVE
     }
 
     private final Reason reason;

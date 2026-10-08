@@ -11,6 +11,9 @@
     <p class="ok" th:if="${param.activated}">Cuenta activada: ingresá con tu documento y tu contraseña.</p>
     <p class="ok" th:if="${param.reset}">Tu contraseña quedó cambiada: ingresá con la nueva.</p>
     <p class="ok" th:if="${param.registered}">Registro confirmado: ingresá con tu documento y tu contraseña.</p>
+    <p class="error" th:if="${notRegistered != null and !notRegistered.isEmpty()}">No pudimos registrar a
+        <span th:text="${#strings.listJoin(notRegistered, ', ')}">Juan</span> con ese documento: acercate a recepción
+        con su documento.</p>
     <p class="error" th:if="${param.expired}">Tu sesión se cerró: tu cuenta fue desactivada o cambió su
         contraseña.</p>
     <form class="card" method="post" th:action="@{/portal/login}">

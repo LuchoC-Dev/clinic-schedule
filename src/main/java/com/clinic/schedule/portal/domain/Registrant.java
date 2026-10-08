@@ -1,6 +1,7 @@
 package com.clinic.schedule.portal.domain;
 
 import java.time.LocalDate;
+import java.util.Locale;
 
 /**
  * Who registers themselves on the web (D-91), as they typed it: whether it can be a patient is the patient
@@ -21,5 +22,15 @@ public record Registrant(String fullName, String documentType, String documentNu
                 || phoneNumber != null && phoneNumber.length() > MAX_TYPED) {
             throw new IllegalArgumentException("A document's number or a phone is at most " + MAX_TYPED + " characters");
         }
+    }
+
+    /**
+     * The document as the patient module tells one from another — its type, and its number without the separators
+     * people type out of habit —, so the same document typed twice in one registration is told (D-92).
+     */
+    public String documentKey() {
+        String number = documentNumber == null ? "" : documentNumber.strip().toUpperCase(Locale.ROOT)
+                .replaceAll("[.\\s-]", "");
+        return documentType + " " + number;
     }
 }
