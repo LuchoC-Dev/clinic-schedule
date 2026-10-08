@@ -12,6 +12,7 @@ import com.clinic.schedule.patient.entity.IdentityStatus;
 import com.clinic.schedule.patient.entity.Patient;
 import com.clinic.schedule.patient.entity.Phone;
 import com.clinic.schedule.patient.entity.Relation;
+import com.clinic.schedule.patient.entity.RegistrationChannel;
 import com.clinic.schedule.patient.entity.Responsible;
 
 /**
@@ -23,10 +24,12 @@ import com.clinic.schedule.patient.entity.Responsible;
  * <p>The date of birth, the phone and the email are null when not given; the phone's and the email's
  * {@code owner} is null when they are the patient's own (D-73). So is the health insurance, whose
  * member number and plan are null when not given (D-74). The phone's and the email's {@code consent} say
- * who agreed to the patient being reminded there, null for nobody (D-77).
+ * who agreed to the patient being reminded there, null for nobody (D-77). {@code registeredVia} says whether
+ * the patient was registered at reception or registered themselves on the web (D-91).
  */
 record PatientResponse(UUID id, String fullName, Document document, IdentityStatus identity, String alias,
-        LocalDate birthDate, PhoneResponse phone, EmailResponse email, InsuranceResponse insurance) {
+        LocalDate birthDate, PhoneResponse phone, EmailResponse email, InsuranceResponse insurance,
+        RegistrationChannel registeredVia) {
 
     record InsuranceResponse(String insurer, String memberNumber, String plan) {
 
@@ -71,6 +74,7 @@ record PatientResponse(UUID id, String fullName, Document document, IdentityStat
                 patient.getBirthDate(),
                 PhoneResponse.of(patient.getPhone(), patient.getPhoneConsent()),
                 EmailResponse.of(patient.getEmail(), patient.getEmailConsent()),
-                InsuranceResponse.of(patient.getInsurance()));
+                InsuranceResponse.of(patient.getInsurance()),
+                patient.getRegisteredVia());
     }
 }

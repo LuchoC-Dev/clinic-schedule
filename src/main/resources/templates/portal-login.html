@@ -10,6 +10,7 @@
     <p class="ok" th:if="${param.logout}">Sesión cerrada.</p>
     <p class="ok" th:if="${param.activated}">Cuenta activada: ingresá con tu documento y tu contraseña.</p>
     <p class="ok" th:if="${param.reset}">Tu contraseña quedó cambiada: ingresá con la nueva.</p>
+    <p class="ok" th:if="${param.registered}">Registro confirmado: ingresá con tu documento y tu contraseña.</p>
     <p class="error" th:if="${param.expired}">Tu sesión se cerró: tu cuenta fue desactivada o cambió su
         contraseña.</p>
     <form class="card" method="post" th:action="@{/portal/login}">
@@ -27,7 +28,7 @@
         <button type="submit" class="primary">Ingresar</button>
     </form>
     <p><a th:href="@{/portal/password-recovery}">¿Olvidaste tu contraseña?</a></p>
-    <p class="muted">¿No tenés cuenta? Pedila en recepción.</p>
+    <p>¿No tenés cuenta? <a th:href="@{/portal/register}">Registrate</a>, o pedila en recepción.</p>
 </main>
 </body>
 </html>

@@ -11,6 +11,8 @@ import com.clinic.schedule.portal.application.port.AccountMailPort;
 import com.clinic.schedule.portal.domain.ActivationMessage;
 import com.clinic.schedule.portal.domain.BookingConfirmation;
 import com.clinic.schedule.portal.domain.PasswordResetMessage;
+import com.clinic.schedule.portal.domain.RegistrationMessage;
+import com.clinic.schedule.portal.domain.RegistrationRefusedMessage;
 
 /**
  * Keeps the web accounts' emails instead of sending them; an address that starts with "falla" cannot be
@@ -22,6 +24,8 @@ public class KeptAccountMail {
     public static final List<ActivationMessage> SENT = new CopyOnWriteArrayList<>();
     public static final List<BookingConfirmation> CONFIRMATIONS = new CopyOnWriteArrayList<>();
     public static final List<PasswordResetMessage> RESETS = new CopyOnWriteArrayList<>();
+    public static final List<RegistrationMessage> REGISTRATIONS = new CopyOnWriteArrayList<>();
+    public static final List<RegistrationRefusedMessage> REGISTRATIONS_REFUSED = new CopyOnWriteArrayList<>();
 
     @Bean
     @Primary
@@ -43,6 +47,18 @@ public class KeptAccountMail {
             public void sendPasswordReset(PasswordResetMessage message) {
                 reach(message.address());
                 RESETS.add(message);
+            }
+
+            @Override
+            public void sendRegistration(RegistrationMessage message) {
+                reach(message.address());
+                REGISTRATIONS.add(message);
+            }
+
+            @Override
+            public void sendRegistrationRefused(RegistrationRefusedMessage message) {
+                reach(message.address());
+                REGISTRATIONS_REFUSED.add(message);
             }
         };
     }

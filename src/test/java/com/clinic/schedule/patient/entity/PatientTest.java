@@ -4,6 +4,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatIllegalArgumentException;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 
 import org.junit.jupiter.api.Test;
@@ -162,5 +163,55 @@ class PatientTest {
         assertThat(seenAgain.getIdentityStatus()).isEqualTo(IdentityStatus.VERIFIED);
 
         assertThat(verified().changeIdentity("Ana Pérez", DNI, false, true, NOW, "recepcion")).isEmpty();
+    }
+
+    /** Registered at reception, as every patient was before the web (D-91). */
+    @Test
+    void aPatientRegisteredAtReceptionSaysSo() {
+        assertThat(verified().getRegisteredVia()).isEqualTo(RegistrationChannel.RECEPTION);
+        assertThat(Patient.registerUnidentified("NN-4821").getRegisteredVia()).isEqualTo(RegistrationChannel.RECEPTION);
+    }
+
+    /** An adult who registers on the web gives their document, which nobody has seen yet (D-91). */
+    @Test
+    void aPatientWhoRegistersOnTheWebIsDeclaredWithTheirDocumentAndSaysSo() {
+        PatientDetails details = new PatientDetails(LocalDate.of(1990, 5, 14), Phone.ofNullable("1155550000", null),
+                null, null);
+        Patient patient = Patient.registerFromWeb("Ana Pérez", DNI, details, NOW.toLocalDate());
+
+        assertThat(patient.getIdentityStatus()).isEqualTo(IdentityStatus.DECLARED);
+        assertThat(patient.getRegisteredVia()).isEqualTo(RegistrationChannel.WEB);
+        assertThat(patient.getDocument()).isEqualTo(DNI);
+        assertThat(patient.getBirthDate()).isEqualTo(LocalDate.of(1990, 5, 14));
+        assertThat(patient.getPhone().number()).isEqualTo("1155550000");
+        assertThat(patient.getPhone().owner()).isNull();
+
+        assertThatIllegalArgumentException()
+                .isThrownBy(() -> Patient.registerFromWeb("Ana Pérez", null, details, NOW.toLocalDate()));
+        assertThatThrownBy(() -> Patient.registerFromWeb("Ana Pérez", DNI,
+                new PatientDetails(LocalDate.of(2026, 3, 11), null, null, null), NOW.toLocalDate()))
+                .isInstanceOf(InvalidPatientDetailsException.class);
+    }
+
+    /**
+     * Their account logs in with a document nobody has seen yet: saved as it is they stay declared, and a new
+     * name or document goes in only with the document seen, which verifies them (D-91).
+     */
+    @Test
+    void aPatientWithAWebAccountWhoRegisteredOnTheWebIsVerifiedOnlyWithTheirDocumentSeen() {
+        PatientDetails details = new PatientDetails(LocalDate.of(1990, 5, 14), null, null, null);
+        Patient unchanged = Patient.registerFromWeb("Ana Pérez", DNI, details, NOW.toLocalDate());
+        assertThat(unchanged.changeIdentity("Ana Pérez", DNI, false, true, NOW, "recepcion")).isEmpty();
+        assertThat(unchanged.getIdentityStatus()).isEqualTo(IdentityStatus.DECLARED);
+
+        Patient renamed = Patient.registerFromWeb("Ana Pérez", DNI, details, NOW.toLocalDate());
+        assertThatThrownBy(() -> renamed.changeIdentity("Ana María Pérez", DNI, false, true, NOW, "recepcion"))
+                .isInstanceOf(VerificationRequiredException.class);
+        assertThat(renamed.getFullName()).isEqualTo("Ana Pérez");
+
+        Patient seen = Patient.registerFromWeb("Ana Pérez", DNI, details, NOW.toLocalDate());
+        assertThat(seen.changeIdentity("Ana Pérez", DNI, true, true, NOW, "recepcion")).isPresent();
+        assertThat(seen.getIdentityStatus()).isEqualTo(IdentityStatus.VERIFIED);
+        assertThat(seen.getRegisteredVia()).isEqualTo(RegistrationChannel.WEB);
     }
 }

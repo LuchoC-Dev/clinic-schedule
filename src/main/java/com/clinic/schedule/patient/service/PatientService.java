@@ -24,6 +24,7 @@ import com.clinic.schedule.patient.api.PatientRegistrationRefusedException.Reaso
 import com.clinic.schedule.patient.api.PatientRegistrationRefusedException;
 import com.clinic.schedule.patient.api.PatientSummary;
 import com.clinic.schedule.patient.api.PatientWriter;
+import com.clinic.schedule.patient.api.WebPatient;
 import com.clinic.schedule.patient.entity.Consent;
 import com.clinic.schedule.patient.entity.DocumentType;
 import com.clinic.schedule.patient.entity.Email;
@@ -37,6 +38,7 @@ import com.clinic.schedule.patient.entity.PatientDetails;
 import com.clinic.schedule.patient.entity.PatientDetailsChange;
 import com.clinic.schedule.patient.entity.PatientIdentityChange;
 import com.clinic.schedule.patient.entity.Phone;
+import com.clinic.schedule.patient.entity.RegistrationChannel;
 import com.clinic.schedule.patient.entity.Relation;
 import com.clinic.schedule.patient.entity.Responsible;
 import com.clinic.schedule.patient.persistence.PatientDetailsChangeRepository;
@@ -60,8 +62,8 @@ import com.clinic.schedule.security.api.CurrentUserReader;
  *
  * <p>A change to a patient's identity is saved with its entry in the history, in the same
  * transaction, stamped with the practice's clock and the user who made it (D-60), and so is a change
- * to their details (D-73). A patient with a web account keeps a verified identity (D-79), which only
- * this module can tell, so it asks the portal whether they have one.
+ * to their details (D-73). A patient with a web account changes their name or document only with the
+ * document seen (D-79, D-91), which only this module can tell, so it asks the portal whether they have one.
  */
 @Service
 public class PatientService implements PatientReader, PatientWriter {
@@ -123,6 +125,42 @@ public class PatientService implements PatientReader, PatientWriter {
             throw new PatientRegistrationRefusedException(Reason.DUPLICATE_DOCUMENT, e.getMessage());
         } catch (IncompleteDocumentException e) {
             throw new PatientRegistrationRefusedException(Reason.INCOMPLETE_DOCUMENT, e.getMessage());
+        } catch (InvalidPatientDetailsException e) {
+            throw new PatientRegistrationRefusedException(Reason.INVALID_DETAILS, e.getMessage());
+        } catch (IllegalArgumentException e) {
+            throw new PatientRegistrationRefusedException(Reason.INVALID_DATA, e.getMessage());
+        }
+    }
+
+    @Override
+    public void checkFromWeb(WebPatient patient) {
+        fromWeb(patient);
+    }
+
+    @Override
+    @Transactional
+    public UUID registerFromWeb(WebPatient patient) {
+        Patient registered = fromWeb(patient);
+        try {
+            requireDocumentIsFree(registered.getDocument());
+        } catch (DuplicateDocumentException e) {
+            throw new PatientRegistrationRefusedException(Reason.DUPLICATE_DOCUMENT, e.getMessage());
+        }
+        return patients.save(registered).getId();
+    }
+
+    /** The patient a web registration would be, with this module's refusals translated into the api's. */
+    private Patient fromWeb(WebPatient patient) {
+        if (blankToNull(patient.documentType()) == null || blankToNull(patient.documentNumber()) == null) {
+            throw new PatientRegistrationRefusedException(Reason.INCOMPLETE_DOCUMENT,
+                    "A patient registers on the web with their document");
+        }
+        try {
+            IdentityDocument document = new IdentityDocument(DocumentType.valueOf(patient.documentType()),
+                    patient.documentNumber());
+            PatientDetails details = new PatientDetails(patient.birthDate(),
+                    Phone.ofNullable(patient.phoneNumber(), null), null, null);
+            return Patient.registerFromWeb(patient.fullName(), document, details, LocalDate.now(clock));
         } catch (InvalidPatientDetailsException e) {
             throw new PatientRegistrationRefusedException(Reason.INVALID_DETAILS, e.getMessage());
         } catch (IllegalArgumentException e) {
@@ -365,7 +403,8 @@ public class PatientService implements PatientReader, PatientWriter {
         return found.stream()
                 .map(patient -> new PatientSummary(patient.getId(), patient.getFullName(), label(patient.getDocument()),
                         patient.getIdentityStatus() == IdentityStatus.VERIFIED, patient.getBirthDate(),
-                        insurance(patient.getInsurance())))
+                        insurance(patient.getInsurance()),
+                        patient.getRegisteredVia() == RegistrationChannel.WEB))
                 .toList();
     }
 

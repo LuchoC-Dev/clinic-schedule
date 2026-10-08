@@ -9,6 +9,8 @@ import com.clinic.schedule.portal.application.port.AccountMailPort;
 import com.clinic.schedule.portal.domain.ActivationMessage;
 import com.clinic.schedule.portal.domain.BookingConfirmation;
 import com.clinic.schedule.portal.domain.PasswordResetMessage;
+import com.clinic.schedule.portal.domain.RegistrationMessage;
+import com.clinic.schedule.portal.domain.RegistrationRefusedMessage;
 
 /**
  * Sends a web account's messages by email, over the same SMTP server as the reminders (D-78, D-79), from
@@ -22,6 +24,7 @@ class EmailAccountAdapter implements AccountMailPort {
     private final ActivationText text;
     private final BookingConfirmationText confirmationText;
     private final PasswordResetText resetText;
+    private final RegistrationText registrationText;
     private final String from;
 
     EmailAccountAdapter(JavaMailSender mail, @Value("${app.mail.from}") String from,
@@ -32,6 +35,7 @@ class EmailAccountAdapter implements AccountMailPort {
         this.text = new ActivationText(practice, address, phone, baseUrl);
         this.confirmationText = new BookingConfirmationText(practice, address, phone, baseUrl);
         this.resetText = new PasswordResetText(practice, address, phone, baseUrl);
+        this.registrationText = new RegistrationText(practice, address, phone, baseUrl);
     }
 
     @Override
@@ -61,6 +65,26 @@ class EmailAccountAdapter implements AccountMailPort {
         email.setTo(message.address());
         email.setSubject(resetText.subject());
         email.setText(resetText.plain(message));
+        mail.send(email);
+    }
+
+    @Override
+    public void sendRegistration(RegistrationMessage message) {
+        sendAboutRegistration(message.address(), registrationText.plain(message));
+    }
+
+    @Override
+    public void sendRegistrationRefused(RegistrationRefusedMessage message) {
+        sendAboutRegistration(message.address(), registrationText.plain(message));
+    }
+
+    /** Both answers to a registration go under the same subject. */
+    private void sendAboutRegistration(String to, String text) {
+        SimpleMailMessage email = new SimpleMailMessage();
+        email.setFrom(from);
+        email.setTo(to);
+        email.setSubject(registrationText.subject());
+        email.setText(text);
         mail.send(email);
     }
 }

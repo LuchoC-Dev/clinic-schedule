@@ -179,6 +179,34 @@ class WebBookingIT {
                 .andExpect(redirectedUrl("/portal/appointments"));
     }
 
+    /** One ahead for a patient who registered on the web, until reception sees their document (D-91). */
+    @Test
+    void oneAppointmentAheadUntilReceptionVerifiesAPatientWhoRegisteredOnTheWeb() throws Exception {
+        Patient patient = accounts.registeredOnWeb();
+        book(patient, arias.consulta(), "2026-03-16T10:00:00").andExpect(status().isCreated());
+        book(patient, arias.consulta(), "2026-03-17T10:00:00").andExpect(status().isConflict())
+                .andExpect(jsonPath("$.message").value(
+                        "A patient who registered on the web books 1 ahead at most until reception verifies them"));
+        mockMvc.perform(post("/api/appointments").with(RECEPTION).contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"patientId\": \"%s\", \"practitionerId\": \"%s\", \"reasonId\": \"%s\", "
+                                .formatted(patient.id(), arias.id(), arias.consulta())
+                                + "\"startsAt\": \"2026-03-17T10:00:00\"}"))
+                .andExpect(status().isCreated());
+
+        mockMvc.perform(put("/api/patients/" + patient.id()).with(RECEPTION).contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {"fullName": "Ana Pérez", "documentType": "DNI", "documentNumber": "%s",
+                                 "documentSeen": true}
+                                """.formatted(patient.dni())))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.identity").value("VERIFIED"))
+                .andExpect(jsonPath("$.registeredVia").value("WEB"));
+        book(patient, arias.consulta(), "2026-03-18T10:00:00").andExpect(status().isCreated());
+        book(patient, arias.consulta(), "2026-03-19T10:00:00").andExpect(status().isConflict())
+                .andExpect(jsonPath("$.message").value(
+                        "A patient books on the web while they have fewer than 3 appointments ahead"));
+    }
+
     @Test
     void threeAppointmentsAheadAtMostOnTheWebButReceptionBooksMore() throws Exception {
         Patient patient = accounts.withAccount();

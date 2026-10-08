@@ -1,6 +1,6 @@
 package com.clinic.schedule.portal.domain;
 
-/** What was done to a web account, as its history keeps it (D-79, D-86). */
+/** What was done to a web account, as its history keeps it (D-79, D-86, D-91). */
 public enum AccountAction {
     OPENED,
     ACTIVATION_SENT,
@@ -15,5 +15,7 @@ public enum AccountAction {
     /** The patient changed their password, logged in. */
     PASSWORD_CHANGED,
     /** Too many failed logins in a row locked the account for a while. */
-    LOCKED
+    LOCKED,
+    /** Opened, in use at once, by the patient confirming from their email the registration they made on the web. */
+    REGISTERED
 }

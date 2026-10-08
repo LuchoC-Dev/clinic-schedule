@@ -80,7 +80,9 @@ Spanish, for the staff.
 
 **The patients' screens** — at http://localhost:8080/portal/login, apart from the staff's. A patient whom
 reception opened a web account for — from *Cuenta web* on the patient's screen, for a verified patient of
-13 or older — gets a link by email to activate it and choose a password, logs in with their document and
+13 or older — gets a link by email to activate it and choose a password; an adult of 18 or older registers
+themselves from "Registrate" on the login, and confirms it from a link to their email, unverified and with one
+appointment ahead until reception sees their document. A patient logs in with their document and
 reads their appointments: those ahead and those of the last year, never reception's note. Five failed logins in a
 row lock the account for 15 minutes; "¿Olvidaste tu contraseña?" sends a link to the account's email to choose
 a new one, and *Contraseña* changes it. Under *Mis turnos* they cancel an appointment up to a
@@ -159,6 +161,8 @@ document as its type and number, such as `DNI 27333444`. Errors share one body:
 | `POST` | `/api/family-groups/{id}/children` | a child under 13, at the request of an adult of the group — `{patientId, requestedBy, relation, proofSeen}`, `relation` `MOTHER`, `FATHER` or `GUARDIAN` |
 | `POST` | `/api/family-groups/{id}/members/{patientId}/remove`, `/sharing` | take a member out; a member of 13 or older starts or stops sharing — `{shares}` |
 | `GET` | `/api/family-groups/{id}/changes` | what happened to the group, the most recent first, and by whom |
+| `POST` | `/api/portal/registrations` | an adult of 18 or older registers themselves — `{fullName, documentType, documentNumber, birthDate, phone, email, password}` —; 202 once the email went out, the same whether the practice knows the document or not; no login |
+| `POST` | `/api/portal/registrations/confirmation` | `{token}`, from that email's link: the patient is registered, unverified, with their account in use; 409 when the document was someone's by then; no login |
 | `POST` | `/api/portal/activation` | the patient activates their account — `{token, password}`, the token from the email's link; no login |
 | `POST` | `/api/portal/password-recovery` | `{documentType, documentNumber}`: sends a link to choose a new password to the account's email, valid for an hour; always 204, account or not; no login |
 | `POST` | `/api/portal/password-reset` | `{token, password}`: the new password, with the token from that link; it lifts a lock and ends the account's open sessions; no login |
@@ -184,7 +188,8 @@ record is `app.clinical-record.access-period`, a year by default. Reminders go o
 patients whose email has their consent — a responsible person's only for a patient under 13; the
 practice's name, address and phone are `app.practice.*`, its sender `app.mail.from`, and the SMTP server
 `spring.mail.*`. The links in the patients' emails point at `app.portal.base-url`, and an activation lasts
-`app.portal.activation-valid-for`, 72 hours by default. A charge is pesos above zero with two decimals at
+`app.portal.activation-valid-for`, 72 hours by default, as a registration made on the web waits for its
+confirmation, `app.portal.registration-valid-for`, before it is forgotten. A charge is pesos above zero with two decimals at
 most, up to `app.cash-desk.max-amount`, $ 99.999.999,99 by default; it is paid in cash, by debit or credit card,
 by transfer or by QR, is never changed nor deleted, and what went wrong is given back as a refund of its own,
 by the charge's means. Only cash counts for what should be in the drawer. A visit goes in covered only for a

@@ -8,6 +8,8 @@ import org.springframework.web.bind.annotation.RestControllerAdvice;
 import com.clinic.schedule.portal.application.exception.AccountNotFoundException;
 import com.clinic.schedule.portal.application.exception.FamilyGroupNotFoundException;
 import com.clinic.schedule.portal.application.exception.InvalidActivationLinkException;
+import com.clinic.schedule.portal.application.exception.InvalidRegistrationException;
+import com.clinic.schedule.portal.application.exception.InvalidRegistrationLinkException;
 import com.clinic.schedule.portal.application.exception.InvalidResetLinkException;
 import com.clinic.schedule.portal.application.exception.NotYourAppointmentException;
 import com.clinic.schedule.portal.application.exception.NotYourFamilyMemberException;
@@ -60,13 +62,13 @@ class PortalExceptionHandler {
     }
 
     /**
-     * A patient who does not exist, a link that activates or resets nothing, an email that cannot be one, a
-     * password too short or too long, a wrong current password, or a patient's own data refused: the request is
-     * malformed.
+     * A patient who does not exist, a link that activates, resets or confirms nothing, an email that cannot be
+     * one, a password too short or too long, a wrong current password, a patient's own data refused, or a
+     * registration whose data cannot be a patient's: the request is malformed.
      */
     @ExceptionHandler({UnknownPatientException.class, InvalidActivationLinkException.class,
-            InvalidResetLinkException.class, OwnPasswordRefusedException.class, OwnDataRefusedException.class,
-            IllegalArgumentException.class})
+            InvalidResetLinkException.class, InvalidRegistrationLinkException.class, OwnPasswordRefusedException.class,
+            OwnDataRefusedException.class, InvalidRegistrationException.class, IllegalArgumentException.class})
     ResponseEntity<ErrorResponse> malformedRequest(RuntimeException e) {
         return ResponseEntity.badRequest().body(ErrorResponse.of(400, "Bad request", e.getMessage()));
     }

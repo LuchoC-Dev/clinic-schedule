@@ -98,6 +98,9 @@ app:
     # How long the link to choose a new password lasts, and how soon another may be sent to the same account.
     recovery-valid-for: PT1H
     recovery-every: PT5M
+    # How long a registration made on the web waits for its confirmation from the email's link; one never
+    # confirmed is forgotten afterwards (D-91).
+    registration-valid-for: PT72H
 
 logging:
   level:

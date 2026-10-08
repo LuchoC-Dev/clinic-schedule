@@ -10,6 +10,8 @@ public class AccountRefusedException extends RuntimeException {
         IDENTITY_NOT_VERIFIED,
         NO_BIRTH_DATE,
         UNDER_THIRTEEN,
+        /** Registering on the web, which is for adults (D-91). */
+        UNDER_EIGHTEEN,
         ALREADY_OPENED
     }
 

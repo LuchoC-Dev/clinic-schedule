@@ -71,6 +71,19 @@ public final class PatientAccount {
     }
 
     /**
+     * A new account in use at once, with the password the patient chose on registering on the web and the email
+     * that confirming the registration proved theirs (D-91). Only the opening service calls it.
+     *
+     * @param passwordHash the password already hashed
+     */
+    static AccountUpdate registered(UUID patientId, String email, String passwordHash, LocalDateTime at) {
+        requirePassword(passwordHash);
+        PatientAccount account = new PatientAccount(UUID.randomUUID(), patientId, email, passwordHash,
+                AccountStatus.ACTIVE, at, 0, null);
+        return new AccountUpdate(account, AccountChange.of(account.id, AccountAction.REGISTERED, at, null));
+    }
+
+    /**
      * An account as it was stored.
      *
      * @param failedLogins the failed logins in a row since the last that went through or the last lock
@@ -232,7 +245,12 @@ public final class PatientAccount {
         }
     }
 
-    private static String email(String email) {
+    /**
+     * The address as an account keeps it: in lower case, once its form is checked.
+     *
+     * @throws InvalidAccountEmailException when it cannot be one
+     */
+    static String email(String email) {
         String address = email == null ? "" : email.strip().toLowerCase(Locale.ROOT);
         if (address.length() > MAX_EMAIL_LENGTH) {
             throw new InvalidAccountEmailException("An email is at most " + MAX_EMAIL_LENGTH + " characters");

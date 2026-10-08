@@ -108,17 +108,23 @@ public class Patient {
     @Column(name = "insurance_plan", length = 50)
     private String insurancePlan;
 
+    /** At reception or on the web, from their registration on (D-91). */
+    @Enumerated(EnumType.STRING)
+    @Column(name = "registered_via", nullable = false, length = 10)
+    private RegistrationChannel registeredVia;
+
     protected Patient() {
         // required by JPA
     }
 
     private Patient(UUID id, String fullName, IdentityDocument document, IdentityStatus identityStatus,
-            String alias) {
+            String alias, RegistrationChannel registeredVia) {
         this.id = id;
         this.fullName = requireName(fullName);
         this.document = document;
         this.identityStatus = identityStatus;
         this.alias = alias;
+        this.registeredVia = registeredVia;
     }
 
     /**
@@ -144,7 +150,26 @@ public class Patient {
             throw new UnverifiableIdentityException("An identity is verified on a document, and there is none");
         }
         Patient patient = new Patient(UUID.randomUUID(), fullName, document,
-                documentSeen ? IdentityStatus.VERIFIED : IdentityStatus.DECLARED, null);
+                documentSeen ? IdentityStatus.VERIFIED : IdentityStatus.DECLARED, null, RegistrationChannel.RECEPTION);
+        patient.setDetails(requireBirthDate(details, today));
+        return patient;
+    }
+
+    /**
+     * A new patient who registered themselves on the web (D-91): with a document, which their account logs in
+     * with, that nobody has seen yet, so their identity is declared until reception verifies it.
+     *
+     * @param today the practice's date, which a date of birth may not be after
+     * @throws IllegalArgumentException when there is no document
+     * @throws InvalidPatientDetailsException when the date of birth cannot be right
+     */
+    public static Patient registerFromWeb(String fullName, IdentityDocument document, PatientDetails details,
+            LocalDate today) {
+        if (document == null) {
+            throw new IllegalArgumentException("A patient registers on the web with their document");
+        }
+        Patient patient = new Patient(UUID.randomUUID(), fullName, document, IdentityStatus.DECLARED, null,
+                RegistrationChannel.WEB);
         patient.setDetails(requireBirthDate(details, today));
         return patient;
     }
@@ -154,7 +179,7 @@ public class Patient {
         if (alias == null || !ALIAS_FORMAT.matcher(alias).matches()) {
             throw new IllegalArgumentException("An alias is NN- and four digits, such as NN-4821");
         }
-        return new Patient(UUID.randomUUID(), alias, null, IdentityStatus.ALIAS, alias);
+        return new Patient(UUID.randomUUID(), alias, null, IdentityStatus.ALIAS, alias, RegistrationChannel.RECEPTION);
     }
 
     /**
@@ -168,15 +193,17 @@ public class Patient {
      *       they were, and is only declared once either changes: nobody has seen the new one.</li>
      * </ul>
      *
-     * <p>A patient with a web account logs in with their document, so their identity stays verified:
-     * a new name or document goes in only with the document seen, and nothing leaves them declared.
+     * <p>A patient with a web account logs in with their document, so a new name or document goes in only with
+     * the document seen (D-79): a verified one is never left declared. One who registered on the web is declared
+     * until reception sees it (D-91), and saving them unchanged leaves them so.
      *
      * @param document null clears it, which is how a wrongly entered one is taken back out
      * @param documentSeen whether reception saw the document now
      * @param holdsAccount whether the patient has a web account, in any state
      * @param changedBy the username of whoever changes it
      * @throws UnverifiableIdentityException when it is said to be seen and cannot be
-     * @throws VerificationRequiredException when it would leave a patient with a web account unverified
+     * @throws VerificationRequiredException when it would change the name or document of a patient with a web
+     *         account without the document seen
      */
     public Optional<PatientIdentityChange> changeIdentity(String fullName, IdentityDocument document,
             boolean documentSeen, boolean holdsAccount, LocalDateTime changedAt, String changedBy) {
@@ -199,7 +226,7 @@ public class Patient {
         } else {
             status = IdentityStatus.DECLARED;
         }
-        if (holdsAccount && status != IdentityStatus.VERIFIED) {
+        if (holdsAccount && changed && !documentSeen) {
             throw new VerificationRequiredException(
                     "A patient with a web account changes their name or document only with the document seen");
         }
@@ -416,6 +443,10 @@ public class Patient {
     /** Null for a patient registered with a name. */
     public String getAlias() {
         return alias;
+    }
+
+    public RegistrationChannel getRegisteredVia() {
+        return registeredVia;
     }
 
     public PatientDetails getDetails() {

@@ -15,6 +15,8 @@ public class WebBookingRefusedException extends RuntimeException {
         NOT_AN_OFFERED_TIME,
         /** The patient has as many appointments ahead as the web lets them book. */
         TOO_MANY_AHEAD,
+        /** The patient registered on the web, has one appointment ahead, and reception has not verified them. */
+        ONE_AHEAD_UNTIL_VERIFIED,
         /** Someone took the time meanwhile. */
         TIME_TAKEN,
         /** The patient has another appointment at that time. */

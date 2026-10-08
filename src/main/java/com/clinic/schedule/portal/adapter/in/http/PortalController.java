@@ -8,6 +8,7 @@ import java.util.UUID;
 import java.util.stream.Collectors;
 
 import org.springframework.format.annotation.DateTimeFormat;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -27,18 +28,21 @@ import com.clinic.schedule.portal.application.usecase.ChangeOwnContactUseCase;
 import com.clinic.schedule.portal.application.usecase.ListOwnAppointmentsUseCase;
 import com.clinic.schedule.portal.application.usecase.ManageOwnFamilyUseCase;
 import com.clinic.schedule.portal.application.usecase.RecoverPasswordUseCase;
+import com.clinic.schedule.portal.application.usecase.RegisterOnWebUseCase;
 import com.clinic.schedule.portal.application.usecase.ViewFamilyUseCase;
 import com.clinic.schedule.portal.application.usecase.ViewOwnDataUseCase;
 import com.clinic.schedule.portal.application.usecase.ViewWebBookingUseCase;
 import com.clinic.schedule.portal.domain.BookedAppointment;
 import com.clinic.schedule.practitioner.api.PractitionerReader;
 import com.clinic.schedule.practitioner.api.PractitionerSummary;
+import com.clinic.schedule.shared.http.ErrorResponse;
 
 import jakarta.validation.Valid;
 
 /**
- * The patients' side of the API (D-80), the contract of their single-page application to come: activating
- * an account, before there is a login, and what a patient logged in reads and changes of their own (D-81).
+ * The patients' side of the API (D-80), the contract of their single-page application to come: registering on
+ * the web (D-91) and activating an account, before there is a login, and what a patient logged in reads and
+ * changes of their own (D-81).
  * Whose it is comes from the login, never from the request.
  */
 @RestController
@@ -57,13 +61,14 @@ class PortalController {
     private final ManageOwnFamilyUseCase ownFamily;
     private final RecoverPasswordUseCase recovery;
     private final ChangeOwnPasswordUseCase ownPassword;
+    private final RegisterOnWebUseCase registration;
     private final PractitionerReader practitioners;
 
     PortalController(ActivateAccountUseCase activate, ListOwnAppointmentsUseCase appointments, ViewOwnDataUseCase data,
             ChangeOwnContactUseCase contact, ChangeOwnConsentUseCase consent, ViewWebBookingUseCase booking,
             BookOnWebUseCase book, CancelOwnAppointmentUseCase cancel, CancelLinkUseCase cancelLinks,
             ViewFamilyUseCase family, ManageOwnFamilyUseCase ownFamily, RecoverPasswordUseCase recovery,
-            ChangeOwnPasswordUseCase ownPassword, PractitionerReader practitioners) {
+            ChangeOwnPasswordUseCase ownPassword, RegisterOnWebUseCase registration, PractitionerReader practitioners) {
         this.activate = activate;
         this.appointments = appointments;
         this.data = data;
@@ -77,6 +82,7 @@ class PortalController {
         this.ownFamily = ownFamily;
         this.recovery = recovery;
         this.ownPassword = ownPassword;
+        this.registration = registration;
         this.practitioners = practitioners;
     }
 
@@ -158,6 +164,36 @@ class PortalController {
     @PostMapping("/api/portal/password-reset")
     ResponseEntity<Void> resetPassword(@RequestBody PasswordRequests.Reset request) {
         recovery.reset(request.token(), request.password());
+        return ResponseEntity.noContent().build();
+    }
+
+    /**
+     * An adult registers themselves (D-91): 202 once the email went out, whichever it was — the link to confirm
+     * it, or, for a document the practice knows already, the request to come to reception —, so it tells nobody
+     * whether a document is a patient's; 503 when it did not go out, and nothing was kept.
+     */
+    @PostMapping("/api/portal/registrations")
+    ResponseEntity<Object> register(@RequestBody RegistrationRequests.Registration request) {
+        boolean sent = registration.request(new RegisterOnWebUseCase.Command(request.fullName(),
+                request.documentType(), request.documentNumber(), request.birthDate(), request.phone(),
+                request.email(), request.password()));
+        if (!sent) {
+            return ResponseEntity.status(HttpStatus.SERVICE_UNAVAILABLE).body(ErrorResponse.of(503,
+                    "Service unavailable", "The email could not go out; nothing was kept"));
+        }
+        return ResponseEntity.accepted().build();
+    }
+
+    /**
+     * With the token of the email's link: 204 once the patient is registered with their account in use; 409 when
+     * the document was someone's by then, and nothing was registered.
+     */
+    @PostMapping("/api/portal/registrations/confirmation")
+    ResponseEntity<Object> confirmRegistration(@RequestBody RegistrationRequests.Confirmation request) {
+        if (registration.confirm(request.token()) == RegisterOnWebUseCase.Confirmation.DOCUMENT_KNOWN) {
+            return ResponseEntity.status(HttpStatus.CONFLICT).body(ErrorResponse.of(409, "Conflict",
+                    "The document is already the practice's: the registration is done at reception"));
+        }
         return ResponseEntity.noContent().build();
     }
 

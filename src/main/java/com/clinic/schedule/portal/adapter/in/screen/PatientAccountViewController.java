@@ -175,6 +175,8 @@ class PatientAccountViewController {
                         "Para abrirle una cuenta web, primero verificá su identidad: mirá su documento y marcalo.";
                 case NO_BIRTH_DATE -> "Para abrirle una cuenta web, cargá primero su fecha de nacimiento.";
                 case UNDER_THIRTEEN -> "La cuenta web es para pacientes de 13 años o más.";
+                // Only registering on the web refuses it, never reception (D-91).
+                case UNDER_EIGHTEEN -> "Desde la web se registran pacientes de 18 años o más.";
             };
         }
         if (e instanceof InvalidAccountEmailException) {
@@ -201,6 +203,7 @@ class PatientAccountViewController {
                 case PASSWORD_RESET -> "Contraseña nueva desde el link";
                 case PASSWORD_CHANGED -> "Contraseña cambiada";
                 case LOCKED -> "Bloqueada por intentos fallidos";
+                case REGISTERED -> "Abierta al confirmar el registro desde la web";
             }, change.by() != null ? change.by() : switch (change.action()) {
                 case RECOVERY_SENT -> "pedido desde la web";
                 case LOCKED -> "";

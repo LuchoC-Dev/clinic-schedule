@@ -1,0 +1,13 @@
+<!DOCTYPE html>
+<html lang="es" xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{fragments :: head('Revisá tu email')}"></head>
+<body>
+<main style="max-width: 24rem">
+    <h1>Revisá tu email</h1>
+    <p>Te mandamos un email<th:block th:if="${email}"> a <strong th:text="${email}">ana@mail.com</strong></th:block>.
+        Seguí lo que dice para terminar tu registro.</p>
+    <p class="muted">Si no te llega en unos minutos, mirá en el correo no deseado.</p>
+    <p><a th:href="@{/portal/login}">Ingresar</a></p>
+</main>
+</body>
+</html>

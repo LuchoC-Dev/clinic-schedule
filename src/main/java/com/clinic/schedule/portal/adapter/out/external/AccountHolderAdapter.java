@@ -35,7 +35,7 @@ class AccountHolderAdapter implements AccountHolderPort {
     public List<AccountHolder> findAll(Collection<UUID> patientIds) {
         return patients.findAll(patientIds).stream()
                 .map(patient -> new AccountHolder(patient.id(), patient.fullName(), patient.identityVerified(),
-                        patient.birthDate()))
+                        patient.birthDate(), patient.registeredOnWeb()))
                 .toList();
     }
 }

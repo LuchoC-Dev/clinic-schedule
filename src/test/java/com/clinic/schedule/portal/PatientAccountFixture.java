@@ -15,6 +15,7 @@ import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.request.RequestPostProcessor;
 
 import com.clinic.schedule.portal.domain.ActivationMessage;
+import com.clinic.schedule.portal.domain.RegistrationMessage;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
@@ -112,6 +113,46 @@ public final class PatientAccountFixture {
         open(patient, address);
         activate(lastTokenTo(address));
         return patient;
+    }
+
+    /** A DNI of its own, out of the development data's range. */
+    public static String dni() {
+        return String.valueOf(ThreadLocalRandom.current().nextInt(50_000_000, 99_999_999));
+    }
+
+    /** An adult registering on the web, born on 14 May 1990, with no phone. */
+    public static String registration(String dni, String email) {
+        return """
+                {"fullName": "Ana Pérez", "documentType": "DNI", "documentNumber": "%s", "birthDate": "1990-05-14",
+                 "email": "%s", "password": "%s"}
+                """.formatted(dni, email, PASSWORD);
+    }
+
+    /** The token of the last link to confirm a registration sent to that address. */
+    public static String lastRegistrationTokenTo(String address) {
+        List<RegistrationMessage> sent = KeptAccountMail.REGISTRATIONS.stream()
+                .filter(message -> message.address().equals(address))
+                .toList();
+        assertThat(sent).isNotEmpty();
+        return sent.get(sent.size() - 1).token();
+    }
+
+    /**
+     * An adult who registered themselves on the web and confirmed it (D-91): unverified, marked as registered on the
+     * web, with an account in use whose password is {@link #PASSWORD}.
+     */
+    public Patient registeredOnWeb() throws Exception {
+        String dni = dni();
+        String address = address();
+        mockMvc.perform(post("/api/portal/registrations").contentType(MediaType.APPLICATION_JSON)
+                        .content(registration(dni, address)))
+                .andExpect(status().isAccepted());
+        mockMvc.perform(post("/api/portal/registrations/confirmation").contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"token\": \"%s\"}".formatted(lastRegistrationTokenTo(address))))
+                .andExpect(status().isNoContent());
+        return new Patient(read(mockMvc.perform(get("/api/patients").with(RECEPTION).param("query", dni))
+                .andExpect(status().isOk())
+                .andReturn().getResponse().getContentAsString()).get(0).get("id").asText(), dni);
     }
 
     private JsonNode read(String body) throws Exception {

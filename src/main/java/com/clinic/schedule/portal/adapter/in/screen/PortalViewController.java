@@ -416,6 +416,8 @@ class PortalViewController {
                     "Ese día no se reserva por la web: elegí uno entre mañana y el último que ofrece la pantalla.";
             case NOT_AN_OFFERED_TIME, TIME_TAKEN -> "Ese horario ya no está libre: elegí otro.";
             case TOO_MANY_AHEAD -> "Ya tenés 3 turnos por delante: para sacar otro, llamá o acercate a recepción.";
+            case ONE_AHEAD_UNTIL_VERIFIED -> "Hasta que recepción verifique tu identidad podés tener un turno por "
+                    + "delante reservado por la web. Acercate con tu documento, o llamá para sacar otro.";
             case PATIENT_BUSY -> "Ya tenés otro turno a esa hora.";
         };
     }

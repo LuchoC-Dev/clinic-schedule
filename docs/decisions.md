@@ -2815,7 +2815,8 @@ appointment module would depend on this one, which depends on it); a link to can
 ---
 
 ## D-79 — A patient's web account: a module of its own, opened by reception and activated by email
-**Date:** 2026-10-02 · **Status:** accepted
+**Date:** 2026-10-02 · **Status:** accepted; an adult opens their own by registering on the web, unverified, and
+an account holder's identity changes only with the document seen, in D-91
 
 v2, phase 6, part 1. Until now only the staff used the application. A patient now has an account of their
 own, to read their appointments — and, in the parts to come, to book, cancel and keep their data.
@@ -2996,7 +2997,8 @@ reading the history from the web (reception's, as before).
 ---
 
 ## D-82 — A patient books on the web what reception opens to it, three ahead at most
-**Date:** 2026-10-02 · **Status:** accepted
+**Date:** 2026-10-02 · **Status:** accepted; one ahead for a patient registered on the web until reception verifies
+them, in D-91
 
 v2, phase 6, part 3. Until now only reception booked. A patient now books an appointment for themselves
 from their account.
@@ -3497,3 +3499,92 @@ uncorrected (the money the patient then pays could not be recorded); the covered
 are patients); a new method on `PatientReader` (its summary already says both); one table for a coverage and its
 withdrawal (a withdrawal is a fact of its own, as a refund); relying on unique keys alone (a charge and a
 coverage are different rows).
+
+---
+
+## D-91 — An adult registers on the web, confirmed by email, unverified and one appointment ahead until reception sees them
+**Date:** 2026-10-08 · **Status:** accepted
+
+v2, phase 8, part 1. Until now only reception registered a patient and opened their account (D-79). An adult of
+18 or older now registers themselves on the web, confirms it from their email, and books; reception verifies who
+they are when they come. Their children under 13 are part 2.
+
+**In `portal`, with the patient module behind its api.** What the patient does on the web is the portal's (D-79):
+the registration waiting to be confirmed, its link and emails, who may register, the account and the limit on
+booking. Who can be a patient stays the patient module's: `patient/api` gains `WebPatient` — a name, a required
+document, a date of birth and an optional phone of the patient's own —, `PatientWriter.checkFromWeb`, which tells
+whether one could be registered without registering anyone, and `registerFromWeb`. The portal reaches them through
+`RegistrantPort`, and whether the practice knows a document through the `findIdByDocument` the login uses (D-80),
+so a document typed with dots is still the one it knows. The registration is checked as it is made, not when it
+is confirmed: a mistyped phone is said then, not after the email.
+
+**Nobody is registered until it is confirmed.** `WebRegistrationPolicy`, the only way to make a registration
+(D-17), asks for a date of birth by which they are 18 on the day, and an email that can be the account's, kept in
+lower case. The registration waits in `web_registration` (`V43`): what was typed, the account's email, the password
+— from 10 to 72 characters (D-68), chosen now, since the context asks for it with the registration — already as its
+bcrypt, and only the SHA-256 of the link's `SecretToken`, as an activation (D-79). The document's number and the
+phone are kept as typed, separators and all, up to 40 characters, and normalized by the patient module once
+registered. A document is not unique among the registrations waiting: making it so would have to tell the second
+one something, or let it replace the first; whoever confirms first is registered.
+
+**Forgotten after a while.** The link lasts `app.portal.registration-valid-for`, 72 hours as an activation; an
+expired one confirms nothing. `ForgetRegistrationsJob` deletes, every hour, the registrations that expired never
+confirmed, so the data of someone who never became a patient is not kept; it is a trigger and nothing else, off in
+the tests with the other jobs.
+
+**Confirming is a button, not the link.** The email's link opens `/portal/register/confirm`, which says what
+confirming does and offers "Confirmar registro": mail readers open links on their own, and opening one changes
+nothing. Confirming, in one transaction, forgets the registration, registers the patient — `DECLARED`, since
+nobody saw their document (D-60), and marked as registered on the web — and opens their account through
+`AccountOpeningService.openRegistered`: in use at once with the password they chose, since the link proved the
+email is theirs, only from 18, and recorded as `REGISTERED`, by nobody at reception. A document someone registered
+meanwhile — at reception, or by confirming first — registers nothing: the registration is forgotten all the same,
+and the page sends them to reception. The portal looks the document up before asking to register it, since a
+refusal thrown from the patient module's transactional method would mark the confirmation's transaction for
+rollback and keep the registration; two confirmations at the very same instant are refused by the document's
+unique constraint (D-09).
+
+**A known document opens nothing, and the answer is the same.** The checks that need nothing but the form — a value
+that cannot be right, someone under 18, an email or a password that cannot be one — are said at once, the same for
+any document. Then a document the practice knows keeps nothing and gets an email asking them to come to reception;
+any other is kept and gets the link; both answer 202, with no body, and the same page, "Te mandamos un email". Both
+hash the password and send one email, so neither takes noticeably longer. An email that does not go out keeps
+nothing and is said, as a 503 or on the form, whichever it was: it depends on the mail server alone. Both emails go
+under one subject, and the one for a known document says neither that it is a patient's nor that it has an account.
+
+*What this does not hide:* the email goes to whatever address was typed, so whoever types someone else's document
+with their own address learns from it whether the practice knows that document. It cannot be otherwise — a
+document the practice knows has a different outcome, and the context asks for that email —; what it costs is a
+mailbox for each try, and nothing on the screen or the API tells. The context leaves out a captcha or any other
+check against bots.
+
+**Where a patient was registered.** `patient.registered_via` (`V43`), `RECEPTION` or `WEB`, as an appointment's
+`booked_via` (D-82): given on registering and never changed, not even once reception verifies them; the patients
+already there were registered at reception, the only place there was. Reception reads "Registrado desde la web" on
+the patient's screen and `registeredVia` in the API; `PatientSummary.registeredOnWeb` carries it to the portal.
+
+**One appointment ahead until reception verifies them.** `WebBookingPolicy` lets a patient registered on the web
+whose identity is not verified have one appointment ahead, instead of three (D-82), as
+`AccountHolder.awaitsVerification` says; once reception sees their document, the usual three. Reception books
+beyond it, as always. Only a patient registered on the web: an unverified child whom reception added to a family
+group (D-84) keeps the three, since reception saw them and a verified adult books for them.
+
+**D-79 narrowed.** A patient with an account kept a verified identity: `Patient.changeIdentity` refused anything that
+left them unverified, an unchanged save of a declared one included, so reception could not save the screen of a
+patient registered on the web without seeing their document. Now an account holder's name or document changes only
+with the document seen: for a verified one it is the same rule, and for one registered on the web that change is
+what verifies them.
+
+**Routes and screens.** `POST /api/portal/registrations` (`{fullName, documentType, documentNumber, birthDate, phone,
+email, password}`) and `POST /api/portal/registrations/confirmation` (`{token}`: 204, a link that confirms nothing a
+400, a document known by then a 409), open to anyone. `/portal/register`, reached from "Registrate" on the login,
+`/portal/register/sent` and `/portal/register/confirm`; the login says "Registro confirmado" afterwards.
+
+*Rejected:* one registration per document (it would tell the second one, or let it replace the first); registering
+the patient before the email is confirmed (anyone could fill the practice with patients); the password chosen on
+confirming, as an activation (the context asks for it with the registration); confirming by opening the link (mail
+readers open links); forgetting the expired ones only as others register (they would stay while nobody does); the
+limit for every unverified patient (it would change phase 6's family groups, whose children reception saw); a flag
+on the account rather than the patient (reception reads it on the patient, and it outlives the account); the
+account's email as the patient's contact (D-79: they are apart); letting the patient module refuse a known document
+at confirmation (its refusal would roll the forgetting back).

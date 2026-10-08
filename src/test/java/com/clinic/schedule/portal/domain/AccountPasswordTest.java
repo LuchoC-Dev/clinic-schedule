@@ -24,7 +24,7 @@ class AccountPasswordTest {
 
     private static PatientAccount pending() {
         return AccountOpeningService.open(new AccountHolder(UUID.randomUUID(), "Ana Pérez", true,
-                LocalDate.of(1990, 5, 14)), false, "ana@mail.com", NOW.minusDays(1), "recepcion").account();
+                LocalDate.of(1990, 5, 14), false), false, "ana@mail.com", NOW.minusDays(1), "recepcion").account();
     }
 
     private static PatientAccount active() {

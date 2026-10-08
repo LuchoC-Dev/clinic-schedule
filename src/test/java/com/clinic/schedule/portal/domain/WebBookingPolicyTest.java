@@ -15,7 +15,10 @@ import org.junit.jupiter.api.Test;
 import com.clinic.schedule.portal.domain.exception.WebBookingRefusedException;
 import com.clinic.schedule.portal.domain.exception.WebBookingRefusedException.Reason;
 
-/** What a patient may book on the web (D-82): a reason, a day, an offered time, and three ahead at most. */
+/**
+ * What a patient may book on the web (D-82): a reason, a day, an offered time, and three ahead at most — one for a
+ * patient who registered on the web, until reception verifies them (D-91).
+ */
 class WebBookingPolicyTest {
 
     private static final LocalDateTime NOW = LocalDateTime.of(2026, 3, 10, 12, 0);
@@ -31,8 +34,13 @@ class WebBookingPolicyTest {
     }
 
     private static Reason refusal(BookableReason reason, LocalDateTime startsAt, List<Appointment> appointments) {
+        return refusal(reason, startsAt, appointments, false);
+    }
+
+    private static Reason refusal(BookableReason reason, LocalDateTime startsAt, List<Appointment> appointments,
+            boolean awaitsVerification) {
         try {
-            WebBookingPolicy.check(reason, startsAt, OFFERED, appointments, NOW, 30);
+            WebBookingPolicy.check(reason, startsAt, OFFERED, appointments, awaitsVerification, NOW, 30);
         } catch (WebBookingRefusedException e) {
             return e.reason();
         }
@@ -77,9 +85,33 @@ class WebBookingPolicyTest {
                 appointment(NOW.plusDays(7), Appointment.State.ABSENT),
                 appointment(NOW.minusMinutes(1), Appointment.State.BOOKED)));
         assertThatNoException().isThrownBy(() -> WebBookingPolicy.check(ON_THE_WEB, tomorrow, OFFERED, appointments,
-                NOW, 30));
+                false, NOW, 30));
 
         appointments.add(appointment(NOW.plusDays(8), Appointment.State.BOOKED));
         assertThat(refusal(ON_THE_WEB, tomorrow, appointments)).isEqualTo(Reason.TOO_MANY_AHEAD);
+    }
+
+    @Test
+    void oneAppointmentAheadUntilReceptionVerifiesAPatientWhoRegisteredOnTheWeb() {
+        LocalDateTime tomorrow = LocalDate.of(2026, 3, 11).atTime(10, 0);
+        List<Appointment> appointments = new ArrayList<>(List.of(
+                appointment(NOW.plusDays(6), Appointment.State.CANCELLED),
+                appointment(NOW.minusMinutes(1), Appointment.State.BOOKED)));
+        assertThat(refusal(ON_THE_WEB, tomorrow, appointments, true)).isNull();
+
+        appointments.add(appointment(NOW.plusDays(5), Appointment.State.BOOKED));
+        assertThat(refusal(ON_THE_WEB, tomorrow, appointments, true)).isEqualTo(Reason.ONE_AHEAD_UNTIL_VERIFIED);
+        assertThat(refusal(ON_THE_WEB, tomorrow, appointments, false)).isNull();
+    }
+
+    @Test
+    void onlyAPatientWhoRegisteredOnTheWebAndIsNotVerifiedAwaitsVerification() {
+        UUID id = UUID.randomUUID();
+        LocalDate born = LocalDate.of(1990, 5, 14);
+
+        assertThat(new AccountHolder(id, "Ana Pérez", false, born, true).awaitsVerification()).isTrue();
+        assertThat(new AccountHolder(id, "Ana Pérez", true, born, true).awaitsVerification()).isFalse();
+        // Registered at reception and not verified, as a child of a family group may be (D-84): the usual three.
+        assertThat(new AccountHolder(id, "Ana Pérez", false, born, false).awaitsVerification()).isFalse();
     }
 }

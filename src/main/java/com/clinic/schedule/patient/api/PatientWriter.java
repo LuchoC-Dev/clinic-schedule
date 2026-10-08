@@ -29,6 +29,27 @@ public interface PatientWriter {
     UUID registerUnidentified();
 
     /**
+     * Whether an adult registering on the web gave what a patient may be registered with (D-91), without
+     * registering anyone: the registration waits for its confirmation by email, and should not fail then for a
+     * value that could be told now. Whether the document is someone's already is not looked at.
+     *
+     * @throws PatientRegistrationRefusedException when the name or the document is missing or cannot be one, or
+     *         the date of birth or the phone cannot be right
+     */
+    void checkFromWeb(WebPatient patient);
+
+    /**
+     * An adult who registered on the web and confirmed it from their email (D-91): their identity declared, since
+     * nobody has seen their document yet, and marked as registered on the web. It joins the caller's transaction,
+     * so the account opened with it goes back with the patient if it fails.
+     *
+     * @return the new patient's id
+     * @throws PatientRegistrationRefusedException as {@link #checkFromWeb}, and when the document is someone's
+     *         already; nothing is registered then
+     */
+    UUID registerFromWeb(WebPatient patient);
+
+    /**
      * The patient changes their own contact and health insurance (D-81), with reception's rules: a new
      * number, address or owner loses its consent, and every change goes to the history, by whoever is logged
      * in. The date of birth stays as it was. It joins the caller's transaction.

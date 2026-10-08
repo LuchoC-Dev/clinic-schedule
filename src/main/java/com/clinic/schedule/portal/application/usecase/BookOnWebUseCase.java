@@ -81,7 +81,9 @@ public class BookOnWebUseCase {
         UUID me = currentPatient.patientId();
         AccountHolder member = forPatientId == null || forPatientId.equals(me) ? null
                 : family.requireActedFor(forPatientId);
-        UUID patientId = member == null ? me : member.patientId();
+        AccountHolder bookedFor = member != null ? member : holders.find(me)
+                .orElseThrow(() -> new IllegalStateException("No patient for the web account logged in"));
+        UUID patientId = bookedFor.patientId();
         LocalDateTime now = LocalDateTime.now(clock);
         BookableReason reason = reasons.all().stream()
                 .filter(candidate -> candidate.practitionerId().equals(practitionerId)
@@ -90,7 +92,8 @@ public class BookOnWebUseCase {
                 .orElse(null);
         List<LocalTime> offered = reason == null ? List.of()
                 : booking.offeredTimes(practitionerId, reasonId, startsAt.toLocalDate());
-        WebBookingPolicy.check(reason, startsAt, offered, appointments.of(patientId), now, daysAhead);
+        WebBookingPolicy.check(reason, startsAt, offered, appointments.of(patientId), bookedFor.awaitsVerification(),
+                now, daysAhead);
         UUID appointmentId = booking.book(patientId, practitionerId, reasonId, startsAt);
         return new Result(appointmentId, patientId, startsAt, reason.practitionerName(),
                 member == null ? null : member.fullName(), confirm(me, member, appointmentId, startsAt, reason));

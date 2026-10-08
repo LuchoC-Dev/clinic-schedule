@@ -1780,15 +1780,74 @@ The application records the money and issues no invoice. What it left for later 
 Scope in `docs/context.md`, section "v2, phase 8 — registering from the web". Delivered in parts; each one
 is usable on its own. The technical design of each part is agreed before it is coded.
 
-#### Part 1 — An adult registers themselves `[ ]`
+#### Part 1 — An adult registers themselves `[x]`
 - [x] `docs/context.md`: the scope of phase 8
-- [ ] An adult of 18 or older registers on the web with their name, document, date of birth and the
+- [x] An adult of 18 or older registers on the web with their name, document, date of birth and the
       account's email and password; the registration is confirmed from a link to that email, and one never
-      confirmed is forgotten after a while
-- [ ] A document the practice already knows opens nothing: the same answer on the screen, and the email
-      sends them to reception
-- [ ] The patient is unverified and marked as registered on the web; one appointment ahead at most until
-      reception verifies them
+      confirmed is forgotten after a while (D-91)
+- [x] The registration waits in the portal, checked as it is made by the patient module through
+      `PatientWriter.checkFromWeb` — `WebRegistrationPolicy` the only way to make one —, with the password as its
+      bcrypt and the link's token as its SHA-256; `app.portal.registration-valid-for`, 72 hours, and
+      `ForgetRegistrationsJob`, every hour, forgetting those never confirmed
+- [x] Confirming is the page's button, not the link: it registers the patient through
+      `PatientWriter.registerFromWeb` and opens their account in use, `AccountOpeningService.openRegistered`,
+      recorded as `REGISTERED`; a document someone registered meanwhile registers nothing, and the registration is
+      forgotten all the same
+- [x] A document the practice already knows opens nothing: the same answer on the screen and the API, and the
+      email sends them to reception; both answers hash the password and send one email
+- [x] The patient is unverified and marked as registered on the web — `patient.registered_via`, "Registrado
+      desde la web" on reception's screen —; one appointment ahead at most until reception verifies them
+      (`AccountHolder.awaitsVerification`), three afterwards; an unverified child of a family group keeps three
+- [x] D-79 narrowed: an account holder's name or document changes only with the document seen, so a patient
+      registered on the web is saved unchanged and verified by seeing it
+- [x] `POST /api/portal/registrations` and `/api/portal/registrations/confirmation`; `/portal/register`, reached
+      from "Registrate" on the login, `/portal/register/sent` and `/portal/register/confirm`
+- [x] `V43`: `web_registration`, `patient.registered_via`, and `REGISTERED` in the account's history, by nobody
+- [x] 15 unit and 14 integration tests more. 512 unit and 597 integration tests, 1109 in total
+
+**Verified with:** every new test failing when the code it covers was broken on purpose — 74 breakages, all
+compiling, 73 caught: a web patient verified at once, marked as reception's, without a document or with a date of
+birth unchecked; D-79's old rule back, or an account holder refused even with the document seen; a registered
+account opened twice, pending, recorded as activated or as reception's; eighteen counted a day late, or no date of
+birth taken as an adult; a registration with no date of birth, under 18, its email as typed, its token kept bare,
+expiring a moment late or an hour later, its document or phone unbounded; the limit at two, ignored, for every
+unverified patient, still binding a verified one, or lost by the use case, the patient module or the portal's
+adapter; the link's address, its expiry, the subject told apart, and the refusal naming a patient; a known document
+sent the link, or no email; a registration kept though its email failed, its password unhashed, its data unchecked
+by the use case, the adapter or the patient module, its name unstripped; a confirmed registration kept, an expired
+link confirming, forgetting nothing, the account opened at another email or not saved, the known document left to
+the patient module or never known; the phone or the date of birth dropped; `registeredVia` dropped from the API, the
+screen's mark always shown or gone; the API's 503, 409, 202 and 400 each swapped, the four routes closed; opening the
+link confirming, the passwords not compared, what was typed not given back, a known document read as an old link, a
+failed email unsaid, the date of birth's message, the email lost on the sent page, the history's label, the login's
+link and its message, the page's button; and V43 refusing the web or registering by reception. The one that survives
+is equivalent: without the portal's own check of an empty document number, the document refuses it all the same,
+and the answer is the same 400. A gap was found and closed first: nothing checked that the token's hash is unique, and
+a test now inserts one twice. A first run of the breakages counted every one as caught because Maven was never
+started; the runner was fixed, a control that changes only a comment was added and not caught, and the whole set run
+again. The faults ran one at a time. `mvnw clean verify`, with the seven `*PostgresIT` on PostgreSQL 18, which ran
+V43.
+
+**Verified with the application running** on a throwaway PostgreSQL and a throwaway Mailpit: taken to V42 and the
+seed V104 by the previous commit's build, then started on this one, which applied V43 out of order. Over the API María
+José López registered as `40.555.666`, with the phone `(011) 4555-6666` and the email `Maria.Lopez@Mail.com`: a 202,
+one row waiting with the password as a bcrypt and a 64-character hash, no patient, and Mailpit got the link, accents
+intact, "Tu registro en la web". The seed's `DNI 30111222` with another email got the same 202, nothing kept, and the
+email sending them to reception, under the same subject. Someone born in 2010 was refused (409), a phone of two digits
+too (400). Opening the link's page confirmed nothing; its button did (204), a second time was a 400, she logged in,
+and reception read her declared, registered on the web, with the phone normalized and no contact email, her account
+active at the address in lower case and its history "REGISTERED" by nobody; the seed's patients were all reception's.
+She booked one appointment on the web and was refused a second; reception was refused renaming her without the
+document (409), saved her unchanged and still declared, then verified her, and she booked two more. The admin was
+refused her account (403). On the screens Lucía Fernández registered from "Registrate" on the login, was told the two
+passwords differed with her name kept, got "Te mandamos un email a lucia.fernandez@mail.com", confirmed with the
+button, read "Registro confirmado" and logged in; a known document got the same page; reception's screen said "No
+verificada · Registrado desde la web" for her and not for the seed's patient, and her account's history "Abierta al
+confirmar el registro desde la web".
+
+**Part 1 of phase 8 is done:** an adult of 18 or older registers on the web, confirms it from their email and books,
+one appointment ahead until reception verifies them; a document the practice knows opens nothing and is answered
+the same, and a registration never confirmed is forgotten. Part 2 follows.
 
 #### Part 2 — Their children under 13 `[ ]`
 - [ ] With the registration or later from the account: each child's name, document, date of birth and
