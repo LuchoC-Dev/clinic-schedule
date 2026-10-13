@@ -81,7 +81,8 @@ v2 is built in phases, each one scoped here before it starts and closed on its o
 the clinical record, is closed, and so are the second, the arrival queue, and the third, users
 and security, the fourth, the patient's extra data, the fifth, reminders and the cancellation log,
 and the sixth, web booking for patients, the seventh, the cash desk, the eighth, registering
-from the web, and the ninth, moving an appointment and a copy of the clinical record. Each next one is chosen from the planned evolution below, and its scope is written here before any code.
+from the web, and the ninth, moving an appointment and a copy of the clinical record. The tenth, the web
+applications, is the last one of v2, and is in progress. Its scope is written here before any code.
 
 ## v2, phase 1 — the clinical record (closed)
 
@@ -942,10 +943,64 @@ Not in this phase: a partial copy, or a single result on the web; reading the re
 signature (Ley 25.506, art. 3) on the PDF; a copy asked for on the web by a spouse, a partner or an heir;
 moving an appointment to another practitioner or reason; reception uploading or reading clinical files.
 
+## v2, phase 10 — the web applications (the last phase of v2)
+
+### What changes
+
+Until now every screen has been a Thymeleaf page, kept thin and meant to be thrown away (D-02). This
+phase replaces them with the **two single-page applications** the REST API was kept for since v1: one
+for the staff — reception, practitioners, admins and the waiting room's screen — and one for patients.
+**It closes v2**: what comes after it is built as features on v2, each on its own branch and pull request.
+
+Nothing a user can do changes. Every rule stays in the server, which keeps refusing what it refuses today;
+the applications only show it better.
+
+### How it is built
+
+- **React with TypeScript**, built with Vite, and a **component library** for tables, forms and dialogs.
+- **In this repository**, under `frontend/`, and **served by Spring from the same origin**: the Maven build
+  compiles them, and the result is one artifact, as today. No CORS.
+- **The login is a session with a cookie**, protected against CSRF, as the screens' is today: the
+  password is never kept in the browser, a deactivated account loses its session at once (D-79), and the
+  patients' failed logins are still counted (D-86). Basic authentication on the API stops being how a
+  browser logs in.
+- **The addresses in the emails keep working**: activation, cancelling from a link, a new password and
+  confirming a registration open the same paths on the patients' application.
+- **Clinical content is never kept in the browser**: nothing of the record in local storage, and nothing
+  cached after logging out (Ley 25.326; D-51).
+- **The screens stay in Spanish** (D-13), and a refusal shows the server's text, a 409's too.
+- **The patients' application is made for a phone first**; the staff's, for a desktop. The waiting room's
+  screen is a route of the staff's application, full screen and without menus.
+- **What the screens do that the API cannot yet** is added to the API when the screen that needs it is
+  built (D-14), with its integration test.
+- **Tested** with unit and component tests on what the screens decide, and a few end-to-end tests on the
+  key flows — logging in, booking, charging, a consultation —; not one per screen (D-11).
+
+### Delivered in parts
+
+1. **The foundation**: both applications building inside Maven and served by Spring, the session login
+   with CSRF for each kind of user, the layout and navigation by role, the API client with its error
+   handling, and one screen end to end — reception's agenda of the day — with its end-to-end test.
+2. **Reception**: the agenda, booking, moving and cancelling; patients, their details, consent, family
+   groups and web accounts; the arrivals; the cancellations and their log; the reminders; and the cash
+   desk, which asks to confirm a very large amount a second time before sending it (D-87).
+3. **Practitioners**: their queue, the clinical record, consultations, checks, results, orders, addenda and
+   attachments, access requests, and the copies of a record to authenticate.
+4. **Admins and the waiting room**: users, practitioners — weekly schedule, reasons, time off —, queues,
+   the record's read log and refusals, the cash desk's log, the envelopes of record copies; and the
+   waiting room's screen.
+5. **Patients**: every screen of the portal — logging in, activating, registering, a new password, booking,
+   moving and cancelling, the family group, the profile, and the copies of the record.
+6. **Thymeleaf removed**: the templates, the screen controllers, the screens' security chains and the
+   dependency go, as D-02 said from the start; what is left of Basic authentication is decided then.
+
+Not in this phase: anything a user could not do before; a mobile application; offline use; notifications
+pushed from the server; other languages than Spanish.
+
 ## Planned evolution (DO NOT implement yet)
 
-Documented so today's decisions do not close doors, not to bring code forward. The next phases of
-v2 are chosen from here.
+Documented so today's decisions do not close doors, not to bring code forward. v2 ends with its tenth
+phase; what is left here comes after it, as features on v2.
 
 1. **Arrival queue**: v2, phase 2, above — closed. **Users and security**: v2, phase 3, above — closed.
    **Extra patient data**: v2, phase 4, above — closed. **Reminders and the cancellation log**: v2,
@@ -960,7 +1015,7 @@ v2 are chosen from here.
 5. **Web booking, further on**: registering from the web is v2, phase 8, above — closed; moving an
    appointment and a copy of the clinical record are v2, phase 9, above — closed.
 6. **Future user interface**: two separate single-page applications, one for
-   reception/practitioners and one for patients. This is why the REST API is the main
-   contract from v1 onwards. The cash desk's screens there ask reception to confirm an amount a
+   reception/practitioners and one for patients — v2, phase 10, above, in progress. This is why the
+   REST API is the main contract from v1 onwards. The cash desk's screens there ask reception to confirm an amount a
    second time when it is very large, before sending it: the server only refuses what goes above
    its ceiling (D-87), so an amount with one zero too many that stays below it goes through.

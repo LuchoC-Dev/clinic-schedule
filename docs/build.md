@@ -2034,6 +2034,40 @@ code to check it, and a practitioner who may read the record checks it, uploads 
 within 48 hours. It is downloaded as a PDF, or collected on paper at reception, which never reads it; each handover is
 one more reading of the record. What it left for later is listed below.
 
+### Phase 10 — The web applications `[~]`
+
+Scope in `docs/context.md`, section "v2, phase 10 — the web applications". The last phase of v2. Delivered
+in parts; each one is usable on its own, and Thymeleaf keeps working until the last. The technical design of
+each part is agreed before it is coded.
+
+#### Part 1 — The foundation `[ ]`
+- [x] `docs/context.md`: the scope of phase 10
+- [ ] Both applications under `frontend/`, React with TypeScript and Vite, built by Maven and served by Spring
+      from the same origin
+- [ ] A session login with CSRF for the staff and for patients; Basic authentication no longer how a browser
+      logs in
+- [ ] The layout and navigation by role, the API client and its error handling, a refusal's text shown
+- [ ] Reception's agenda of the day end to end, with an end-to-end test
+
+#### Part 2 — Reception `[ ]`
+- [ ] The agenda, booking, moving and cancelling; patients, details, consent, family groups, web accounts;
+      the arrivals; the cancellations and their log; the reminders; the cash desk, a very large amount
+      confirmed twice
+
+#### Part 3 — Practitioners `[ ]`
+- [ ] Their queue; the clinical record, consultations, checks, results, orders, addenda, attachments and access
+      requests; the copies of a record to authenticate
+
+#### Part 4 — Admins and the waiting room `[ ]`
+- [ ] Users; practitioners, weekly schedules, reasons and time off; queues; the read log and refusals; the cash
+      desk's log; the envelopes of record copies; the waiting room's screen
+
+#### Part 5 — Patients `[ ]`
+- [ ] Every screen of the portal, phone first, the emails' addresses still working
+
+#### Part 6 — Thymeleaf removed `[ ]`
+- [ ] Templates, screen controllers, the screens' security chains and the dependency removed (D-02)
+
 ---
 
 ## Explicitly postponed
