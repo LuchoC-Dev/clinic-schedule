@@ -1925,7 +1925,7 @@ each has one appointment ahead at most, and only the adult who registered a chil
 verifies the identity and proves the relation, the rules of phase 6 apply. An account for someone who is not a
 patient is still a patient with no visits. What it left for later is listed below.
 
-### Phase 9 — Moving an appointment, and a copy of the clinical record `[~]`
+### Phase 9 — Moving an appointment, and a copy of the clinical record `[x]`
 
 Scope in `docs/context.md`, section "v2, phase 9 — moving an appointment, and a copy of the clinical
 record". Delivered in parts; each one is usable on its own. The technical design of each part is agreed
@@ -2023,11 +2023,32 @@ machine's lack of memory stopped the run with a breakage left planted; each was 
 smaller batches. `mvnw clean test` and `mvnw verify`, apart for the memory; Docker was not running, so the seven
 `*PostgresIT` were skipped — `V47` is portable SQL.
 
+**Phase 9 of v2, moving an appointment and a copy of the clinical record, is closed.** A patient moves their
+appointment on the web, and their family group's, up to a day before, to a time the agenda offers, with the same
+practitioner and reason, as many times as they want: it is the same appointment, counted once and never a
+cancellation, marked as moved on the web for reception, and told by an email with a new link while the old one ends.
+A practitioner attaches a file to the patient's record as a whole — a record kept on paper, a report never uploaded —
+read by practitioners only and logged. A patient from 13, or a parent for a child under 13 with the relation proved,
+asks from their account for a copy of the whole record; the application puts it together as the record stood, with a
+code to check it, and a practitioner who may read the record checks it, uploads what was missing and authenticates it
+within 48 hours. It is downloaded as a PDF, or collected on paper at reception, which never reads it; each handover is
+one more reading of the record. What it left for later is listed below.
+
 ---
 
 ## Explicitly postponed
 
 These are not oversights: they are decided and waiting for their moment.
+
+From v2, phase 9:
+
+- A partial copy of the record, a single result on the web, and reading the record online (see the context).
+- A digital signature (Ley 25.506, art. 3) on the PDF, and whether an automatic copy needs no one to authenticate it,
+  which is for a lawyer to say (see D-95).
+- A copy asked for on the web by a spouse, a partner or an heir: they ask at reception, with the patient's written
+  authorisation, outside the application.
+- Moving an appointment on the web to another practitioner or reason.
+- Reception uploading or reading clinical files.
 
 From v2, phase 8:
 

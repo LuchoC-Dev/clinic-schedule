@@ -80,8 +80,8 @@ The minimum record needed to book an appointment:
 v2 is built in phases, each one scoped here before it starts and closed on its own. The first,
 the clinical record, is closed, and so are the second, the arrival queue, and the third, users
 and security, the fourth, the patient's extra data, the fifth, reminders and the cancellation log,
-and the sixth, web booking for patients, the seventh, the cash desk, and the eighth, registering
-from the web. The ninth, moving an appointment and a copy of the clinical record, is in progress. Each next one is chosen from the planned evolution below, and its scope is written here before any code.
+and the sixth, web booking for patients, the seventh, the cash desk, the eighth, registering
+from the web, and the ninth, moving an appointment and a copy of the clinical record. Each next one is chosen from the planned evolution below, and its scope is written here before any code.
 
 ## v2, phase 1 — the clinical record (closed)
 
@@ -881,7 +881,7 @@ proving the identity remotely; merging a web registration with a record the prac
 document or none (D-60); moving an appointment from the web; asking for a copy of the clinical record; a
 captcha or any check against bots beyond the email's confirmation.
 
-## v2, phase 9 — moving an appointment, and a copy of the clinical record
+## v2, phase 9 — moving an appointment, and a copy of the clinical record (closed)
 
 ### What changes
 
@@ -958,7 +958,7 @@ v2 are chosen from here.
 4. **Cash desk, further on**: issuing invoices with ARCA, billing the insurers each month, a price
    list, printing receipts.
 5. **Web booking, further on**: registering from the web is v2, phase 8, above — closed; moving an
-   appointment and a copy of the clinical record are v2, phase 9, above — in progress.
+   appointment and a copy of the clinical record are v2, phase 9, above — closed.
 6. **Future user interface**: two separate single-page applications, one for
    reception/practitioners and one for patients. This is why the REST API is the main
    contract from v1 onwards. The cash desk's screens there ask reception to confirm an amount a
