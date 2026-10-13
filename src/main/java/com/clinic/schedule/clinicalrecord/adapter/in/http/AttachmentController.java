@@ -25,11 +25,13 @@ import com.clinic.schedule.clinicalrecord.domain.AttachmentId;
 import com.clinic.schedule.clinicalrecord.domain.AttachmentOwner;
 import com.clinic.schedule.clinicalrecord.domain.CheckId;
 import com.clinic.schedule.clinicalrecord.domain.ConsultationId;
+import com.clinic.schedule.clinicalrecord.domain.PatientId;
 import com.clinic.schedule.practitioner.api.PractitionerReader;
 import com.clinic.schedule.practitioner.api.PractitionerSummary;
 
 /**
- * Files attached to a consultation or a check, for practitioners only (D-51, D-57): one file per
+ * Files attached to a consultation, a check or the record as a whole, for practitioners only (D-51, D-57,
+ * D-94): one file per
  * request, as {@code multipart/form-data} with a part named {@code file}; and the download, only
  * for whoever may read the record, never at a public address.
  */
@@ -57,6 +59,12 @@ class AttachmentController {
     ResponseEntity<AttachmentResponse> attachToCheck(@PathVariable UUID id, @RequestPart MultipartFile file)
             throws IOException {
         return attach(new AttachmentOwner.OfCheck(new CheckId(id)), file);
+    }
+
+    @PostMapping("/api/clinical-records/{patientId}/attachments")
+    ResponseEntity<AttachmentResponse> attachToRecord(@PathVariable UUID patientId, @RequestPart MultipartFile file)
+            throws IOException {
+        return attach(new AttachmentOwner.OfRecord(new PatientId(patientId)), file);
     }
 
     /** The file, with its type as told by its content and its name to save it under. */

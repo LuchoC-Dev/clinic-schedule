@@ -1771,7 +1771,7 @@ grow, with nothing telling new from seen); a "reviewed" mark now (undecided).
 ---
 
 ## D-57 — Attached files: described in the record, stored behind a port
-**Date:** 2026-09-25 · **Status:** accepted
+**Date:** 2026-09-25 · **Status:** accepted; files of the record as a whole, the third owner, in D-94
 
 A consultation or a check may carry files: a photo, an electrocardiogram trace, a laboratory's
 PDF. Any practitioner who may read the record attaches them, at the time or later — adding to the
@@ -3736,3 +3736,36 @@ the patient cancels it on the web anyway); a history of the times it was moved (
 when reception moves it (it would say less than what happened, and the reception path would have to care); reminding
 it at once on moving (a second message with the confirmation's link, on the same day); deleting the old links on moving
 (they end by themselves, and reception's moves would not delete them).
+
+---
+
+## D-94 — Files attached to the record as a whole, the third owner of an attachment
+**Date:** 2026-10-13 · **Status:** accepted
+
+v2, phase 9, part 2. What is not in the application — a record kept on paper before it, a report never uploaded —
+is uploaded by a practitioner, scanned with their stamp, to the patient's record as a whole: the half of D-57 left for
+later. It is needed by part 3, whose copy of the record includes every file, and whose practitioner uploads what was
+missing before authenticating it.
+
+**A third owner, nothing else new.** `AttachmentOwner.OfRecord(patient)` joins `OfConsultation` and `OfCheck`; the rest
+is D-57's: `Attachment` with its kind told by the content, 10 MB at most, the SHA-256, the content behind
+`AttachmentContentStore`, nothing ever deleted, the download only for whoever may read the record and recorded as a
+reading (D-59), a refusal recorded (D-72). `Attachment.restore` refuses a file of one patient's record kept as
+another's. There is no description beside the file: its name says what it is, as for the others.
+
+**Who uploads it.** `AddAttachmentUseCase`, any practitioner who may read the record (D-49, D-54), at any time, with the
+practice's clock. A patient who does not exist is refused like a record the user may not read, a 403 (D-49). Uploading
+is not seeing the patient: it does not start the access period again, as reporting a result does not (D-53).
+Reception neither uploads nor reads these files, by route (D-51).
+
+**Storage.** `V46` loosens `ck_attachment_owner`: at most one of `consultation_id` and `check_id`, both empty for a
+file of the record. The patient is already in every row.
+
+**API and screens.** `POST /api/clinical-records/{patientId}/attachments`, one file as `multipart/form-data`; each
+attachment of the record's answer says its `owner` — `CONSULTATION`, `CHECK` or `RECORD`. The record screen has
+"Archivos de la historia", the list and "Subir a la historia" (`/clinical-records/{patientId}/attachments`); beside
+the consultation form the list shows without the form.
+
+*Rejected:* a description or a kind of document beside the file (nothing reads it yet); a new aggregate for documents
+from elsewhere (the attachment is already what is needed, D-57); waiting for the orders from elsewhere, as D-57
+planned (the copy of the record needs these files now; the orders bring their own validation when they come).

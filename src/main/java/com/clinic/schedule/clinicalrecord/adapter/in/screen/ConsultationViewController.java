@@ -27,6 +27,7 @@ import com.clinic.schedule.clinicalrecord.application.usecase.AddAddendumUseCase
 import com.clinic.schedule.clinicalrecord.application.usecase.RecordConsultationUseCase;
 import com.clinic.schedule.clinicalrecord.application.usecase.ViewClinicalRecordUseCase;
 import com.clinic.schedule.clinicalrecord.domain.AddendumId;
+import com.clinic.schedule.clinicalrecord.domain.AttachmentOwner;
 import com.clinic.schedule.clinicalrecord.domain.CheckOrder;
 import com.clinic.schedule.clinicalrecord.domain.ConsultationId;
 import com.clinic.schedule.clinicalrecord.domain.ItemKind;
@@ -233,6 +234,9 @@ class ConsultationViewController {
         model.addAttribute("insurance", insurance(patient.insurance()));
         model.addAttribute("entries", ClinicalRecordEntry.of(read, names));
         model.addAttribute("grants", GrantEntry.of(read, names));
+        // Files of the record as a whole, not of a consultation or a check (D-94).
+        model.addAttribute("recordFiles", AttachmentEntry.ofOwner(read.attachments(),
+                new AttachmentOwner.OfRecord(new PatientId(patientId)), names));
         // The orders a check done now may fulfil (D-55).
         model.addAttribute("openOrders", read.orders().stream().filter(CheckOrder::isOpen).toList());
         model.addAttribute("mayRecord", read.mayRecord());

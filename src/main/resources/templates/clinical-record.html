@@ -107,6 +107,24 @@
         </article>
     </section>
 
+    <!--
+      Files of the record as a whole: a record kept on paper before the application, a report never
+      uploaded (D-94). Beside the consultation form they show, without the form to add one.
+    -->
+    <section th:fragment="recordFiles" th:if="${recordActions == true or !recordFiles.isEmpty()}">
+        <h2>Archivos de la historia</h2>
+        <p class="muted" th:if="${recordFiles.isEmpty()}">No hay archivos de la historia.</p>
+        <ul class="files" th:unless="${recordFiles.isEmpty()}">
+            <li th:each="file : ${recordFiles}" th:insert="~{clinical-record :: file(${file})}"></li>
+        </ul>
+        <form method="post" enctype="multipart/form-data" th:if="${recordActions}"
+              th:action="@{/clinical-records/{id}/attachments(id=${patient.id})}" class="attach">
+            <input type="file" name="file" accept=".pdf,.png,.jpg,.jpeg,application/pdf,image/png,image/jpeg">
+            <button type="submit">Subir a la historia</button>
+        </form>
+        <p class="muted" th:if="${recordActions}">Una historia en papel escaneada con su sello, un informe que nunca se subió: PDF, PNG o JPG, hasta 10 MB.</p>
+    </section>
+
     <!-- Who else was granted access to this record, and why: every grant is kept, valid or not (D-54). -->
     <section th:unless="${grants.isEmpty()}">
         <h2>Accesos autorizados</h2>

@@ -13,4 +13,6 @@ interface AttachmentRowRepository extends JpaRepository<AttachmentRow, UUID> {
     boolean existsByConsultationId(UUID consultationId);
 
     boolean existsByCheckId(UUID checkId);
+
+    boolean existsByPatientIdAndConsultationIdIsNullAndCheckIdIsNull(UUID patientId);
 }

@@ -498,6 +498,40 @@ class ConsultationViewIT {
                 .andExpect(content().string(not(containsString("Resultado pendiente."))));
     }
 
+    @Test
+    void aFileOfTheRecordAsAWholeIsUploadedFromTheRecordAndShownBesideTheForm() throws Exception {
+        arrivedToday();
+        mockMvc.perform(get("/clinical-records/" + patient).with(asArias))
+                .andExpect(content().string(containsString("No hay archivos de la historia.")))
+                .andExpect(content().string(containsString("Subir a la historia")));
+
+        mockMvc.perform(multipart("/clinical-records/" + patient + "/attachments")
+                        .file(new MockMultipartFile("file", "historia-en-papel.pdf", "application/pdf", PDF))
+                        .with(asArias).with(csrf()))
+                .andExpect(redirectedUrl("/clinical-records/" + patient))
+                .andExpect(flash().attribute("message", "Archivo adjuntado."));
+        mockMvc.perform(multipart("/clinical-records/" + patient + "/attachments")
+                        .file(new MockMultipartFile("file", "informe.pdf", "application/pdf", "hola".getBytes()))
+                        .with(asArias).with(csrf()))
+                .andExpect(flash().attribute("error", "Solo se adjuntan archivos PDF, PNG o JPG."));
+
+        mockMvc.perform(get("/clinical-records/" + patient).with(asArias))
+                .andExpect(content().string(containsString("Archivos de la historia")))
+                .andExpect(content().string(containsString("historia-en-papel.pdf")))
+                .andExpect(content().string(not(containsString("No hay archivos de la historia."))));
+        mockMvc.perform(get("/consultations/new").param("patientId", patient.toString()).with(asArias))
+                .andExpect(content().string(containsString("historia-en-papel.pdf")))
+                .andExpect(content().string(not(containsString("Subir a la historia"))));
+    }
+
+    @Test
+    void receptionCannotUploadAFileOfTheRecord() throws Exception {
+        mockMvc.perform(multipart("/clinical-records/" + patient + "/attachments")
+                        .file(new MockMultipartFile("file", "informe.pdf", "application/pdf", PDF))
+                        .with(csrf()))
+                .andExpect(status().isForbidden());
+    }
+
     // --- addenda on checks (D-58) -------------------------------------------------------
 
     @Test

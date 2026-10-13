@@ -1,5 +1,6 @@
 package com.clinic.schedule.clinicalrecord.adapter.in.http;
 
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.hamcrest.Matchers.containsString;
 import static org.hamcrest.Matchers.hasSize;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
@@ -39,7 +40,8 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 /**
  * Files attached to consultations and checks over the real stack (D-57): uploaded by whoever may
  * read the record, told apart by their content, listed in the record, downloaded only by whoever
- * may read it, and enough to make a check's result. "Today" is 10 March 2026.
+ * may read it, and enough to make a check's result; and files of the record as a whole (D-94). "Today"
+ * is 10 March 2026.
  */
 @SpringBootTest
 @AutoConfigureMockMvc
@@ -191,5 +193,50 @@ class AttachmentApiIT {
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.pending").value(false))
                 .andExpect(jsonPath("$.result.text").doesNotExist());
+    }
+
+    // --- files of the record as a whole (D-94) ------------------------------------------
+
+    @Test
+    void aFileOfTheRecordAsAWholeIsUploadedListedAndItsReadingLogged() throws Exception {
+        String attachment = idOf(upload(asArias, "/api/clinical-records/" + patient + "/attachments",
+                "historia-en-papel.pdf", PDF)
+                .andExpect(status().isCreated())
+                .andExpect(header().exists("Location"))
+                .andExpect(jsonPath("$.owner").value("RECORD"))
+                .andExpect(jsonPath("$.consultationId").doesNotExist())
+                .andExpect(jsonPath("$.checkId").doesNotExist())
+                .andExpect(jsonPath("$.fileName").value("historia-en-papel.pdf"))
+                .andReturn());
+
+        mockMvc.perform(get("/api/clinical-records/" + patient).with(asArias))
+                .andExpect(jsonPath("$.attachments", hasSize(1)))
+                .andExpect(jsonPath("$.attachments[0].id").value(attachment))
+                .andExpect(jsonPath("$.attachments[0].owner").value("RECORD"));
+        mockMvc.perform(get("/api/attachments/" + attachment).with(asArias))
+                .andExpect(status().isOk())
+                .andExpect(content().bytes(PDF));
+
+        assertThat(jdbc.queryForObject("select count(*) from record_reading where attachment_id = ?", Integer.class,
+                UUID.fromString(attachment))).isEqualTo(1);
+    }
+
+    @Test
+    void onlyAPractitionerWhoMayReadTheRecordUploadsOrReadsAFileOfIt() throws Exception {
+        String attachment = idOf(upload(asArias, "/api/clinical-records/" + patient + "/attachments", "informe.pdf", PDF)
+                .andExpect(status().isCreated())
+                .andReturn());
+
+        upload(asStranger, "/api/clinical-records/" + patient + "/attachments", "informe.pdf", PDF)
+                .andExpect(status().isForbidden());
+        upload(asArias, "/api/clinical-records/" + UUID.randomUUID() + "/attachments", "informe.pdf", PDF)
+                .andExpect(status().isForbidden());
+        upload(user -> user, "/api/clinical-records/" + patient + "/attachments", "informe.pdf", PDF)
+                .andExpect(status().isForbidden());
+        mockMvc.perform(get("/api/attachments/" + attachment).with(asStranger)).andExpect(status().isForbidden());
+        mockMvc.perform(get("/api/attachments/" + attachment)).andExpect(status().isForbidden());
+
+        mockMvc.perform(get("/api/clinical-records/" + patient).with(asArias))
+                .andExpect(jsonPath("$.attachments", hasSize(1)));
     }
 }

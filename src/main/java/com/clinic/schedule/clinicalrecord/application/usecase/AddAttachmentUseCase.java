@@ -21,9 +21,10 @@ import com.clinic.schedule.clinicalrecord.domain.PatientId;
 import com.clinic.schedule.clinicalrecord.domain.PractitionerId;
 
 /**
- * A practitioner attaches a file to a consultation or a check, at any time, like an addendum: any
- * practitioner who may read the patient's record, with the practice's clock (D-57). What it belongs
- * to must exist; one that does not is refused like a record the user may not read.
+ * A practitioner attaches a file to a consultation, a check or the record as a whole, at any time, like
+ * an addendum: any practitioner who may read the patient's record, with the practice's clock (D-57,
+ * D-94). What it belongs to must exist; one that does not is refused like a record the user may not
+ * read — a patient who does not exist too, since nobody may read their record.
  *
  * <p>What describes the file and the file itself are stored in the same transaction while the
  * files live in the database. An object store will not join it, and will have to write the file
@@ -83,6 +84,7 @@ public class AddAttachmentUseCase {
             case AttachmentOwner.OfCheck of -> checks.findById(of.check())
                     .map(Check::patientId)
                     .orElseThrow(ClinicalRecordAccessDeniedException::toRead);
+            case AttachmentOwner.OfRecord of -> of.patient();
         };
     }
 

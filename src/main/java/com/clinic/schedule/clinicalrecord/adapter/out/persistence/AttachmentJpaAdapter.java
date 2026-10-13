@@ -36,6 +36,8 @@ class AttachmentJpaAdapter implements AttachmentRepository {
         return switch (owner) {
             case AttachmentOwner.OfConsultation of -> rows.existsByConsultationId(of.consultation().value());
             case AttachmentOwner.OfCheck of -> rows.existsByCheckId(of.check().value());
+            case AttachmentOwner.OfRecord of ->
+                    rows.existsByPatientIdAndConsultationIdIsNullAndCheckIdIsNull(of.patient().value());
         };
     }
 

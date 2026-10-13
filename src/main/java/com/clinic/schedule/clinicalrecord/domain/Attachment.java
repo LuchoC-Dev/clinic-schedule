@@ -9,8 +9,8 @@ import com.clinic.schedule.clinicalrecord.domain.exception.FileTooLargeException
 import com.clinic.schedule.clinicalrecord.domain.exception.UnsupportedFileException;
 
 /**
- * A file attached to a consultation or a check: who uploaded it, when, what it is and its
- * fingerprint (D-57). It is added to the record and never changed nor deleted; a file attached by
+ * A file attached to a consultation, a check or the record as a whole: who uploaded it, when, what it
+ * is and its fingerprint (D-57, D-94). It is added to the record and never changed nor deleted; a file attached by
  * mistake is said so in an addendum.
  *
  * <p>It holds what describes the file, not the file: the content is stored apart, by the
@@ -83,6 +83,9 @@ public class Attachment {
         if (fileName == null || fileName.isBlank() || fileName.length() > MAX_FILE_NAME_LENGTH) {
             throw new IllegalArgumentException("An attachment needs a file name of at most " + MAX_FILE_NAME_LENGTH
                     + " characters");
+        }
+        if (owner instanceof AttachmentOwner.OfRecord of && !of.patient().equals(patientId)) {
+            throw new IllegalArgumentException("An attachment of a record belongs to that patient's record");
         }
         if (sizeBytes <= 0 || sizeBytes > MAX_BYTES) {
             throw new IllegalArgumentException("An attachment is between one byte and " + MAX_BYTES + " bytes");

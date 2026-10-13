@@ -1962,9 +1962,23 @@ caught. The first run was stopped by the machine's lack of memory with the 35th 
 and run again, and the twelve that had run beside it were run again clean. `mvnw clean verify`; Docker was not running,
 so the seven `*PostgresIT` were skipped — `V45` is one portable `alter table`.
 
-#### Part 2 — Files attached to the record as a whole `[ ]`
-- [ ] A practitioner uploads a file — a record on paper, a report never uploaded — to the patient's record
-      as a whole; practitioners only read it, and every reading is logged
+#### Part 2 — Files attached to the record as a whole `[x]`
+- [x] A practitioner uploads a file — a record on paper, a report never uploaded — to the patient's record
+      as a whole; practitioners only read it, and every reading is logged — `AttachmentOwner.OfRecord`, the third
+      owner D-57 left for later, with everything else of D-57: any practitioner who may read the record, a patient
+      who does not exist a 403, not counted as seeing the patient, reception kept out by route (D-94)
+- [x] `POST /api/clinical-records/{patientId}/attachments`; each attachment of the record says its `owner`; "Archivos
+      de la historia" on the record screen, with "Subir a la historia", and beside the consultation form without it
+- [x] `V46`: `ck_attachment_owner` allows both owners empty
+- [x] 1 unit and 4 integration tests. 529 unit and 620 integration tests, 1149 in total
+
+**Verified with:** every new test failing when the code it covers was broken on purpose — 14 breakages, all compiling
+and all caught: a file of one patient's record kept as another's, the owner without its patient; the use case taking
+another patient, or skipping the access rule for these files; the row read back as another patient's; the owner told
+as a check; the API's and the screen's routes gone; `V46` keeping the old constraint; the screen listing no files, the
+form beside the consultation form, the empty message always shown, the list never shown, and the files missing beside
+the consultation form. `mvnw clean verify`; Docker was not running, so the seven `*PostgresIT` were skipped — `V46` is
+a portable `drop` and `add` of one constraint.
 
 #### Part 3 — A copy of the clinical record `[ ]`
 - [ ] The patient from 13, or a parent with the relation proved for a child under 13, asks for the whole

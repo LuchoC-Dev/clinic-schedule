@@ -25,12 +25,13 @@ import com.clinic.schedule.clinicalrecord.domain.AttachmentId;
 import com.clinic.schedule.clinicalrecord.domain.AttachmentOwner;
 import com.clinic.schedule.clinicalrecord.domain.CheckId;
 import com.clinic.schedule.clinicalrecord.domain.ConsultationId;
+import com.clinic.schedule.clinicalrecord.domain.PatientId;
 import com.clinic.schedule.clinicalrecord.domain.exception.FileTooLargeException;
 import com.clinic.schedule.clinicalrecord.domain.exception.UnsupportedFileException;
 
 /**
- * Attaching a file to a consultation or a check from the clinical record screen, and downloading
- * one (D-57). An upload goes back to the record, saying what happened; a user who may not read the
+ * Attaching a file to a consultation, a check or the record as a whole from the clinical record screen,
+ * and downloading one (D-57, D-94). An upload goes back to the record, saying what happened; a user who may not read the
  * record gets a 403, for the download as well.
  */
 @Controller
@@ -57,6 +58,12 @@ class AttachmentViewController {
     String attachToCheck(@PathVariable UUID id, @RequestParam UUID patientId,
             @RequestParam(required = false) MultipartFile file, RedirectAttributes flash) throws IOException {
         return attach(new AttachmentOwner.OfCheck(new CheckId(id)), patientId, file, flash);
+    }
+
+    @PostMapping("/clinical-records/{patientId}/attachments")
+    String attachToRecord(@PathVariable UUID patientId, @RequestParam(required = false) MultipartFile file,
+            RedirectAttributes flash) throws IOException {
+        return attach(new AttachmentOwner.OfRecord(new PatientId(patientId)), patientId, file, flash);
     }
 
     /** The file, with its type as told by its content and its name to save it under. */

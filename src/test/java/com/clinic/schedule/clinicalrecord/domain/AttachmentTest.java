@@ -73,4 +73,15 @@ class AttachmentTest {
         assertThatIllegalArgumentException().isThrownBy(() -> new AttachmentOwner.OfCheck(null));
         assertThatIllegalArgumentException().isThrownBy(() -> new AttachmentOwner.OfConsultation(null));
     }
+
+    @Test
+    void aFileOfTheRecordBelongsToThatPatientsRecordAlone() {
+        AttachmentOwner ofTheRecord = new AttachmentOwner.OfRecord(PATIENT);
+
+        assertThat(Attachment.upload(AttachmentId.newId(), PATIENT, ofTheRecord, ARIAS, AT, "historia-papel.pdf", PDF)
+                .owner()).isEqualTo(ofTheRecord);
+        assertThatIllegalArgumentException().isThrownBy(() -> Attachment.upload(AttachmentId.newId(),
+                new PatientId(UUID.randomUUID()), ofTheRecord, ARIAS, AT, "historia-papel.pdf", PDF));
+        assertThatIllegalArgumentException().isThrownBy(() -> new AttachmentOwner.OfRecord(null));
+    }
 }
