@@ -1925,6 +1925,33 @@ each has one appointment ahead at most, and only the adult who registered a chil
 verifies the identity and proves the relation, the rules of phase 6 apply. An account for someone who is not a
 patient is still a patient with no visits. What it left for later is listed below.
 
+### Phase 9 — Moving an appointment, and a copy of the clinical record `[~]`
+
+Scope in `docs/context.md`, section "v2, phase 9 — moving an appointment, and a copy of the clinical
+record". Delivered in parts; each one is usable on its own. The technical design of each part is agreed
+before it is coded.
+
+#### Part 1 — Moving an appointment on the web `[ ]`
+- [x] `docs/context.md`: the scope of phase 9
+- [ ] Up to 24 hours before, to a suggested time from tomorrow to 30 days ahead, same practitioner and
+      reason, as many times as wanted; for the family group too
+- [ ] The same appointment: counted once, not a cancellation; marked as moved on the web
+- [ ] An email confirms the new time; the reminder is sent again with a new link, and the old one stops
+      working
+
+#### Part 2 — Files attached to the record as a whole `[ ]`
+- [ ] A practitioner uploads a file — a record on paper, a report never uploaded — to the patient's record
+      as a whole; practitioners only read it, and every reading is logged
+
+#### Part 3 — A copy of the clinical record `[ ]`
+- [ ] The patient from 13, or a parent with the relation proved for a child under 13, asks for the whole
+      record from their account
+- [ ] The application puts the copy together, each entry with its author and date, and a code to check it
+- [ ] A practitioner who may read the record checks it, uploads what was missing if any, and authenticates
+      it within 48 hours; the requests wait with the time left
+- [ ] A PDF to download from the account, or paper printed, signed and stamped by the practitioner and
+      collected at reception with the document in sight; every request kept, the copy logged as a reading
+
 ---
 
 ## Explicitly postponed
@@ -1979,7 +2006,7 @@ From v2, phase 1:
 - Marking a check's result as reviewed, per practitioner (see D-56).
 - Orders coming from elsewhere — on paper, or from another practice — and their validation, with
   the anti-corruption layer (see D-55).
-- Files attached to the record as a whole, such as a report the patient brings (see D-57).
+- Files attached to the record as a whole, such as a report the patient brings (see D-57): v2, phase 9.
 - Moving the attached files to an object store, when they outgrow the database (see D-57).
 
 From v2, phase 2:

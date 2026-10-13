@@ -81,7 +81,7 @@ v2 is built in phases, each one scoped here before it starts and closed on its o
 the clinical record, is closed, and so are the second, the arrival queue, and the third, users
 and security, the fourth, the patient's extra data, the fifth, reminders and the cancellation log,
 and the sixth, web booking for patients, the seventh, the cash desk, and the eighth, registering
-from the web. Each next one is chosen from the planned evolution below, and its scope is written here before any code.
+from the web. The ninth, moving an appointment and a copy of the clinical record, is in progress. Each next one is chosen from the planned evolution below, and its scope is written here before any code.
 
 ## v2, phase 1 — the clinical record (closed)
 
@@ -881,6 +881,67 @@ proving the identity remotely; merging a web registration with a record the prac
 document or none (D-60); moving an appointment from the web; asking for a copy of the clinical record; a
 captcha or any check against bots beyond the email's confirmation.
 
+## v2, phase 9 — moving an appointment, and a copy of the clinical record
+
+### What changes
+
+Until now a patient who wanted another time cancelled and booked again, and a copy of their clinical
+record was asked for at the practice and made outside the application. From this phase on **a patient
+moves their appointment on the web**, and **asks for a copy of their whole clinical record from their
+account**, which the application puts together and a practitioner authenticates within the 48 hours the
+law gives (Ley 26.529, art. 14).
+
+### Moving an appointment
+
+- **The rules of booking and cancelling** (phase 6): up to 24 hours before it, to a time the agenda
+  suggests from tomorrow to 30 days ahead, with the same practitioner and the same reason. To change
+  either, they cancel and book again.
+- **As many times as they want**, while it is more than 24 hours away. It is the same appointment: it
+  counts once against the limit of appointments ahead, and moving is not a cancellation (phase 5).
+- **For the family group too**, as booking and cancelling are (phases 6 and 8).
+- **Each move is told**: an email confirms the new time, the reminder is sent again for it with a new
+  link, and the old link stops working. The appointment says it was moved on the web, and reception sees
+  it on the agenda.
+
+### Files attached to the record as a whole
+
+What is not in the application — a record kept on paper before it, a report never uploaded — is
+uploaded by a **practitioner**, scanned with their stamp, as a file attached to the patient's record as
+a whole, not to a consultation or a check (the postponed half of D-57). It is clinical content: written
+and read by practitioners only (D-51), and every reading is logged, as any other.
+
+### A copy of the clinical record
+
+- **Who asks for it on the web**: each patient with an account, from 13, their own; a parent or guardian,
+  that of their child under 13, once reception has **proved the relation** (phases 6 and 8). A spouse, a
+  partner or an heir asks at reception, with the patient's written authorisation (Ley 26.529, art. 19),
+  outside the application.
+- **Always the whole record**: every consultation, check, result, addendum and attached file, from every
+  practitioner. A single result is given by the practitioner, at the consultation, as today.
+- **The application puts it together** at once: each entry with its author and when it was written,
+  and a code to check the copy against the application.
+- **A practitioner authenticates it within 48 hours.** The request waits for the practitioners, with the
+  time left. A practitioner who may read the record checks that it is complete — or first uploads what was
+  missing, and the copy is put together again — and authenticates it: their login is their electronic
+  signature (Ley 25.506, art. 5; Decreto 1089/2012, art. 13). Whether an automatic copy needs no one to
+  authenticate it is for a lawyer to say; until then, someone does.
+- **Delivered as the patient chooses**: a PDF they download from their account once authenticated, or on
+  paper, which the practitioner prints, signs and stamps, and leaves with reception in a sealed envelope,
+  for the patient to collect showing their document. Reception never reads it (D-51).
+- **Every request is kept**: who asked, for whom, when, who authenticated it and when, how it was
+  delivered. The read log of the record (phase 2) records the copy as one more reading.
+
+### Delivered in parts
+
+1. Moving an appointment on the web.
+2. Files attached to the record as a whole, uploaded by practitioners.
+3. A copy of the clinical record: the request on the web, the 48 hours, the authentication, and the PDF
+   or the paper.
+
+Not in this phase: a partial copy, or a single result on the web; reading the record online; a digital
+signature (Ley 25.506, art. 3) on the PDF; a copy asked for on the web by a spouse, a partner or an heir;
+moving an appointment to another practitioner or reason; reception uploading or reading clinical files.
+
 ## Planned evolution (DO NOT implement yet)
 
 Documented so today's decisions do not close doors, not to bring code forward. The next phases of
@@ -896,14 +957,8 @@ v2 are chosen from here.
    reminder, once the application knows them.
 4. **Cash desk, further on**: issuing invoices with ARCA, billing the insurers each month, a price
    list, printing receipts.
-5. **Web booking, further on**: registering from the web is v2, phase 8, above — closed. Then:
-   - **moving an appointment from the web**, with the rules of booking and cancelling — up to 24 hours
-     before, to a suggested time from tomorrow to 30 days ahead, with the same practitioner and reason —,
-     for the family group too;
-   - **asking for a copy of the clinical record from the web** (Ley 26.529, art. 14): the patient asks
-     from their account, the application keeps the 48 hours it must be handed in, and the practice hands
-     it authenticated. Reading the record online is not offered: clinical content stays the
-     practitioners' (D-51).
+5. **Web booking, further on**: registering from the web is v2, phase 8, above — closed; moving an
+   appointment and a copy of the clinical record are v2, phase 9, above — in progress.
 6. **Future user interface**: two separate single-page applications, one for
    reception/practitioners and one for patients. This is why the REST API is the main
    contract from v1 onwards. The cash desk's screens there ask reception to confirm an amount a
