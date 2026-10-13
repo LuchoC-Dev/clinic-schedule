@@ -33,13 +33,17 @@ final class BookingConfirmationText {
         return practice + (confirmation.moved() ? " — Turno cambiado" : " — Turno reservado");
     }
 
-    /** The link when there is time to cancel on the web; a call otherwise, and to change it in any case. */
+    /**
+     * While there is time to do it on the web, the link to cancel it and the account to move it to another time (D-93);
+     * a call for anything else, and for everything once it is too late.
+     */
     private String howToCancel(BookingConfirmation confirmation) {
         if (confirmation.cancelToken() == null) {
             return "Para cancelarlo o cambiarlo, llamá al " + phone + " o acercate a recepción.\n\n";
         }
         return "Para cancelarlo, entrá a este link:\n\n" + baseUrl + "/portal/cancel?token="
-                + confirmation.cancelToken() + "\n\nPara cambiarlo, llamá al " + phone
+                + confirmation.cancelToken() + "\n\nPara cambiarle el horario, entrá a Mis turnos en tu cuenta:\n\n"
+                + baseUrl + "/portal/appointments\n\nPara cualquier otro cambio, llamá al " + phone
                 + " o acercate a recepción.\n\n";
     }
 

@@ -75,8 +75,12 @@ it happens. A practitioner gets their own agenda,
 read-only, with today's patients linked to their clinical record and *Empezar consulta* once
 they arrived: a form beside the record, sent once and never changed, and completed afterwards
 with addenda. Under *Mi cola* they call the next patient of their queue and start their consultation. Under *Resultados pendientes* they find the checks waiting for a result, and ask
-for access to a record to report one; under *Mis órdenes*, they follow up the orders they issued. The screens are in
-Spanish, for the staff.
+for access to a record to report one; under *Mis órdenes*, they follow up the orders they issued. On the record, under
+*Archivos de la historia*, they upload what is not in the application — a record kept on paper, a report never
+uploaded. Under *Copias pedidas* they find the copies of records the patients asked for, with the time left of the 48
+hours: they review one, upload what was missing and put it together again, and authenticate it — or ask for access to
+the record first —, and check a copy against the application by its code. Reception hands the copies on paper over,
+sealed, under *Copias para retirar*. The screens are in Spanish, for the staff.
 
 **The patients' screens** — at http://localhost:8080/portal/login, apart from the staff's. A patient whom
 reception opened a web account for — from *Cuenta web* on the patient's screen, for a verified patient of
@@ -93,8 +97,10 @@ day before it, as anyone cancels from the link in its reminder or in a booking's
 they book the reasons reception opened to the web — "Se reserva por la web" on the practitioners' screen —, under
 *Mi familia* they see their family groups and choose whether each sees their appointments, and from 18 they see,
 book, move and cancel those of the members who share theirs as their own, and
-under *Mis datos* they change their phone, email and health insurance, and whether they want reminders on each. The emails go to
-Mailpit in development, at http://localhost:8025.
+under *Mis datos* they change their phone, email and health insurance, and whether they want reminders on each. Under *Mi
+historia clínica* they ask for a copy of their whole clinical record — from 13, their own; a parent, that of their
+child under 13 once reception proved the relation —, as a PDF to download once a practitioner authenticates it, or on
+paper to collect at reception. The emails go to Mailpit in development, at http://localhost:8025.
 
 **API** — basic authentication on every request: the staff with their username, a patient with their
 document as its type and number, such as `DNI 27333444`. Errors share one body:
@@ -148,12 +154,17 @@ document as its type and number, such as `DNI 27333444`. Errors share one body:
 | `POST` | `/api/checks` | a check without a consultation — the emergency precaution — with its result or pending; it may fulfil an open order |
 | `POST` | `/api/checks/{id}/addenda` | an addendum to a check — how a wrong result is corrected — by any practitioner with access to the record |
 | `POST` | `/api/orders/{id}/cancel` | the author cancels an open order, with a reason |
-| `POST` | `/api/consultations/{id}/attachments`, `/api/checks/{id}/attachments` | attach a PDF, PNG or JPEG of up to 10 MB, as `multipart/form-data` with a `file` part |
+| `POST` | `/api/consultations/{id}/attachments`, `/api/checks/{id}/attachments`, `/api/clinical-records/{patientId}/attachments` | attach a PDF, PNG or JPEG of up to 10 MB to a consultation, a check or the record as a whole, as `multipart/form-data` with a `file` part |
 | `GET` | `/api/attachments/{id}` | download an attached file — only for whoever may read the record |
 | `GET` | `/api/orders/mine` | the user's own orders not cancelled, and where each stands — no result texts |
 | `POST` | `/api/checks/{id}/result` | the result of a pending check, by any practitioner with access to the record |
 | `GET` | `/api/checks/pending` | the checks of the practice waiting for a result: only the patient and the check |
 | `POST` | `/api/checks/{id}/access-grants` | access to the record to report that pending check — granted at once, for now, and recorded |
+| `GET` | `/api/record-copies`, `?code=`, `/api/record-copies/{id}` | the copies of records waiting for a practitioner, the soonest due first, with the minutes left of the 48 hours and whether the user may read the record; one by the code printed on it, or by id |
+| `GET` | `/api/record-copies/{id}/pdf` | the copy as a PDF, as the record stood when it was put together — a reading of the record |
+| `POST` | `/api/record-copies/{id}/reassembly`, `/authentication`, `/access-grants` | put it together again as the record stands now; authenticate it — `{assembly, reviewed}`, the assembly reviewed —; or ask for access to its record to do so — `{reason}` |
+| `GET` | `/api/record-copy-envelopes` | reception's copies on paper waiting to be collected: whose, who asked, since when |
+| `POST` | `/api/record-copy-envelopes/{id}/handover` | `{documentSeen}`: reception hands one over to whoever shows their document |
 | `POST` | `/api/patient-accounts` | reception opens a patient's web account — `{patientId, email}`, for a verified patient of 13 or older — and the activation goes to that email |
 | `GET` | `/api/patient-accounts?patientId=`, `/api/patient-accounts/{id}` | a patient's web account and its state; never its password |
 | `POST` | `/api/patient-accounts/{id}/activation-resend`, `/email-change`, `/deactivate`, `/reactivate` | send the activation again, change the account's email, switch it off or on |
@@ -181,6 +192,9 @@ document as its type and number, such as `DNI 27333444`. Errors share one body:
 | `POST` | `/api/portal/appointments/{id}/move` | `{startsAt}`: the patient moves it to one of those times, from tomorrow to 30 days on, up to a day before it; the same appointment, marked `movedOnWeb`, and a confirmation goes to the account's email |
 | `POST` | `/api/portal/appointments/{id}/cancel` | the patient cancels one of their appointments, or of a family member they act for, up to a day before it |
 | `GET` | `/api/portal/family` | the patient's family groups: each member's name, age band and whether they share, and which is the patient |
+| `GET` | `/api/portal/record-copies` | whose record the patient may ask a copy of — `askableFor` —, and the copies asked for, with where each stands |
+| `POST` | `/api/portal/record-copies` | `{patientId?, delivery}`: ask for a copy of the patient's own record, or of a child's under 13 with the relation proved, `PDF` or `PAPER`; one waits at a time |
+| `GET` | `/api/portal/record-copies/{id}/pdf` | download an authenticated PDF copy — a reading of the record in the account's name |
 | `POST` | `/api/portal/family/{groupId}/sharing`, `/api/portal/family/{groupId}/leave` | the patient shares their appointments with the group or stops — `{shares}` —, or leaves it |
 | `GET`, `POST` | `/api/portal/cancel-links/{token}`, `/api/portal/cancel-links/{token}/cancel` | what an email's link would cancel — when and with whom — and cancelling it, with nobody logged in |
 | `PUT` | `/api/portal/profile/contact-consent` | `{phone, email}`: true is the patient's own consent, false withdraws any, left out stays |

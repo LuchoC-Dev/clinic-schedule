@@ -13,7 +13,7 @@ import com.clinic.schedule.clinicalrecord.domain.CheckId;
 
 /**
  * One access granted to a clinical record, as the record screen shows it: to whom, when, until
- * when, for which check, and why (D-54).
+ * when, for which check — or to authenticate a copy of the record (D-95) —, and why (D-54).
  */
 record GrantEntry(String practitioner, String grantedAt, String validUntil, String check, String reason) {
 
@@ -28,7 +28,8 @@ record GrantEntry(String practitioner, String grantedAt, String validUntil, Stri
                         ClinicalRecordEntry.nameOf(names, grant.practitionerId().value()),
                         ClinicalRecordEntry.format(grant.grantedAt()),
                         grant.validUntil().format(DAY),
-                        checks.containsKey(grant.checkId()) ? checks.get(grant.checkId()).description() : "",
+                        grant.checkId().map(checks::get).map(Check::description)
+                                .orElse(grant.recordCopyId().isPresent() ? "Autenticar una copia de la historia" : ""),
                         grant.reason().orElse("")))
                 .toList();
     }

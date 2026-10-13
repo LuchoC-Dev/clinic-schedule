@@ -13,5 +13,11 @@ public enum ReadAccess {
     ACCESS_GRANT,
 
     /** They saw the patient within the access period. */
-    SEEN_WITHIN_PERIOD
+    SEEN_WITHIN_PERIOD,
+
+    /**
+     * Not a practitioner's: a copy of the record handed to whoever asked for it, by the patient's right to it (Ley
+     * 26.529, art. 14) — downloaded from their account, or collected at reception (D-96). The policy never answers it.
+     */
+    COPY_REQUEST
 }

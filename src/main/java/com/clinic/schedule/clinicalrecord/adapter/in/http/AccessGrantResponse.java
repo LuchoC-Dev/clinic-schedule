@@ -7,14 +7,20 @@ import java.util.UUID;
 
 import com.clinic.schedule.clinicalrecord.domain.AccessGrant;
 import com.clinic.schedule.clinicalrecord.domain.Approval;
+import com.clinic.schedule.clinicalrecord.domain.CheckId;
+import com.clinic.schedule.clinicalrecord.domain.RecordCopyId;
 
-/** An access grant as the API shows it: who, for which patient and check, when, until when, why, how (D-54). */
+/**
+ * An access grant as the API shows it: who, for which patient and check — or copy of the record, the other null
+ * (D-95) —, when, until when, why, how (D-54).
+ */
 record AccessGrantResponse(
         UUID id,
         UUID patientId,
         UUID practitionerId,
         String practitionerName,
         UUID checkId,
+        UUID recordCopyId,
         LocalDateTime grantedAt,
         LocalDate validUntil,
         String reason,
@@ -27,7 +33,8 @@ record AccessGrantResponse(
                 grant.patientId().value(),
                 grant.practitionerId().value(),
                 names.get(grant.practitionerId().value()),
-                grant.checkId().value(),
+                grant.checkId().map(CheckId::value).orElse(null),
+                grant.recordCopyId().map(RecordCopyId::value).orElse(null),
                 grant.grantedAt(),
                 grant.validUntil(),
                 grant.reason().orElse(null),

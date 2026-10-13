@@ -49,6 +49,22 @@
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-starter-mail</artifactId>
         </dependency>
+        <!--
+          The copy of a clinical record is a PDF, with the files attached to the record in it (D-95). OpenPDF lays out
+          the text, places pictures and imports the pages of a PDF. Brotli decodes compressed web fonts, which a copy
+          never has.
+        -->
+        <dependency>
+            <groupId>com.github.librepdf</groupId>
+            <artifactId>openpdf</artifactId>
+            <version>3.0.5</version>
+            <exclusions>
+                <exclusion>
+                    <groupId>com.aayushatharva.brotli4j</groupId>
+                    <artifactId>brotli4j</artifactId>
+                </exclusion>
+            </exclusions>
+        </dependency>
 
         <!-- The application runs on PostgreSQL (D-44); flyway-core needs its PostgreSQL module. -->
         <dependency>

@@ -19,7 +19,7 @@ class RecordReadingTest {
     void aReadingOfTheWholeRecordNamesNoFile() {
         RecordReading reading = RecordReading.ofRecord(PRACTITIONER, USER, PATIENT, NOW, ReadAccess.VISIT_TODAY);
 
-        assertThat(reading.practitionerId()).isEqualTo(PRACTITIONER);
+        assertThat(reading.practitionerId()).contains(PRACTITIONER);
         assertThat(reading.readBy()).contains(USER);
         assertThat(reading.patientId()).isEqualTo(PATIENT);
         assertThat(reading.readAt()).isEqualTo(NOW);
@@ -60,5 +60,31 @@ class RecordReadingTest {
 
         assertThat(RecordReading.restore(RecordReadingId.newId(), PRACTITIONER, null, PATIENT, NOW,
                 ReadAccess.VISIT_TODAY, null).readBy()).isEmpty();
+    }
+
+    /** A copy handed to whoever asked for it is read by no practitioner, by the patient's right (D-96). */
+    @Test
+    void aCopyIsReadByAPractitionerWithTheirAccessOrHandedOverByThePatientsRight() {
+        RecordCopyId copy = RecordCopyId.newId();
+
+        RecordReading reviewed = RecordReading.ofCopy(PRACTITIONER, USER, PATIENT, NOW, ReadAccess.ACCESS_GRANT, copy);
+        assertThat(reviewed.practitionerId()).contains(PRACTITIONER);
+        assertThat(reviewed.recordCopyId()).contains(copy);
+        assertThat(reviewed.attachmentId()).isEmpty();
+
+        RecordReading delivered = RecordReading.ofDeliveredCopy("portal:cuenta", PATIENT, NOW, copy);
+        assertThat(delivered.practitionerId()).isEmpty();
+        assertThat(delivered.readBy()).contains("portal:cuenta");
+        assertThat(delivered.access()).isEqualTo(ReadAccess.COPY_REQUEST);
+        assertThat(delivered.recordCopyId()).contains(copy);
+
+        assertThatIllegalArgumentException().isThrownBy(
+                () -> RecordReading.ofCopy(PRACTITIONER, USER, PATIENT, NOW, ReadAccess.ACCESS_GRANT, null));
+        assertThatIllegalArgumentException().isThrownBy(
+                () -> RecordReading.ofDeliveredCopy("portal:cuenta", PATIENT, NOW, null));
+        assertThatIllegalArgumentException().isThrownBy(
+                () -> RecordReading.ofCopy(PRACTITIONER, USER, PATIENT, NOW, ReadAccess.COPY_REQUEST, copy));
+        assertThatIllegalArgumentException().isThrownBy(() -> RecordReading.restore(RecordReadingId.newId(), null,
+                USER, PATIENT, NOW, ReadAccess.VISIT_TODAY, null, copy));
     }
 }

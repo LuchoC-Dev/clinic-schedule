@@ -18,6 +18,9 @@ import com.clinic.schedule.clinicalrecord.domain.exception.OrderNotOpenException
 import com.clinic.schedule.clinicalrecord.domain.exception.ReasonRequiredException;
 import com.clinic.schedule.clinicalrecord.domain.exception.ResultAlreadyRecordedException;
 import com.clinic.schedule.clinicalrecord.domain.exception.UnsupportedFileException;
+import com.clinic.schedule.clinicalrecord.application.exception.RecordCopyChangedException;
+import com.clinic.schedule.clinicalrecord.application.exception.RecordCopyNotFoundException;
+import com.clinic.schedule.clinicalrecord.domain.exception.RecordCopyRefusedException;
 import com.clinic.schedule.shared.http.ErrorResponse;
 
 /**
@@ -25,7 +28,7 @@ import com.clinic.schedule.shared.http.ErrorResponse;
  * requests are answered once for every module, in {@code shared/http}.
  */
 @RestControllerAdvice(assignableTypes = {ConsultationController.class, CheckController.class, OrderController.class,
-        AttachmentController.class})
+        AttachmentController.class, RecordCopyController.class})
 class ConsultationExceptionHandler {
 
     /** Not this user's to read or to write: a 403, never an empty record (D-50). */
@@ -113,6 +116,18 @@ class ConsultationExceptionHandler {
     }
 
     /** A consultation that breaks its own rules, when Bean Validation did not already catch it. */
+    /** A copy that does not exist: the request names nobody's content (D-95). */
+    @ExceptionHandler(RecordCopyNotFoundException.class)
+    ResponseEntity<ErrorResponse> copyNotFound(RecordCopyNotFoundException e) {
+        return ResponseEntity.status(HttpStatus.NOT_FOUND).body(ErrorResponse.of(404, "Not found", e.getMessage()));
+    }
+
+    /** A copy refusing a step — authenticated already, put together again since, not reviewed —, or changed meanwhile. */
+    @ExceptionHandler({RecordCopyRefusedException.class, RecordCopyChangedException.class})
+    ResponseEntity<ErrorResponse> copyRefused(RuntimeException e) {
+        return ResponseEntity.status(HttpStatus.CONFLICT).body(ErrorResponse.of(409, "Conflict", e.getMessage()));
+    }
+
     @ExceptionHandler(IllegalArgumentException.class)
     ResponseEntity<ErrorResponse> badRequest(IllegalArgumentException e) {
         return ResponseEntity.badRequest().body(ErrorResponse.of(400, "Bad request", e.getMessage()));

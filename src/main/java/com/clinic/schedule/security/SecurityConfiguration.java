@@ -137,7 +137,8 @@ class SecurityConfiguration {
                 .authorizeHttpRequests(routes -> routes
                         .requestMatchers(HttpMethod.GET, "/api/appointments").hasAnyRole(RECEPTION, PRACTITIONER)
                         .requestMatchers("/api/consultations/**", "/api/checks/**", "/api/orders/**",
-                                "/api/attachments/**", "/api/clinical-records/**", "/api/my-queue/**").hasRole(PRACTITIONER)
+                                "/api/attachments/**", "/api/clinical-records/**", "/api/my-queue/**",
+                                "/api/record-copies/**").hasRole(PRACTITIONER)
                         .requestMatchers("/api/users/**", "/api/record-readings", "/api/record-refusals",
                                 "/api/cancellation-log", "/api/cash-desk-log").hasRole(ADMIN)
                         .requestMatchers(HttpMethod.POST, "/api/password").authenticated()
@@ -160,7 +161,7 @@ class SecurityConfiguration {
                         .requestMatchers(HttpMethod.GET, "/waiting-room").hasAnyRole(RECEPTION, WAITING_ROOM)
                         .requestMatchers(HttpMethod.GET, "/", "/agenda").hasAnyRole(RECEPTION, PRACTITIONER)
                         .requestMatchers("/consultations/**", "/checks/**", "/orders/**", "/attachments/**",
-                                "/clinical-records/**", "/my-queue/**").hasRole(PRACTITIONER)
+                                "/clinical-records/**", "/my-queue/**", "/record-copies/**").hasRole(PRACTITIONER)
                         .requestMatchers("/users/**", "/record-readings", "/record-refusals", "/cancellation-log",
                                 "/cash-desk-log").hasRole(ADMIN)
                         .requestMatchers("/password").authenticated()

@@ -5,6 +5,7 @@ import java.time.Period;
 
 import com.clinic.schedule.clinicalrecord.domain.exception.CheckNotPendingException;
 import com.clinic.schedule.clinicalrecord.domain.exception.ReasonRequiredException;
+import com.clinic.schedule.clinicalrecord.domain.exception.RecordCopyRefusedException;
 
 /**
  * How a practitioner is granted access to a patient's record to report a check (D-54).
@@ -47,6 +48,28 @@ public class AccessGrantPolicy {
             throw new ReasonRequiredException();
         }
         return AccessGrant.restore(id, check.patientId(), practitionerId, check.id(), now,
+                now.toLocalDate().plus(validity), reason, Approval.AUTOMATIC);
+    }
+
+    /**
+     * Access to authenticate a copy of the record the patient asked for (D-95): only while it waits, so that, like a
+     * pending check, a real request is behind it. The rest is as for a check.
+     *
+     * @throws RecordCopyRefusedException when it is authenticated already
+     * @throws ReasonRequiredException when a reason is required and none was given
+     */
+    public AccessGrant grantForCopy(AccessGrantId id, PractitionerId practitionerId, RecordCopy copy,
+            LocalDateTime now, String reason) {
+        if (copy == null) {
+            throw new IllegalArgumentException("An access grant is asked for a copy");
+        }
+        if (copy.isAuthenticated()) {
+            throw new RecordCopyRefusedException(RecordCopyRefusedException.Reason.ALREADY_AUTHENTICATED);
+        }
+        if (reasonRequired && (reason == null || reason.isBlank())) {
+            throw new ReasonRequiredException();
+        }
+        return AccessGrant.restore(id, copy.patientId(), practitionerId, null, copy.id(), now,
                 now.toLocalDate().plus(validity), reason, Approval.AUTOMATIC);
     }
 

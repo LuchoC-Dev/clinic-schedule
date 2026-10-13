@@ -9,7 +9,7 @@ Read these before proposing design or code:
 
 - `docs/context.md` — what the application does, who uses it, the business rules and the
   planned evolution.
-- `docs/decisions.md` — technical decisions and their reasoning (D-01 … D-94).
+- `docs/decisions.md` — technical decisions and their reasoning (D-01 … D-96).
 - `docs/build.md` — the staged plan and the current progress.
 
 ## Stack
@@ -88,4 +88,4 @@ patient · practitioner · appointment (`BOOKED`/`CANCELLED`/`ABSENT`) · reason
 weekly schedule · break · time off · arrival · queue · session · reschedule · reception
 · consultation · item (prescription) · check · result · order · addendum · clinical record ·
 access period · access grant · attachment · web account (`PENDING`/`ACTIVE`/`INACTIVE`) · activation
-· visit · charge · refund · means · cash desk
+· visit · charge · refund · means · cash desk · copy (of the record) · assembly · verification code

@@ -30,7 +30,9 @@ class BookingConfirmationTextTest {
                 .contains("Tu turno quedó reservado para el jueves 12 de marzo a las 10:30 con Dra. Arias.")
                 .contains("Para cancelarlo, entrá a este link:\n\n"
                         + "https://turnos.example/portal/cancel?token=abc-123\n\n"
-                        + "Para cambiarlo, llamá al 011 4555-0000 o acercate a recepción.\n\n")
+                        + "Para cambiarle el horario, entrá a Mis turnos en tu cuenta:\n\n"
+                        + "https://turnos.example/portal/appointments\n\n"
+                        + "Para cualquier otro cambio, llamá al 011 4555-0000 o acercate a recepción.\n\n")
                 .endsWith("Consultorio Central · Av. Siempre Viva 742 · 011 4555-0000\n");
     }
 

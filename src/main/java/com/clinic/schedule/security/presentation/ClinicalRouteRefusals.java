@@ -25,7 +25,7 @@ import com.clinic.schedule.security.api.ClinicalRouteRefused;
 public class ClinicalRouteRefusals {
 
     private static final List<String> CLINICAL = List.of("/consultations", "/checks", "/orders", "/attachments",
-            "/clinical-records");
+            "/clinical-records", "/record-copies");
 
     private final ApplicationEventPublisher events;
 

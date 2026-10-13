@@ -10,6 +10,7 @@ import com.clinic.schedule.clinicalrecord.domain.Approval;
 import com.clinic.schedule.clinicalrecord.domain.CheckId;
 import com.clinic.schedule.clinicalrecord.domain.PatientId;
 import com.clinic.schedule.clinicalrecord.domain.PractitionerId;
+import com.clinic.schedule.clinicalrecord.domain.RecordCopyId;
 
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
@@ -32,8 +33,12 @@ class AccessGrantRow {
     @Column(name = "practitioner_id", nullable = false)
     private UUID practitionerId;
 
-    @Column(name = "check_id", nullable = false)
+    /** One of the check and the copy, the other null (D-95). */
+    @Column(name = "check_id")
     private UUID checkId;
+
+    @Column(name = "record_copy_id")
+    private UUID recordCopyId;
 
     @Column(name = "granted_at", nullable = false)
     private LocalDateTime grantedAt;
@@ -56,7 +61,8 @@ class AccessGrantRow {
         row.id = grant.id().value();
         row.patientId = grant.patientId().value();
         row.practitionerId = grant.practitionerId().value();
-        row.checkId = grant.checkId().value();
+        row.checkId = grant.checkId().map(CheckId::value).orElse(null);
+        row.recordCopyId = grant.recordCopyId().map(RecordCopyId::value).orElse(null);
         row.grantedAt = grant.grantedAt();
         row.validUntil = grant.validUntil();
         row.reason = grant.reason().orElse(null);
@@ -66,6 +72,7 @@ class AccessGrantRow {
 
     AccessGrant toGrant() {
         return AccessGrant.restore(new AccessGrantId(id), new PatientId(patientId), new PractitionerId(practitionerId),
-                new CheckId(checkId), grantedAt, validUntil, reason, approval);
+                checkId == null ? null : new CheckId(checkId), recordCopyId == null ? null : new RecordCopyId(recordCopyId),
+                grantedAt, validUntil, reason, approval);
     }
 }

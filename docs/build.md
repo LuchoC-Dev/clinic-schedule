@@ -1980,14 +1980,48 @@ form beside the consultation form, the empty message always shown, the list neve
 the consultation form. `mvnw clean verify`; Docker was not running, so the seven `*PostgresIT` were skipped — `V46` is
 a portable `drop` and `add` of one constraint.
 
-#### Part 3 — A copy of the clinical record `[ ]`
-- [ ] The patient from 13, or a parent with the relation proved for a child under 13, asks for the whole
-      record from their account
-- [ ] The application puts the copy together, each entry with its author and date, and a code to check it
-- [ ] A practitioner who may read the record checks it, uploads what was missing if any, and authenticates
-      it within 48 hours; the requests wait with the time left
-- [ ] A PDF to download from the account, or paper printed, signed and stamped by the practitioner and
-      collected at reception with the document in sight; every request kept, the copy logged as a reading
+#### Part 3 — A copy of the clinical record `[x]`
+- [x] The patient from 13, or a parent with the relation proved for a child under 13, asks for the whole
+      record from their account — `RecordCopyPolicy` in `portal`, at each request: their own from 13, and each child
+      under 13 they asked to add with the relation proved, not another adult's; anyone else a 403; one copy waiting
+      at a time for each record (D-95)
+- [x] The application puts the copy together, each entry with its author and date, and a code to check it —
+      `RecordCopy` in `clinicalrecord`, its first `api/` (`RecordCopyWriter`, `RecordCopyReader`); no copy stored:
+      `RecordCopyContent.asOf` puts the record together as it stood at `assembledAt`; `CopyCode`, twelve characters
+      of Crockford's base 32 on every page, checked at `/record-copies/verify`
+- [x] A practitioner who may read the record checks it, uploads what was missing if any, and authenticates
+      it within 48 hours; the requests wait with the time left — "Copias pedidas", the soonest due first, "Quedan
+      31 h"; put together again after uploading (D-94); authenticated naming the assembly reviewed, their login their
+      signature; one who may not read the record asks for access from the copy, as for a pending check (D-54, D-95)
+- [x] A PDF to download from the account, or paper printed, signed and stamped by the practitioner and
+      collected at reception with the document in sight; every request kept, the copy logged as a reading —
+      OpenPDF 3.0.5, with the files attached as annexes; "Copias para retirar", reception's, never the content; each
+      download and each handover a reading by `COPY_REQUEST`, with no practitioner, which the admins read (D-96)
+- [x] The booking's email points at *Mis turnos* to move the appointment, while there is time to do it on the web
+- [x] `GET`/`POST /api/record-copies/**`, `/api/record-copy-envelopes/**`, `/api/portal/record-copies/**`; *Copias
+      pedidas*, *Copias para retirar*, *Mi historia clínica*
+- [x] `V47`: `record_copy`; `record_access_grant.record_copy_id`; `record_reading.record_copy_id`, its practitioner
+      empty only for `COPY_REQUEST`
+- [x] 20 unit and 12 integration tests. 549 unit and 632 integration tests, 1181 in total
+
+**Verified with:** every new test failing when the code it covers was broken on purpose — 69 breakages, all compiling
+and all caught in the end: the deadline, the assembly not counted, put together again or authenticated twice once
+authenticated, the assembly or the review not checked, a handover without the document seen, a PDF handed over, a paper
+copy downloaded or one not authenticated, never late, an envelope still waiting once handed over, the code read without
+mending an O; the copy with later addenda, results, files or consultations, another patient's checks, an order's later
+outcome, no files of the record; the policy with an unproved child, another adult's child, a child of 13, a child asking,
+a group the parent left; a grant for an authenticated copy or for both; a copy's reading by any access; the email still
+saying to call; two copies waiting, a reading not kept — the practitioner's, the download's, the handover's —, the PDF or
+the authentication without access, anyone's copy downloaded, every copy readable, a patient asking for anyone or read as
+someone else; the waiting ones all, the handover, the assembly, the reading's or the grant's copy not stored; the draft
+not marked, a PDF never annexed, the pages miscounted, no code, no files of the record in the PDF; the routes open to
+reception or their refusals not recorded; a refusal a 400, the grant or the readings without their copy, a copy of
+someone else's a 409; and the screens' time left, forms, inline PDF, code, envelope, grant, download, states and the
+three headers. Five were missed at first — another patient's check, a group the parent left, every copy readable, the
+authenticated ones still waiting, the code only in the footer — and their tests were made to catch them. Twice the
+machine's lack of memory stopped the run with a breakage left planted; each was found, restored, and the rest run in
+smaller batches. `mvnw clean test` and `mvnw verify`, apart for the memory; Docker was not running, so the seven
+`*PostgresIT` were skipped — `V47` is portable SQL.
 
 ---
 

@@ -95,11 +95,12 @@ class RecordReadingViewController {
                     : patient.document() == null ? patient.fullName()
                     : patient.fullName() + " — " + patient.document();
             return new ReadingRow(ClinicalRecordEntry.format(reading.readAt()),
-                    ClinicalRecordEntry.nameOf(names, reading.practitionerId().value()),
+                    reading.practitionerId().map(id -> ClinicalRecordEntry.nameOf(names, id.value())).orElse("—"),
                     reading.readBy().orElse("sin usuario registrado"),
                     patientLabel,
                     access(reading.access()),
-                    reading.attachmentId().isPresent() ? "Archivo adjunto" : "Historia");
+                    reading.attachmentId().isPresent() ? "Archivo adjunto"
+                            : reading.recordCopyId().isPresent() ? "Copia de la historia" : "Historia");
         }
 
         private static String access(ReadAccess access) {
@@ -107,6 +108,7 @@ class RecordReadingViewController {
                 case VISIT_TODAY -> "Lo atiende hoy";
                 case ACCESS_GRANT -> "Acceso pedido";
                 case SEEN_WITHIN_PERIOD -> "Lo atendió dentro del período";
+                case COPY_REQUEST -> "Copia pedida por el paciente";
             };
         }
     }

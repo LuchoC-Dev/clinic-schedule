@@ -13,14 +13,18 @@ import com.clinic.schedule.patient.api.PatientSummary;
 
 /**
  * The readings of clinical records as the admins get them (D-71): who, whose, when, by which access,
- * and whether it was an attached file — never which one, whose name may say what it holds, and never
- * anything that was read.
+ * and whether it was an attached file or a copy of the record — never which file, whose name may say
+ * what it holds, and never anything that was read. A copy handed to whoever asked for it has no
+ * practitioner (D-96).
  */
 record RecordReadingsResponse(LocalDate from, LocalDate to, boolean limitReached, List<Reading> readings) {
 
-    /** {@code readBy} is null for a reading recorded before users were. */
+    /**
+     * {@code readBy} is null for a reading recorded before users were; {@code practitioner} is null for a copy
+     * handed to whoever asked for it.
+     */
     record Reading(LocalDateTime readAt, Practitioner practitioner, String readBy, Patient patient, ReadAccess access,
-            boolean attachment) {
+            boolean attachment, boolean copy) {
     }
 
     record Practitioner(UUID id, String fullName) {
@@ -39,14 +43,16 @@ record RecordReadingsResponse(LocalDate from, LocalDate to, boolean limitReached
 
     private static Reading reading(RecordReading reading, Map<UUID, PatientSummary> patients,
             Map<UUID, String> practitionerNames) {
-        UUID practitionerId = reading.practitionerId().value();
         UUID patientId = reading.patientId().value();
         PatientSummary patient = patients.get(patientId);
         return new Reading(reading.readAt(),
-                new Practitioner(practitionerId, practitionerNames.get(practitionerId)),
+                reading.practitionerId()
+                        .map(id -> new Practitioner(id.value(), practitionerNames.get(id.value())))
+                        .orElse(null),
                 reading.readBy().orElse(null),
                 new Patient(patientId, patient == null ? null : patient.fullName(), patient == null ? null : patient.document()),
                 reading.access(),
-                reading.attachmentId().isPresent());
+                reading.attachmentId().isPresent(),
+                reading.recordCopyId().isPresent());
     }
 }

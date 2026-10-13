@@ -18,6 +18,9 @@ import com.clinic.schedule.portal.application.exception.OwnDataRefusedException;
 import com.clinic.schedule.portal.application.exception.OwnPasswordRefusedException;
 import com.clinic.schedule.portal.application.exception.UnknownPatientException;
 import com.clinic.schedule.portal.domain.exception.AccountRefusedException;
+import com.clinic.schedule.portal.application.exception.NotYourRecordException;
+import com.clinic.schedule.portal.application.exception.RecordCopyNotReadyException;
+import com.clinic.schedule.portal.application.exception.RecordCopyWaitingException;
 import com.clinic.schedule.portal.domain.exception.AccountStateException;
 import com.clinic.schedule.portal.domain.exception.FamilyRefusedException;
 import com.clinic.schedule.portal.domain.exception.WebBookingRefusedException;
@@ -27,14 +30,15 @@ import com.clinic.schedule.shared.http.ErrorResponse;
 
 /** Translates this module's refusals into HTTP for its own controllers only (D-23). */
 @RestControllerAdvice(assignableTypes = {PatientAccountController.class, PortalController.class,
-        FamilyGroupController.class})
+        FamilyGroupController.class, PortalRecordCopyController.class})
 class PortalExceptionHandler {
 
     /**
      * An appointment that is not the patient's, or a patient they do not act for: refused, never answered as if it
      * were not there (D-50, D-85).
      */
-    @ExceptionHandler({NotYourAppointmentException.class, NotYourFamilyMemberException.class})
+    @ExceptionHandler({NotYourAppointmentException.class, NotYourFamilyMemberException.class,
+            NotYourRecordException.class})
     ResponseEntity<ErrorResponse> notYours(RuntimeException e) {
         return ResponseEntity.status(HttpStatus.FORBIDDEN).body(ErrorResponse.of(403, "Forbidden", e.getMessage()));
     }
@@ -45,6 +49,12 @@ class PortalExceptionHandler {
         if (e.reason() == WebCancellationRefusedException.Reason.GONE) {
             return ResponseEntity.status(HttpStatus.NOT_FOUND).body(ErrorResponse.of(404, "Not found", e.getMessage()));
         }
+        return ResponseEntity.status(HttpStatus.CONFLICT).body(ErrorResponse.of(409, "Conflict", e.getMessage()));
+    }
+
+    /** A record that has a copy waiting already, or a copy not ready to download (D-95). */
+    @ExceptionHandler({RecordCopyWaitingException.class, RecordCopyNotReadyException.class})
+    ResponseEntity<ErrorResponse> copyNotNow(RuntimeException e) {
         return ResponseEntity.status(HttpStatus.CONFLICT).body(ErrorResponse.of(409, "Conflict", e.getMessage()));
     }
 

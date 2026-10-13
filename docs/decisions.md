@@ -1841,7 +1841,8 @@ consultation (a check without one would have nowhere to be corrected).
 ---
 
 ## D-59 — Every reading of a clinical record is recorded
-**Date:** 2026-09-26 · **Status:** accepted; the admins read them since D-71, and each keeps its user; refusals recorded since D-72
+**Date:** 2026-09-26 · **Status:** accepted; the admins read them since D-71, and each keeps its user; refusals recorded since D-72;
+a copy handed over is a reading with no practitioner since D-96
 
 The law asks that access to a clinical record be traceable: every action on it tied to one person,
 leaving a trace (Ley 27.706; Ley 26.529, art. 2). Phase 1 recorded who wrote and who was granted
@@ -3769,3 +3770,116 @@ the consultation form the list shows without the form.
 *Rejected:* a description or a kind of document beside the file (nothing reads it yet); a new aggregate for documents
 from elsewhere (the attachment is already what is needed, D-57); waiting for the orders from elsewhere, as D-57
 planned (the copy of the record needs these files now; the orders bring their own validation when they come).
+
+---
+
+## D-95 — A copy of the clinical record: asked for on the web, put together as the record stood, authenticated within 48 hours
+**Date:** 2026-10-13 · **Status:** accepted
+
+v2, phase 9, part 3. Until now a copy of the record was asked for at the practice and made outside the application.
+A patient now asks for a copy of their whole record from their account, which the application puts together and a
+practitioner authenticates within the 48 hours of Ley 26.529, art. 14.
+
+**The request is the clinical record module's; who may ask is the portal's.** `RecordCopy`, in `clinicalrecord`, keeps
+who asked — the patient, and the account's name (D-81) —, for whom, when, how it is delivered, its code, when it was put
+together, who authenticated it and when, and, on paper, when reception handed it over and who did: every request, in
+`record_copy` (`V47`). The module gains its first `api/`: `RecordCopyWriter.request`, `RecordCopyReader.findForPatients`
+and `downloadPdf`, answered by `adapter/in/external/RecordCopyApiAdapter` (D-48). `portal` decides whose record a patient
+may ask about, `RecordCopyPolicy`, at each request: their own from 13; and each child under 13 whose relation with them
+reception proved — the member of a group of theirs they asked to add, `relationProved` (D-84, D-92) —, not another
+adult's child in the same group. Anyone else is a 403 (D-50). Nothing is kept, so on a child's thirteenth birthday their
+parent stops seeing and downloading their copies, those asked before included. One copy waits at a time for each
+record: another is a 409 until a practitioner authenticates it.
+
+**Put together as the record stood, not stored.** The record only grows: nothing in it changes or is deleted, and
+everything says when it was written (D-47, D-52, D-53, D-57). So a copy is the record as it stood at `assembledAt`, and
+`RecordCopyContent.asOf`, a pure domain service, puts it together again whenever it is shown: every consultation, check,
+result, order, addendum and attached file of every practitioner written by then, each with its author and time; a result
+reported later, an addendum, an order fulfilled or cancelled since, a file uploaded since, are left out. The accesses
+granted are not clinical content and are not copied. Putting it together again — after a practitioner uploaded what was
+missing (D-94) — moves `assembledAt` to now and counts one more `assembly`; the deadline stays.
+
+**The code.** Twelve characters of Crockford's base 32, sixty random bits, printed in three groups, `K7QM-3XPA-9TRD`, on
+every page; unique in the table. Typed back from paper, an O is read as 0 and an I or L as 1. A practitioner checks a
+copy against the application by its code, `/record-copies/verify`: it leads to the request, and opening the copy again
+is a reading. Checking it without logging in is left out.
+
+**The 48 hours.** `RecordCopy.AUTHENTICATE_WITHIN`, forty-eight hours from the request, by the clock; not a setting,
+since it is the law's. "Copias pedidas", the practitioners' list, shows the copies waiting, the soonest due first, with
+"Quedan 31 h" or "Vencida hace 3 h", and only the patient, who asked and how it is delivered: no reading. One late is
+authenticated all the same.
+
+**Authenticating.** A practitioner who may read the record at that moment (D-49) opens the copy — a reading, as any —,
+uploads what was missing to the record as a whole and puts it together again, and authenticates it, saying they reviewed
+it is complete and naming the `assembly` they reviewed: one put together again since is refused, as is a second
+authentication, both 409, and two at once are told apart by the row's version. Their login is their electronic
+signature (Ley 25.506, art. 5; Decreto 1089/2012, art. 13): the copy keeps the practitioner and the user. There is no
+digital signature on the PDF.
+
+**Access to authenticate it.** A record nobody saw within the access period would leave the copy without anyone to
+authenticate it. So a practitioner who may not read it asks for access from the copy, as for a pending check (D-54):
+granted at once, recorded and shown in the record's "Accesos autorizados", for the configured period, with the reason the
+setting asks for. Only while the copy waits, so that, as for a check, a real request is behind it. `AccessGrant` is for a
+check or for a copy, one of the two (`record_access_grant.record_copy_id`, `V47`).
+
+**The PDF, with OpenPDF.** The copy must hold the files attached to the record, PDFs and pictures, so the document needs
+a library that lays out text, places pictures and imports the pages of a PDF: OpenPDF 3.0.5 (LGPL/MPL) does the three, one
+dependency, with Brotli — for web fonts, which a copy never has — excluded. Behind `RecordCopyDocumentPort`,
+`adapter/out/pdf/RecordCopyPdfAdapter` writes the practice, the patient, when the record is copied as it stood, the code,
+who authenticated it — or "SIN AUTENTICAR" across a draft —; then the entries, the oldest first, each with its author and
+time; then each file as an annex, a PDF's pages or a picture scaled to the page. Every page says the code and "página N
+de M". A file that cannot be read leaves a page saying so with its fingerprint, for the practitioner to see on
+reviewing it. The names come from `patient/api` and `practitioner/api`, read by the adapter (D-33). It is made each time
+it is asked for, never kept.
+
+**Delivered as the patient chose.** A PDF they download from their account once authenticated; or on paper, which the
+practitioner prints from the copy, signs and stamps, and leaves with reception in a sealed envelope. "Copias para
+retirar", reception's, lists the envelopes — whose, who asked, since when — and hands one over to whoever shows their
+document, the checkbox "Vi el documento de quien la retira" required; never the content, nor who authenticated it
+(D-51). A paper copy is not downloaded, and a PDF is not handed over.
+
+**Routes and screens.** The practitioners', by route (D-34) and among the clinical ones whose refusals are recorded (D-72):
+`GET /api/record-copies` (waiting) and `?code=`, `GET /{id}`, `GET /{id}/pdf`, `POST /{id}/reassembly`,
+`POST /{id}/authentication` (`{assembly, reviewed}`), `POST /{id}/access-grants`; the screens `/record-copies` and
+`/record-copies/{id}`. Reception's: `GET /api/record-copy-envelopes`, `POST /{id}/handover` (`{documentSeen}`), and
+`/record-copy-envelopes`. The patients': `GET /api/portal/record-copies` (`askableFor`, `copies`),
+`POST /api/portal/record-copies` (`{patientId?, delivery}`), `GET /{id}/pdf`, and "Mi historia clínica",
+`/portal/record-copies`.
+
+**The booking's email says it can be moved.** Since D-93 a patient moves an appointment on the web, but the confirmation
+still said to call to change it: while there is time to do it on the web, it now points at *Mis turnos* in the account.
+
+*Rejected:* storing the copy, as a PDF or a snapshot of the record (the record only grows, so the time is enough, and a
+stored PDF would be clinical content kept twice); the request in the portal (putting it together, the code, the
+authentication and the readings are the record's); a parent of the group other than the one whose relation was proved (no
+proof was seen of them); any adult of 18 asking for a child (D-85's acting is for appointments; the law gives the copy to
+the parent); a new code each time it is put together (nothing is delivered before it is authenticated); the deadline as
+a setting (it is the law's); a digital signature (out of this phase); checking a code without logging in (it would tell
+anyone holding a code whose record it is); PDFBox (the lines of text broken by hand) or HTML to PDF (a second library to
+import the pages); asking for the password again to authenticate (the login is the signature the law accepts); a
+practitioner who may not read the record authenticating it unseen.
+
+---
+
+## D-96 — A copy handed over is one more reading of the record, by the patient's right, with no practitioner
+**Date:** 2026-10-13 · **Status:** accepted
+
+v2, phase 9, part 3. Every reading of a clinical record is recorded (D-59): who, whose, when, by which access. A copy of
+the record hands the record to someone who is not a practitioner — the patient, a parent — so it is recorded too, as the
+context asks.
+
+**Who reads it.** A practitioner who opens the copy — to review it, print it or check its code — reads the record by
+their own access, as any reading, naming the copy. The patient's copy reaches them by their right to it (Ley 26.529,
+art. 14), not by any access of the policy: `ReadAccess.COPY_REQUEST`, which `ClinicalRecordAccessPolicy` never answers,
+with no practitioner, read by the name of the account that downloaded the PDF (`portal:` and its id, D-81) or by the user
+of reception who handed the envelope over. Each download is one reading; an envelope is one, when it is handed over.
+`RecordReading.ofCopy` and `ofDeliveredCopy`; `record_reading.practitioner_id` may be empty only for `COPY_REQUEST`, and
+`record_copy_id` names the copy (`V47`), which the database checks.
+
+**The admins read it** as any reading (D-71): "Copia de la historia" and "Copia pedida por el paciente", no
+practitioner, and who; `copy` in the API's readings, and `practitioner` null.
+
+*Rejected:* one reading when the copy is authenticated (nobody has read it yet; the paper may never be collected); not
+recording the patient's own reading (the context asks for it, and a parent reading a child's record is worth tracing);
+a reading table of its own for copies (the admins would search two places); the reception user as reading the content
+(they hand a sealed envelope; it is recorded as theirs because that is who handed it).

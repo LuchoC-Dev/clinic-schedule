@@ -73,11 +73,13 @@
     <!--
       readOnly is set on a practitioner's screens: they read their agenda (D-34) and work with
       clinical records, reported through the list of pending results (D-54) and followed up through
-      their own orders (D-56).
+      their own orders (D-56), and the copies of records the patients asked for (D-95). Reception hands the
+      copies on paper over.
     -->
     <a th:href="@{/my-queue}" th:if="${readOnly}">Mi cola</a>
     <a th:href="@{/checks/pending}" th:if="${readOnly}">Resultados pendientes</a>
     <a th:href="@{/orders/mine}" th:if="${readOnly}">Mis órdenes</a>
+    <a th:href="@{/record-copies}" th:if="${readOnly}">Copias pedidas</a>
     <a th:href="@{/patients}" th:unless="${readOnly}">Pacientes</a>
     <a th:href="@{/practitioners}" th:unless="${readOnly}">Profesionales</a>
     <a th:href="@{/arrivals}" th:unless="${readOnly}">Llegadas</a>
@@ -86,6 +88,7 @@
     <a th:href="@{/queues}" th:unless="${readOnly}">Colas</a>
     <a th:href="@{/cancellations}" th:unless="${readOnly}">Cancelaciones</a>
     <a th:href="@{/reminders}" th:unless="${readOnly}">Recordatorios</a>
+    <a th:href="@{/record-copy-envelopes}" th:unless="${readOnly}">Copias para retirar</a>
     </th:block>
     <a th:href="@{/password}">Contraseña</a>
     <form class="inline" method="post" th:action="@{/logout}">
@@ -101,6 +104,7 @@
     <a th:href="@{/portal/appointments}">Mis turnos</a>
     <a th:href="@{/portal/booking}">Sacar turno</a>
     <a th:href="@{/portal/family}">Mi familia</a>
+    <a th:href="@{/portal/record-copies}">Mi historia clínica</a>
     <a th:href="@{/portal/profile}">Mis datos</a>
     <a th:href="@{/portal/password}">Contraseña</a>
     <form class="inline" method="post" th:action="@{/portal/logout}">

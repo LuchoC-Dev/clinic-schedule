@@ -1,0 +1,74 @@
+<!DOCTYPE html>
+<html lang="es" xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{fragments :: head('Copia de historia clínica')}"></head>
+<body>
+<header th:replace="~{fragments :: staffHeader}"></header>
+<main>
+    <h1 th:text="'Copia de la historia de ' + ${copy.patient}">Copia de la historia de Ana Pérez — DNI 30111222</h1>
+    <div th:replace="~{fragments :: messages}"></div>
+
+    <table>
+        <tbody>
+        <tr><th>Pidió</th><td th:text="${copy.requestedBy} + ', el ' + ${copy.requestedAt}">El paciente, el 12/10/2026 09:30</td></tr>
+        <tr><th>Entrega</th><td th:text="${copy.delivery}">PDF en su cuenta</td></tr>
+        <tr><th>Código de verificación</th><td th:text="${copy.code}">K7QM-3XPA-9TRD</td></tr>
+        <tr><th>Historia al</th><td th:text="${copy.assembledAt}">12/10/2026 09:30</td></tr>
+        <tr th:unless="${authenticated}"><th>Plazo</th>
+            <td th:class="${copy.late} ? 'error' : ''" th:text="${copy.timeLeft}">Quedan 31 h</td></tr>
+        <tr th:if="${authenticated}"><th>Autenticada</th><td th:text="${copy.authenticated}">Dra. Laura Arias, 12/10/2026 11:00</td></tr>
+        <tr th:if="${copy.handedOver}"><th>Entregada en recepción</th><td th:text="${copy.handedOver}">13/10/2026 10:00</td></tr>
+        </tbody>
+    </table>
+
+    <!-- Whoever may not read the record asks for access to it first, as for a pending check (D-54). -->
+    <section th:unless="${copy.mayRead}">
+        <p class="muted">No tenés acceso a esta historia. Para revisar y autenticar la copia, pedilo.</p>
+        <form method="post" th:unless="${authenticated}"
+              th:action="@{/record-copies/{id}/access-grants(id=${copy.id})}">
+            <label><span th:text="${reasonRequired} ? 'Motivo' : 'Motivo (opcional)'">Motivo</span>
+                <textarea name="reason" rows="2" maxlength="500"></textarea>
+            </label>
+            <p class="bar"><button type="submit">Pedir acceso</button></p>
+        </form>
+    </section>
+
+    <section th:if="${copy.mayRead}">
+        <p class="bar">
+            <a th:href="@{/record-copies/{id}/pdf(id=${copy.id})}" target="_blank">
+                <button type="button" th:class="${authenticated} ? '' : 'primary'"
+                        th:text="${authenticated and onPaper} ? 'Ver e imprimir la copia' : 'Ver la copia'">Ver la copia</button>
+            </a>
+            <a th:href="@{/clinical-records/{id}(id=${copy.patientId})}">
+                <button type="button">Ver historia</button>
+            </a>
+        </p>
+        <p class="muted" th:if="${authenticated and onPaper}">
+            Imprimila, firmala y sellala, y dejala en recepción en un sobre cerrado: el paciente la retira con su documento.
+        </p>
+
+        <th:block th:unless="${authenticated}">
+            <!-- What was missing — a record on paper, a report never uploaded — goes to the record as a whole (D-94). -->
+            <h2>Si falta algo</h2>
+            <form method="post" enctype="multipart/form-data" class="attach"
+                  th:action="@{/record-copies/{id}/attachments(id=${copy.id})}">
+                <input type="file" name="file" accept=".pdf,.png,.jpg,.jpeg,application/pdf,image/png,image/jpeg">
+                <button type="submit">Subir a la historia</button>
+            </form>
+            <form method="post" th:action="@{/record-copies/{id}/reassembly(id=${copy.id})}">
+                <p class="bar"><button type="submit">Volver a armar la copia</button></p>
+            </form>
+
+            <h2>Autenticar</h2>
+            <form method="post" th:action="@{/record-copies/{id}/authentication(id=${copy.id})}">
+                <input type="hidden" name="assembly" th:value="${assembly}">
+                <label><input type="checkbox" name="reviewed" value="true"> Revisé la copia y está completa</label>
+                <p class="muted">
+                    Tu ingreso a la aplicación es tu firma electrónica (Ley 25.506, art. 5; Decreto 1089/2012, art. 13).
+                </p>
+                <p class="bar"><button type="submit" class="primary">Autenticar copia</button></p>
+            </form>
+        </th:block>
+    </section>
+</main>
+</body>
+</html>

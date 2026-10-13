@@ -13,6 +13,7 @@ import org.junit.jupiter.api.Test;
 
 import com.clinic.schedule.clinicalrecord.domain.exception.CheckNotPendingException;
 import com.clinic.schedule.clinicalrecord.domain.exception.ReasonRequiredException;
+import com.clinic.schedule.clinicalrecord.domain.exception.RecordCopyRefusedException;
 
 class AccessGrantPolicyTest {
 
@@ -36,7 +37,7 @@ class AccessGrantPolicyTest {
 
         assertThat(grant.patientId()).isEqualTo(PATIENT);
         assertThat(grant.practitionerId()).isEqualTo(ANALYST);
-        assertThat(grant.checkId()).isEqualTo(check.id());
+        assertThat(grant.checkId()).contains(check.id());
         assertThat(grant.approval()).isEqualTo(Approval.AUTOMATIC);
         assertThat(grant.reason()).contains("Informar el hemograma");
         assertThat(grant.validUntil()).isEqualTo(LocalDate.of(2027, 3, 12));
@@ -75,5 +76,38 @@ class AccessGrantPolicyTest {
     void theValidityMustBeLongerThanNothing() {
         assertThatIllegalArgumentException().isThrownBy(() -> new AccessGrantPolicy(Period.ZERO, true));
         assertThatIllegalArgumentException().isThrownBy(() -> new AccessGrantPolicy(null, true));
+    }
+
+    private static RecordCopy askedForCopy() {
+        return RecordCopy.request(RecordCopyId.newId(), PATIENT, PATIENT.value(), "portal:cuenta", PERFORMED,
+                CopyDelivery.PDF, new CopyCode("K7QM3XPA9TRD"));
+    }
+
+    /** A copy the patient asked for opens the record to authenticate it, while it waits (D-95). */
+    @Test
+    void aGrantToAuthenticateACopyIsForItsPatientWhileItWaits() {
+        RecordCopy copy = askedForCopy();
+
+        AccessGrant grant = A_YEAR_WITH_A_REASON.grantForCopy(AccessGrantId.newId(), ANALYST, copy, NOW, "Autenticar");
+
+        assertThat(grant.patientId()).isEqualTo(PATIENT);
+        assertThat(grant.recordCopyId()).contains(copy.id());
+        assertThat(grant.checkId()).isEmpty();
+        assertThat(grant.approval()).isEqualTo(Approval.AUTOMATIC);
+        assertThat(grant.validUntil()).isEqualTo(LocalDate.of(2027, 3, 12));
+
+        RecordCopy authenticated = copy.authenticated(ARIAS, "arias", NOW, 1, true);
+        assertThatThrownBy(() -> A_YEAR_WITH_A_REASON.grantForCopy(AccessGrantId.newId(), ANALYST, authenticated, NOW,
+                "Autenticar")).isInstanceOf(RecordCopyRefusedException.class);
+        assertThatThrownBy(() -> A_YEAR_WITH_A_REASON.grantForCopy(AccessGrantId.newId(), ANALYST, copy, NOW, " "))
+                .isInstanceOf(ReasonRequiredException.class);
+    }
+
+    @Test
+    void aGrantIsForACheckOrForACopyNeverBothNorNone() {
+        assertThatIllegalArgumentException().isThrownBy(() -> AccessGrant.restore(AccessGrantId.newId(), PATIENT,
+                ANALYST, CheckId.newId(), RecordCopyId.newId(), NOW, NOW.toLocalDate(), null, Approval.AUTOMATIC));
+        assertThatIllegalArgumentException().isThrownBy(() -> AccessGrant.restore(AccessGrantId.newId(), PATIENT,
+                ANALYST, null, null, NOW, NOW.toLocalDate(), null, Approval.AUTOMATIC));
     }
 }
