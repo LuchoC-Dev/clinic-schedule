@@ -147,7 +147,8 @@ class AppointmentFlowIT {
         CreatedPractitioner arias = fixture.workingEveryDay();
         Appointment booked = book.handle(consulta(arias, TEN));
 
-        Appointment moved = reschedule.handle(new RescheduleAppointmentUseCase.Command(booked.id(), TEN.plusHours(5)));
+        Appointment moved = reschedule.handle(new RescheduleAppointmentUseCase.Command(booked.id(), TEN.plusHours(5),
+                BookingChannel.RECEPTION));
 
         assertThat(moved.slot()).isEqualTo(TimeSlot.of(TEN.plusHours(5), 30));
         assertThat(book.handle(consulta(arias, TEN)).isBooked()).isTrue();
@@ -159,7 +160,7 @@ class AppointmentFlowIT {
         Appointment booked = book.handle(consulta(arias, TEN));
 
         assertThatThrownBy(() -> reschedule.handle(
-                new RescheduleAppointmentUseCase.Command(booked.id(), TEN.withHour(19))))
+                new RescheduleAppointmentUseCase.Command(booked.id(), TEN.withHour(19), BookingChannel.RECEPTION)))
                 .isInstanceOf(OutsideWorkingHoursException.class);
     }
 

@@ -29,7 +29,7 @@ class BookingPolicyTest {
     private Appointment stored(PatientId patient, PractitionerId practitioner, int atMinute, int minutes) {
         return Appointment.restore(AppointmentId.newId(), patient, practitioner,
                 TimeSlot.of(TEN.plusMinutes(atMinute), minutes), "consulta", null,
-                        AppointmentStatus.BOOKED, false, null, BookingChannel.RECEPTION);
+                        AppointmentStatus.BOOKED, false, null, BookingChannel.RECEPTION, false);
     }
 
     @Test
@@ -82,7 +82,7 @@ class BookingPolicyTest {
     void reschedulingDoesNotCollideWithTheAppointmentItself() {
         Appointment original = stored(ANA, ARIAS, 0, 30);
         // Moved by ten minutes, so the new slot overlaps its own previous one.
-        Appointment moved = original.movedTo(TimeSlot.of(TEN.plusMinutes(10), 30));
+        Appointment moved = original.movedTo(TimeSlot.of(TEN.plusMinutes(10), 30), BookingChannel.RECEPTION);
 
         assertThatCode(() -> policy.check(moved, List.of(original)))
                 .doesNotThrowAnyException();

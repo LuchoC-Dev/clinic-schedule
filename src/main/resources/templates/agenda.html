@@ -79,8 +79,9 @@
                     <div class="muted" th:if="${row.note}" th:text="${row.note}"></div>
                 </td>
                 <td><span th:text="${row.reason}">consulta</span>
-                    <!-- Booked by the patient on the web (D-82). -->
-                    <span class="muted" th:if="${row.web}">· Web</span></td>
+                    <!-- Booked by the patient on the web (D-82), or moved there (D-93). -->
+                    <span class="muted" th:if="${row.web}">· Web</span>
+                    <span class="muted" th:if="${row.movedOnWeb}">· Movido por la web</span></td>
                 <td th:text="${row.state}">Reservado</td>
                 <td class="actions" th:if="${readOnly}">
                     <!-- The consultation starts from the queue, when the patient is called (D-63, D-65). -->

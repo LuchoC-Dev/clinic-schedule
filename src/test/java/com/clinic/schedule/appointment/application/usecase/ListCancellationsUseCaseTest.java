@@ -34,7 +34,8 @@ class ListCancellationsUseCaseTest {
     private Appointment cancelledAt(LocalDateTime at) {
         Appointment appointment = Appointment.restore(AppointmentId.newId(), PatientId.newId(), ARIAS,
                 TimeSlot.of(TODAY.plusDays(5).atTime(10, 0), 30), "consulta", null, AppointmentStatus.CANCELLED, false,
-                Cancellation.byHand(at, "recepcion", CancellationRequester.PATIENT, null), BookingChannel.RECEPTION);
+                Cancellation.byHand(at, "recepcion", CancellationRequester.PATIENT, null), BookingChannel.RECEPTION,
+                false);
         appointments.given(appointment);
         return appointment;
     }

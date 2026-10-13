@@ -40,7 +40,7 @@ class DayOfTheAppointmentUseCasesTest {
     private Appointment stored(LocalDateTime startsAt) {
         return Appointment.restore(AppointmentId.newId(), PatientId.newId(), PractitionerId.newId(),
                 TimeSlot.of(startsAt, 30), "consulta", null, AppointmentStatus.BOOKED, false, null,
-                        BookingChannel.RECEPTION);
+                        BookingChannel.RECEPTION, false);
     }
 
     private final FakeArrivals arrivals = new FakeArrivals();

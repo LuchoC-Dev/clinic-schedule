@@ -15,6 +15,7 @@ import com.clinic.schedule.appointment.application.exception.UnknownPatientExcep
 import com.clinic.schedule.appointment.application.exception.UnknownReasonException;
 import com.clinic.schedule.appointment.application.usecase.BookAppointmentUseCase;
 import com.clinic.schedule.appointment.application.usecase.CancelForPatientUseCase;
+import com.clinic.schedule.appointment.application.usecase.RescheduleAppointmentUseCase;
 import com.clinic.schedule.appointment.domain.AppointmentId;
 import com.clinic.schedule.appointment.domain.BookingChannel;
 import com.clinic.schedule.appointment.domain.PatientId;
@@ -27,17 +28,20 @@ import com.clinic.schedule.appointment.domain.exception.SlotTooFarAheadException
 
 /**
  * Answers this module's {@link AppointmentWriter} for other modules, as {@link AppointmentReaderAdapter}
- * answers the reader (D-48): it books through the same use case as reception, and turns this module's
+ * answers the reader (D-48): it books and moves through the same use cases as reception, and turns this module's
  * refusals into the api's own.
  */
 @Component
 class AppointmentWriterAdapter implements AppointmentWriter {
 
     private final BookAppointmentUseCase book;
+    private final RescheduleAppointmentUseCase reschedule;
     private final CancelForPatientUseCase cancel;
 
-    AppointmentWriterAdapter(BookAppointmentUseCase book, CancelForPatientUseCase cancel) {
+    AppointmentWriterAdapter(BookAppointmentUseCase book, RescheduleAppointmentUseCase reschedule,
+            CancelForPatientUseCase cancel) {
         this.book = book;
+        this.reschedule = reschedule;
         this.cancel = cancel;
     }
 
@@ -52,6 +56,20 @@ class AppointmentWriterAdapter implements AppointmentWriter {
             throw new BookingRefusedException(Reason.PATIENT_BUSY, e.getMessage());
         } catch (OutsideWorkingHoursException | SlotInThePastException | SlotTooFarAheadException
                 | UnknownReasonException | UnknownPatientException e) {
+            throw new BookingRefusedException(Reason.NOT_BOOKABLE, e.getMessage());
+        }
+    }
+
+    @Override
+    public void moveOnWeb(UUID appointmentId, LocalDateTime startsAt) {
+        try {
+            reschedule.handle(new RescheduleAppointmentUseCase.Command(new AppointmentId(appointmentId), startsAt,
+                    BookingChannel.WEB));
+        } catch (PractitionerAlreadyBookedException e) {
+            throw new BookingRefusedException(Reason.TIME_TAKEN, e.getMessage());
+        } catch (PatientAlreadyBookedException e) {
+            throw new BookingRefusedException(Reason.PATIENT_BUSY, e.getMessage());
+        } catch (AppointmentNotFoundException | BookingRuleViolationException e) {
             throw new BookingRefusedException(Reason.NOT_BOOKABLE, e.getMessage());
         }
     }

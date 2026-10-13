@@ -86,6 +86,10 @@ class AppointmentRow {
     @Column(name = "booked_via", nullable = false, length = 10)
     private BookingChannel bookedVia;
 
+    /** Whether the patient ever moved it on the web (D-93). */
+    @Column(name = "moved_on_web", nullable = false)
+    private boolean movedOnWeb;
+
     protected AppointmentRow() {
         // required by JPA
     }
@@ -102,6 +106,7 @@ class AppointmentRow {
         row.status = appointment.status();
         row.lateArrivalNotice = appointment.hasLateArrivalNotice();
         row.bookedVia = appointment.bookedVia();
+        row.movedOnWeb = appointment.movedOnWeb();
         appointment.cancellation().ifPresent(cancellation -> {
             row.cancelledAt = cancellation.at();
             row.cancelledBy = cancellation.by();
@@ -124,6 +129,7 @@ class AppointmentRow {
                 lateArrivalNotice,
                 cancelledAt == null ? null : new Cancellation(cancelledAt, cancelledBy, cancellationOrigin,
                         cancellationRequestedBy, cancellationNote),
-                bookedVia);
+                bookedVia,
+                movedOnWeb);
     }
 }

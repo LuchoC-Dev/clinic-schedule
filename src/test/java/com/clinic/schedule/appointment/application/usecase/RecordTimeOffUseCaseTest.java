@@ -43,7 +43,7 @@ class RecordTimeOffUseCaseTest {
     private static Appointment booked(PractitionerId practitioner, LocalDateTime startsAt) {
         return Appointment.restore(AppointmentId.newId(), PatientId.newId(), practitioner,
                 TimeSlot.of(startsAt, 30), "consulta", null, AppointmentStatus.BOOKED, false, null,
-                        BookingChannel.RECEPTION);
+                        BookingChannel.RECEPTION, false);
     }
 
     private static TimeSlot wholeDay() {

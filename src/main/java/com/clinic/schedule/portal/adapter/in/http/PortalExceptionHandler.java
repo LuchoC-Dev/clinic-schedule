@@ -22,6 +22,7 @@ import com.clinic.schedule.portal.domain.exception.AccountStateException;
 import com.clinic.schedule.portal.domain.exception.FamilyRefusedException;
 import com.clinic.schedule.portal.domain.exception.WebBookingRefusedException;
 import com.clinic.schedule.portal.domain.exception.WebCancellationRefusedException;
+import com.clinic.schedule.portal.domain.exception.WebMoveRefusedException;
 import com.clinic.schedule.shared.http.ErrorResponse;
 
 /** Translates this module's refusals into HTTP for its own controllers only (D-23). */
@@ -64,7 +65,7 @@ class PortalExceptionHandler {
      * not book what was asked, or a family group's rules refuse it.
      */
     @ExceptionHandler({AccountRefusedException.class, AccountStateException.class, WebBookingRefusedException.class,
-            FamilyRefusedException.class})
+            WebMoveRefusedException.class, FamilyRefusedException.class})
     ResponseEntity<ErrorResponse> conflict(RuntimeException e) {
         return ResponseEntity.status(HttpStatus.CONFLICT).body(ErrorResponse.of(409, "Conflict", e.getMessage()));
     }

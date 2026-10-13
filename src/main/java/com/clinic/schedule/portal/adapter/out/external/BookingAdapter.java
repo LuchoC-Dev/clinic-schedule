@@ -14,10 +14,11 @@ import com.clinic.schedule.appointment.api.BookingRefusedException;
 import com.clinic.schedule.portal.application.port.BookingPort;
 import com.clinic.schedule.portal.domain.exception.WebBookingRefusedException;
 import com.clinic.schedule.portal.domain.exception.WebBookingRefusedException.Reason;
+import com.clinic.schedule.portal.domain.exception.WebMoveRefusedException;
 
 /**
  * Answers {@link BookingPort} through the appointment module's api (D-05), turning its refusals into this
- * module's: a time not bookable any more is, for the patient, a time taken.
+ * module's: a time not bookable any more is, for the patient, a time taken, on booking as on moving (D-93).
  */
 @Component
 class BookingAdapter implements BookingPort {
@@ -42,6 +43,22 @@ class BookingAdapter implements BookingPort {
         } catch (BookingRefusedException e) {
             throw new WebBookingRefusedException(
                     e.reason() == BookingRefusedException.Reason.PATIENT_BUSY ? Reason.PATIENT_BUSY : Reason.TIME_TAKEN,
+                    e.getMessage());
+        }
+    }
+
+    @Override
+    public List<LocalTime> movingTimes(UUID appointmentId, LocalDate date) {
+        return reader.suggestedTimesForMoving(appointmentId, date);
+    }
+
+    @Override
+    public void move(UUID appointmentId, LocalDateTime startsAt) {
+        try {
+            writer.moveOnWeb(appointmentId, startsAt);
+        } catch (BookingRefusedException e) {
+            throw new WebMoveRefusedException(e.reason() == BookingRefusedException.Reason.PATIENT_BUSY
+                    ? WebMoveRefusedException.Reason.PATIENT_BUSY : WebMoveRefusedException.Reason.TIME_TAKEN,
                     e.getMessage());
         }
     }

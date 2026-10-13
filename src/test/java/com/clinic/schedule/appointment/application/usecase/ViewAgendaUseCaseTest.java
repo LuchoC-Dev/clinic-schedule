@@ -33,7 +33,7 @@ class ViewAgendaUseCaseTest {
 
     private Appointment stored(PractitionerId practitioner, LocalDateTime startsAt, AppointmentStatus status) {
         return Appointment.restore(AppointmentId.newId(), PatientId.newId(), practitioner,
-                TimeSlot.of(startsAt, 30), "consulta", null, status, false, null, BookingChannel.RECEPTION);
+                TimeSlot.of(startsAt, 30), "consulta", null, status, false, null, BookingChannel.RECEPTION, false);
     }
 
     private Appointment booked(PractitionerId practitioner, LocalDateTime startsAt) {

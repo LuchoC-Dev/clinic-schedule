@@ -25,7 +25,8 @@ import com.clinic.schedule.appointment.domain.exception.NotTheAppointmentDayExce
  *
  * <p>The reason is carried as text: a snapshot of what was booked, together with the
  * duration, so renaming a reason later does not rewrite history (D-29). It keeps where it was
- * booked, at reception or on the web (D-82), which nothing that happens to it afterwards changes.
+ * booked, at reception or on the web (D-82), which nothing that happens to it afterwards changes, and
+ * whether the patient moved it on the web (D-93).
  */
 public class Appointment {
 
@@ -48,10 +49,11 @@ public class Appointment {
     private final boolean lateArrivalNotice;
     private final Cancellation cancellation;
     private final BookingChannel bookedVia;
+    private final boolean movedOnWeb;
 
     private Appointment(AppointmentId id, PatientId patientId, PractitionerId practitionerId, TimeSlot slot,
             String reason, String note, AppointmentStatus status, boolean lateArrivalNotice,
-            Cancellation cancellation, BookingChannel bookedVia) {
+            Cancellation cancellation, BookingChannel bookedVia, boolean movedOnWeb) {
         this.id = id;
         this.patientId = patientId;
         this.practitionerId = practitionerId;
@@ -62,6 +64,7 @@ public class Appointment {
         this.lateArrivalNotice = lateArrivalNotice;
         this.cancellation = cancellation;
         this.bookedVia = bookedVia;
+        this.movedOnWeb = movedOnWeb;
     }
 
     /**
@@ -75,7 +78,7 @@ public class Appointment {
             String reason, String note, BookingChannel bookedVia) {
         requireInvariants(id, patientId, practitionerId, slot, reason, note, bookedVia);
         return new Appointment(id, patientId, practitionerId, slot, reason.strip(), note, AppointmentStatus.BOOKED,
-                false, null, bookedVia);
+                false, null, bookedVia, false);
     }
 
     /**
@@ -94,10 +97,11 @@ public class Appointment {
      *
      * @param cancellation what was recorded of its cancellation; null for one cancelled before
      *        anything was (D-76), and for every appointment that is not cancelled
+     * @param movedOnWeb whether the patient ever moved it on the web (D-93)
      */
     public static Appointment restore(AppointmentId id, PatientId patientId, PractitionerId practitionerId,
             TimeSlot slot, String reason, String note, AppointmentStatus status, boolean lateArrivalNotice,
-            Cancellation cancellation, BookingChannel bookedVia) {
+            Cancellation cancellation, BookingChannel bookedVia, boolean movedOnWeb) {
         requireInvariants(id, patientId, practitionerId, slot, reason, note, bookedVia);
         if (status == null) {
             throw new IllegalArgumentException("A stored appointment needs a status");
@@ -106,7 +110,7 @@ public class Appointment {
             throw new IllegalArgumentException("Only a cancelled appointment has a cancellation");
         }
         return new Appointment(id, patientId, practitionerId, slot, reason.strip(), note, status, lateArrivalNotice,
-                cancellation, bookedVia);
+                cancellation, bookedVia, movedOnWeb);
     }
 
     private static void requireInvariants(AppointmentId id, PatientId patientId, PractitionerId practitionerId,
@@ -139,11 +143,14 @@ public class Appointment {
             throw new IllegalArgumentException("A cancellation is recorded with the appointment it cancels");
         }
         return new Appointment(id, patientId, practitionerId, slot, reason, note, AppointmentStatus.CANCELLED,
-                lateArrivalNotice, cancellation, bookedVia);
+                lateArrivalNotice, cancellation, bookedVia, movedOnWeb);
     }
 
     /**
-     * The same appointment on another slot. Version 1 keeps no history of the previous date.
+     * The same appointment on another slot. No history of the previous date is kept.
+     *
+     * <p>Moved by the patient on the web, it says so from then on, whoever moves it afterwards: reception
+     * sees on the agenda that the patient chose a time themselves (D-93).
      *
      * <p>A notice that the patient would be late was about the old time, so it does not carry
      * over. Whether the patient already arrived, which forbids the move, is known outside the
@@ -152,12 +159,13 @@ public class Appointment {
      * <p>Restricted to the domain package like {@link #book}, because the new slot has to be
      * checked against the agenda: the way in is {@link BookingService#reschedule}.
      */
-    Appointment movedTo(TimeSlot newSlot) {
+    Appointment movedTo(TimeSlot newSlot, BookingChannel movedVia) {
         requireBooked("rescheduled");
-        if (newSlot == null) {
-            throw new IllegalArgumentException("An appointment needs a slot");
+        if (newSlot == null || movedVia == null) {
+            throw new IllegalArgumentException("An appointment is moved to a slot, from somewhere");
         }
-        return new Appointment(id, patientId, practitionerId, newSlot, reason, note, status, false, null, bookedVia);
+        return new Appointment(id, patientId, practitionerId, newSlot, reason, note, status, false, null, bookedVia,
+                movedOnWeb || movedVia == BookingChannel.WEB);
     }
 
     /**
@@ -175,7 +183,8 @@ public class Appointment {
         if (lateArrivalNotice) {
             throw new BookingRuleViolationException("Reception was already warned that this patient will be late");
         }
-        return new Appointment(id, patientId, practitionerId, slot, reason, note, status, true, null, bookedVia);
+        return new Appointment(id, patientId, practitionerId, slot, reason, note, status, true, null, bookedVia,
+                movedOnWeb);
     }
 
     /**
@@ -206,7 +215,7 @@ public class Appointment {
             throw new BookingRuleViolationException("The patient of this appointment may still come");
         }
         return new Appointment(id, patientId, practitionerId, slot, reason, note, AppointmentStatus.ABSENT,
-                lateArrivalNotice, null, bookedVia);
+                lateArrivalNotice, null, bookedVia, movedOnWeb);
     }
 
     private void requireTheDayOfTheAppointment(LocalDateTime now, String action) {
@@ -278,5 +287,10 @@ public class Appointment {
     /** Where it was booked: at reception, or by the patient on the web (D-82). */
     public BookingChannel bookedVia() {
         return bookedVia;
+    }
+
+    /** Whether the patient ever moved it on the web (D-93); when or from what time is not kept. */
+    public boolean movedOnWeb() {
+        return movedOnWeb;
     }
 }

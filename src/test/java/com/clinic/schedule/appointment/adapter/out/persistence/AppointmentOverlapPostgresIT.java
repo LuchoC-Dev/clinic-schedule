@@ -66,7 +66,7 @@ class AppointmentOverlapPostgresIT {
 
     private static Appointment booked(PatientId patient, PractitionerId practitioner, LocalDateTime startsAt) {
         return Appointment.restore(AppointmentId.newId(), patient, practitioner, TimeSlot.of(startsAt, 30),
-                "consulta", null, AppointmentStatus.BOOKED, false, null, BookingChannel.RECEPTION);
+                "consulta", null, AppointmentStatus.BOOKED, false, null, BookingChannel.RECEPTION, false);
     }
 
     @Test

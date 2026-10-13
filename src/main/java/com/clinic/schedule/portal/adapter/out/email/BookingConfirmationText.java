@@ -6,9 +6,10 @@ import java.util.Locale;
 import com.clinic.schedule.portal.domain.BookingConfirmation;
 
 /**
- * The words of the email that confirms an appointment booked on the web, in Spanish (D-13, D-82): the
- * practice, a greeting, whom it is for when not the account's own (D-85), the day, the time and the
- * practitioner, the link to cancel it (D-83) and how to change it. Never the reason, which may be clinical.
+ * The words of the email that confirms an appointment booked on the web, or moved there (D-93), in Spanish
+ * (D-13, D-82): the practice, a greeting, whom it is for when not the account's own (D-85), the day, the time
+ * — the new one, for a move — and the practitioner, the link to cancel it (D-83) and how to change it. Never the
+ * reason, which may be clinical.
  */
 final class BookingConfirmationText {
 
@@ -28,8 +29,8 @@ final class BookingConfirmationText {
         this.baseUrl = baseUrl.endsWith("/") ? baseUrl.substring(0, baseUrl.length() - 1) : baseUrl;
     }
 
-    String subject() {
-        return practice + " — Turno reservado";
+    String subject(BookingConfirmation confirmation) {
+        return practice + (confirmation.moved() ? " — Turno cambiado" : " — Turno reservado");
     }
 
     /** The link when there is time to cancel on the web; a call otherwise, and to change it in any case. */
@@ -46,7 +47,8 @@ final class BookingConfirmationText {
         return practice + "\n\n"
                 + "Hola, " + confirmation.fullName() + ":\n\n"
                 + (confirmation.member() == null ? "Tu turno" : "El turno de " + confirmation.member())
-                + " quedó reservado para el " + DAY.format(confirmation.startsAt()) + " a las "
+                + (confirmation.moved() ? " se cambió al " : " quedó reservado para el ")
+                + DAY.format(confirmation.startsAt()) + " a las "
                 + TIME.format(confirmation.startsAt()) + " con " + confirmation.practitioner() + ".\n\n"
                 + howToCancel(confirmation)
                 + practice + " · " + address + " · " + phone + "\n";

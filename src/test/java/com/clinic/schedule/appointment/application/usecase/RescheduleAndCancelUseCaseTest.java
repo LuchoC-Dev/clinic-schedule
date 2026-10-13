@@ -47,7 +47,7 @@ class RescheduleAndCancelUseCaseTest {
     private Appointment stored(PatientId patient, int atMinute, int minutes) {
         return Appointment.restore(AppointmentId.newId(), patient, ARIAS,
                 TimeSlot.of(TEN.plusMinutes(atMinute), minutes), "consulta", null,
-                        AppointmentStatus.BOOKED, false, null, BookingChannel.RECEPTION);
+                        AppointmentStatus.BOOKED, false, null, BookingChannel.RECEPTION, false);
     }
 
     private static CancelAppointmentUseCase.Command byPatient(AppointmentId id) {
@@ -55,7 +55,7 @@ class RescheduleAndCancelUseCaseTest {
     }
 
     private RescheduleAppointmentUseCase.Command moveTo(Appointment appointment, LocalDateTime startsAt) {
-        return new RescheduleAppointmentUseCase.Command(appointment.id(), startsAt);
+        return new RescheduleAppointmentUseCase.Command(appointment.id(), startsAt, BookingChannel.RECEPTION);
     }
 
     @Test
@@ -129,7 +129,8 @@ class RescheduleAndCancelUseCaseTest {
 
     @Test
     void reschedulingAnUnknownAppointmentFails() {
-        assertThatThrownBy(() -> reschedule.handle(new RescheduleAppointmentUseCase.Command(AppointmentId.newId(), TEN)))
+        assertThatThrownBy(() -> reschedule.handle(new RescheduleAppointmentUseCase.Command(AppointmentId.newId(), TEN,
+                BookingChannel.RECEPTION)))
                 .isInstanceOf(AppointmentNotFoundException.class);
     }
 

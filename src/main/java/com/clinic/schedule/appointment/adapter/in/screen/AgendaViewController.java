@@ -370,7 +370,8 @@ class AgendaViewController {
             return "redirect:/agenda/appointments/" + id + "/reschedule?date=" + date;
         }
         boolean moved = attempt(
-                () -> reschedule.handle(new RescheduleAppointmentUseCase.Command(new AppointmentId(id), date.atTime(chosen))),
+                () -> reschedule.handle(new RescheduleAppointmentUseCase.Command(new AppointmentId(id),
+                        date.atTime(chosen), BookingChannel.RECEPTION)),
                 "Turno movido.", flash);
         if (!moved) {
             return "redirect:/agenda/appointments/" + id + "/reschedule?date=" + date;

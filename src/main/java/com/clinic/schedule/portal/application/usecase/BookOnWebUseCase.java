@@ -109,7 +109,7 @@ public class BookOnWebUseCase {
         try {
             mail.sendBookingConfirmation(new BookingConfirmation(account.email(), name,
                     member == null ? null : member.fullName(), startsAt, reason.practitionerName(),
-                    cancelLinks.issue(appointmentId, startsAt).orElse(null)));
+                    cancelLinks.issue(appointmentId, startsAt).orElse(null), false));
             return true;
         } catch (RuntimeException e) {
             log.warn("The confirmation of an appointment booked on the web did not go out: {}", e.getMessage());

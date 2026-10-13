@@ -53,7 +53,7 @@ class EmailAccountAdapter implements AccountMailPort {
         SimpleMailMessage email = new SimpleMailMessage();
         email.setFrom(from);
         email.setTo(confirmation.address());
-        email.setSubject(confirmationText.subject());
+        email.setSubject(confirmationText.subject(confirmation));
         email.setText(confirmationText.plain(confirmation));
         mail.send(email);
     }

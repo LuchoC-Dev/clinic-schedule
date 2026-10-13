@@ -3049,7 +3049,7 @@ booking on the web (today's agenda is reception's to manage).
 ---
 
 ## D-83 — A patient cancels up to a day before, on the web or from an email's link, and the log says so
-**Date:** 2026-10-02 · **Status:** accepted
+**Date:** 2026-10-02 · **Status:** accepted; moving an appointment came to the web as the same appointment, in D-93
 
 v2, phase 6, part 4. Until now only reception cancelled, and the reminder told the patient to call (D-78).
 A patient now cancels from their account, and anyone who got a reminder or a booking's confirmation cancels
@@ -3670,3 +3670,69 @@ group acting for an unproved child (nobody saw the proof); no limit on the accou
 look up documents one after another); counting only the requests that registered someone (the known ones are what is
 being looked up); a group of its own for each child (a family books from one group); proving the relation as
 verifying the child, or the other way round (they are different papers).
+
+---
+
+## D-93 — A patient moves an appointment on the web, as the same appointment, marked as moved there
+**Date:** 2026-10-13 · **Status:** accepted
+
+v2, phase 9, part 1. Until now a patient who wanted another time cancelled and booked again (D-83). They now move
+their appointment on the web, and so do the adults of their family group who act for them (D-85, D-92).
+
+**The rules of cancelling and of booking together.** `WebMovePolicy`, pure, in `portal`: a booked appointment of the
+patient's — reception's bookings too —, up to `app.portal.cancel-hours-before` hours before it, as cancelling it
+(D-83); to a day from tomorrow to `app.portal.booking-days-ahead` days on, at one of the times the agenda offers, as
+booking it (D-82), and not the time it already has. As many times as they want. The practitioner and the reason are
+the appointment's own, and nothing else: to change either, they cancel and book again. Whether the reason is open to
+the web is not asked — the appointment keeps its reason as text (D-29), not the reason it came from, and a patient
+already cancels any booked appointment on the web, reception's included; moving changes neither its reason nor its
+length.
+
+**The same appointment.** It keeps its id, its reason, its booked length (D-28) and where it was booked; only the start
+changes. So it counts once against the limit of appointments ahead — one or three (D-82, D-91), not asked again — and
+it is not a cancellation: the cancellation log does not hear of it (D-76). Whose it may be is worked out as for
+cancelling: the patient's own, or of a member they act for, `FamilyAccessPolicy` at each request; anyone else's a 403
+(D-50).
+
+**How any appointment is moved stays the appointment module's.** `appointment/api/AppointmentWriter.moveOnWeb` moves it
+through `RescheduleAppointmentUseCase` and `BookingService.reschedule`, with reception's rules — the practitioner's
+hours, no overlap with their agenda nor with the patient's —, its refusals as the `BookingRefusedException` of booking,
+which the portal tells the patient as a time taken or another appointment of theirs then. The times offered are
+`AppointmentReader.suggestedTimesForMoving`, over `SuggestSlotsUseCase.forMoving`, reception's suggestion: every quarter
+of an hour where a slot of its booked length is free, its own slot not counted as taken, so moving it by a quarter of an
+hour is offered. The portal leaves out the time it has.
+
+**The appointment says it was moved on the web.** `Appointment.movedOnWeb`, `appointment.moved_on_web` (`V45`, false for
+the appointments already there, since none could be): set by a move on the web, and never cleared afterwards — reception
+moving it again leaves it, as `booked_via` stays whatever happens (D-82). It says the patient chose a time themselves at
+some point, not when, nor from what time: no history of an appointment's times is kept (phase 5). `BookingService`
+takes where the move comes from, reception or the web, and reception's own moves pass `RECEPTION`. Reception reads
+"· Movido por la web" on the agenda and on the patient's appointments, beside "· Web", and `movedOnWeb` in the API.
+
+**Each move is told.** An email to the account that moved it — the patient's, or the adult's who acts for them, naming
+the member —, "Turno cambiado": the new day, the time and the practitioner, never the reason, with a new link to cancel
+it. It is the confirmation of a web booking with `moved` on (`BookingConfirmation`), one attempt, as booking: one that
+does not go out leaves the appointment moved, and the patient is told.
+
+**The reminder and the old link need nothing new.** A reminder is kept with the time it was about (D-78), so a moved
+appointment is due again and reminded at the next day's run, with its own new link; one moved after that day's run to
+the next day has none, as one booked then, and its confirmation carries the link. A cancel link works while its
+appointment is booked at the time it was sent for (D-83), so the old one ends as the appointment moves. Moved back to
+that very time, the old link and the old reminder count again, since they are about the same appointment at the same
+time — as they already did when reception moved it back; nothing is deleted to prevent it.
+
+**Routes and screens.** `GET /api/portal/appointments/{id}/move-times?date=` — the times, a refusal for the
+appointment's state or the day a 409 —; `POST /api/portal/appointments/{id}/move`, `{startsAt}`, 200 with the
+appointment, whom it is for, its new time, the practitioner and whether the confirmation went out; a refusal a 409,
+someone else's appointment a 403. *Mis turnos* offers "Cambiar horario" beside "Cancelar" while it may be moved, leading
+to `/portal/appointments/{id}/move`: the appointment as it stands, a new day, and its times as buttons, as *Sacar
+turno*. The appointments' answer does not say which may be moved, as it does not say which may be cancelled.
+
+*Rejected:* moving as cancelling and booking (the limit would count it twice, the log would read a cancellation, and the
+appointment's history would be two); moving to another practitioner or reason (it would be another booking, with its own
+reason open to the web or not and another length); counting the limit of appointments ahead again (it is one
+appointment); requiring the reason to be open to the web (the appointment keeps the text of a reason, not the reason; and
+the patient cancels it on the web anyway); a history of the times it was moved (phase 5 keeps none); clearing the mark
+when reception moves it (it would say less than what happened, and the reception path would have to care); reminding
+it at once on moving (a second message with the confirmation's link, on the same day); deleting the old links on moving
+(they end by themselves, and reception's moves would not delete them).

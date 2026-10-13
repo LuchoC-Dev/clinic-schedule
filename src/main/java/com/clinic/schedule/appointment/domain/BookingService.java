@@ -12,7 +12,7 @@ import com.clinic.schedule.appointment.domain.exception.SlotTooFarAheadException
 /**
  * The way into the booking domain. Creating an appointment and checking it against the rest
  * of the agenda happen together here, so there is no path that produces an appointment
- * nobody validated: {@code Appointment.book} and {@code rescheduleTo} are reachable only
+ * nobody validated: {@code Appointment.book} and {@code movedTo} are reachable only
  * from this package.
  *
  * <p>It takes the agenda as a collection rather than reading it, which keeps the domain free
@@ -53,12 +53,13 @@ public final class BookingService {
      * already arrived is not moved: the arrival belongs to this time, not to another (D-31, D-65).
      *
      * @param arrivedAt when the patient arrived, if they did
+     * @param movedVia at reception, or by the patient on the web, which the appointment then says (D-93)
      * @return the appointment on its new slot, which is what has to be stored
      */
     public Appointment reschedule(Appointment appointment, TimeSlot newSlot, LocalDateTime now,
-            Collection<Appointment> agenda, Optional<LocalDateTime> arrivedAt) {
+            Collection<Appointment> agenda, Optional<LocalDateTime> arrivedAt, BookingChannel movedVia) {
         AppointmentDayService.requireNotArrived(arrivedAt, "rescheduled");
-        Appointment moved = appointment.movedTo(newSlot);
+        Appointment moved = appointment.movedTo(newSlot, movedVia);
         policy.checkWhen(newSlot, now);
         policy.check(moved, agenda);
         return moved;

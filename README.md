@@ -87,11 +87,12 @@ registers a child later, from *Mi familia*. The children go into a family group 
 reception proves on the group's screen. A patient logs in with their document and
 reads their appointments: those ahead and those of the last year, never reception's note. Five failed logins in a
 row lock the account for 15 minutes; "¿Olvidaste tu contraseña?" sends a link to the account's email to choose
-a new one, and *Contraseña* changes it. Under *Mis turnos* they cancel an appointment up to a
-day before it, as anyone does from the link in its reminder or in a booking's confirmation; under *Sacar turno*
+a new one, and *Contraseña* changes it. Under *Mis turnos* they move an appointment to another time the agenda
+offers, with the same practitioner and reason — "· Movido por la web" on reception's agenda —, or cancel it, up to a
+day before it, as anyone cancels from the link in its reminder or in a booking's confirmation; under *Sacar turno*
 they book the reasons reception opened to the web — "Se reserva por la web" on the practitioners' screen —, under
 *Mi familia* they see their family groups and choose whether each sees their appointments, and from 18 they see,
-book and cancel those of the members who share theirs as their own, and
+book, move and cancel those of the members who share theirs as their own, and
 under *Mis datos* they change their phone, email and health insurance, and whether they want reminders on each. The emails go to
 Mailpit in development, at http://localhost:8025.
 
@@ -176,6 +177,8 @@ document as its type and number, such as `DNI 27333444`. Errors share one body:
 | `PUT` | `/api/portal/profile/details` | the patient sets their phone, email and health insurance, with reception's rules; one left out is cleared |
 | `GET` | `/api/portal/booking/options`, `/api/portal/booking/times?practitionerId=&reasonId=&date=` | what the patient may book on the web: the reasons reception opened to it, the days from tomorrow to 30 days on, for whom — themselves first — and the times offered |
 | `POST` | `/api/portal/appointments` | the patient books for themselves, or with `patientId` for a family member they act for, three ahead at most for whom it is; a confirmation goes to the account's email |
+| `GET` | `/api/portal/appointments/{id}/move-times?date=` | the times one of their appointments, or a family member's they act for, may be moved to that day |
+| `POST` | `/api/portal/appointments/{id}/move` | `{startsAt}`: the patient moves it to one of those times, from tomorrow to 30 days on, up to a day before it; the same appointment, marked `movedOnWeb`, and a confirmation goes to the account's email |
 | `POST` | `/api/portal/appointments/{id}/cancel` | the patient cancels one of their appointments, or of a family member they act for, up to a day before it |
 | `GET` | `/api/portal/family` | the patient's family groups: each member's name, age band and whether they share, and which is the patient |
 | `POST` | `/api/portal/family/{groupId}/sharing`, `/api/portal/family/{groupId}/leave` | the patient shares their appointments with the group or stops — `{shares}` —, or leaves it |

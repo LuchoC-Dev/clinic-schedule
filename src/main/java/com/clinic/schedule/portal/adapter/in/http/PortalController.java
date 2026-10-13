@@ -27,6 +27,7 @@ import com.clinic.schedule.portal.application.usecase.ChangeOwnConsentUseCase;
 import com.clinic.schedule.portal.application.usecase.ChangeOwnContactUseCase;
 import com.clinic.schedule.portal.application.usecase.ListOwnAppointmentsUseCase;
 import com.clinic.schedule.portal.application.usecase.ManageOwnFamilyUseCase;
+import com.clinic.schedule.portal.application.usecase.MoveOwnAppointmentUseCase;
 import com.clinic.schedule.portal.application.usecase.RecoverPasswordUseCase;
 import com.clinic.schedule.portal.application.usecase.RegisterChildUseCase;
 import com.clinic.schedule.portal.application.usecase.RegisterOnWebUseCase;
@@ -57,6 +58,7 @@ class PortalController {
     private final ViewWebBookingUseCase booking;
     private final BookOnWebUseCase book;
     private final CancelOwnAppointmentUseCase cancel;
+    private final MoveOwnAppointmentUseCase move;
     private final CancelLinkUseCase cancelLinks;
     private final ViewFamilyUseCase family;
     private final ManageOwnFamilyUseCase ownFamily;
@@ -68,8 +70,9 @@ class PortalController {
 
     PortalController(ActivateAccountUseCase activate, ListOwnAppointmentsUseCase appointments, ViewOwnDataUseCase data,
             ChangeOwnContactUseCase contact, ChangeOwnConsentUseCase consent, ViewWebBookingUseCase booking,
-            BookOnWebUseCase book, CancelOwnAppointmentUseCase cancel, CancelLinkUseCase cancelLinks,
-            ViewFamilyUseCase family, ManageOwnFamilyUseCase ownFamily, RecoverPasswordUseCase recovery,
+            BookOnWebUseCase book, CancelOwnAppointmentUseCase cancel, MoveOwnAppointmentUseCase move,
+            CancelLinkUseCase cancelLinks, ViewFamilyUseCase family, ManageOwnFamilyUseCase ownFamily,
+            RecoverPasswordUseCase recovery,
             ChangeOwnPasswordUseCase ownPassword, RegisterOnWebUseCase registration, RegisterChildUseCase child,
             PractitionerReader practitioners) {
         this.activate = activate;
@@ -80,6 +83,7 @@ class PortalController {
         this.booking = booking;
         this.book = book;
         this.cancel = cancel;
+        this.move = move;
         this.cancelLinks = cancelLinks;
         this.family = family;
         this.ownFamily = ownFamily;
@@ -131,6 +135,19 @@ class PortalController {
     ResponseEntity<Void> cancel(@PathVariable UUID id) {
         cancel.handle(id);
         return ResponseEntity.noContent().build();
+    }
+
+    /** The times one of their appointments, or a member's, may be moved to on that day (D-93). */
+    @GetMapping("/api/portal/appointments/{id}/move-times")
+    BookingTimesResponse moveTimes(@PathVariable UUID id,
+            @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate date) {
+        return new BookingTimesResponse(date, move.times(id, date));
+    }
+
+    /** The patient moves one of their appointments, or a member's, to another time, up to a day before it. */
+    @PostMapping("/api/portal/appointments/{id}/move")
+    WebMoveResponse move(@PathVariable UUID id, @Valid @RequestBody WebMoveRequest request) {
+        return WebMoveResponse.of(move.handle(id, request.startsAt()));
     }
 
     /** What an email's link would cancel, with nobody logged in: when, and with whom — nothing else (D-83). */

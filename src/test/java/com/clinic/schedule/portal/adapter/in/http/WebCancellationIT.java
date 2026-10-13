@@ -45,6 +45,7 @@ import com.clinic.schedule.portal.KeptAccountMail;
 import com.clinic.schedule.portal.PatientAccountFixture;
 import com.clinic.schedule.portal.PatientAccountFixture.Patient;
 import com.clinic.schedule.portal.api.CancelLinkWriter;
+import com.clinic.schedule.portal.domain.BookingConfirmation;
 import com.clinic.schedule.portal.domain.SecretToken;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -250,9 +251,11 @@ class WebCancellationIT {
                 .andExpect(status().isCreated())
                 .andReturn().getResponse().getContentAsString()).get("id").asText();
 
-        String token = KeptAccountMail.CONFIRMATIONS.stream()
+        BookingConfirmation confirmation = KeptAccountMail.CONFIRMATIONS.stream()
                 .filter(sent -> sent.startsAt().equals(LocalDateTime.of(2026, 3, 15, 10, 0)))
-                .reduce((first, last) -> last).orElseThrow().cancelToken();
+                .reduce((first, last) -> last).orElseThrow();
+        assertThat(confirmation.moved()).isFalse();
+        String token = confirmation.cancelToken();
         mockMvc.perform(post("/api/portal/cancel-links/" + token + "/cancel")).andExpect(status().isNoContent());
         mockMvc.perform(get("/api/portal/appointments").with(as(patient)))
                 .andExpect(jsonPath("$.upcoming[?(@.id == '%s')].state", appointment).value("CANCELLED"));

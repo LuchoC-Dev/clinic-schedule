@@ -18,7 +18,7 @@ import com.clinic.schedule.appointment.domain.CancellationRequester;
  * client would compute it otherwise.
  *
  * <p>{@code cancellation} is null unless it is cancelled, and for one cancelled before anything was
- * recorded of it (D-76).
+ * recorded of it (D-76). {@code movedOnWeb} says the patient moved it on the web at some time (D-93).
  */
 record AppointmentResponse(
         UUID id,
@@ -33,7 +33,8 @@ record AppointmentResponse(
         LocalDateTime arrivedAt,
         boolean lateArrivalNotice,
         Cancellation cancellation,
-        BookingChannel bookedVia) {
+        BookingChannel bookedVia,
+        boolean movedOnWeb) {
 
     /** {@code note} is null when reception wrote none. */
     record Cancellation(LocalDateTime at, String by, CancellationOrigin origin, CancellationRequester requestedBy,
@@ -57,6 +58,7 @@ record AppointmentResponse(
                         .map(cancellation -> new Cancellation(cancellation.at(), cancellation.by(),
                                 cancellation.origin(), cancellation.requestedBy(), cancellation.note()))
                         .orElse(null),
-                appointment.bookedVia());
+                appointment.bookedVia(),
+                appointment.movedOnWeb());
     }
 }

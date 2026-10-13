@@ -1931,13 +1931,36 @@ Scope in `docs/context.md`, section "v2, phase 9 — moving an appointment, and 
 record". Delivered in parts; each one is usable on its own. The technical design of each part is agreed
 before it is coded.
 
-#### Part 1 — Moving an appointment on the web `[ ]`
+#### Part 1 — Moving an appointment on the web `[x]`
 - [x] `docs/context.md`: the scope of phase 9
-- [ ] Up to 24 hours before, to a suggested time from tomorrow to 30 days ahead, same practitioner and
-      reason, as many times as wanted; for the family group too
-- [ ] The same appointment: counted once, not a cancellation; marked as moved on the web
-- [ ] An email confirms the new time; the reminder is sent again with a new link, and the old one stops
-      working
+- [x] Up to `app.portal.cancel-hours-before` hours before (24), to a time the agenda offers from tomorrow to
+      `app.portal.booking-days-ahead` days on (30), not the one it has, same practitioner and reason, as many times as
+      wanted — `WebMovePolicy`, any booked appointment, reception's too, whatever its reason; for the members of the
+      family group one acts for, someone else's a 403 (D-93)
+- [x] The same appointment: moved by the appointment module with reception's rules
+      (`AppointmentWriter.moveOnWeb`, `RescheduleAppointmentUseCase`), its times `AppointmentReader.suggestedTimesForMoving`;
+      counted once, not a cancellation; `Appointment.movedOnWeb`, never cleared, "· Movido por la web" on the agenda and
+      the patient's appointments, `movedOnWeb` in the API
+- [x] An email to the account that moved it, "Turno cambiado", naming the member, with a new link; the old link ends and
+      the reminder goes out again for the new time at the next run, with nothing new in `reminder`
+- [x] `GET /api/portal/appointments/{id}/move-times`, `POST /api/portal/appointments/{id}/move`; "Cambiar horario" on
+      *Mis turnos* and `/portal/appointments/{id}/move`
+- [x] `V45`: `appointment.moved_on_web`
+- [x] 8 unit and 7 integration tests. 528 unit and 616 integration tests, 1144 in total
+
+**Verified with:** every new test failing when the code it covers was broken on purpose — 51 breakages, all compiling
+and all caught: the mark cleared by reception, never set, always set, lost on cancelling, a move from nowhere; the move
+made as reception's by the service, the use case or the api; a busy patient told as a time taken by the api or by the
+portal's adapter; no times offered by the reader or the adapter; the mark not stored, not read back, dropped by the API,
+the agenda or either screen's words; each rule of the policy — a cancelled one, too late, any day, the same time, any
+time, its first check skipped, always movable —; the time it has offered, times asked for too late or on any day, the
+policy skipped, nothing moved, only one's own moved; the email told as a booking, naming nobody, without the new link,
+said not sent, without the practitioner; a refusal not a 409, the API's times empty or answering the patient's id; a
+booking's email told as a move; the button always offered or gone, the page's times empty, the page always movable,
+each refusal's words and the message; and the email's subject and words. A control that changes only a comment was not
+caught. The first run was stopped by the machine's lack of memory with the 35th left planted; it was found, restored
+and run again, and the twelve that had run beside it were run again clean. `mvnw clean verify`; Docker was not running,
+so the seven `*PostgresIT` were skipped — `V45` is one portable `alter table`.
 
 #### Part 2 — Files attached to the record as a whole `[ ]`
 - [ ] A practitioner uploads a file — a record on paper, a report never uploaded — to the patient's record
@@ -1976,8 +1999,8 @@ From v2, phase 6:
 
 - Registering a patient, or opening an account, from the web, and accounts for people who are not patients
   (see D-79).
-- Moving an appointment on the web, booking today's appointments on the web, and confirming an appointment
-  (see D-82, D-83).
+- Booking today's appointments on the web, and confirming an appointment (see D-82, D-83); moving one came with
+  v2, phase 9 (D-93).
 - The patients reading what the law lets them ask for of their clinical record (see the context).
 - Recording which account booked an appointment (see D-85).
 - Telling the patient that the practice cancelled their appointment (see the context).

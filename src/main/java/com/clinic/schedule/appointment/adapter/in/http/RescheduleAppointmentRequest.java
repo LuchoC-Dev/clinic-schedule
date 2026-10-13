@@ -5,6 +5,7 @@ import java.util.UUID;
 
 import com.clinic.schedule.appointment.application.usecase.RescheduleAppointmentUseCase;
 import com.clinic.schedule.appointment.domain.AppointmentId;
+import com.clinic.schedule.appointment.domain.BookingChannel;
 
 import jakarta.validation.constraints.NotNull;
 
@@ -17,6 +18,6 @@ record RescheduleAppointmentRequest(
         LocalDateTime startsAt) {
 
     RescheduleAppointmentUseCase.Command toCommand(UUID id) {
-        return new RescheduleAppointmentUseCase.Command(new AppointmentId(id), startsAt);
+        return new RescheduleAppointmentUseCase.Command(new AppointmentId(id), startsAt, BookingChannel.RECEPTION);
     }
 }

@@ -85,6 +85,15 @@ class AppointmentReaderAdapter implements AppointmentReader {
     }
 
     @Override
+    public List<LocalTime> suggestedTimesForMoving(UUID appointmentId, LocalDate date) {
+        try {
+            return slots.forMoving(appointment.handle(new AppointmentId(appointmentId)), date).times();
+        } catch (AppointmentNotFoundException e) {
+            return List.of();
+        }
+    }
+
+    @Override
     public List<PatientAppointment> findForPatient(UUID patientId) {
         return patientAppointments.handle(new PatientId(patientId)).stream()
                 .map(AppointmentReaderAdapter::forPatient)

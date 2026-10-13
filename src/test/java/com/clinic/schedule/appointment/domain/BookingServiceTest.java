@@ -32,7 +32,7 @@ class BookingServiceTest {
     private Appointment stored(PatientId patient, int atMinute, int minutes) {
         return Appointment.restore(AppointmentId.newId(), patient, ARIAS,
                 TimeSlot.of(TEN.plusMinutes(atMinute), minutes), "consulta", null,
-                        AppointmentStatus.BOOKED, false, null, BookingChannel.RECEPTION);
+                        AppointmentStatus.BOOKED, false, null, BookingChannel.RECEPTION, false);
     }
 
     @Test
@@ -77,7 +77,8 @@ class BookingServiceTest {
         Appointment existing = stored(ANA, 0, 30);
         TimeSlot newSlot = TimeSlot.of(TEN.plusHours(3), 30);
 
-        Appointment moved = bookingService.reschedule(existing, newSlot, NOW, List.of(existing), Optional.empty());
+        Appointment moved = bookingService.reschedule(existing, newSlot, NOW, List.of(existing), Optional.empty(),
+                BookingChannel.RECEPTION);
 
         assertThat(moved.slot()).isEqualTo(newSlot);
         assertThat(moved.id()).isEqualTo(existing.id());
@@ -89,7 +90,8 @@ class BookingServiceTest {
         Appointment other = stored(LUIS, 120, 30);
         TimeSlot takenSlot = TimeSlot.of(TEN.plusMinutes(120), 30);
 
-        assertThatThrownBy(() -> bookingService.reschedule(existing, takenSlot, NOW, List.of(existing, other), Optional.empty()))
+        assertThatThrownBy(() -> bookingService.reschedule(existing, takenSlot, NOW, List.of(existing, other),
+                Optional.empty(), BookingChannel.RECEPTION))
                 .isInstanceOf(PractitionerAlreadyBookedException.class);
 
         assertThat(existing.slot()).isEqualTo(TimeSlot.of(TEN, 30));
@@ -100,7 +102,7 @@ class BookingServiceTest {
         Appointment cancelled = stored(ANA, 0, 30).cancelled(Cancellations.byHand());
 
         assertThatThrownBy(() -> bookingService.reschedule(cancelled, TimeSlot.of(TEN.plusHours(3), 30), NOW,
-                List.of(), Optional.empty()))
+                List.of(), Optional.empty(), BookingChannel.RECEPTION))
                 .isInstanceOf(BookingRuleViolationException.class);
     }
 
@@ -137,7 +139,7 @@ class BookingServiceTest {
         Appointment existing = stored(ANA, 0, 30);
 
         assertThatThrownBy(() -> bookingService.reschedule(existing, TimeSlot.of(NOW.minusHours(1), 30), NOW,
-                List.of(existing), Optional.empty()))
+                List.of(existing), Optional.empty(), BookingChannel.RECEPTION))
                 .isInstanceOf(SlotInThePastException.class);
     }
 }

@@ -52,7 +52,7 @@ class AppointmentJpaAdapterIT {
             int minutes, String note) {
         return Appointment.restore(AppointmentId.newId(), patient, practitioner,
                 TimeSlot.of(startsAt, minutes), "consulta", note, AppointmentStatus.BOOKED, false, null,
-                        BookingChannel.RECEPTION);
+                        BookingChannel.RECEPTION, false);
     }
 
     /** Sends everything to the database and empties the context, so reads are real queries. */

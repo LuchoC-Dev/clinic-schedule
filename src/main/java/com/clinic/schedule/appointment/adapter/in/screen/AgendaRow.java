@@ -35,7 +35,8 @@ record AgendaRow(
         String state,
         String cancellation,
         String cancellationNote,
-        boolean web) {
+        boolean web,
+        boolean movedOnWeb) {
 
     /** @param arrivedAt when the patient arrived, if they did — the queues say it (D-65) */
     static AgendaRow of(Appointment appointment, PatientSummary patient, String practitioner, LocalDateTime arrivedAt) {
@@ -59,7 +60,8 @@ record AgendaRow(
                 stateOf(appointment, arrivedAt),
                 CancellationWords.summary(appointment),
                 appointment.cancellation().map(Cancellation::note).orElse(null),
-                appointment.bookedVia() == BookingChannel.WEB);
+                appointment.bookedVia() == BookingChannel.WEB,
+                appointment.movedOnWeb());
     }
 
     /** The day with its year, for lists that span more than a week. Public so the template can call it. */

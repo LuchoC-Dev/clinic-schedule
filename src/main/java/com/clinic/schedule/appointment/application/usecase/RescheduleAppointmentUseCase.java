@@ -13,6 +13,7 @@ import com.clinic.schedule.appointment.application.port.ArrivalPort;
 import com.clinic.schedule.appointment.application.port.PractitionerSchedulePort;
 import com.clinic.schedule.appointment.domain.Appointment;
 import com.clinic.schedule.appointment.domain.AppointmentId;
+import com.clinic.schedule.appointment.domain.BookingChannel;
 import com.clinic.schedule.appointment.domain.BookingService;
 import com.clinic.schedule.appointment.domain.TimeSlot;
 
@@ -22,7 +23,8 @@ import com.clinic.schedule.appointment.domain.TimeSlot;
  * <p>The duration is the one it was booked with, not the reason's current one: an
  * appointment records what was booked, and changing a reason's duration does not move the
  * agenda under reception's feet (D-28). So only the start changes, and the new slot is
- * checked against the practitioner's hours and the rest of the agenda.
+ * checked against the practitioner's hours and the rest of the agenda. Reception moves it, and so does a
+ * patient on the web through {@code AppointmentWriter.moveOnWeb} (D-93).
  *
  * <p>Unlike booking, this one is not idempotent and cannot be: asking twice for the same
  * move is indistinguishable from asking for it again.
@@ -59,12 +61,13 @@ public class RescheduleAppointmentUseCase {
 
         Appointment moved = bookingService.reschedule(appointment, newSlot, LocalDateTime.now(clock),
                 agenda.around(newSlot, appointment.practitionerId(), appointment.patientId()),
-                arrivals.arrivalOf(appointment.id()));
+                arrivals.arrivalOf(appointment.id()), command.movedVia());
 
         appointments.save(moved);
         return moved;
     }
 
-    public record Command(AppointmentId id, LocalDateTime startsAt) {
+    /** @param movedVia at reception, or by the patient on the web (D-93) */
+    public record Command(AppointmentId id, LocalDateTime startsAt, BookingChannel movedVia) {
     }
 }

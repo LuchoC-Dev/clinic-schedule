@@ -37,6 +37,13 @@ public interface AppointmentReader {
      */
     List<LocalTime> suggestedTimes(UUID practitionerId, UUID reasonId, LocalDate date);
 
+    /**
+     * The start times worth offering to move that appointment to on that day: every quarter of an hour its
+     * practitioner works and a slot of its booked length is free, its own slot not counted as taken, none
+     * already gone (D-33, D-93). None for an appointment that is not there.
+     */
+    List<LocalTime> suggestedTimesForMoving(UUID appointmentId, LocalDate date);
+
     /** The appointment, if it is still booked: neither cancelled nor absent (D-64). */
     Optional<AppointmentSummary> findBooked(UUID appointmentId);
 }

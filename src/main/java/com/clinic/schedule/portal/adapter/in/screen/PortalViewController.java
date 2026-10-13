@@ -46,6 +46,7 @@ import com.clinic.schedule.portal.application.usecase.CancelOwnAppointmentUseCas
 import com.clinic.schedule.portal.application.usecase.ChangeOwnConsentUseCase;
 import com.clinic.schedule.portal.application.usecase.ChangeOwnContactUseCase;
 import com.clinic.schedule.portal.application.usecase.ListOwnAppointmentsUseCase;
+import com.clinic.schedule.portal.application.usecase.MoveOwnAppointmentUseCase;
 import com.clinic.schedule.portal.application.usecase.ViewOwnDataUseCase;
 import com.clinic.schedule.portal.application.usecase.ViewWebBookingUseCase;
 import com.clinic.schedule.portal.domain.Appointment;
@@ -55,19 +56,21 @@ import com.clinic.schedule.portal.domain.OwnAppointments;
 import com.clinic.schedule.portal.domain.OwnContact;
 import com.clinic.schedule.portal.domain.OwnData;
 import com.clinic.schedule.portal.domain.WebCancellationPolicy;
+import com.clinic.schedule.portal.domain.WebMovePolicy;
 import com.clinic.schedule.portal.domain.exception.WebBookingRefusedException;
 import com.clinic.schedule.portal.domain.exception.WebCancellationRefusedException;
+import com.clinic.schedule.portal.domain.exception.WebMoveRefusedException;
 import com.clinic.schedule.practitioner.api.PractitionerReader;
 import com.clinic.schedule.practitioner.api.PractitionerSummary;
 
 /**
  * The patients' screens (D-80), in Spanish, since patients read them (D-13): logging in with their document,
  * activating their account from the email's link, their appointments, their data, which they change
- * themselves (D-81), booking an appointment (D-82) and cancelling one, from their account or from an email's
- * link with nobody logged in (D-83), and their family: the appointments of the members they act for, booked and
- * cancelled as their own, and the groups they are in (D-85); and their password, changed or recovered by
- * email (D-86). Thin and throwaway, as every screen (D-02): the
- * patients' single-page application will replace them.
+ * themselves (D-81), booking an appointment (D-82), moving one to another time (D-93) and cancelling one, from
+ * their account or from an email's link with nobody logged in (D-83), and their family: the appointments of the
+ * members they act for, booked, moved and cancelled as their own, and the groups they are in (D-85); and their
+ * password, changed or recovered by email (D-86). Thin and throwaway, as every screen (D-02): the patients'
+ * single-page application will replace them.
  */
 @Controller
 class PortalViewController {
@@ -86,6 +89,7 @@ class PortalViewController {
     private final ViewWebBookingUseCase booking;
     private final BookOnWebUseCase book;
     private final CancelOwnAppointmentUseCase cancel;
+    private final MoveOwnAppointmentUseCase move;
     private final CancelLinkUseCase cancelLinks;
     private final ViewFamilyUseCase family;
     private final ManageOwnFamilyUseCase ownFamily;
@@ -99,7 +103,8 @@ class PortalViewController {
     PortalViewController(ActivateAccountUseCase activate, ListOwnAppointmentsUseCase appointments,
             ViewOwnDataUseCase data, ChangeOwnContactUseCase contact, ChangeOwnConsentUseCase consent,
             ViewWebBookingUseCase booking, BookOnWebUseCase book, CancelOwnAppointmentUseCase cancel,
-            CancelLinkUseCase cancelLinks, ViewFamilyUseCase family, ManageOwnFamilyUseCase ownFamily,
+            MoveOwnAppointmentUseCase move, CancelLinkUseCase cancelLinks, ViewFamilyUseCase family,
+            ManageOwnFamilyUseCase ownFamily,
             RecoverPasswordUseCase recovery, ChangeOwnPasswordUseCase ownPassword, PatientReader patients,
             PractitionerReader practitioners, Clock clock,
             @Value("${app.portal.cancel-hours-before}") int cancelHoursBefore) {
@@ -111,6 +116,7 @@ class PortalViewController {
         this.booking = booking;
         this.book = book;
         this.cancel = cancel;
+        this.move = move;
         this.cancelLinks = cancelLinks;
         this.family = family;
         this.ownFamily = ownFamily;
@@ -241,13 +247,14 @@ class PortalViewController {
                 .collect(Collectors.toMap(PractitionerSummary::id, PractitionerSummary::fullName));
         LocalDateTime now = LocalDateTime.now(clock);
         model.addAttribute("upcoming", upcoming(own, names, now, true));
-        model.addAttribute("past", own.past().stream().map(appointment -> Row.of(appointment, names, false, true))
+        model.addAttribute("past", own.past().stream()
+                .map(appointment -> Row.of(appointment, names, false, false, true))
                 .toList());
         model.addAttribute("family", appointments.family().stream()
                 .map(member -> new MemberRows(member.member().fullName(),
                         upcoming(member.appointments(), names, now, false),
                         member.appointments().past().stream()
-                                .map(appointment -> Row.of(appointment, names, false, false))
+                                .map(appointment -> Row.of(appointment, names, false, false, false))
                                 .toList()))
                 .toList());
         return "portal-appointments";
@@ -257,7 +264,8 @@ class PortalViewController {
             boolean own) {
         return appointments.upcoming().stream()
                 .map(appointment -> Row.of(appointment, names,
-                        WebCancellationPolicy.canCancel(appointment, now, cancelHoursBefore), own))
+                        WebCancellationPolicy.canCancel(appointment, now, cancelHoursBefore),
+                        WebMovePolicy.canMove(appointment, now, cancelHoursBefore), own))
                 .toList();
     }
 
@@ -272,6 +280,78 @@ class PortalViewController {
             redirect.addFlashAttribute("error", cancellationRefusal(e));
         }
         return "redirect:/portal/appointments";
+    }
+
+    /**
+     * Moving one of their appointments, or a member's, in steps that come back to the same screen, as booking: a
+     * new day, then the times the agenda offers to move it to that day, each a button that moves it (D-93).
+     */
+    @GetMapping("/portal/appointments/{id}/move")
+    String moving(@PathVariable UUID id,
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate date,
+            Model model) {
+        MoveOwnAppointmentUseCase.Target target;
+        try {
+            target = move.find(id);
+        } catch (NotYourAppointmentException e) {
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN, e.getMessage());
+        }
+        Appointment appointment = target.appointment();
+        model.addAttribute("id", id);
+        model.addAttribute("member", target.member());
+        model.addAttribute("when", WHEN.format(appointment.startsAt()));
+        model.addAttribute("practitioner", practitioners.findAll().stream()
+                .filter(practitioner -> practitioner.id().equals(appointment.practitionerId()))
+                .map(PractitionerSummary::fullName)
+                .findFirst()
+                .orElse(""));
+        model.addAttribute("reason", appointment.reason());
+        model.addAttribute("movable", target.movable());
+        model.addAttribute("firstDay", target.firstDay());
+        model.addAttribute("lastDay", target.lastDay());
+        model.addAttribute("lastDayLabel", DAY.format(target.lastDay()));
+        model.addAttribute("date", date == null ? target.firstDay() : date);
+        if (target.movable() && date != null) {
+            try {
+                model.addAttribute("day", DAY_NAME.format(date));
+                model.addAttribute("times", move.times(id, date));
+            } catch (WebMoveRefusedException e) {
+                model.addAttribute("error", moveRefusal(e));
+            }
+        }
+        return "portal-move";
+    }
+
+    @PostMapping("/portal/appointments/{id}/move")
+    String move(@PathVariable UUID id, @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME)
+            LocalDateTime startsAt, RedirectAttributes redirect) {
+        try {
+            MoveOwnAppointmentUseCase.Result moved = move.handle(id, startsAt);
+            redirect.addFlashAttribute("message", "Turno cambiado"
+                    + (moved.member() == null ? "" : " para " + moved.member()) + ": "
+                    + WHEN.format(moved.startsAt()) + " con " + moved.practitioner() + (moved.confirmationSent()
+                            ? ". Te mandamos la confirmación por email."
+                            : ". No pudimos mandarte la confirmación por email, pero el turno quedó cambiado."));
+            return "redirect:/portal/appointments";
+        } catch (NotYourAppointmentException e) {
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN, e.getMessage());
+        } catch (WebMoveRefusedException e) {
+            redirect.addFlashAttribute("error", moveRefusal(e));
+            return "redirect:/portal/appointments/" + id + "/move?date=" + startsAt.toLocalDate();
+        }
+    }
+
+    /** What the patient reads when an appointment cannot be moved on the web where they asked. */
+    private static String moveRefusal(WebMoveRefusedException e) {
+        return switch (e.reason()) {
+            case NOT_BOOKED -> "Ese turno ya no está reservado.";
+            case TOO_LATE -> "Falta menos de un día para el turno: para cambiarlo, llamá o acercate a recepción.";
+            case DAY_OUT_OF_RANGE ->
+                    "Ese día no se puede elegir por la web: elegí uno entre mañana y el último que ofrece la pantalla.";
+            case SAME_TIME -> "El turno ya es a esa hora: elegí otra.";
+            case NOT_AN_OFFERED_TIME, TIME_TAKEN -> "Ese horario ya no está libre: elegí otro.";
+            case PATIENT_BUSY -> "Ya hay otro turno del paciente a esa hora: elegí otra.";
+        };
     }
 
     /** The page of an email's link, with nobody logged in: when and with whom, and a button (D-83). */
@@ -535,14 +615,17 @@ class PortalViewController {
 
     /**
      * One of the patient's appointments, or of a member's they act for (D-85), in Spanish. Never the note nor who
-     * cancelled it. {@code cancellable} offers cancelling it, while it is booked and there is time to (D-83).
+     * cancelled it. {@code cancellable} offers cancelling it, while it is booked and there is time to (D-83), and
+     * {@code movable} moving it to another time (D-93).
      */
-    record Row(UUID id, String when, String practitioner, String reason, String state, boolean cancellable) {
+    record Row(UUID id, String when, String practitioner, String reason, String state, boolean cancellable,
+            boolean movable) {
 
-        static Row of(Appointment appointment, Map<UUID, String> names, boolean cancellable, boolean own) {
+        static Row of(Appointment appointment, Map<UUID, String> names, boolean cancellable, boolean movable,
+                boolean own) {
             return new Row(appointment.id(), WHEN.format(appointment.startsAt()),
                     names.getOrDefault(appointment.practitionerId(), ""), appointment.reason(),
-                    state(appointment, own), cancellable);
+                    state(appointment, own), cancellable, movable);
         }
 
         private static String state(Appointment appointment, boolean own) {

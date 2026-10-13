@@ -21,6 +21,7 @@
             <td>
                 <span th:text="${row.reason}">consulta</span>
                 <span class="muted" th:if="${row.web}">· Web</span>
+                <span class="muted" th:if="${row.movedOnWeb}">· Movido por la web</span>
                 <div class="muted" th:if="${row.note}" th:text="${row.note}"></div>
             </td>
             <td>

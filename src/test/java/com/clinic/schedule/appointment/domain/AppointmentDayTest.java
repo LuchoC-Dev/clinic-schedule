@@ -56,7 +56,8 @@ class AppointmentDayTest {
     @Test
     void movingTheAppointmentDropsTheLateArrivalNotice() {
         // The notice was about the old time.
-        Appointment moved = DAY.lateArrivalNotice(booked, TEN, NOT_ARRIVED).movedTo(TimeSlot.of(TEN.plusDays(1), 30));
+        Appointment moved = DAY.lateArrivalNotice(booked, TEN, NOT_ARRIVED).movedTo(TimeSlot.of(TEN.plusDays(1), 30),
+                BookingChannel.RECEPTION);
 
         assertThat(moved.hasLateArrivalNotice()).isFalse();
     }
@@ -64,7 +65,7 @@ class AppointmentDayTest {
     @Test
     void anAppointmentWhosePatientArrivedIsNotMoved() {
         assertThatThrownBy(() -> new BookingService().reschedule(booked, TimeSlot.of(TEN.plusHours(2), 30), TEN,
-                List.of(), ARRIVED)).isInstanceOf(BookingRuleViolationException.class)
+                List.of(), ARRIVED, BookingChannel.RECEPTION)).isInstanceOf(BookingRuleViolationException.class)
                 .hasMessageContaining("already arrived");
     }
 
@@ -133,7 +134,7 @@ class AppointmentDayTest {
                 .hasMessageContaining("absent");
         assertThatThrownBy(() -> DAY.lateArrivalNotice(absent, TEN.plusMinutes(40), NOT_ARRIVED))
                 .isInstanceOf(BookingRuleViolationException.class);
-        assertThatThrownBy(() -> absent.movedTo(TimeSlot.of(TEN.plusDays(1), 30)))
+        assertThatThrownBy(() -> absent.movedTo(TimeSlot.of(TEN.plusDays(1), 30), BookingChannel.RECEPTION))
                 .isInstanceOf(BookingRuleViolationException.class);
     }
 

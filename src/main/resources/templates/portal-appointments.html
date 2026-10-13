@@ -18,6 +18,7 @@
             <td th:text="${a.reason}">Consulta</td>
             <td th:text="${a.state}">Reservado</td>
             <td class="actions">
+                <a th:if="${a.movable}" th:href="@{/portal/appointments/{id}/move(id=${a.id})}">Cambiar horario</a>
                 <form class="inline" method="post" th:if="${a.cancellable}"
                       th:action="@{/portal/appointments/{id}/cancel(id=${a.id})}">
                     <button type="submit" class="danger">Cancelar</button>
@@ -52,6 +53,8 @@
                 <td th:text="${a.reason}">Consulta</td>
                 <td th:text="${a.state}">Reservado</td>
                 <td class="actions">
+                    <a th:if="${a.movable}" th:href="@{/portal/appointments/{id}/move(id=${a.id})}">Cambiar
+                        horario</a>
                     <form class="inline" method="post" th:if="${a.cancellable}"
                           th:action="@{/portal/appointments/{id}/cancel(id=${a.id})}">
                         <button type="submit" class="danger">Cancelar</button>
@@ -69,8 +72,8 @@
         </table>
     </th:block>
 
-    <p class="muted"><a th:href="@{/portal/booking}">Sacar un turno</a>. Un turno se cancela acá hasta un día antes;
-        después, o para cambiarlo, llamá o acercate a recepción.</p>
+    <p class="muted"><a th:href="@{/portal/booking}">Sacar un turno</a>. Un turno se cambia de horario o se cancela acá
+        hasta un día antes; después, o para cambiar de profesional o de motivo, llamá o acercate a recepción.</p>
 </main>
 </body>
 </html>
