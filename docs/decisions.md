@@ -4019,3 +4019,26 @@ reached from this one on the same day and practitioner.
 *Rejected:* the names in `AppointmentResponse` (every endpoint of the module would carry them for one screen); the
 names asked for by the application, one patient at a time; the browser's date for today; the operations in this part
 (they are part 2's, with booking).
+
+---
+
+## D-99 — The build's memory, measured: no ceilings
+**Date:** 2026-10-14 · **Status:** accepted
+
+The machine the application is built on also runs it, a database in Docker and several agents at once, and the
+long runs of tests were stopped more than once by the system running low on memory. A full `mvnw clean verify` was
+measured before changing anything: about 1.9 GB at its worst for everything the build started together — the Java
+that runs the integration tests about 1 GB, Maven's and the unit tests' about 0.75 GB each, and Node.js for the web
+applications' install, build and tests most of the rest. The build was not what filled the memory: about 3 GB of it
+were agents' sessions that had finished and were still open.
+
+**Nothing is capped.** The build's Java keeps the JVM's defaults — no `.mvn/jvm.config`, no `argLine` — because the
+measured peak is far below their ceiling: a lower one would change nothing today and only risk an
+`OutOfMemoryError` as the tests grow. Vitest keeps its default workers: run on two at most, the build's peak went
+from about 1.96 GB to 1.88 GB, too little to be worth a setting. If a later measurement says otherwise, the ceiling
+goes in then (D-14). What keeps memory free is closing what has finished: an agent's session, the application and
+the throwaway database it started.
+
+*Rejected:* a heap ceiling on Maven and the forked tests, and two Vitest workers at most (measured, neither was
+needed); a smaller cache of Spring contexts for the tests (the integration tests stayed near 1 GB as it is);
+stopping Claude Code from cutting long commands when memory is short (it hides the shortage instead of avoiding it).
