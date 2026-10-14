@@ -4144,3 +4144,28 @@ in with nothing charged, and one with no name is registered under an alias (D-60
 *Rejected:* a board of its own for the arrivals (the session's answer with the names is the board); polling for the
 queues' changes (the stream is there, and tells the moment); the members' age said in words by the API (the words are
 the screen's, D-13).
+
+---
+
+## D-103 — The cash desk, the cancellations and the reminders in the staff's application
+**Date:** 2026-10-14 · **Status:** accepted
+
+v2, phase 10, part 2, batch C (D-101): `/cash-desk`, `/cancellations` and `/reminders`, doing what their Thymeleaf
+screens do. With them, every screen of reception's is in the staff's application but the copies to collect, which
+part 4 brings with the admins'.
+
+**What may be done with a visit, said by the API.** The Thymeleaf screen reads the visit itself to know whether what
+is left of a charge may be given back — it is the visit's current charge —, whether a visit given back whole may be
+charged again — its last charge, nothing current —, and whether a visit whose coverage was withdrawn is now charged
+privately (D-88, D-90). The application cannot see the visit, so each movement of `GET /api/cash-desk` says
+`refundable` and `chargeableAgain`, and each covered visit `chargeable`: the rules stay the server's, and the screen
+only offers what they allow.
+
+**The screen.** The mock's tiles above — the cash in the drawer, each other means used, what was given back —, the
+totals by who recorded them and by means, the movements, the emergencies to charge or cover, and the visits covered.
+Charging, giving back, covering and withdrawing are dialogs; an amount above $ 500.000 — a charge, a refund, a copay —
+is confirmed a second time (D-101). The cancellations and the reminders are searched by their days, and say who
+cancelled each and what happened to each reminder in the Thymeleaf screens' words.
+
+*Rejected:* the screen working out the visit's state from its movements (the rules of D-88 and D-90 would live twice,
+and drift); a tile per means always (a means nobody used that day is noise).

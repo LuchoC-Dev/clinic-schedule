@@ -7,6 +7,7 @@ import { Theme } from '../shared/theme';
 import { AccountPage } from './account/AccountPage';
 import { AgendaPage } from './agenda/AgendaPage';
 import { ArrivalsPage } from './arrivals/ArrivalsPage';
+import { CashDeskPage } from './cash/CashDeskPage';
 import { FamilyGroupPage } from './family/FamilyGroupPage';
 import { FamilyGroupsPage } from './family/FamilyGroupsPage';
 import { BookingPage } from './booking/BookingPage';
@@ -16,6 +17,8 @@ import { PatientPage } from './patients/PatientPage';
 import { PatientsPage } from './patients/PatientsPage';
 import { Layout } from './Layout';
 import { LoginPage } from './LoginPage';
+import { CancellationsPage } from './logs/CancellationsPage';
+import { RemindersPage } from './logs/RemindersPage';
 import { GoTo } from './GoTo';
 import { type Role, type StaffUser, landingFor } from './navigation';
 import { BASE, SessionContext, SetUserContext, useUser } from './session';
@@ -50,6 +53,9 @@ export const routes: RouteObject[] = [
       { path: 'arrivals', element: <OnlyFor role="RECEPTION"><ArrivalsPage /></OnlyFor> },
       { path: 'family-groups', element: <OnlyFor role="RECEPTION"><FamilyGroupsPage /></OnlyFor> },
       { path: 'family-groups/:id', element: <OnlyFor role="RECEPTION"><FamilyGroupPage /></OnlyFor> },
+      { path: 'cash-desk', element: <OnlyFor role="RECEPTION"><CashDeskPage /></OnlyFor> },
+      { path: 'cancellations', element: <OnlyFor role="RECEPTION"><CancellationsPage /></OnlyFor> },
+      { path: 'reminders', element: <OnlyFor role="RECEPTION"><RemindersPage /></OnlyFor> },
     ],
   },
   { path: '*', element: <Navigate to="/" replace /> },

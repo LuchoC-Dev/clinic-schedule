@@ -729,6 +729,53 @@ class CashDeskApiIT {
         assertThat(coveredOf(today(), charged)).isNull();
     }
 
+    /**
+     * Each charge says whether what is left of it may be given back — its visit's current one — and whether it may be
+     * charged again — the last of a visit given back whole —; a coverage withdrawn, whether the visit is charged
+     * privately now (D-88, D-90, D-103).
+     */
+    @Test
+    void eachMovementSaysWhatMayBeDoneWithItsVisit() throws Exception {
+        UUID ana = patients.newPatient();
+        arrives(ana, ", \"amount\": 10000").andExpect(status().isCreated());
+        String visit = visitOf(ana);
+        JsonNode first = movementOf(today(), visit);
+        assertThat(first.get("refundable").asBoolean()).isTrue();
+        assertThat(first.get("chargeableAgain").asBoolean()).isFalse();
+
+        refund(visit, "{\"amount\": 4000, \"reason\": \"cobrado de más\"}").andExpect(status().isOk());
+        JsonNode day = today();
+        assertThat(movementOf(day, visit).get("refundable").asBoolean()).isTrue();
+        assertThat(movementOf(day, visit, "REFUND", 0).get("refundable").asBoolean()).isFalse();
+        assertThat(movementOf(day, visit, "REFUND", 0).get("chargeableAgain").asBoolean()).isFalse();
+
+        refund(visit, "{\"amount\": 6000, \"reason\": \"se fue\"}").andExpect(status().isOk());
+        day = today();
+        assertThat(movementOf(day, visit).get("refundable").asBoolean()).isFalse();
+        assertThat(movementOf(day, visit).get("chargeableAgain").asBoolean()).isTrue();
+
+        day = read(mockMvc.perform(post("/api/visits/" + visit + "/charge").contentType(MediaType.APPLICATION_JSON)
+                .content("{\"amount\": 8000}")).andExpect(status().isOk()));
+        assertThat(movementOf(day, visit).get("chargeableAgain").asBoolean()).isFalse();
+        assertThat(movementOf(day, visit, "CHARGE", 1).get("refundable").asBoolean()).isTrue();
+        assertThat(movementOf(day, visit, "CHARGE", 1).get("chargeableAgain").asBoolean()).isFalse();
+        // Given back whole again: only its last charge may be charged again.
+        refund(visit, "{\"amount\": 8000, \"reason\": \"se fue otra vez\"}").andExpect(status().isOk());
+        day = today();
+        assertThat(movementOf(day, visit).get("chargeableAgain").asBoolean()).isFalse();
+        assertThat(movementOf(day, visit, "CHARGE", 1).get("chargeableAgain").asBoolean()).isTrue();
+
+        UUID insured = insuredPatient(true);
+        arrives(insured, ", \"coverage\": {}").andExpect(status().isCreated());
+        String covered = visitOf(insured);
+        assertThat(coveredOf(today(), covered).get("chargeable").asBoolean()).isFalse();
+        withdraw(covered, "{\"reason\": \"no tenía la credencial\"}").andExpect(status().isOk());
+        assertThat(coveredOf(today(), covered).get("chargeable").asBoolean()).isTrue();
+        mockMvc.perform(post("/api/visits/" + covered + "/charge").contentType(MediaType.APPLICATION_JSON)
+                .content("{\"amount\": 15000}")).andExpect(status().isOk());
+        assertThat(coveredOf(today(), covered).get("chargeable").asBoolean()).isFalse();
+    }
+
     @Test
     void aCoverageMarkedByMistakeIsWithdrawnOnceItsCopayIsGivenBackAndTheVisitIsChargedPrivately() throws Exception {
         UUID ana = insuredPatient(true);

@@ -219,3 +219,53 @@ export const ACCOUNT_REFUSALS = byCode({
   INVALID_ACCOUNT_EMAIL: 'El email tiene la forma nombre@dominio.com y hasta 254 caracteres.',
   ACCOUNT_STATE: 'La cuenta ya no está en ese estado: mirá cómo quedó.',
 });
+
+/** The cash desk's rules (D-87, D-88, D-89, D-90). */
+export const CASH_REFUSALS = byCode({
+  CHARGE_REQUIRED: 'Falta el importe del cobro.',
+  INVALID_AMOUNT: 'El importe debe ser mayor que cero, con dos decimales como mucho.',
+  AMOUNT_TOO_HIGH: 'El importe supera el máximo que acepta la caja.',
+  ALREADY_CHARGED: 'Esa visita ya está cobrada.',
+  NOTHING_TO_REFUND: 'No queda nada por devolver de ese cobro.',
+  REFUND_TOO_HIGH: 'No se puede devolver más de lo que queda del cobro.',
+  REASON_REQUIRED: 'Falta el motivo.',
+  REASON_TOO_LONG: 'El motivo no puede superar los 200 caracteres.',
+  CHANGED_MEANWHILE: 'La caja cambió mientras tanto. Revisala y probá de nuevo.',
+  NOT_INSURED: 'El paciente no tiene obra social cargada: paga como particular.',
+  IDENTITY_NOT_VERIFIED: 'La identidad del paciente no está verificada: paga como particular.',
+  TOKEN_TOO_LONG: 'El token no puede superar los 50 caracteres.',
+  ALREADY_COVERED: 'Esa visita ya tiene cobertura.',
+  NOT_COVERED: 'Esa visita no tiene cobertura para quitar.',
+  COPAY_LEFT: 'Primero devolvé el coseguro; después se quita la cobertura.',
+  VISIT_NOT_FOUND: 'Esa visita no existe.',
+});
+
+/** How an appointment was cancelled (D-76, D-83). */
+export const CANCELLATION_ORIGINS: Record<string, string> = {
+  BY_HAND: 'A mano',
+  TIME_OFF: 'Ausencia del profesional',
+  ONLINE: 'Por la web',
+  EMAIL_LINK: 'Con el link del email',
+};
+
+/** Who cancelled it, as reception reads it: the patient's web account as the patient, an email's link as itself. */
+export function cancelledBy(origin: string, by: string | null): string {
+  if (origin === 'ONLINE') return 'el paciente (web)';
+  if (origin === 'EMAIL_LINK') return 'el link del email';
+  return by ?? '—';
+}
+
+/** What happened to a reminder (D-78): never the address. */
+export function reminderOutcome(outcome: string, reason: string | null): string {
+  if (outcome === 'SENT') return 'Enviado por email';
+  if (outcome === 'FAILED') return 'No se pudo enviar: avisale por teléfono';
+  switch (reason) {
+    case 'NO_EMAIL':
+      return 'No enviado: no tiene email';
+    case 'NO_CONSENT':
+      return 'No enviado: sin consentimiento para el email';
+    default:
+      return 'No enviado: el email es de un responsable que dio el consentimiento, y el paciente tiene 13 años o '
+        + 'más o no tiene fecha de nacimiento';
+  }
+}

@@ -75,8 +75,8 @@ account in use: she logs in at http://localhost:8080/portal/login as `DNI 273334
 http://localhost:8080/app/, the patients' at http://localhost:8080/portal/app/. For now, the staff's has reception's
 agenda — a day or its week, of everyone or one practitioner, with the arrival charged as it comes in, a warning of
 lateness, moving and cancelling —, booking at the free times with a patient found or a new one, the patients, with
-their details, consent, histories, appointments and web account, the family groups, and the arrivals, shown as the
-queues change; a very large amount is confirmed a second time. Every other entry
+their details, consent, histories, appointments and web account, the family groups, the arrivals, shown as the
+queues change, the day's cash desk, the cancellations and the reminders; a very large amount is confirmed a second time. Every other entry
 of each role's menu opens its Thymeleaf screen, in the same session; the patients' has its login, with the document, and its sections lead to their screens. Both keep nothing in
 the browser, and say every refusal in Spanish.
 
@@ -175,7 +175,7 @@ such as `PRACTITIONER_ALREADY_BOOKED` or `ALREADY_CHARGED`.
 | `POST` | `/api/queues/{id}/session/patients`, `/session/unidentified` | bring a patient in, or one who gives no name, as an emergency or not, with the `amount` charged — which only an emergency may leave out, pending — and its `means`: `CASH`, the default, `DEBIT`, `CREDIT`, `TRANSFER` or `QR`; a known patient with an insurance and a verified identity may come in with `coverage: {token?}`, the `amount` then being the copay, if any |
 | `POST` | `/api/queue-entries/{id}/emergency`, `/left` | make a waiting patient an emergency, or say they left |
 | `POST` | `/api/appointment-arrivals` | a patient with an appointment today arrives, paying the `amount` by its `means`, or with `coverage: {token?}` and its copay: into their practitioner's queue, kept for them; the appointment answers when, as `arrivedAt` |
-| `GET` | `/api/cash-desk?date=` | a day's cash desk, today by default: each charge and refund with its patient — a refund with why, a charge with what is left of it —, what was charged, given back and is left, overall and by who recorded them, each by means, with the `drawer` — what is left in cash —, each movement saying whether it was a `copay`, the emergencies of that day never charged nor covered, and the visits `covered` that day, with the insurance as it was then, the token and any withdrawal |
+| `GET` | `/api/cash-desk?date=` | a day's cash desk, today by default: each charge and refund with its patient — a refund with why, a charge with what is left of it —, what was charged, given back and is left, overall and by who recorded them, each by means, with the `drawer` — what is left in cash —, each movement saying whether it was a `copay`, the emergencies of that day never charged nor covered, and the visits `covered` that day, with the insurance as it was then, the token and any withdrawal; each movement says whether it is `refundable` and `chargeableAgain`, each covered visit whether it is `chargeable` |
 | `POST` | `/api/visits/{id}/charge` | `{amount, means}`: charge an emergency's pending visit, or one given back whole again; cash unless `means` says otherwise |
 | `POST` | `/api/visits/{id}/refund` | `{amount, reason}`: give back some or all of what is left of the visit's charge, by its means, saying why |
 | `POST` | `/api/visits/{id}/coverage` | `{token?, copay?, means?}`: record an emergency's pending visit as covered by the patient's insurance |

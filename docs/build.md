@@ -2099,7 +2099,7 @@ token belonged to a session that was gone. A token of a session that is gone is 
 asks for a new token first; four more breakages — either check of the session, and either login not asking — were
 all caught.
 
-#### Part 2 — Reception `[~]`
+#### Part 2 — Reception `[x]`
 Delivered in three batches, each a commit of its own (D-101). The copies to collect stay for part 4, as the scope has
 them.
 
@@ -2171,8 +2171,37 @@ practitioner waited for and practitioner with them, my queue's called patient, t
 band; the history's names, and those of who left. One was missed at first — the practitioner chosen to give a
 patient to — and its test was made to catch it. `mvnw clean verify`, with Docker running: the seven `*PostgresIT` ran.
 
-##### Batch C — The cash desk, the cancellations and the reminders `[ ]`
-- [ ] The day's cash desk, a very large amount confirmed twice; the cancellations; the reminders
+##### Batch C — The cash desk, the cancellations and the reminders `[x]`
+- [x] The day's cash desk: its tiles and totals, by who recorded them and by means; a charge given back, some or all,
+      saying why; a visit given back whole charged again; an emergency charged or covered with its copay; a coverage
+      withdrawn and the visit charged privately; a very large amount confirmed twice (D-87, D-88, D-89, D-90, D-101)
+- [x] Each movement says whether it is `refundable` and `chargeableAgain`, and each covered visit whether it is
+      `chargeable` (D-103)
+- [x] The cancellations, by the day they were made, with who, how and who asked; the reminders, the failed ones to call
+      about (D-76, D-78)
+- [x] The menu sends to all of reception's screens but the copies to collect, which are part 4's
+- [x] 14 Vitest tests more, 1 integration test more, and 1 end-to-end test more: charging. 549 unit and 667
+      integration tests in Java, and 121 in the applications: 1337 in total
+
+**Verified with:** every new test failing when the code it covers was broken on purpose — 35 breakages, all compiling
+and all caught in the end. In the application, 29: a patient without their document, a copay said as a charge, a
+refund unsaid or without its minus, a means unused shown, the drawer as all that is left, an insurance's plan by its
+member number; who cancelled on the web, nobody said, a failed reminder, one without consent; a refund offered for any
+charge, a charge again for any, a covered visit charged while covered, a withdrawal offered twice, the means of a
+charge dropped, a withdrawal's reason unsaid, a refund's notice, a refund's reason, the day asked for; a refund asking
+as a charge, its amount not proposed, a copay dropped, a withdrawal's reason dropped; the cancellations' first day, the
+warning of more, who asked; a reminder's words, a range backwards. In the server, 5: a refundable charge that is not
+the current one, the last charge chargeable while one is current, any charge chargeable again, a covered visit
+chargeable while covered or while charged. End to end, 1: the cash desk sent to the Thymeleaf screen. Four were
+missed at first — a plan without its member number, a charge no longer current, one never to charge again, and the
+last of two charges given back — and their tests were made to catch them. `mvnw clean verify`, with Docker running:
+the seven `*PostgresIT` ran.
+
+**Part 2 of phase 10, reception, is done.** Every screen of reception's is in the staff's application but the copies to
+collect, which come with the admins' in part 4: the agenda of a day or a week with its operations, booking with a new
+patient at once, the patients, the arrivals as they change, the family groups, the web accounts, the cash desk, the
+cancellations and the reminders. Every refusal is said in Spanish by its code, and a very large amount is confirmed a
+second time. The Thymeleaf screens stay until part 6.
 
 #### Part 3 — Practitioners `[ ]`
 - [ ] Their queue; the clinical record, consultations, checks, results, orders, addenda, attachments and access

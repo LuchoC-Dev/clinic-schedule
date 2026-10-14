@@ -28,9 +28,13 @@ record CashDeskResponse(LocalDate date, List<Movement> movements, Totals.Total t
      * @param copay whether it was, or gave back from, the copay of a covered visit
      * @param left what is left of the charge now; null for a refund
      * @param reason why it was given back; null for a charge
+     * @param refundable whether it is its visit's current charge, of which what is left may be given back (D-88)
+     * @param chargeableAgain whether it is the last charge of a visit given back whole, which may be charged again
+     *        (D-88, D-103)
      */
     record Movement(Kind kind, UUID visitId, Patient patient, boolean emergency, boolean copay, BigDecimal amount,
-            Means means, BigDecimal left, String reason, String recordedBy, LocalDateTime recordedAt) {
+            Means means, BigDecimal left, String reason, String recordedBy, LocalDateTime recordedAt,
+            boolean refundable, boolean chargeableAgain) {
     }
 
     /**
@@ -40,9 +44,11 @@ record CashDeskResponse(LocalDate date, List<Movement> movements, Totals.Total t
      * @param plan null when the patient had none recorded
      * @param token null when the insurer asked for none
      * @param withdrawal null unless the coverage was withdrawn
+     * @param chargeable its coverage withdrawn and nothing charged of it: charged privately (D-90, D-103)
      */
     record Covered(UUID visitId, Patient patient, boolean emergency, String insurer, String memberNumber,
-            String plan, String token, String recordedBy, LocalDateTime recordedAt, Withdrawal withdrawal) {
+            String plan, String token, String recordedBy, LocalDateTime recordedAt, Withdrawal withdrawal,
+            boolean chargeable) {
     }
 
     record Withdrawal(String reason, String recordedBy, LocalDateTime recordedAt) {
@@ -71,15 +77,19 @@ record CashDeskResponse(LocalDate date, List<Movement> movements, Totals.Total t
         return new Covered(visit.id(), patient(visit, patients), visit.emergency(), coverage.insurance().insurer(),
                 coverage.insurance().memberNumber(), coverage.insurance().plan(), coverage.token(),
                 coverage.recordedBy(), coverage.recordedAt(), withdrawal == null ? null
-                        : new Withdrawal(withdrawal.reason(), withdrawal.recordedBy(), withdrawal.recordedAt()));
+                        : new Withdrawal(withdrawal.reason(), withdrawal.recordedBy(), withdrawal.recordedAt()),
+                !visit.covered() && visit.current().isEmpty());
     }
 
     private static Movement movement(CashDeskDay.Movement movement, Map<UUID, PatientSummary> patients) {
         Visit visit = movement.visit();
+        boolean charge = movement.kind() == Kind.CHARGE;
+        boolean current = charge && visit.current().map(movement.charge()::equals).orElse(false);
+        boolean last = charge && visit.charges().getLast().equals(movement.charge());
         return new Movement(movement.kind(), visit.id(), patient(visit, patients), visit.emergency(),
                 movement.copay(), movement.amount().value(), movement.means(),
-                movement.kind() == Kind.CHARGE ? movement.charge().left() : null, movement.reason(),
-                movement.recordedBy(), movement.recordedAt());
+                charge ? movement.charge().left() : null, movement.reason(),
+                movement.recordedBy(), movement.recordedAt(), current, last && visit.current().isEmpty());
     }
 
     private static Patient patient(Visit visit, Map<UUID, PatientSummary> patients) {

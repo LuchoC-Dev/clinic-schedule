@@ -256,6 +256,52 @@ class ReceptionAgendaE2EIT {
         assertThat(page.getByLabel("…u otra hora")).hasValue("10:00");
     }
 
+    /**
+     * Charging (D-87, D-101): the patient arrives from the agenda, their visit charged as they come in; an amount with
+     * one zero too many asks once more before it is sent; the day's cash desk shows it, and part of it is given back,
+     * saying why.
+     */
+    @Test
+    void receptionChargesAnArrivalConfirmingAVeryLargeAmountAndGivesPartOfItBack() throws Exception {
+        String name = "Dra. Caja " + unique();
+        String[] practitioner = practitioner(name);
+        new ArrivalFixture(mockMvc, jdbc).openQueueFor(UUID.fromString(practitioner[0]));
+        String patient = "Rosa Cobro " + unique();
+        book(practitioner, patient, "2026-03-10T11:00:00");
+
+        logInAsReception();
+        assertThat(page).hasURL(Pattern.compile("/app/agenda$"));
+        page.navigate(at("/app/agenda?practitionerId=" + practitioner[0]));
+        row(patient).getByRole(AriaRole.BUTTON, new Locator.GetByRoleOptions().setName("Llegó")).click();
+        Locator dialog = page.getByRole(AriaRole.DIALOG);
+        dialog.getByLabel("Importe").fill("1500000");
+        dialog.getByRole(AriaRole.BUTTON, new Locator.GetByRoleOptions().setName("Llegó")).click();
+        assertThat(dialog.getByRole(AriaRole.ALERT)).containsText("Vas a cobrar $ 1.500.000,00");
+        dialog.getByRole(AriaRole.BUTTON, new Locator.GetByRoleOptions().setName("Sí, cobrar $ 1.500.000,00")).click();
+
+        assertThat(page.getByRole(AriaRole.STATUS)).hasText("Llegó: está en la cola de su profesional.");
+        assertThat(row(patient)).containsText("Llegó a las");
+
+        page.getByRole(AriaRole.NAVIGATION).getByText("Caja", new Locator.GetByTextOptions().setExact(true)).click();
+        assertThat(page).hasURL(Pattern.compile("/app/cash-desk$"));
+        Locator charge = page.getByRole(AriaRole.ROW).filter(new Locator.FilterOptions().setHasText(patient))
+                .filter(new Locator.FilterOptions().setHasText("Cobro"));
+        assertThat(charge).containsText("$ 1.500.000,00");
+        charge.getByRole(AriaRole.BUTTON, new Locator.GetByRoleOptions().setName("Devolver (queda $ 1.500.000,00)")).click();
+        dialog = page.getByRole(AriaRole.DIALOG);
+        dialog.getByLabel("Importe a devolver").fill("500.000");
+        dialog.getByLabel("Motivo").fill("cobrado de más");
+        dialog.getByRole(AriaRole.BUTTON, new Locator.GetByRoleOptions().setName("Devolver")).click();
+
+        assertThat(page.getByRole(AriaRole.STATUS)).hasText("Devolución registrada.");
+        Locator refund = page.getByRole(AriaRole.ROW).filter(new Locator.FilterOptions().setHasText(patient))
+                .filter(new Locator.FilterOptions().setHasText("Devolución"));
+        assertThat(refund).containsText("−$ 500.000,00");
+        assertThat(refund).containsText("cobrado de más");
+        assertThat(charge.getByRole(AriaRole.BUTTON, new Locator.GetByRoleOptions().setName("Devolver (queda $ 1.000.000,00)")))
+                .isVisible();
+    }
+
     @Test
     void aWrongPasswordIsSaidAndNothingIsShown() {
         page.navigate(at("/app/agenda"));
