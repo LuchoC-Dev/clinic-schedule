@@ -73,9 +73,10 @@ account in use: she logs in at http://localhost:8080/portal/login as `DNI 273334
 
 **The web applications** — the screens are moving to two single-page applications (D-97): the staff's at
 http://localhost:8080/app/, the patients' at http://localhost:8080/portal/app/. For now, the staff's has reception's
-agenda of the day — the day's appointments, of everyone or of one practitioner, who arrived, who warned, who was absent
-and what the web booked or moved — and every other entry of each role's menu opens its Thymeleaf screen, in the same
-session; the patients' has its login, with the document, and its sections lead to their screens. Both keep nothing in
+agenda — a day or its week, of everyone or one practitioner, with the arrival charged as it comes in, a warning of
+lateness, moving and cancelling —, booking at the free times with a patient found or a new one, and the patients, with
+their details, consent, histories and appointments; a very large amount is confirmed a second time. Every other entry
+of each role's menu opens its Thymeleaf screen, in the same session; the patients' has its login, with the document, and its sections lead to their screens. Both keep nothing in
 the browser, and say every refusal in Spanish.
 
 **Screens** — open http://localhost:8080 and log in. Reception gets the agenda — a day or a
@@ -129,14 +130,18 @@ paper to collect at reception. The emails go to Mailpit in development, at http:
 **API** — the web applications log in with a session, as the screens do, and send its CSRF token as `X-CSRF-TOKEN`
 with every write; any other client uses basic authentication on every request: the staff with their username, a
 patient with their document as its type and number, such as `DNI 27333444`. Errors share one body:
-`{timestamp, status, error, message, fields?}`.
+`{timestamp, status, error, message, code?, fields?}`, `code` naming a refusal for a screen to say it in its words,
+such as `PRACTITIONER_ALREADY_BOOKED` or `ALREADY_CHARGED`.
 
 | Method | Route | What it does |
 |---|---|---|
 | `GET` | `/api/session`, `/api/portal/session` | who of the staff is logged in, or whether a patient is, and the CSRF token, before logging in too; the patients', the types of document too |
 | `POST` | `/api/session`, `/api/portal/session` | log in, as a form — `username` and `password`; `documentType`, `documentNumber` and `password` —, with the token: the same as above, with the new token, or a 401; a patient's failures count towards the lock |
 | `POST` | `/api/session/logout`, `/api/portal/session/logout` | log out, ending the whole session, the screens' too |
-| `GET` | `/api/agenda?date=&practitionerId=` | reception's agenda of a day — today without one, everyone's without a practitioner —: the practitioners to choose from, and each appointment not cancelled with its patient's and practitioner's names |
+| `GET` | `/api/agenda?date=&practitionerId=&week=` | reception's agenda of a day, or with `week=true` of its week from Monday to Sunday — today without one, everyone's without a practitioner —: the practitioners to choose from, and each appointment not cancelled with its patient's and practitioner's names |
+| `GET` | `/api/agenda/free-times?practitionerId=&reasonId=&date=`, `?appointmentId=&date=` | the times free that day for a reason of the practitioner, or to move an appointment to, and whether the practitioner works that day at all |
+| `POST` | `/api/appointments/with-new-patient` | register a patient and book them at once — the booking with `patient: {fullName, documentType?, documentNumber?, phone?, email?}` in place of `patientId`, the phone and the email each `{value, owner?: {name, relation}}` —; nothing of either when one is refused |
+| `GET` | `/api/patients/{id}/appointments` | a patient's appointments, cancelled ones included, each with who cancelled it, when, how and who asked |
 | `POST` | `/api/patients` | register a patient, with an optional typed document; `documentSeen` verifies it at once; optionally `birthDate`, `phone` and `email`, each with its `owner`, and `insurance` |
 | `POST` | `/api/patients/unidentified` | register a patient who gives no name, under an alias such as NN-4821 |
 | `PUT` | `/api/patients/{id}` | correct a name, add or remove the document; `documentSeen` verifies the identity |

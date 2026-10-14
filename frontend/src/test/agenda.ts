@@ -7,6 +7,7 @@ export function appointment(overrides: Partial<AgendaAppointment> = {}): AgendaA
     patientId: 'p1', patient: 'Ana Pérez', patientDocument: 'DNI 30111222',
     practitionerId: 'd1', practitioner: 'Dra. Laura Arias', reason: 'consulta', note: null,
     status: 'BOOKED', arrivedAt: null, lateArrivalNotice: false, bookedVia: 'RECEPTION', movedOnWeb: false,
+    cancellation: null,
     ...overrides,
   };
 }

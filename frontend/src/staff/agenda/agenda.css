@@ -46,3 +46,8 @@
   background: #fbe4da;
   color: #8a2c0b;
 }
+
+.agenda-badge-cancelled {
+  background: #e3e7e1;
+  color: #3a4442;
+}

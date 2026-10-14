@@ -5,6 +5,11 @@ import { Navigate, Outlet, type RouteObject, RouterProvider, createBrowserRouter
 import { newQueryClient } from '../shared/queries';
 import { Theme } from '../shared/theme';
 import { AgendaPage } from './agenda/AgendaPage';
+import { BookingPage } from './booking/BookingPage';
+import { MovePage } from './booking/MovePage';
+import { PatientAppointmentsPage } from './patients/PatientAppointmentsPage';
+import { PatientPage } from './patients/PatientPage';
+import { PatientsPage } from './patients/PatientsPage';
 import { Layout } from './Layout';
 import { LoginPage } from './LoginPage';
 import { GoTo } from './GoTo';
@@ -32,6 +37,11 @@ export const routes: RouteObject[] = [
     children: [
       { index: true, element: <Landing /> },
       { path: 'agenda', element: <OnlyFor role="RECEPTION"><AgendaPage /></OnlyFor> },
+      { path: 'agenda/new', element: <OnlyFor role="RECEPTION"><BookingPage /></OnlyFor> },
+      { path: 'agenda/appointments/:id/move', element: <OnlyFor role="RECEPTION"><MovePage /></OnlyFor> },
+      { path: 'patients', element: <OnlyFor role="RECEPTION"><PatientsPage /></OnlyFor> },
+      { path: 'patients/:id', element: <OnlyFor role="RECEPTION"><PatientPage /></OnlyFor> },
+      { path: 'patients/:id/appointments', element: <OnlyFor role="RECEPTION"><PatientAppointmentsPage /></OnlyFor> },
     ],
   },
   { path: '*', element: <Navigate to="/" replace /> },

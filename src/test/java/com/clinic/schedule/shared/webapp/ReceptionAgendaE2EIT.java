@@ -202,11 +202,58 @@ class ReceptionAgendaE2EIT {
         logInAsReception();
         assertThat(page).hasURL(Pattern.compile("/app/agenda$"));
 
-        page.getByRole(AriaRole.NAVIGATION).getByText("Pacientes").click();
+        page.getByRole(AriaRole.NAVIGATION).getByText("Profesionales").click();
 
-        assertThat(page).hasURL(at("/patients"));
-        assertThat(page.getByRole(AriaRole.HEADING, new Page.GetByRoleOptions().setName("Pacientes"))).isVisible();
+        assertThat(page).hasURL(at("/practitioners"));
+        assertThat(page.getByRole(AriaRole.HEADING, new Page.GetByRoleOptions().setName("Profesionales"))).isVisible();
         assertThat(page.locator("#root")).hasCount(0);
+    }
+
+    /**
+     * Booking from the agenda (D-75, D-100): the practitioner's free times for the reason, a patient registered in the
+     * same step, and the appointment on the agenda afterwards. Taking a time that is gone by then is refused in
+     * Spanish, with the form as it was.
+     */
+    @Test
+    void receptionBooksANewPatientAtAFreeTimeAndFindsThemOnTheAgenda() throws Exception {
+        String name = "Dra. Reserva " + unique();
+        String[] practitioner = practitioner(name);
+        String taken = "Ya Reservado " + unique();
+        book(practitioner, taken, "2026-03-12T09:00:00");
+        String patient = "Rosa Nueva " + unique();
+
+        logInAsReception();
+        assertThat(page).hasURL(Pattern.compile("/app/agenda$"));
+        page.navigate(at("/app/agenda?date=2026-03-12&practitionerId=" + practitioner[0]));
+        assertThat(row(taken)).isVisible();
+        page.getByRole(AriaRole.BUTTON, new Page.GetByRoleOptions().setName("Nuevo turno")).click();
+
+        assertThat(page.getByRole(AriaRole.HEADING, new Page.GetByRoleOptions().setName("Nuevo turno con " + name)))
+                .isVisible();
+        Locator times = page.getByRole(AriaRole.GROUP, new Page.GetByRoleOptions().setName("Horarios libres"));
+        assertThat(times.getByText("09:30", new Locator.GetByTextOptions().setExact(true))).isVisible();
+        assertThat(times.getByText("09:00", new Locator.GetByTextOptions().setExact(true))).hasCount(0);
+        times.getByText("10:00", new Locator.GetByTextOptions().setExact(true)).click();
+        page.getByText("Paciente nuevo").click();
+        page.getByLabel("Nombre completo").fill(patient);
+        page.getByLabel("Teléfono").fill("1145556666");
+        page.getByLabel("Nota (opcional)").fill("Primera vez");
+        page.getByRole(AriaRole.BUTTON, new Page.GetByRoleOptions().setName("Reservar")).click();
+
+        assertThat(page).hasURL(Pattern.compile("/app/agenda\\?date=2026-03-12&practitionerId=" + practitioner[0] + "$"));
+        assertThat(page.getByRole(AriaRole.STATUS)).hasText("Paciente registrado y turno reservado.");
+        assertThat(row(patient)).containsText("10:00");
+        assertThat(row(patient)).containsText("Primera vez");
+        assertThat(row(patient)).containsText("Reservado");
+
+        // The same time again, now taken: refused, and nothing typed is lost.
+        page.getByRole(AriaRole.BUTTON, new Page.GetByRoleOptions().setName("Nuevo turno")).click();
+        page.getByText("Paciente nuevo").click();
+        page.getByLabel("Nombre completo").fill("Otra Persona " + unique());
+        page.getByLabel("…u otra hora").fill("10:00");
+        page.getByRole(AriaRole.BUTTON, new Page.GetByRoleOptions().setName("Reservar")).click();
+        assertThat(page.getByRole(AriaRole.ALERT)).hasText("El profesional ya tiene un turno en ese horario.");
+        assertThat(page.getByLabel("…u otra hora")).hasValue("10:00");
     }
 
     @Test

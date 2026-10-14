@@ -34,3 +34,22 @@ export function nowAtThePractice(now: Date): string {
   const part = (type: Intl.DateTimeFormatPartTypes) => parts.find((each) => each.type === type)?.value ?? '';
   return `${part('weekday')} ${part('day')} de ${part('month')} · ${part('hour')}:${part('minute')}`;
 }
+
+const WEEKDAYS = ['dom', 'lun', 'mar', 'mié', 'jue', 'vie', 'sáb'];
+
+/** `10/03/2026`. */
+export function shortDay(day: string): string {
+  const [year, month, date] = day.slice(0, 10).split('-');
+  return `${date}/${month}/${year}`;
+}
+
+/** `mar 10/03/2026`, the day of a time as the API sends it. */
+export function weekdayDay(dateTime: string): string {
+  const [year, month, date] = dateTime.slice(0, 10).split('-').map(Number);
+  return `${WEEKDAYS[new Date(Date.UTC(year, month - 1, date)).getUTCDay()]} ${shortDay(dateTime)}`;
+}
+
+/** `mar 10/03/2026 09:30`: when something was done, as the histories say it. */
+export function when(dateTime: string): string {
+  return `${weekdayDay(dateTime)} ${timeOf(dateTime)}`;
+}

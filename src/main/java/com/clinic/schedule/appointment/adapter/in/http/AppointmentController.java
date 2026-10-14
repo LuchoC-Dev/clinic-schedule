@@ -19,6 +19,7 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 import com.clinic.schedule.appointment.application.usecase.BookAppointmentUseCase;
+import com.clinic.schedule.appointment.application.usecase.BookNewPatientUseCase;
 import com.clinic.schedule.appointment.application.usecase.CancelAppointmentUseCase;
 import com.clinic.schedule.appointment.application.usecase.FindArrivalsUseCase;
 import com.clinic.schedule.appointment.application.usecase.RescheduleAppointmentUseCase;
@@ -43,16 +44,19 @@ import jakarta.validation.Valid;
 class AppointmentController {
 
     private final BookAppointmentUseCase book;
+    private final BookNewPatientUseCase bookNewPatient;
     private final RescheduleAppointmentUseCase reschedule;
     private final CancelAppointmentUseCase cancel;
     private final FindArrivalsUseCase arrivals;
     private final RecordLateArrivalNoticeUseCase recordLateArrivalNotice;
     private final ViewAgendaUseCase agenda;
 
-    AppointmentController(BookAppointmentUseCase book, RescheduleAppointmentUseCase reschedule,
+    AppointmentController(BookAppointmentUseCase book, BookNewPatientUseCase bookNewPatient,
+            RescheduleAppointmentUseCase reschedule,
             CancelAppointmentUseCase cancel, FindArrivalsUseCase arrivals,
             RecordLateArrivalNoticeUseCase recordLateArrivalNotice, ViewAgendaUseCase agenda) {
         this.book = book;
+        this.bookNewPatient = bookNewPatient;
         this.reschedule = reschedule;
         this.cancel = cancel;
         this.arrivals = arrivals;
@@ -68,6 +72,18 @@ class AppointmentController {
     @PostMapping
     ResponseEntity<AppointmentResponse> book(@Valid @RequestBody BookAppointmentRequest request) {
         Appointment booked = book.handle(request.toCommand());
+        return ResponseEntity
+                .created(URI.create("/api/appointments/" + booked.id().value()))
+                .body(respond(booked));
+    }
+
+    /**
+     * Registers a new patient and books them at once, in one transaction (D-75, D-100): a refused booking registers
+     * nobody, and a patient the patient module refuses books nothing.
+     */
+    @PostMapping("/with-new-patient")
+    ResponseEntity<AppointmentResponse> bookNewPatient(@Valid @RequestBody BookNewPatientRequest request) {
+        Appointment booked = bookNewPatient.handle(request.toCommand());
         return ResponseEntity
                 .created(URI.create("/api/appointments/" + booked.id().value()))
                 .body(respond(booked));

@@ -20,7 +20,7 @@ class CashDeskExceptionHandler {
 
     @ExceptionHandler(VisitNotFoundException.class)
     ResponseEntity<ErrorResponse> notFound(VisitNotFoundException e) {
-        return ResponseEntity.status(HttpStatus.NOT_FOUND).body(ErrorResponse.of(404, "Not found", e.getMessage()));
+        return ResponseEntity.status(HttpStatus.NOT_FOUND).body(ErrorResponse.of(404, "Not found", e));
     }
 
     @ExceptionHandler(ChargeRuleViolationException.class)
@@ -28,10 +28,10 @@ class CashDeskExceptionHandler {
         return switch (e.reason()) {
             case ALREADY_CHARGED, NOTHING_TO_REFUND, REFUND_TOO_HIGH, CHANGED_MEANWHILE, ALREADY_COVERED, NOT_COVERED,
                     COPAY_LEFT ->
-                    ResponseEntity.status(HttpStatus.CONFLICT).body(ErrorResponse.of(409, "Conflict", e.getMessage()));
+                    ResponseEntity.status(HttpStatus.CONFLICT).body(ErrorResponse.of(409, "Conflict", e));
             case CHARGE_REQUIRED, INVALID_AMOUNT, AMOUNT_TOO_HIGH, REASON_REQUIRED, REASON_TOO_LONG, NOT_INSURED,
                     IDENTITY_NOT_VERIFIED, TOKEN_TOO_LONG ->
-                    ResponseEntity.badRequest().body(ErrorResponse.of(400, "Bad request", e.getMessage()));
+                    ResponseEntity.badRequest().body(ErrorResponse.of(400, "Bad request", e));
         };
     }
 }

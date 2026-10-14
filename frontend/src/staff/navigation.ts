@@ -40,7 +40,8 @@ const MENUS: Record<Role, MenuEntry[]> = {
   RECEPTION: [
     inApp('Agenda', '/agenda'),
     screen('Llegadas', '/arrivals'),
-    screen('Pacientes', '/patients'),
+    inApp('Pacientes', '/patients'),
+    screen('Grupos familiares', '/family-groups'),
     screen('Profesionales', '/practitioners'),
     screen('Colas', '/queues'),
     screen('Cancelaciones', '/cancellations'),

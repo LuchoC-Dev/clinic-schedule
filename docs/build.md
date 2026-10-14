@@ -2099,10 +2099,52 @@ token belonged to a session that was gone. A token of a session that is gone is 
 asks for a new token first; four more breakages — either check of the session, and either login not asking — were
 all caught.
 
-#### Part 2 — Reception `[ ]`
-- [ ] The agenda, booking, moving and cancelling; patients, details, consent, family groups, web accounts;
-      the arrivals; the cancellations and their log; the reminders; the cash desk, a very large amount
-      confirmed twice
+#### Part 2 — Reception `[~]`
+Delivered in three batches, each a commit of its own (D-101). The copies to collect stay for part 4, as the scope has
+them.
+
+##### Batch A — The agenda and the patients `[x]`
+- [x] Every refusal names itself: `code` in the error body, its reason or its class, said in Spanish by each screen
+      (D-100)
+- [x] The agenda of a day or its week, of everyone or one practitioner, with the arrival charged as it comes in, the
+      warning of lateness, moving and cancelling — `GET /api/agenda?week=true` (D-100, D-101)
+- [x] Booking at the free times of a reason, or another typed, for a patient found or a new one registered in the same
+      step; moving to the free times of another day — `GET /api/agenda/free-times`,
+      `POST /api/appointments/with-new-patient` (D-75, D-100)
+- [x] The patients: found, registered with their details, registered under an alias; a patient's identity and details
+      with their histories, the consent of each channel, and their appointments, cancelled ones included —
+      `GET /api/patients/{id}/appointments` (D-100)
+- [x] A very large amount confirmed a second time, above $ 500.000, wherever one is typed (D-87, D-101)
+- [x] The menu sends to the new screens, and offers the family groups
+- [x] 41 Vitest tests more, 5 integration tests more, and 1 end-to-end test more: booking. 549 unit and 663
+      integration tests in Java, and 83 in the applications: 1295 in total
+
+**Verified with:** every new test failing when the code it covers was broken on purpose — 67 breakages, all compiling
+and all caught in the end. In the application, 49: how an amount is read — the thousands, the decimals, zero —, the
+threshold and where it starts, a refusal not read by its code; what a row offers — the warning twice, cancelling once
+arrived, an absent one, moving an arrived one —, the week's last day, a cancelled one's state; the week not asked for,
+moving a day at a time, the warning not said, the arrival offered to who arrived, the days' headings, the note dropped
+from a cancellation, the arrival sent without its confirmation, without its coverage or its token, cancelling without
+saying who asked, a confirmation that does not ask again for another amount; the time typed losing to the one chosen,
+a full day said as not worked, a booking without its patient or its time, the reason and the email of a new patient,
+the notice of one registered, a booking sent while it lacks something, the free times of another reason; an identity
+without its document, a phone without its owner, a birth date unformatted, the owner's consent not offered or not
+said, an insurance without its insurer, the email's link's cancellation, one cancelled before they were recorded; the
+document seen, the consent of the email, the consent shown, the details of a new patient, an alias's notice, the
+alias. In the server, 16: a refusal's reason, its words, its "Exception", its code; the week's Monday and Sunday, the
+times to move, a request without what it needs, the cancelled ones of a patient and who cancelled them; a document
+someone else has as a 400, the refusals of the agenda untranslated, the phone's owner swapped, the email dropped, the
+booking and the registration apart, a patient's appointments open to practitioners. End to end, 2: going back to the
+agenda without its practitioner, and booking from it without them. Three were missed at first — another amount asking
+again, a cancellation before they were recorded, a new patient's email — and their tests were made to catch them.
+Every run of the breakages first runs its tests untouched, which must pass. `mvnw clean verify`, with Docker running:
+the seven `*PostgresIT` ran.
+
+##### Batch B — The arrivals, family groups and web accounts `[ ]`
+- [ ] The queues at reception, shown as they change; the family groups; the patients' web accounts
+
+##### Batch C — The cash desk, the cancellations and the reminders `[ ]`
+- [ ] The day's cash desk, a very large amount confirmed twice; the cancellations; the reminders
 
 #### Part 3 — Practitioners `[ ]`
 - [ ] Their queue; the clinical record, consultations, checks, results, orders, addenda, attachments and access

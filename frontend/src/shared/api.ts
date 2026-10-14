@@ -12,6 +12,8 @@ export interface ErrorBody {
   status: number;
   error: string;
   message: string;
+  /** The refusal's stable name, which a screen says in its own words (D-100). */
+  code?: string;
   fields?: Record<string, string>;
 }
 
@@ -41,6 +43,7 @@ export type Query = Record<string, string | null | undefined>;
 export interface ApiClient {
   get<T>(path: string, query?: Query): Promise<T>;
   post<T>(path: string, body?: unknown): Promise<T>;
+  put<T>(path: string, body?: unknown): Promise<T>;
   /** A login: a form, as Spring Security's reads it, whose 401 is an answer and not a session ended. */
   logIn<T>(path: string, fields: Record<string, string>): Promise<T>;
   setCsrfToken(token: string | null): void;
@@ -89,6 +92,8 @@ export function createApiClient(options: ApiClientOptions): ApiClient {
   return {
     get: (path, query) => send('GET', withQuery(path, query), undefined, undefined, true),
     post: (path, body) => send('POST', path, body === undefined ? undefined : JSON.stringify(body),
+      body === undefined ? undefined : 'application/json', true),
+    put: (path, body) => send('PUT', path, body === undefined ? undefined : JSON.stringify(body),
       body === undefined ? undefined : 'application/json', true),
     logIn: (path, fields) => send('POST', path, new URLSearchParams(fields).toString(),
       'application/x-www-form-urlencoded', false),

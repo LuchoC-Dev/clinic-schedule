@@ -15,5 +15,8 @@ export default defineConfig({
     include: ['src/**/*.test.{ts,tsx}'],
     setupFiles: ['src/test/setup.ts'],
     css: false,
+    // A screen's test types as a person would, field by field: under a full build's load it takes longer than
+    // Vitest's default 5 seconds.
+    testTimeout: 15_000,
   },
 });

@@ -490,7 +490,7 @@ columns disagree with the tables they will point at would have meant migrating t
 ---
 
 ## D-23 — Business operations are POST on a sub-path; each module translates its own errors
-**Date:** 2026-09-22 · **Status:** accepted
+**Date:** 2026-09-22 · **Status:** accepted; the error body names each refusal by its `code` since D-100
 
 **Routes.** Cancelling is `POST /api/appointments/{id}/cancel` and rescheduling is
 `POST /api/appointments/{id}/reschedule`, rather than `DELETE` and `PATCH`. They are business
@@ -4042,3 +4042,78 @@ the throwaway database it started.
 *Rejected:* a heap ceiling on Maven and the forked tests, and two Vitest workers at most (measured, neither was
 needed); a smaller cache of Spring contexts for the tests (the integration tests stayed near 1 GB as it is);
 stopping Claude Code from cutting long commands when memory is short (it hides the shortage instead of avoiding it).
+
+---
+
+## D-100 — A refusal names itself, and the API answers what reception's screens need
+**Date:** 2026-10-14 · **Status:** accepted
+
+v2, phase 10, part 2. The API answers in English and the screens speak Spanish (D-13): the Thymeleaf screens put a
+refusal into words by its exception's class (`ScreenMessages`), which the applications cannot see. Reading the English
+message would tie the screens to sentences meant for developers.
+
+**Every refusal says its code.** The error body (D-23) gains `code`, the refusal's stable name: its reason, for an
+exception that says one — `ALREADY_CHARGED`, `DUPLICATE_DOCUMENT` —, and otherwise its class without "Exception", in
+capitals — `PRACTITIONER_ALREADY_BOOKED`, `ILLEGAL_ARGUMENT`. `ErrorResponse.of(status, error, exception)` reads it,
+by the reason's name, so no module's exception has to know of the API (D-05); each module's advice passes the
+exception instead of its message. The message stays as it was, and a body without a refusal — a validation error, a
+401 — has no code. The screens say each code in the words the Thymeleaf screens use, and a code they do not know by
+its status (D-97).
+
+**What reception's screens need, added as each is built (D-14).**
+- `GET /api/agenda` takes `week=true`: the day's week, Monday to Sunday, as the Thymeleaf agenda's, saying `from` and
+  `to`.
+- `GET /api/agenda/free-times` — `practitionerId`, `reasonId` and `date`, or `appointmentId` and `date` to move it —:
+  the times the booking screen offers, from `SuggestSlotsUseCase`, and whether the practitioner works that day at all,
+  so a day not worked is said apart from a full one (D-45).
+- `POST /api/appointments/with-new-patient`: a patient registered and booked in one transaction (D-75), the phone and
+  the email saying whose they are (D-73); a document someone else has is a 409, other refused data a 400, each with
+  the patient module's reason as its code.
+- `GET /api/patients/{id}/appointments`: a patient's appointments, cancelled ones included, each with who cancelled it,
+  when, how and who asked (D-76), and the names; reception's alone, by route.
+
+All four live in the appointment module's adapter, where the screens' controllers read the same use cases (D-33).
+
+*Rejected:* the English message read by the screens (written for developers, it changes when it is reworded); a code
+written by hand in every advice (more than forty places to keep in step with the exceptions, for what their names
+already say); a code field on every exception (each module's domain would know of the API); a `GET` of a single
+appointment for moving it (the screen finds it on its day's agenda, which it already reads).
+
+---
+
+## D-101 — Reception's screens in the staff's application
+**Date:** 2026-10-14 · **Status:** accepted
+
+v2, phase 10, part 2: every screen of reception moves to the staff's application, doing what the Thymeleaf one does,
+no more and no less, delivered in three batches — the agenda and the patients; the arrivals, family groups and web
+accounts; the cash desk, the cancellations and the reminders. Each Thymeleaf screen stays until part 6, and the menu
+stops sending to it. The copies to collect stay for part 4, as the scope has them; the practitioners' set-up and the
+queues' too.
+
+**Screens and addresses.** `/agenda` — a day or its week, with the arrival, the warning of lateness, moving and
+cancelling —, `/agenda/new` and `/agenda/appointments/:id/move`, `/patients`, `/patients/:id` and
+`/patients/:id/appointments`. Cancelling and the arrival are dialogs over the agenda, as in the approved mock; the rest
+of a row's actions are under "⋯". The menu adds "Grupos familiares", which the mock has and which was reached only from
+a patient's screen; web accounts stay a patient's, since there is no list of them to show.
+
+**What is shared.** `useAction` sends one thing reception does, once: the button waits while it goes, what is done is
+said, its refusal is said in Spanish by its code (D-100), and what it changed is read again; a refusal leaves the form
+as it was typed (D-52). The fields of an amount, a means of payment, a coverage, a document, and a phone or an email
+saying whose it is, are each one component.
+
+**A very large amount is confirmed a second time** (D-87), wherever one is typed: the arrival from the agenda and from
+the arrivals, and the cash desk's charges, refunds and copays. Above $ 500.000 — the approved mock's — sending it
+first says "¿Seguro? Es un importe muy alto. Vas a cobrar $ 1.500.000,00. Revisá que no sobre un cero.", and only
+"Sí, cobrar $ 1.500.000,00" sends it; another amount asks again. A constant of the application: the server's ceiling
+stays the server's, and a practice that wants another threshold changes one line. Amounts are typed as the practice
+types them — `15000`, `15.000`, `15.000,50` — and written as `$ 15.000,00`.
+
+**Tested** with Vitest on what each screen decides — the actions a row offers, the week's days, the time chosen, what a
+booking lacks, the words of a history, the consent offered, the amount and its confirmation, each refusal's words —
+and end to end on the key flows: booking, and charging. Vitest gives a test 15 seconds: a screen's test types field by
+field, and under a full build's load took longer than its default 5.
+
+*Rejected:* a dialog for every action (the mock has dialogs for the money and cancelling, and a page keeps a booking's
+choices in the address); the threshold as a setting of the server (one more setting and endpoint for a number the
+practice has not asked to change); a list of web accounts (the Thymeleaf screens have none: it would be more than they
+do); notifications that pop up and go (a refusal must stay until it is read).

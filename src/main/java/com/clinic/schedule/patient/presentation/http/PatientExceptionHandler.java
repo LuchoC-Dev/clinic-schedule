@@ -24,14 +24,14 @@ class PatientExceptionHandler {
     @ExceptionHandler(PatientNotFoundException.class)
     ResponseEntity<ErrorResponse> notFound(PatientNotFoundException e) {
         return ResponseEntity.status(HttpStatus.NOT_FOUND)
-                .body(ErrorResponse.of(404, "Not found", e.getMessage()));
+                .body(ErrorResponse.of(404, "Not found", e));
     }
 
     /** A taken document, or a patient with a web account left unverified (D-79): refused for the state. */
     @ExceptionHandler({DuplicateDocumentException.class, VerificationRequiredException.class})
     ResponseEntity<ErrorResponse> conflict(RuntimeException e) {
         return ResponseEntity.status(HttpStatus.CONFLICT)
-                .body(ErrorResponse.of(409, "Conflict", e.getMessage()));
+                .body(ErrorResponse.of(409, "Conflict", e));
     }
 
     /**
@@ -42,6 +42,6 @@ class PatientExceptionHandler {
             IllegalArgumentException.class})
     ResponseEntity<ErrorResponse> malformedRequest(RuntimeException e) {
         return ResponseEntity.badRequest()
-                .body(ErrorResponse.of(400, "Bad request", e.getMessage()));
+                .body(ErrorResponse.of(400, "Bad request", e));
     }
 }

@@ -22,19 +22,19 @@ class PractitionerExceptionHandler {
     @ExceptionHandler({PractitionerNotFoundException.class, ReasonNotFoundException.class})
     ResponseEntity<ErrorResponse> notFound(RuntimeException e) {
         return ResponseEntity.status(HttpStatus.NOT_FOUND)
-                .body(ErrorResponse.of(404, "Not found", e.getMessage()));
+                .body(ErrorResponse.of(404, "Not found", e));
     }
 
     @ExceptionHandler(DuplicateReasonException.class)
     ResponseEntity<ErrorResponse> duplicateReason(DuplicateReasonException e) {
         return ResponseEntity.status(HttpStatus.CONFLICT)
-                .body(ErrorResponse.of(409, "Conflict", e.getMessage()));
+                .body(ErrorResponse.of(409, "Conflict", e));
     }
 
     /** A week that does not make sense, or hours that end before they start. */
     @ExceptionHandler({InvalidWeeklyScheduleException.class, IllegalArgumentException.class})
     ResponseEntity<ErrorResponse> malformedRequest(RuntimeException e) {
         return ResponseEntity.badRequest()
-                .body(ErrorResponse.of(400, "Bad request", e.getMessage()));
+                .body(ErrorResponse.of(400, "Bad request", e));
     }
 }

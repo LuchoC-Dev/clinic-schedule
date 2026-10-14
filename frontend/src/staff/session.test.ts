@@ -14,6 +14,7 @@ function client(sessionPath: string, body: object) {
       return { ...body, csrfToken: 'uno-nuevo' };
     }) as ApiClient['get'],
     post: vi.fn() as ApiClient['post'],
+    put: vi.fn() as ApiClient['put'],
     logIn: vi.fn(async (path: string) => {
       sent.push(`POST ${path} with ${token}`);
       return { ...body, csrfToken: 'el-del-login' };

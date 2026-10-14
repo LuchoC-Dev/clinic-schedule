@@ -17,6 +17,6 @@ class PasswordExceptionHandler {
 
     @ExceptionHandler({WrongPasswordException.class, UnchangedPasswordException.class, IllegalArgumentException.class})
     ResponseEntity<ErrorResponse> refused(RuntimeException e) {
-        return ResponseEntity.badRequest().body(ErrorResponse.of(400, "Bad request", e.getMessage()));
+        return ResponseEntity.badRequest().body(ErrorResponse.of(400, "Bad request", e));
     }
 }

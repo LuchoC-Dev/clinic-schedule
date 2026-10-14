@@ -12,7 +12,7 @@ describe('the menu of each role', () => {
   it("offers reception the agenda of this application first, and the rest of reception's screens", () => {
     const menu = menuFor(user('RECEPTION'));
     expect(menu[0]).toEqual({ label: 'Agenda', to: '/agenda', inApp: true });
-    expect(labels('RECEPTION')).toEqual(['Agenda', 'Llegadas', 'Pacientes', 'Profesionales', 'Colas',
+    expect(labels('RECEPTION')).toEqual(['Agenda', 'Llegadas', 'Pacientes', 'Grupos familiares', 'Profesionales', 'Colas',
       'Cancelaciones', 'Recordatorios', 'Caja', 'Copias para retirar', 'Sala de espera']);
     expect(menu.find((entry) => entry.label === 'Sala de espera')?.newTab).toBe(true);
   });

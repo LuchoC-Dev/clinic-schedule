@@ -65,6 +65,6 @@ class RecordRefusalController {
     /** The first day after the last. */
     @ExceptionHandler(IllegalArgumentException.class)
     ResponseEntity<ErrorResponse> malformedRequest(IllegalArgumentException e) {
-        return ResponseEntity.badRequest().body(ErrorResponse.of(400, "Bad request", e.getMessage()));
+        return ResponseEntity.badRequest().body(ErrorResponse.of(400, "Bad request", e));
     }
 }

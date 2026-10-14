@@ -1,5 +1,6 @@
 package com.clinic.schedule.appointment.adapter.in.http;
 
+import static org.hamcrest.Matchers.contains;
 import static org.hamcrest.Matchers.everyItem;
 import static org.hamcrest.Matchers.hasItem;
 import static org.hamcrest.Matchers.hasItems;
@@ -151,5 +152,150 @@ class AgendaApiIT {
     @Test
     void aDayThatIsNoneIsA400() throws Exception {
         mockMvc.perform(get("/api/agenda").param("date", "mañana")).andExpect(status().isBadRequest());
+    }
+
+    // --- D-100 ------------------------------------------------------------------------------
+
+    /** The week around the day, Monday to Sunday, as the Thymeleaf agenda's. */
+    @Test
+    void aWeekIsTheDaysWeekFromMondayToSunday() throws Exception {
+        CreatedPractitioner practitioner = practitioners.workingEveryDay();
+        String tuesday = book(practitioner, patients.newPatient(), "10:00");
+        String sunday = bookOn(practitioner, patients.newPatient(), "2026-03-15T10:00:00");
+        String nextMonday = bookOn(practitioner, patients.newPatient(), "2026-03-16T10:00:00");
+
+        mockMvc.perform(get("/api/agenda").param("practitionerId", practitioner.id().toString())
+                        .param("date", "2026-03-12").param("week", "true"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.date").value("2026-03-12"))
+                .andExpect(jsonPath("$.from").value("2026-03-09"))
+                .andExpect(jsonPath("$.to").value("2026-03-15"))
+                .andExpect(jsonPath("$.appointments[*].id", hasItems(tuesday, sunday)))
+                .andExpect(jsonPath("$.appointments[*].id", not(hasItem(nextMonday))));
+        mockMvc.perform(get("/api/agenda").param("practitionerId", practitioner.id().toString())
+                        .param("date", "2026-03-12"))
+                .andExpect(jsonPath("$.from").value("2026-03-12"))
+                .andExpect(jsonPath("$.to").value("2026-03-12"))
+                .andExpect(jsonPath("$.appointments.length()").value(0));
+    }
+
+    /** The times a reason fits, the practitioner's hours and the appointments already there considered. */
+    @Test
+    void theFreeTimesOfAReasonLeaveOutWhatIsTakenAndADayNotWorkedIsSaidSo() throws Exception {
+        CreatedPractitioner practitioner = practitioners.workingTuesdaysWithALunchBreak();
+        String booked = book(practitioner, patients.newPatient(), "09:00");
+
+        mockMvc.perform(get("/api/agenda/free-times").param("practitionerId", practitioner.id().toString())
+                        .param("reasonId", practitioner.consulta().toString()).param("date", DAY))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.practitionerWorks").value(true))
+                .andExpect(jsonPath("$.times", not(hasItem("09:00:00"))))
+                .andExpect(jsonPath("$.times", not(hasItem("09:15:00"))))
+                .andExpect(jsonPath("$.times", hasItems("09:30:00", "12:30:00", "14:00:00", "17:30:00")))
+                .andExpect(jsonPath("$.times", not(hasItem("12:45:00"))));
+        mockMvc.perform(get("/api/agenda/free-times").param("practitionerId", practitioner.id().toString())
+                        .param("reasonId", practitioner.consulta().toString()).param("date", "2026-03-11"))
+                .andExpect(jsonPath("$.practitionerWorks").value(false))
+                .andExpect(jsonPath("$.times.length()").value(0));
+        // Moving it, its own time is not taken.
+        mockMvc.perform(get("/api/agenda/free-times").param("appointmentId", booked).param("date", DAY))
+                .andExpect(jsonPath("$.times", hasItems("09:00:00", "09:15:00")));
+        mockMvc.perform(get("/api/agenda/free-times").param("date", DAY))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.code").value("ILLEGAL_ARGUMENT"));
+    }
+
+    /** Registered and booked at once (D-75): a refusal of either leaves nothing behind. */
+    @Test
+    void aNewPatientIsRegisteredAndBookedAtOnceOrNotAtAll() throws Exception {
+        CreatedPractitioner practitioner = practitioners.workingTuesdaysWithALunchBreak();
+        String dni = String.valueOf(ThreadLocalRandom.current().nextInt(50_000_000, 99_999_999));
+
+        String id = json.readTree(mockMvc.perform(post("/api/appointments/with-new-patient")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(newPatientBooking(practitioner, "Nueva Paciente", dni, DAY + "T10:00:00")))
+                .andExpect(status().isCreated())
+                .andReturn().getResponse().getContentAsString()).get("patientId").asText();
+        mockMvc.perform(get("/api/patients/" + id))
+                .andExpect(jsonPath("$.fullName").value("Nueva Paciente"))
+                .andExpect(jsonPath("$.document.number").value(dni))
+                .andExpect(jsonPath("$.phone.number").value("1145556666"))
+                .andExpect(jsonPath("$.phone.owner.relation").value("MOTHER"))
+                .andExpect(jsonPath("$.phone.owner.name").value("Rosa Madre"))
+                .andExpect(jsonPath("$.email.address").value("nueva@mail.com"))
+                .andExpect(jsonPath("$.email.owner").isEmpty());
+
+        // Someone else's document: a conflict, and nothing booked.
+        mockMvc.perform(post("/api/appointments/with-new-patient").contentType(MediaType.APPLICATION_JSON)
+                        .content(newPatientBooking(practitioner, "Otra Persona", dni, DAY + "T11:00:00")))
+                .andExpect(status().isConflict())
+                .andExpect(jsonPath("$.code").value("DUPLICATE_DOCUMENT"));
+        // A time the practitioner does not work: refused, and nobody registered.
+        String other = String.valueOf(ThreadLocalRandom.current().nextInt(50_000_000, 99_999_999));
+        mockMvc.perform(post("/api/appointments/with-new-patient").contentType(MediaType.APPLICATION_JSON)
+                        .content(newPatientBooking(practitioner, "Sin Registrar", other, DAY + "T13:15:00")))
+                .andExpect(status().isConflict())
+                .andExpect(jsonPath("$.code").value("OUTSIDE_WORKING_HOURS"));
+        mockMvc.perform(get("/api/patients").param("query", other)).andExpect(jsonPath("$.length()").value(0));
+        mockMvc.perform(get("/api/agenda").param("practitionerId", practitioner.id().toString()).param("date", DAY))
+                .andExpect(jsonPath("$.appointments.length()").value(1));
+    }
+
+    /** Each refusal says its name, for a screen to say it in its own words (D-100). */
+    @Test
+    void aRefusalSaysItsCode() throws Exception {
+        CreatedPractitioner practitioner = practitioners.workingEveryDay();
+        book(practitioner, patients.newPatient(), "10:00");
+
+        mockMvc.perform(post("/api/appointments").contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {"patientId": "%s", "practitionerId": "%s", "reasonId": "%s", "startsAt": "%sT10:15:00"}
+                                """.formatted(patients.newPatient(), practitioner.id(), practitioner.consulta(), DAY)))
+                .andExpect(status().isConflict())
+                .andExpect(jsonPath("$.code").value("PRACTITIONER_ALREADY_BOOKED"))
+                .andExpect(jsonPath("$.message").isNotEmpty());
+    }
+
+    /** All of a patient's appointments, the cancelled ones with who cancelled them (D-76). */
+    @Test
+    void aPatientsAppointmentsIncludeTheCancelledOnes() throws Exception {
+        CreatedPractitioner practitioner = practitioners.workingEveryDay();
+        UUID patient = patients.newPatient();
+        String kept = book(practitioner, patient, "10:00");
+        String cancelled = bookOn(practitioner, patient, "2026-03-12T10:00:00");
+        mockMvc.perform(post("/api/appointments/" + cancelled + "/cancel").contentType(MediaType.APPLICATION_JSON)
+                .content("{\"requestedBy\": \"PATIENT\", \"note\": \"Viaja\"}")).andExpect(status().isOk());
+
+        mockMvc.perform(get("/api/patients/" + patient + "/appointments"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.length()").value(2))
+                .andExpect(jsonPath("$[?(@.id == '%s')].status".formatted(kept)).value(contains("BOOKED")))
+                .andExpect(jsonPath("$[?(@.id == '%s')].status".formatted(cancelled)).value(contains("CANCELLED")))
+                .andExpect(jsonPath("$[?(@.id == '%s')].cancellation.requestedBy".formatted(cancelled))
+                        .value(contains("PATIENT")))
+                .andExpect(jsonPath("$[?(@.id == '%s')].cancellation.by".formatted(cancelled)).value(contains("recepcion")))
+                .andExpect(jsonPath("$[?(@.id == '%s')].cancellation.note".formatted(cancelled)).value(contains("Viaja")))
+                .andExpect(jsonPath("$[*].practitioner", everyItem(is(nameOf(practitioner)))));
+        mockMvc.perform(get("/api/patients/" + patient + "/appointments").with(httpBasic("arias", "arias123")))
+                .andExpect(status().isForbidden());
+    }
+
+    private String bookOn(CreatedPractitioner practitioner, UUID patient, String startsAt) throws Exception {
+        return json.readTree(mockMvc.perform(post("/api/appointments").contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {"patientId": "%s", "practitionerId": "%s", "reasonId": "%s", "startsAt": "%s"}
+                                """.formatted(patient, practitioner.id(), practitioner.consulta(), startsAt)))
+                .andExpect(status().isCreated())
+                .andReturn().getResponse().getContentAsString()).get("id").asText();
+    }
+
+    private static String newPatientBooking(CreatedPractitioner practitioner, String name, String dni,
+            String startsAt) {
+        return """
+                {"patient": {"fullName": "%s", "documentType": "DNI", "documentNumber": "%s",
+                             "phone": {"value": "1145556666", "owner": {"name": "Rosa Madre", "relation": "MOTHER"}},
+                             "email": {"value": "nueva@mail.com", "owner": null}},
+                 "practitionerId": "%s", "reasonId": "%s", "startsAt": "%s"}
+                """.formatted(name, dni, practitioner.id(), practitioner.consulta(), startsAt);
     }
 }
