@@ -75,6 +75,7 @@ class ApplicationSessionIT {
             request.setSession(session);
             request.setRequestedSessionId(session.getId());
             request.setRequestedSessionIdFromCookie(true);
+            request.setRequestedSessionIdValid(!session.isInvalid());
             return request;
         }
     }
@@ -205,6 +206,29 @@ class ApplicationSessionIT {
         // With neither, it is nobody's.
         mockMvc.perform(post("/api/appointments").contentType(MediaType.APPLICATION_JSON).content("{}"))
                 .andExpect(status().isUnauthorized());
+    }
+
+    /**
+     * A screen left open on a session that is gone — the application restarted, or the session ran out — carries a
+     * token of that session: it is told the session ended, and goes back to its login, not that it may not.
+     */
+    @Test
+    void aTokenOfASessionThatIsGoneIsASessionEndedNotARefusal() throws Exception {
+        Browser browser = staff("recepcion", "recepcion123");
+        browser.session().invalidate();
+
+        mockMvc.perform(post("/api/appointments").with(browser).header(CSRF, browser.token())
+                        .contentType(MediaType.APPLICATION_JSON).content("{}"))
+                .andExpect(status().isUnauthorized())
+                .andExpect(jsonPath("$.message").value("The session was ended"));
+        staffLogIn(browser, "recepcion", "recepcion123")
+                .andExpect(status().isUnauthorized())
+                .andExpect(jsonPath("$.message").value("The session was ended"));
+        // A wrong token of a session that is there is still a refusal.
+        Browser other = staff("recepcion", "recepcion123");
+        mockMvc.perform(post("/api/appointments").with(other).header(CSRF, browser.token())
+                        .contentType(MediaType.APPLICATION_JSON).content("{}"))
+                .andExpect(status().isForbidden());
     }
 
     @Test

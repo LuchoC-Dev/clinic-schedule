@@ -35,6 +35,8 @@ export async function loadSession(client: ApiClient = api): Promise<PatientSessi
  */
 export async function logIn(documentType: string, documentNumber: string, password: string,
     client: ApiClient = api): Promise<PatientSession> {
+  // The token the page started with may belong to a session that is gone by now.
+  await loadSession(client);
   const { csrfToken, ...session } = await client.logIn<SessionBody>('/api/portal/session',
     { documentType, documentNumber, password });
   client.setCsrfToken(csrfToken);

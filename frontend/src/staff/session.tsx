@@ -25,8 +25,12 @@ export async function loadSession(client: ApiClient = api): Promise<StaffUser | 
   return session.user;
 }
 
-/** Logs in with the screens' own login, answered in JSON; the session's id and token are new afterwards. */
+/**
+ * Logs in with the screens' own login, answered in JSON; the session's id and token are new afterwards. The token
+ * is asked for again first: the one the page started with may belong to a session that is gone by now.
+ */
 export async function logIn(username: string, password: string, client: ApiClient = api): Promise<StaffUser> {
+  await loadSession(client);
   const session = await client.logIn<SessionBody>('/api/session', { username, password });
   client.setCsrfToken(session.csrfToken);
   return session.user as StaffUser;

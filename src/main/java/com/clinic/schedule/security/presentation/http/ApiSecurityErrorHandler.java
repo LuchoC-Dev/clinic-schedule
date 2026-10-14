@@ -8,6 +8,7 @@ import org.springframework.security.access.AccessDeniedException;
 import org.springframework.security.core.AuthenticationException;
 import org.springframework.security.web.AuthenticationEntryPoint;
 import org.springframework.security.web.access.AccessDeniedHandler;
+import org.springframework.security.web.csrf.CsrfException;
 import org.springframework.stereotype.Component;
 
 import com.clinic.schedule.security.presentation.ClinicalRouteRefusals;
@@ -42,9 +43,19 @@ public class ApiSecurityErrorHandler implements AuthenticationEntryPoint, Access
         write(response, HttpStatus.UNAUTHORIZED, ErrorResponse.of(401, "Unauthenticated", "Valid credentials are required"));
     }
 
+    /**
+     * A CSRF token refused because the session it belonged to is gone — the application restarted, or the session
+     * ran out while a screen stayed open — is a session ended, not a refusal: the application goes back to its
+     * login (D-97).
+     */
     @Override
     public void handle(HttpServletRequest request, HttpServletResponse response, AccessDeniedException e)
             throws IOException {
+        if (e instanceof CsrfException && request.getRequestedSessionId() != null
+                && !request.isRequestedSessionIdValid()) {
+            write(response, HttpStatus.UNAUTHORIZED, ErrorResponse.of(401, "Unauthenticated", "The session was ended"));
+            return;
+        }
         refusals.report(request, e);
         write(response, HttpStatus.FORBIDDEN, ErrorResponse.of(403, "Forbidden", "You are not allowed to do this"));
     }

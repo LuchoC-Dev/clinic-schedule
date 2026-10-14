@@ -2063,10 +2063,10 @@ each part is agreed before it is coded.
       today by the practice's clock, with the names; read only, the day and practitioner in the address, the
       choice what the server answered; arriving, moving, cancelling and booking on the Thymeleaf agenda until
       part 2 (D-98)
-- [x] 40 Vitest tests and 24 integration tests, 3 of them end to end with Playwright for Java. 549 unit and 656
-      integration tests in Java, and 40 in the applications: 1245 in total
+- [x] 42 Vitest tests and 25 integration tests, 3 of them end to end with Playwright for Java. 549 unit and 657
+      integration tests in Java, and 42 in the applications: 1248 in total
 
-**Verified with:** every new test failing when the code it covers was broken on purpose — 87 breakages, all
+**Verified with:** every new test failing when the code it covers was broken on purpose — 91 breakages, all
 compiling and all caught in the end. In the applications, 49: each state's order and words, the day's count and its
 plurals, an unknown patient, each role's menu and landing, a temporary password, the waiting room's new tab; the
 token on reads or not on writes, a 401 that ends no session or a login's that does, an unreachable server, the
@@ -2094,6 +2094,10 @@ storage. `mvnw clean verify`, with Docker running: the seven `*PostgresIT` ran. 
 times and in the next full run, and is left as found, for a later look. The application was started on a
 throwaway PostgreSQL and both applications driven in Chromium: reception's agenda of a day, a practitioner, other
 days, the Thymeleaf agenda on the same day, logging out and going back, and a patient's login and sections.
+Trying it by hand afterwards, a login page left open while the application restarted was refused as forbidden: its
+token belonged to a session that was gone. A token of a session that is gone is now a session ended, and each login
+asks for a new token first; four more breakages — either check of the session, and either login not asking — were
+all caught.
 
 #### Part 2 — Reception `[ ]`
 - [ ] The agenda, booking, moving and cancelling; patients, details, consent, family groups, web accounts;

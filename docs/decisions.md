@@ -3952,7 +3952,10 @@ login answers the new one; the application keeps it in memory and sends it as `X
 API asks it of a browser's writes: those that come with a session's cookie, and the logins themselves, so no
 other site logs a browser in as someone else. Not of a write with an `Authorization` header — no browser adds one by
 itself to another site's request, since the API never asks for Basic credentials (D-34), and a page cannot add it to
-a request to another origin without CORS —, nor of one with neither, which is nobody's and refused as such. Spring
+a request to another origin without CORS —, nor of one with neither, which is nobody's and refused as such. A token
+refused because its session is gone — the application restarted, or the session ran out while a screen stayed
+open — is answered as a session ended, a 401, so the screen goes back to its login instead of saying the person may
+not; and each login asks for a new token right before it is sent, so a login page left open still logs in. Spring
 Security 6.5 has no ready setting for single-page applications yet; this is its default repository and handler with
 a matcher of our own.
 
