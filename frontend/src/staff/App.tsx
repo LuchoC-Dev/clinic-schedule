@@ -4,7 +4,11 @@ import { Navigate, Outlet, type RouteObject, RouterProvider, createBrowserRouter
 
 import { newQueryClient } from '../shared/queries';
 import { Theme } from '../shared/theme';
+import { AccountPage } from './account/AccountPage';
 import { AgendaPage } from './agenda/AgendaPage';
+import { ArrivalsPage } from './arrivals/ArrivalsPage';
+import { FamilyGroupPage } from './family/FamilyGroupPage';
+import { FamilyGroupsPage } from './family/FamilyGroupsPage';
 import { BookingPage } from './booking/BookingPage';
 import { MovePage } from './booking/MovePage';
 import { PatientAppointmentsPage } from './patients/PatientAppointmentsPage';
@@ -42,6 +46,10 @@ export const routes: RouteObject[] = [
       { path: 'patients', element: <OnlyFor role="RECEPTION"><PatientsPage /></OnlyFor> },
       { path: 'patients/:id', element: <OnlyFor role="RECEPTION"><PatientPage /></OnlyFor> },
       { path: 'patients/:id/appointments', element: <OnlyFor role="RECEPTION"><PatientAppointmentsPage /></OnlyFor> },
+      { path: 'patients/:id/account', element: <OnlyFor role="RECEPTION"><AccountPage /></OnlyFor> },
+      { path: 'arrivals', element: <OnlyFor role="RECEPTION"><ArrivalsPage /></OnlyFor> },
+      { path: 'family-groups', element: <OnlyFor role="RECEPTION"><FamilyGroupsPage /></OnlyFor> },
+      { path: 'family-groups/:id', element: <OnlyFor role="RECEPTION"><FamilyGroupPage /></OnlyFor> },
     ],
   },
   { path: '*', element: <Navigate to="/" replace /> },

@@ -5,6 +5,7 @@ import java.time.Clock;
 import java.time.LocalDate;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.UUID;
 import java.util.function.Function;
 import java.util.stream.Collectors;
@@ -21,6 +22,7 @@ import com.clinic.schedule.patient.api.PatientReader;
 import com.clinic.schedule.patient.api.PatientSummary;
 import com.clinic.schedule.portal.application.usecase.FindFamilyGroupUseCase;
 import com.clinic.schedule.portal.application.usecase.ManageFamilyGroupUseCase;
+import com.clinic.schedule.portal.domain.FamilyChange;
 import com.clinic.schedule.portal.domain.FamilyGroup;
 import com.clinic.schedule.portal.domain.FamilyMember;
 
@@ -95,7 +97,11 @@ class FamilyGroupController {
     /** What happened to the group, the most recent first. */
     @GetMapping("/api/family-groups/{id}/changes")
     List<FamilyChangeResponse> changes(@PathVariable UUID id) {
-        return find.history(id).stream().map(FamilyChangeResponse::of).toList();
+        List<FamilyChange> history = find.history(id);
+        Map<UUID, PatientSummary> named = patients.findAll(history.stream().map(FamilyChange::patientId)
+                        .filter(Objects::nonNull).distinct().toList()).stream()
+                .collect(Collectors.toMap(PatientSummary::id, Function.identity()));
+        return history.stream().map(change -> FamilyChangeResponse.of(change, named)).toList();
     }
 
     private FamilyGroupResponse respond(FamilyGroup group) {

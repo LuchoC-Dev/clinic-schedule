@@ -39,9 +39,9 @@ const screen = (label: string, to: string): MenuEntry => ({ label, to, inApp: fa
 const MENUS: Record<Role, MenuEntry[]> = {
   RECEPTION: [
     inApp('Agenda', '/agenda'),
-    screen('Llegadas', '/arrivals'),
+    inApp('Llegadas', '/arrivals'),
     inApp('Pacientes', '/patients'),
-    screen('Grupos familiares', '/family-groups'),
+    inApp('Grupos familiares', '/family-groups'),
     screen('Profesionales', '/practitioners'),
     screen('Colas', '/queues'),
     screen('Cancelaciones', '/cancellations'),

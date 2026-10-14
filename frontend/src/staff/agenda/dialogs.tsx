@@ -3,8 +3,7 @@ import { type FormEvent, useState } from 'react';
 
 import { timeOf } from '../../shared/dates';
 import { combine } from '../../shared/refusals';
-import { AmountField, LargeAmountWarning, useConfirmedAmount } from '../components/AmountField';
-import { type Coverage, CoverageFields, coverageOf, MeansSelect } from '../components/fields';
+import { ChargeDialog } from '../components/ChargeDialog';
 import { Said } from '../components/Said';
 import { useAction } from '../components/useAction';
 import { api } from '../session';
@@ -17,51 +16,17 @@ function heading(appointment: AgendaAppointment) {
 
 /**
  * The patient arrived: they come into their practitioner's queue (D-65), their visit charged in the same step by
- * the means reception picks (D-87, D-89), or covered by their insurance, the amount then the copay (D-90). A very
- * large amount is confirmed a second time (D-100).
+ * the means reception picks (D-87, D-89), or covered by their insurance, the amount then the copay (D-90).
  */
-export function ArrivalDialog({ appointment, onClose }: { appointment: AgendaAppointment; onClose: () => void }) {
-  const [amount, setAmount] = useState('');
-  const [means, setMeans] = useState('CASH');
-  const [coverage, setCoverage] = useState<Coverage>({ covered: false, token: '' });
-  const confirmed = useConfirmedAmount(amount);
-  const arrive = useAction(
-    () => api.post('/api/appointment-arrivals', {
-      appointmentId: appointment.id,
-      amount: confirmed.amount ?? undefined,
-      means,
-      coverage: coverageOf(coverage),
-    }),
-    { refusals: ARRIVAL_REFUSALS, invalidates: ['agenda'], onDone: onClose },
-  );
-
-  function submit(event: FormEvent) {
-    event.preventDefault();
-    confirmed.submit(() => arrive.run(undefined));
-  }
-
+export function ArrivalDialog({ appointment, onClose, onDone }: {
+  appointment: AgendaAppointment;
+  onClose: () => void;
+  onDone?: () => void;
+}) {
   return (
-    <Modal opened onClose={onClose} title="Llegó" centered>
-      <form onSubmit={submit}>
-        <Stack>
-          <Text c="dimmed" fz={14}>{heading(appointment)}</Text>
-          <AmountField label={coverage.covered ? 'Coseguro (si hay)' : 'Importe'} value={amount} onChange={setAmount}
-            required={!coverage.covered} />
-          <MeansSelect value={means} onChange={setMeans} />
-          <CoverageFields value={coverage} onChange={setCoverage} />
-          <Said error={arrive.error} />
-          {confirmed.confirming && confirmed.amount !== null
-            ? <LargeAmountWarning amount={confirmed.amount} verb="cobrar" pending={arrive.pending}
-                onCancel={confirmed.cancel} onConfirm={() => confirmed.submit(() => arrive.run(undefined))} />
-            : (
-              <Group justify="flex-end">
-                <Button variant="default" onClick={onClose}>Cancelar</Button>
-                <Button type="submit" loading={arrive.pending}>Llegó</Button>
-              </Group>
-            )}
-        </Stack>
-      </form>
-    </Modal>
+    <ChargeDialog title="Llegó" about={heading(appointment)} button="Llegó" refusals={ARRIVAL_REFUSALS}
+      invalidates={['agenda', 'session']} onClose={onClose} onDone={onDone}
+      send={(charge) => api.post('/api/appointment-arrivals', { appointmentId: appointment.id, ...charge })} />
   );
 }
 

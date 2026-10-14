@@ -153,6 +153,34 @@ class FamilyGroupIT {
         assertThat(left.get("members").findValuesAsText("patientId")).containsExactlyInAnyOrder(son, daughter);
     }
 
+    /**
+     * Each member says their age band, which decides how they join and whether they decide for themselves (D-84);
+     * the history names whom each change was about, members who left included (D-102).
+     */
+    @Test
+    void eachMemberSaysTheirAgeBandAndTheHistoryNamesWhomItWasAbout() throws Exception {
+        String mother = patient("Clara Banda", "1985-02-01");
+        String son = patient("Bruno Banda", "2011-01-20");
+        String daughter = patient("Lía Banda", "2018-07-03");
+        String group = group("Familia Banda");
+        join(group, mother, true);
+        join(group, son, false);
+        JsonNode all = read(addChild(group, daughter, mother, "MOTHER", true).andExpect(status().isOk()));
+
+        assertThat(member(all, mother).get("ageBand").asText()).isEqualTo("ADULT");
+        assertThat(member(all, son).get("ageBand").asText()).isEqualTo("ADOLESCENT");
+        assertThat(member(all, daughter).get("ageBand").asText()).isEqualTo("CHILD");
+
+        send("/api/family-groups/" + group + "/members/" + son + "/remove", "{}").andExpect(status().isOk());
+        JsonNode changes = read(mockMvc.perform(get("/api/family-groups/" + group + "/changes").with(RECEPTION)));
+        assertThat(changes.findValuesAsText("patient")).contains("Clara Banda", "Bruno Banda", "Lía Banda");
+        for (JsonNode change : changes) {
+            if (change.get("action").asText().equals("CREATED")) {
+                assertThat(change.get("patient").isNull()).isTrue();
+            }
+        }
+    }
+
     @Test
     void theGroupsRulesAreAConflict() throws Exception {
         String father = patient("Luis Ríos", "1980-03-10");

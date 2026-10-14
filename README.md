@@ -74,8 +74,9 @@ account in use: she logs in at http://localhost:8080/portal/login as `DNI 273334
 **The web applications** — the screens are moving to two single-page applications (D-97): the staff's at
 http://localhost:8080/app/, the patients' at http://localhost:8080/portal/app/. For now, the staff's has reception's
 agenda — a day or its week, of everyone or one practitioner, with the arrival charged as it comes in, a warning of
-lateness, moving and cancelling —, booking at the free times with a patient found or a new one, and the patients, with
-their details, consent, histories and appointments; a very large amount is confirmed a second time. Every other entry
+lateness, moving and cancelling —, booking at the free times with a patient found or a new one, the patients, with
+their details, consent, histories, appointments and web account, the family groups, and the arrivals, shown as the
+queues change; a very large amount is confirmed a second time. Every other entry
 of each role's menu opens its Thymeleaf screen, in the same session; the patients' has its login, with the document, and its sections lead to their screens. Both keep nothing in
 the browser, and say every refusal in Spanish.
 
@@ -170,7 +171,7 @@ such as `PRACTITIONER_ALREADY_BOOKED` or `ALREADY_CHARGED`.
 | `POST` | `/api/queues/{id}/practitioners` | a practitioner starts serving the queue; one queue at most each |
 | `DELETE` | `/api/queues/{id}/practitioners/{practitionerId}` | a practitioner stops serving it; the queue stays |
 | `POST` | `/api/queues/{id}/open`, `/close`, `/auto-close-off` | open a queue — a new session —, close it, keep it open past its day |
-| `GET` | `/api/queues/{id}/session` | the open session: who waits, in the order they will be called, who was called, who is done |
+| `GET` | `/api/queues/{id}/session` | the open session: who waits, in the order they will be called, who was called, who is done — each with their name and document and the names of whom they wait for and who called them |
 | `POST` | `/api/queues/{id}/session/patients`, `/session/unidentified` | bring a patient in, or one who gives no name, as an emergency or not, with the `amount` charged — which only an emergency may leave out, pending — and its `means`: `CASH`, the default, `DEBIT`, `CREDIT`, `TRANSFER` or `QR`; a known patient with an insurance and a verified identity may come in with `coverage: {token?}`, the `amount` then being the copay, if any |
 | `POST` | `/api/queue-entries/{id}/emergency`, `/left` | make a waiting patient an emergency, or say they left |
 | `POST` | `/api/appointment-arrivals` | a patient with an appointment today arrives, paying the `amount` by its `means`, or with `coverage: {token?}` and its copay: into their practitioner's queue, kept for them; the appointment answers when, as `arrivedAt` |
@@ -204,12 +205,12 @@ such as `PRACTITIONER_ALREADY_BOOKED` or `ALREADY_CHARGED`.
 | `POST` | `/api/patient-accounts/{id}/activation-resend`, `/email-change`, `/deactivate`, `/reactivate` | send the activation again, change the account's email, switch it off or on |
 | `GET` | `/api/patient-accounts/{id}/changes` | what was done to the account, when and by whom |
 | `POST` | `/api/family-groups` | reception forms a family group — `{name}` |
-| `GET` | `/api/family-groups`, `?patientId=`, `/api/family-groups/{id}` | the family groups by name, or a patient's, with each member and whether the group sees their appointments |
+| `GET` | `/api/family-groups`, `?patientId=`, `/api/family-groups/{id}` | the family groups by name, or a patient's, with each member, their `ageBand` — `CHILD`, `ADOLESCENT` or `ADULT` — and whether the group sees their appointments |
 | `POST` | `/api/family-groups/{id}/members` | someone of 13 or older joins, present and agreeing — `{patientId, shares}`, `shares` an adolescent's choice; an adult shares |
 | `POST` | `/api/family-groups/{id}/children` | a child under 13, at the request of an adult of the group — `{patientId, requestedBy, relation, proofSeen}`, `relation` `MOTHER`, `FATHER` or `GUARDIAN` |
 | `POST` | `/api/family-groups/{id}/members/{patientId}/relation-proof` | `{proofSeen}`: reception saw what proves the relation of a child an adult registered on the web |
 | `POST` | `/api/family-groups/{id}/members/{patientId}/remove`, `/sharing` | take a member out; a member of 13 or older starts or stops sharing — `{shares}` |
-| `GET` | `/api/family-groups/{id}/changes` | what happened to the group, the most recent first, and by whom |
+| `GET` | `/api/family-groups/{id}/changes` | what happened to the group, the most recent first, and by whom, naming whom it was about |
 | `POST` | `/api/portal/registrations` | an adult of 18 or older registers themselves — `{fullName, documentType, documentNumber, birthDate, phone, email, password, children}`, up to five children under 13 each `{fullName, documentType, documentNumber, birthDate, relation}` —; 202 once the email went out, the same whether the practice knows a document or not; no login |
 | `POST` | `/api/portal/registrations/confirmation` | `{token}`, from that email's link: the patient is registered, unverified, with their account in use, and their children in a family group; 200 with `notRegistered`, the children it could not register; 409 when the adult's document was someone's by then; no login |
 | `POST` | `/api/portal/family/children` | the adult logged in registers a child under 13 — `{fullName, documentType, documentNumber, birthDate, relation, groupId}`, a new group without `groupId` —; 202 whether the practice knows the document or not; 429 past five a day |

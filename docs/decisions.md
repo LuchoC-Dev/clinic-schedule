@@ -4117,3 +4117,30 @@ field, and under a full build's load took longer than its default 5.
 choices in the address); the threshold as a setting of the server (one more setting and endpoint for a number the
 practice has not asked to change); a list of web accounts (the Thymeleaf screens have none: it would be more than they
 do); notifications that pop up and go (a refusal must stay until it is read).
+
+---
+
+## D-102 — The arrivals, family groups and web accounts in the staff's application
+**Date:** 2026-10-14 · **Status:** accepted
+
+v2, phase 10, part 2, batch B (D-101): `/arrivals`, `/family-groups`, `/family-groups/:id` and
+`/patients/:id/account`, doing what their Thymeleaf screens do.
+
+**The names the screens show, in the answers.** A queue's session knows its patients and practitioners by id (D-62),
+and the Thymeleaf screens ask the patient and practitioner modules for their names (D-33). The API now answers them:
+each entry of `GET /api/queues/{id}/session` — and of what each action on a queue answers, and of `/api/my-queue` —
+says its patient's name and document, and the names of whom they wait for and who called them, asked once for the
+whole session. A family group's member says their `ageBand` — under 13, 13 to 17, an adult —, which decides how they
+join, whether they decide to share and whether they may ask for a child (D-84), as the screen offered by their age;
+and each change of a group's history names whom it was about, members who left included.
+
+**The arrivals as they change.** The staff's application listens to the same stream the queue screens do,
+`/queue-events` (D-66): a queue that changes is read again, and so is today's agenda, whose arrivals it answers. A
+patient found comes in with today's appointment from the agenda the application already reads — theirs, with a
+practitioner of the queue, still booked —, so no endpoint was added for it. Each visit is charged as it comes in, in
+the dialog the agenda's arrival uses, its very large amount confirmed a second time (D-101); an emergency may come
+in with nothing charged, and one with no name is registered under an alias (D-60).
+
+*Rejected:* a board of its own for the arrivals (the session's answer with the names is the board); polling for the
+queues' changes (the stream is there, and tells the moment); the members' age said in words by the API (the words are
+the screen's, D-13).

@@ -24,6 +24,8 @@ import com.clinic.schedule.arrival.session.command.OpenQueueUseCase;
 import com.clinic.schedule.arrival.session.command.TurnOffAutoCloseUseCase;
 import com.clinic.schedule.arrival.session.domain.EntryId;
 import com.clinic.schedule.arrival.session.query.ViewQueueSessionUseCase;
+import com.clinic.schedule.patient.api.PatientReader;
+import com.clinic.schedule.practitioner.api.PractitionerReader;
 
 /**
  * A queue at work, for reception (D-63): opening and closing it, keeping it open past its day,
@@ -44,11 +46,14 @@ class SessionController {
     private final ReassignUseCase reassign;
     private final LiftReservationUseCase liftReservation;
     private final ViewQueueSessionUseCase view;
+    private final PatientReader patients;
+    private final PractitionerReader practitioners;
 
     SessionController(OpenQueueUseCase open, CloseQueueUseCase close, TurnOffAutoCloseUseCase turnOffAutoClose,
             AddPatientUseCase addPatient, DeclareEmergencyUseCase declareEmergency, MarkLeftUseCase markLeft,
             AddUnidentifiedPatientUseCase addUnidentified, AppointmentArrivesUseCase appointmentArrives,
-            ReassignUseCase reassign, LiftReservationUseCase liftReservation, ViewQueueSessionUseCase view) {
+            ReassignUseCase reassign, LiftReservationUseCase liftReservation, ViewQueueSessionUseCase view,
+            PatientReader patients, PractitionerReader practitioners) {
         this.open = open;
         this.close = close;
         this.turnOffAutoClose = turnOffAutoClose;
@@ -60,11 +65,13 @@ class SessionController {
         this.reassign = reassign;
         this.liftReservation = liftReservation;
         this.view = view;
+        this.patients = patients;
+        this.practitioners = practitioners;
     }
 
     @GetMapping("/api/queues/{id}/session")
     SessionResponse session(@PathVariable UUID id) {
-        return SessionResponse.of(id, view.handle(id));
+        return SessionResponse.of(id, view.handle(id), patients, practitioners);
     }
 
     @PostMapping("/api/queues/{id}/open")

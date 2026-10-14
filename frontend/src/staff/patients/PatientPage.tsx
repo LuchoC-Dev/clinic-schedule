@@ -76,8 +76,8 @@ function PatientScreen({ patient }: { patient: Patient }) {
           {patient.alias && ` · alias ${patient.alias}`}
           {patient.registeredVia === 'WEB' && ' · Registrado desde la web'}
           {' · '}<Anchor component={Link} to={`/patients/${patient.id}/appointments`}>Turnos</Anchor>
-          {' · '}<Anchor href={`/patient-accounts?patient=${patient.id}`}>Cuenta web</Anchor>
-          {' · '}<Anchor href={`/family-groups?patient=${patient.id}`}>Grupos familiares</Anchor>
+          {' · '}<Anchor component={Link} to={`/patients/${patient.id}/account`}>Cuenta web</Anchor>
+          {' · '}<Anchor component={Link} to={`/family-groups?patient=${patient.id}`}>Grupos familiares</Anchor>
         </Text>
       </Stack>
       <Said notice={registered} />

@@ -2140,8 +2140,36 @@ again, a cancellation before they were recorded, a new patient's email — and t
 Every run of the breakages first runs its tests untouched, which must pass. `mvnw clean verify`, with Docker running:
 the seven `*PostgresIT` ran.
 
-##### Batch B — The arrivals, family groups and web accounts `[ ]`
-- [ ] The queues at reception, shown as they change; the family groups; the patients' web accounts
+##### Batch B — The arrivals, family groups and web accounts `[x]`
+- [x] The arrivals: a queue opened, closed and kept open past its day; who waits, given to another practitioner,
+      freed, made an emergency or gone; who was called and who is done; who comes in — with today's appointment,
+      without one, as an emergency, with no name —, each visit charged as it comes in; shown again as the queues change
+      (D-66, D-102)
+- [x] Each entry of a queue says its patient's name and document and its practitioners' names (D-102)
+- [x] The family groups, by name or a patient's; a new one; its members with their age, whether they share and who
+      asked for a child; proving a relation, sharing or not, taking one out; someone of 13 or older joining, or a
+      child at an adult's request; its history, naming who left — each member's `ageBand`, and the history's names
+      (D-84, D-92, D-102)
+- [x] A patient's web account: opened, its activation sent again, switched off and on, its email changed, and its
+      history (D-79, D-86)
+- [x] The menu sends to the arrivals and the family groups, and the patient's screen to their account and groups
+- [x] 24 Vitest tests more and 2 integration tests more. 549 unit and 665 integration tests in Java, and 107 in the
+      applications: 1321 in total
+
+**Verified with:** every new test failing when the code it covers was broken on purpose — 45 breakages, all compiling
+and all caught in the end. In the application, 36: a patient without their document, given to whom they wait for, the
+calls' plural, an absent appointment offered, one with a practitioner of another queue; an emergency offered again,
+the practitioner given not the one chosen, the one waited for offered, the reservation lifted from whom has none,
+the notice of a reassignment, the appointment's arrival sent as one without, an unnamed one never an emergency or
+with a coverage, the one nobody can call not said, the charge not said, the state of who is done not said, an
+emergency's amount required; a member's sharing, deciding and being an adult by the wrong age, the names of who left
+or of the members, a member without a date of birth; the account's actions by state, the email's change's words, a
+reactivated account's words, a lock said as the patient's; a relation proved without the documents, sharing sent
+backwards, children asked for by anyone, a child's relation, the history's names; the account opened with the other
+email, a missing account not found, the account's notices. In the server, 9: each entry's patient, document,
+practitioner waited for and practitioner with them, my queue's called patient, the called ones' names; a member's age
+band; the history's names, and those of who left. One was missed at first — the practitioner chosen to give a
+patient to — and its test was made to catch it. `mvnw clean verify`, with Docker running: the seven `*PostgresIT` ran.
 
 ##### Batch C — The cash desk, the cancellations and the reminders `[ ]`
 - [ ] The day's cash desk, a very large amount confirmed twice; the cancellations; the reminders

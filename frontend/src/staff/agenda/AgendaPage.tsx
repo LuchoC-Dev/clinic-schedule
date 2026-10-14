@@ -38,6 +38,7 @@ export function AgendaPage() {
     { refusals: AGENDA_REFUSALS, done: 'Anotado: se lo espera hasta el final del día.', invalidates: ['agenda'] },
   );
   const booked = (location.state as { notice?: string } | null)?.notice ?? null;
+  const [arrived, setArrived] = useState<string | null>(null);
 
   function show(next: { date?: string | null; practitionerId?: string | null; week?: boolean }) {
     const wanted = { date, practitionerId, week, ...next };
@@ -78,7 +79,7 @@ export function AgendaPage() {
 
       {agenda.isError && <Alert color="red" role="alert">{describeError(agenda.error)}</Alert>}
       {agenda.isPending && <Loader aria-label="Cargando la agenda" />}
-      <Said error={warnLate.error} notice={warnLate.notice ?? booked} />
+      <Said error={warnLate.error} notice={warnLate.notice ?? arrived ?? booked} />
 
       {shown && (
         <>
@@ -107,7 +108,8 @@ export function AgendaPage() {
           ))}
         </>
       )}
-      {arriving && <ArrivalDialog appointment={arriving} onClose={() => setArriving(null)} />}
+      {arriving && <ArrivalDialog appointment={arriving} onClose={() => setArriving(null)}
+        onDone={() => setArrived('Llegó: está en la cola de su profesional.')} />}
       {cancelling && <CancelDialog appointment={cancelling} onClose={() => setCancelling(null)} />}
     </Stack>
   );

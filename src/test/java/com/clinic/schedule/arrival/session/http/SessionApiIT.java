@@ -11,6 +11,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 
 import java.util.List;
 import java.util.UUID;
+import java.util.concurrent.ThreadLocalRandom;
 
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -95,6 +96,40 @@ class SessionApiIT {
                 + "fetch first 1 rows only", UUID.class, UUID.fromString(queue));
         return jdbc.queryForList("select event_type from arrival_event where stream_id = ? order by version",
                 String.class, session);
+    }
+
+    /** Each entry carries the names the applications show: the patient's and the practitioners' (D-102). */
+    @Test
+    void eachEntrySaysWhoThePatientIsWhomTheyWaitForAndWhoCalledThem() throws Exception {
+        UUID rosa = UUID.fromString(read(mockMvc.perform(post("/api/patients").contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {"fullName": "Rosa Cola", "documentType": "DNI", "documentNumber": "%d"}
+                                """.formatted(ThreadLocalRandom.current().nextInt(50_000_000, 99_999_999)))))
+                .get("id").asText());
+        String practitioner = jdbc.queryForObject("select full_name from practitioner where id = ?", String.class, arias);
+        UUID reason = jdbc.queryForObject("select id from reason where practitioner_id = ? and name = 'consulta'",
+                UUID.class, arias);
+        String appointment = read(mockMvc.perform(post("/api/appointments").contentType(MediaType.APPLICATION_JSON)
+                .content("""
+                        {"patientId": "%s", "practitionerId": "%s", "reasonId": "%s", "startsAt": "2026-03-10T10:00:00"}
+                        """.formatted(rosa, arias, reason)))).get("id").asText();
+        open().andExpect(status().isOk());
+        mockMvc.perform(post("/api/appointment-arrivals").contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"appointmentId\": \"" + appointment + "\", \"amount\": 15000}"))
+                .andExpect(status().isCreated());
+
+        JsonNode waiting = read(mockMvc.perform(get("/api/queues/" + queue + "/session"))).get("waiting").get(0);
+        assertThat(waiting.get("patient").asText()).isEqualTo("Rosa Cola");
+        assertThat(waiting.get("patientDocument").asText()).startsWith("DNI ");
+        assertThat(waiting.get("reservedFor").asText()).isEqualTo(practitioner);
+        assertThat(waiting.get("withPractitioner").isNull()).isTrue();
+
+        mine("call-next").andExpect(status().isOk());
+        JsonNode called = read(mockMvc.perform(get("/api/queues/" + queue + "/session"))).get("called").get(0);
+        assertThat(called.get("patient").asText()).isEqualTo("Rosa Cola");
+        assertThat(called.get("withPractitioner").asText()).isEqualTo(practitioner);
+        assertThat(read(mockMvc.perform(get("/api/my-queue").with(asArias))).get("called").get("patient").asText())
+                .isEqualTo("Rosa Cola");
     }
 
     @Test

@@ -128,3 +128,94 @@ export const ARRIVAL_REFUSALS = byCode({
   UNKNOWN_PATIENT: 'Ese paciente no existe.',
   STREAM_CHANGED: 'La cola cambió mientras tanto. Revisala y probá de nuevo.',
 });
+
+/** Where a patient is in a queue (D-63). */
+export const ENTRY_STATES: Record<string, string> = {
+  WAITING: 'Esperando',
+  CALLED: 'Llamado',
+  SEEN: 'Atendido',
+  LEFT: 'Se fue',
+  NOT_SEEN: 'No atendido',
+  DID_NOT_SHOW_UP: 'No se presentó',
+};
+
+/** A member's age, which decides how they join and whether they decide for themselves (D-84). */
+export const AGE_BANDS: Record<string, string> = {
+  CHILD: 'menor de 13',
+  ADOLESCENT: 'de 13 a 17',
+  ADULT: 'adulto',
+};
+
+/** What a child is to the adult who asked for them (D-84). */
+export const CHILD_RELATIONS: Record<string, string> = {
+  MOTHER: 'madre',
+  FATHER: 'padre',
+  GUARDIAN: 'tutor o tutora',
+};
+
+export const FAMILY_CHANGES: Record<string, string> = {
+  CREATED: 'Grupo creado',
+  JOINED: 'Entró',
+  CHILD_ADDED: 'Agregado como menor',
+  REMOVED: 'Salió',
+  SHARING_STARTED: 'Empezó a compartir sus turnos',
+  SHARING_STOPPED: 'Dejó de compartir sus turnos',
+  RELATION_PROVED: 'Vínculo probado',
+};
+
+/** A family group's rules (D-84, D-92). */
+export const FAMILY_REFUSALS = byCode({
+  NO_BIRTH_DATE: 'Para entrar a un grupo, el paciente necesita su fecha de nacimiento cargada.',
+  A_CHILD: 'Es menor de 13: se agrega como menor, a pedido de su madre, padre o tutor del grupo.',
+  NOT_A_CHILD: 'Tiene 13 años o más: entra por sí mismo, presente y aceptando.',
+  ALREADY_A_MEMBER: 'Ya está en el grupo.',
+  NOT_A_MEMBER: 'No está en el grupo.',
+  NOT_AN_ADULT_MEMBER: 'Un menor se agrega a pedido de un adulto del grupo.',
+  NO_PROOF: 'Para agregar un menor, mirá la documentación que acredita el vínculo y marcalo.',
+  CHILDREN_SHARE: 'Un menor de 13 comparte siempre sus turnos con su familia.',
+  NOTHING_TO_PROVE: 'Ese miembro no tiene un vínculo por probar.',
+  FAMILY_GROUP_NOT_FOUND: 'El grupo no existe.',
+  UNKNOWN_PATIENT: 'Ese paciente no existe.',
+});
+
+export const ACCOUNT_STATUS: Record<string, string> = {
+  PENDING: 'Pendiente de activación',
+  ACTIVE: 'Activa',
+  INACTIVE: 'Desactivada',
+};
+
+export const ACCOUNT_CHANGES: Record<string, string> = {
+  OPENED: 'Abierta',
+  ACTIVATION_SENT: 'Link de activación enviado',
+  ACTIVATED: 'Activada',
+  EMAIL_CHANGED: 'Email cambiado',
+  DEACTIVATED: 'Desactivada',
+  REACTIVATED: 'Reactivada',
+  RECOVERY_SENT: 'Link para elegir contraseña enviado',
+  PASSWORD_RESET: 'Contraseña nueva desde el link',
+  PASSWORD_CHANGED: 'Contraseña cambiada',
+  LOCKED: 'Bloqueada por intentos fallidos',
+  REGISTERED: 'Abierta al confirmar el registro desde la web',
+  CHILD_REQUESTED: 'Pidió registrar a un hijo desde la web',
+};
+
+/** Who did something to an account: reception's user, or the patient, nobody being at reception (D-86). */
+export function accountChangeBy(action: string, by: string | null): string {
+  if (by) {
+    return by;
+  }
+  if (action === 'RECOVERY_SENT') {
+    return 'pedido desde la web';
+  }
+  return action === 'LOCKED' ? '' : 'el paciente';
+}
+
+/** A patient's web account (D-79, D-86). */
+export const ACCOUNT_REFUSALS = byCode({
+  ALREADY_OPENED: 'El paciente ya tiene cuenta web.',
+  IDENTITY_NOT_VERIFIED: 'Para abrirle una cuenta web, primero verificá su identidad: mirá su documento y marcalo.',
+  NO_BIRTH_DATE: 'Para abrirle una cuenta web, cargá primero su fecha de nacimiento.',
+  UNDER_THIRTEEN: 'La cuenta web es para pacientes de 13 años o más.',
+  INVALID_ACCOUNT_EMAIL: 'El email tiene la forma nombre@dominio.com y hasta 254 caracteres.',
+  ACCOUNT_STATE: 'La cuenta ya no está en ese estado: mirá cómo quedó.',
+});

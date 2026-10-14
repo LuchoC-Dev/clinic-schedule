@@ -10,6 +10,8 @@ import com.clinic.schedule.arrival.session.command.DidNotComeInUseCase;
 import com.clinic.schedule.arrival.session.command.FinishUseCase;
 import com.clinic.schedule.arrival.session.command.NoQueueServedException;
 import com.clinic.schedule.arrival.session.query.ViewMyQueueUseCase;
+import com.clinic.schedule.patient.api.PatientReader;
+import com.clinic.schedule.practitioner.api.PractitionerReader;
 
 /**
  * The practitioner's side of their queue (D-63): what it looks like, and the three things they do
@@ -24,18 +26,22 @@ class MyQueueController {
     private final CallNextUseCase callNext;
     private final FinishUseCase finish;
     private final DidNotComeInUseCase didNotComeIn;
+    private final PatientReader patients;
+    private final PractitionerReader practitioners;
 
     MyQueueController(ViewMyQueueUseCase view, CallNextUseCase callNext, FinishUseCase finish,
-            DidNotComeInUseCase didNotComeIn) {
+            DidNotComeInUseCase didNotComeIn, PatientReader patients, PractitionerReader practitioners) {
         this.view = view;
         this.callNext = callNext;
         this.finish = finish;
         this.didNotComeIn = didNotComeIn;
+        this.patients = patients;
+        this.practitioners = practitioners;
     }
 
     @GetMapping
     MyQueueResponse mine() {
-        return view.handle().map(MyQueueResponse::of).orElseThrow(NoQueueServedException::new);
+        return view.handle().map(mine -> MyQueueResponse.of(mine, patients, practitioners)).orElseThrow(NoQueueServedException::new);
     }
 
     @PostMapping("/call-next")
