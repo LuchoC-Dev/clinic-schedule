@@ -2040,14 +2040,60 @@ Scope in `docs/context.md`, section "v2, phase 10 — the web applications". The
 in parts; each one is usable on its own, and Thymeleaf keeps working until the last. The technical design of
 each part is agreed before it is coded.
 
-#### Part 1 — The foundation `[ ]`
+#### Part 1 — The foundation `[x]`
 - [x] `docs/context.md`: the scope of phase 10
-- [ ] Both applications under `frontend/`, React with TypeScript and Vite, built by Maven and served by Spring
-      from the same origin
-- [ ] A session login with CSRF for the staff and for patients; Basic authentication no longer how a browser
-      logs in
-- [ ] The layout and navigation by role, the API client and its error handling, a refusal's text shown
-- [ ] Reception's agenda of the day end to end, with an end-to-end test
+- [x] Both applications under `frontend/`, React with TypeScript and Vite, built by Maven and served by Spring
+      from the same origin — one npm package, two builds, `src/shared` for what both use; Mantine, themed after
+      the approved mock, its fonts served by the application; `frontend-maven-plugin` installs its own Node.js and
+      builds both into `target/classes/static`, and runs Vitest with the unit tests; the staff's at `/app/`, the
+      patients' at `/portal/app/`, each address of their own answered with their page, while Thymeleaf keeps every
+      address it has, the emails' included; `/` and `/portal/` once it is gone (D-97)
+- [x] A session login with CSRF for the staff and for patients; Basic authentication no longer how a browser
+      logs in — the screens' form login answered in JSON at `/api/session` and `/api/portal/session`, the
+      screens' session and registries, so either side's login is the other's and a deactivation ends it at once;
+      the patients' failures counted as any (D-86); the token in the session, handed by `GET /api/session` and the
+      login, sent back as `X-CSRF-TOKEN` and asked of every write with a session's cookie and of the logins; Basic
+      still for any other client, with no session (D-97)
+- [x] The layout and navigation by role, the API client and its error handling, a refusal's text shown — the
+      staff's header and the role's menu, a screen not built yet the Thymeleaf one in the same session, each role
+      landing where it did; the patients' header and bar; `ApiError` with the server's body, a 401 back to the
+      login, each refusal said in Spanish by the screen and a 409 too, never clearing what was typed; nothing kept
+      in the browser, which ESLint refuses, and `no-store` on every page and answer (D-97)
+- [x] Reception's agenda of the day end to end, with an end-to-end test — `GET /api/agenda?date=&practitionerId=`,
+      today by the practice's clock, with the names; read only, the day and practitioner in the address, the
+      choice what the server answered; arriving, moving, cancelling and booking on the Thymeleaf agenda until
+      part 2 (D-98)
+- [x] 40 Vitest tests and 24 integration tests, 3 of them end to end with Playwright for Java. 549 unit and 656
+      integration tests in Java, and 40 in the applications: 1245 in total
+
+**Verified with:** every new test failing when the code it covers was broken on purpose — 87 breakages, all
+compiling and all caught in the end. In the applications, 49: each state's order and words, the day's count and its
+plurals, an unknown patient, each role's menu and landing, a temporary password, the waiting room's new tab; the
+token on reads or not on writes, a 401 that ends no session or a login's that does, an unreachable server, the
+cache, an empty value in the query, the login sent as JSON, a body that is not the API's; each refusal's Spanish and
+a screen's own words skipped; a day moved by the browser's zone, the time read in UTC, the seconds shown; the choice
+taken from the address, two days at once, "Hoy" dropping the practitioner, the practitioner lost on moving, the
+screens' links without it, the web's marks swapped or gone, the note, the document and the minutes gone, an English
+refusal, the empty day always, the patient's link; each login keeping the password, losing the username, not handing
+the user over, its Spanish, how the session ended, the document's type, and the recovery's link. In the server and
+end to end, 38: the waiting room's session, each login's failure, the temporary password, the token, the token asked
+of no write, of writes with credentials, not of the login, not of a session's writes, a Basic login kept in the
+session, a key or registry of its own for the applications, a session ended without saying so, the document joined
+elsewhere, the patients' logout, `GET /api/session` closed or refused to a temporary password, a patient's login kept
+as the staff's; the agenda's day, names, document, whose, arrival, practitioners, warning and practitioner ignored, its
+route opened to others, its refusals untranslated; the applications' pages, a missing file served as one, their root,
+their redirect, and either application closed; and, in the browser, a logout that ends nothing, a role's screen sent
+away, and the menu's links into the application. Four were missed at first — a body without a message, a day moved
+by the browser's zone, the web's marks swapped, and the menu's links — and their tests were made to catch them: the
+Vitest tests now run in a time zone far from the practice's. A first run of the server's breakages counted 38 as
+caught without running anything, since the script could not find the Maven wrapper; it was found, the script now runs
+each test untouched first, and all were run again. The machine's session ended once in the middle, with one breakage
+left planted; it was found, restored, every other checked, and the rest run again. ESLint refuses the browser's
+storage. `mvnw clean verify`, with Docker running: the seven `*PostgresIT` ran. One full run failed in
+`RecordCopyApiIT`, of phase 9, untouched here — a copy of four pages where three were expected —; it passed alone three
+times and in the next full run, and is left as found, for a later look. The application was started on a
+throwaway PostgreSQL and both applications driven in Chromium: reception's agenda of a day, a practitioner, other
+days, the Thymeleaf agenda on the same day, logging out and going back, and a patient's login and sections.
 
 #### Part 2 — Reception `[ ]`
 - [ ] The agenda, booking, moving and cancelling; patients, details, consent, family groups, web accounts;

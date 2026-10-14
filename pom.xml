@@ -19,6 +19,8 @@
 
     <properties>
         <java.version>21</java.version>
+        <!-- The Node.js the build installs for the web applications, apart from any on the machine (D-97). -->
+        <node.version>v24.19.0</node.version>
     </properties>
 
     <!-- Only what the current stage uses (D-14). Every other dependency is added by the
@@ -109,6 +111,13 @@
             <artifactId>spring-security-test</artifactId>
             <scope>test</scope>
         </dependency>
+        <!-- The end-to-end tests drive a real browser over the web applications, served by the application (D-97). -->
+        <dependency>
+            <groupId>com.microsoft.playwright</groupId>
+            <artifactId>playwright</artifactId>
+            <version>1.63.0</version>
+            <scope>test</scope>
+        </dependency>
         <!-- The module boundaries and the layers the compiler no longer guards (D-42). -->
         <dependency>
             <groupId>com.tngtech.archunit</groupId>
@@ -123,6 +132,62 @@
             <plugin>
                 <groupId>org.springframework.boot</groupId>
                 <artifactId>spring-boot-maven-plugin</artifactId>
+            </plugin>
+            <!--
+              The two web applications under frontend/ (D-97): the build installs its own Node.js and npm into
+              frontend/node, so nothing has to be installed by hand; type-checks, lints and builds both into
+              target/classes/static, before the resources, so the jar carries them; and runs their tests with the
+              unit tests, which -DskipTests skips as any other. -Dskip.npm and -Dskip.installnodenpm leave the applications
+              as they were built last.
+            -->
+            <plugin>
+                <groupId>com.github.eirslett</groupId>
+                <artifactId>frontend-maven-plugin</artifactId>
+                <version>2.0.2</version>
+                <configuration>
+                    <workingDirectory>frontend</workingDirectory>
+                    <installDirectory>frontend</installDirectory>
+                    <nodeVersion>${node.version}</nodeVersion>
+                </configuration>
+                <executions>
+                    <execution>
+                        <id>install-node-and-npm</id>
+                        <phase>generate-resources</phase>
+                        <goals>
+                            <goal>install-node-and-npm</goal>
+                        </goals>
+                    </execution>
+                    <execution>
+                        <id>npm-install</id>
+                        <phase>generate-resources</phase>
+                        <goals>
+                            <goal>npm</goal>
+                        </goals>
+                        <configuration>
+                            <arguments>install --no-audit --no-fund</arguments>
+                        </configuration>
+                    </execution>
+                    <execution>
+                        <id>npm-build</id>
+                        <phase>generate-resources</phase>
+                        <goals>
+                            <goal>npm</goal>
+                        </goals>
+                        <configuration>
+                            <arguments>run build</arguments>
+                        </configuration>
+                    </execution>
+                    <execution>
+                        <id>npm-test</id>
+                        <phase>test</phase>
+                        <goals>
+                            <goal>npm</goal>
+                        </goals>
+                        <configuration>
+                            <arguments>test</arguments>
+                        </configuration>
+                    </execution>
+                </executions>
             </plugin>
             <!-- Unit tests (*Test) run with Surefire on `mvnw test`; integration tests (*IT)
                  with Failsafe on `mvnw verify` (D-44). -->

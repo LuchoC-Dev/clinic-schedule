@@ -16,7 +16,8 @@ adoption still low).
 ---
 
 ## D-02 — REST API as the main contract, minimal throwaway Thymeleaf views
-**Date:** 2026-09-22 · **Status:** applied on 2026-09-23 (see D-33)
+**Date:** 2026-09-22 · **Status:** applied on 2026-09-23 (see D-33); the single-page applications replace the views
+part by part from v2, phase 10, both living together until its last part (D-97)
 
 The future user interface will be two separate single-page applications, so the stable
 contract is the REST API. The v1 Thymeleaf views exist only to see the application
@@ -189,7 +190,8 @@ commit convention.
 ---
 
 ## D-13 — English for the repository, Spanish for the screens
-**Date:** 2026-09-22 · **Status:** accepted
+**Date:** 2026-09-22 · **Status:** accepted; the single-page applications put the API's refusals into Spanish, each
+screen its own, in D-97
 
 Everything written in the repository is in **English**: packages, classes, methods,
 variables, comments, table and column names, API error messages, test names, commit
@@ -897,7 +899,8 @@ and they are available through the API; a screen can be added when it is asked f
 
 ## D-34 — Security
 **Date:** 2026-09-23 · **Status:** accepted; a practitioner asking for another agenda is refused since D-39;
-the users moved to their own module in D-43
+the users moved to their own module in D-43; `/api/**` also takes the single-page applications' session, with a CSRF
+token, since D-97
 
 Applies D-04, the design that was built in stage 1 and removed until there was something to
 protect.
@@ -2899,7 +2902,8 @@ opening would be skipped for nothing).
 ---
 
 ## D-80 — Patients log in with their document, on a login, a session and routes of their own
-**Date:** 2026-10-02 · **Status:** accepted; the principal's name became `portal:` and the account's id in D-81
+**Date:** 2026-10-02 · **Status:** accepted; the principal's name became `portal:` and the account's id in D-81;
+`/api/portal/**` also takes the patients' application's session, with a CSRF token, in D-97
 
 v2, phase 6, part 1. The staff log in with a username; a patient has none, and the account requires their
 identity document and **never** the internal id (the context's planned evolution).
@@ -3883,3 +3887,132 @@ practitioner, and who; `copy` in the API's readings, and `practitioner` null.
 recording the patient's own reading (the context asks for it, and a parent reading a child's record is worth tracing);
 a reading table of its own for copies (the admins would search two places); the reception user as reading the content
 (they hand a sealed envelope; it is recorded as theirs because that is who handed it).
+
+---
+
+## D-97 — The web applications: one package under `frontend/`, built by Maven, served by Spring, logged in with the screens' session
+**Date:** 2026-10-13 · **Status:** accepted
+
+v2, phase 10, part 1. The Thymeleaf screens were always meant to be replaced by two single-page applications over
+the REST API (D-02): one for the staff, one for patients. This is their foundation; the screens move over part by
+part, and Thymeleaf keeps working until part 6.
+
+**One npm package under `frontend/`, two builds.** React with TypeScript, built by Vite: `src/staff/` and
+`src/patients/`, each with its `index.html`, built on its own by `vite build --mode staff` or `--mode patients`;
+`src/shared/` holds what both use — the theme, the API client, the words for a refusal, the practice's dates —,
+imported directly. One `package.json`, one lock file, one TypeScript, ESLint and Vitest configuration: npm
+workspaces, or a package of their own for what is shared, would be three packages to keep for two applications of
+one repository. React Router for the addresses, TanStack Query for what a screen reads.
+
+**Mantine for the components.** Tables, forms, dialogs, alerts and dates in Spanish, styled with plain CSS and no
+CSS-in-JS at run time. The approved mock is its theme: a petrol green, `#0F5F5B`, as the primary colour, amber for
+warnings, white surfaces bordered `#DADDD6` with a 12px radius on `#F4F5F2`, Instrument Sans for the text and IBM Plex
+Mono for times and amounts — both served by the application itself, from `@fontsource`, never asked of another site.
+The staff's application is made for a desktop: a white header — the practice, who is logged in, the practice's day
+and time, "Salir" —, the role's menu on the left. The patients', for a phone first: a simple header, and Turnos,
+Familia, Historia and Perfil in a bar at the bottom.
+
+**Maven builds them.** `frontend-maven-plugin` installs its own Node.js (`node.version`, v24.19.0) and npm into
+`frontend/node` — nothing has to be installed by hand —, runs `npm install` and `npm run build` — type-checking,
+linting and both builds — in `generate-resources`, straight into `target/classes/static/app` and
+`static/portal/app`, so the jar carries them; and `npm test`, Vitest, with the unit tests, skipped by
+`-DskipTests` as they are. `-Dskip.npm -Dskip.installnodenpm` leave the applications as built last, for a change
+in Java alone.
+
+**Spring serves them, from the same origin.** No CORS. `shared/webapp/WebApplicationConfiguration` serves each
+application's files, and answers an address of its own — `/app/agenda`, reloaded or opened from a link — with its
+`index.html`, for its router; a file with an extension that is not there is a 404, so a broken link shows.
+
+**Addresses: under `/app/` and `/portal/app/` while the screens move over; `/` and `/portal/` at the end.**
+Thymeleaf keeps every address it has, the emails' links included — activation, cancelling, a new password,
+confirming a registration, *Mis turnos* —, so nothing a patient has in their mailbox breaks. Part 6, removing
+Thymeleaf, moves the applications to `/` and `/portal/` by changing each build's `base` — the router reads its own
+from it —, and the same addresses open on the patients' application. Meanwhile, what an application does not have yet
+is the Thymeleaf screen, reached with a plain link: its menu offers each role what the screens' header does, and
+both share one session, so the person stays logged in. A role whose screens are not built yet lands on the
+screens', as before: an admin on the users, a practitioner on their agenda, the waiting room on its screen.
+
+**The login is the screens' session, answered in JSON.** The two API chains take Spring Security's form login,
+at `POST /api/session` — `username`, `password` — and `POST /api/portal/session` — `documentType`,
+`documentNumber`, `password`, joined by `DocumentLoginFilter` as on the screens (D-80) —, with handlers that answer
+JSON: 200 with what `GET /api/session` or `GET /api/portal/session` say, and 401 with the error body (D-23), the same
+whatever failed. Spring does the rest as it does for the screens: a new session id, a new CSRF token, the session
+registered. The session keeps its login under the screens' keys, so logging in on either side is logging in on the
+other, and in their registries, so a deactivated user or account, or a password reset, ends it at once (D-68, D-79,
+D-86): its next request is a 401, "The session was ended". The patients' failed logins are counted by the same
+`PatientAuthenticationProvider`, whatever the way in (D-86). The waiting room's session never runs out (D-70). A
+user whose password is temporary is told so by `GET /api/session`, which the temporary password lets through, and
+the application sends them to change it (D-69). `POST /api/session/logout` and `/api/portal/session/logout` end the
+whole session, the screens' login in it included, as logging out of the screens does (D-80), with a 204. The
+password is never kept by the application: it goes in the login's request, and nowhere else.
+
+**CSRF: the token in the session, handed to the application, sent back in a header.** Spring's own repository
+keeps it in the session; `GET /api/session` and `GET /api/portal/session` give it, before logging in too, and the
+login answers the new one; the application keeps it in memory and sends it as `X-CSRF-TOKEN` on every write. The
+API asks it of a browser's writes: those that come with a session's cookie, and the logins themselves, so no
+other site logs a browser in as someone else. Not of a write with an `Authorization` header — no browser adds one by
+itself to another site's request, since the API never asks for Basic credentials (D-34), and a page cannot add it to
+a request to another origin without CORS —, nor of one with neither, which is nobody's and refused as such. Spring
+Security 6.5 has no ready setting for single-page applications yet; this is its default repository and handler with
+a matcher of our own.
+
+**Basic authentication stays, but is not how a browser logs in.** Other clients and the tests keep it, on every
+request and with no session: the login a request brings is kept for that request alone. What is left of it is
+decided in part 6.
+
+**The API client and its errors.** `shared/api.ts`: the same origin, the session's cookie, the token on writes. A
+refusal is an `ApiError` with the server's body (D-23); a server that could not be reached, a `NetworkError`; a
+401 outside the login means the session ended, and the application reloads at its login, so nothing read stays in
+memory. The API answers in English and the screens speak Spanish (D-13): `describeError` says a refusal in Spanish —
+each screen passing the words of its own refusals, read from the body, as `ScreenMessages` does for Thymeleaf, and a
+sentence by status for anything else, a 409 included. A refusal never clears what was typed: the forms keep their
+values, and a 409 is sent again as it was or changed (D-52).
+
+**Nothing kept in the browser.** No local or session storage, IndexedDB or cache storage: an ESLint rule refuses
+them, and Mantine's colour scheme, which it would keep in local storage, is kept nowhere. What the applications read
+lives in memory and goes with the page, which logging out reloads. Spring Security answers every page and every
+response of the API with `Cache-Control: no-store`, so the browser keeps no copy, and going back after logging out
+asks the server again, which knows nobody (Ley 25.326; D-51).
+
+**Tested** (D-11): Vitest and Testing Library on what the screens decide, with `mvnw test`; integration tests on the
+login, the CSRF token and the serving; and end-to-end tests, `*E2EIT`, with Playwright for Java: the application on a
+port of its own, on the integration tests' H2 and clock, the applications as Maven built them, in Chromium alone,
+downloaded the first time and kept in Playwright's cache. They run with `mvnw verify`, with no server to start apart.
+
+*Rejected:* npm workspaces, or a shared package (three packages for two applications of one repository); MUI (its
+Material look is hard to take off), Chakra (its API is changing), shadcn with Tailwind (each component copied in, to
+be kept as ours); Google Fonts (another site asked on every page); asking for Node.js installed by hand; the
+applications at their final addresses now (Thymeleaf has them, the emails' among them); a JSON login of our own (the
+form login already renews the session and the token and registers the session); a session of their own for the
+applications (logging in twice while the screens move over, and a deactivation would have two places to end);
+the CSRF token in a cookie the page reads (one more cookie, for what the session already keeps); asking the token of
+every write without credentials (a request with neither is refused anyway, and the API's tests write without a
+session); Basic authentication in the browser (the password would be kept by the application, and a 401 is not a
+logout); the server's English shown as it is (D-13); keeping the colour scheme in local storage; the end-to-end tests
+in TypeScript (the application would have to run apart, on a database of its own).
+
+---
+
+## D-98 — Reception's agenda of the day in the staff's application
+**Date:** 2026-10-13 · **Status:** accepted
+
+v2, phase 10, part 1: the first screen of the staff's application, end to end.
+
+**`GET /api/agenda?date=&practitionerId=`**, `AgendaController` in `appointment/adapter/in/http`: what the agenda
+screen puts together, for a day, with the names the use case does not need and the screen does (D-33) — the day,
+whose agenda it is or null for everyone's, the practitioners to choose from, and each appointment not cancelled, in
+order, with its patient's name and document, its practitioner's name, its reason and note, its state, when its
+patient arrived (D-65), whether they warned, whether it was booked or moved on the web. Without a day, today's, by the
+practice's clock: the application never trusts the browser's. Reception's alone for now, by route (D-34); the
+practitioners' application reads it when it is built (part 3), and the use case already answers whose agenda a
+practitioner may read (D-39).
+
+**The screen, read only.** The day and the practitioner are in the address, so going back and reloading keep them;
+what is shown — the day, the practitioner chosen — is what the server answered, so the choice never disagrees with
+the agenda (D-45). Each appointment says its state as the screens do — absent, arrived at, warned, booked —, with the
+day's count above. Arriving, warning, moving, cancelling and booking stay on the Thymeleaf agenda until part 2,
+reached from this one on the same day and practitioner.
+
+*Rejected:* the names in `AppointmentResponse` (every endpoint of the module would carry them for one screen); the
+names asked for by the application, one patient at a time; the browser's date for today; the operations in this part
+(they are part 2's, with booking).

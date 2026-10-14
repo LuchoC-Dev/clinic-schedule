@@ -22,8 +22,8 @@ import com.clinic.schedule.shared.http.ErrorResponse;
  * retry with another time. Validation errors are handled once for every module, in
  * {@code shared/http}.
  */
-@RestControllerAdvice(assignableTypes = {AppointmentController.class, TimeOffController.class,
-        CancellationController.class})
+@RestControllerAdvice(assignableTypes = {AppointmentController.class, AgendaController.class,
+        TimeOffController.class, CancellationController.class})
 class AppointmentExceptionHandler {
 
     @ExceptionHandler(AppointmentNotFoundException.class)

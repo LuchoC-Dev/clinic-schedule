@@ -25,6 +25,7 @@ the clinical record — and v2 is not finished.**
   ```
 
 - Maven does not need to be installed: the repository ships the wrapper.
+- Nor does Node.js: the build installs its own into `frontend/node` the first time, for the web applications.
 - **Docker**, for the database.
 
 ```powershell
@@ -33,8 +34,23 @@ docker compose up -d        # PostgreSQL 18, with its data kept in a volume, and
 .\mvnw spring-boot:run      # the application, on http://localhost:8080
 .\mvnw test                 # unit tests: nothing needed, no database
 .\mvnw verify               # unit and integration tests: H2 in memory, no Docker needed;
-                            # the PostgreSQL tests run too when Docker is up, and are skipped otherwise
+                            # the PostgreSQL tests run too when Docker is up, and are skipped otherwise;
+                            # the end-to-end tests download Chromium the first time
 ```
+
+Every build also builds the two web applications under `frontend/` — type-checked, linted and bundled into the
+jar — and `test` runs their tests with Vitest. For a change in Java alone, `-Dskip.npm -Dskip.installnodenpm`
+leaves them as they were built last. To work on one of them, with the application running on port 8080:
+
+```powershell
+cd frontend
+npm run dev:staff           # the staff's application, at http://localhost:5173/app/
+npm run dev:patients        # the patients', at http://localhost:5174/portal/app/
+npm test                    # their tests
+```
+
+Vite serves the application and sends everything else — the API, the Thymeleaf screens — to port 8080, so the
+session is one.
 
 Flyway creates the schema on the first start, and the data stays between restarts;
 `docker compose down -v` wipes it. It starts with development data: two practitioners with their
@@ -54,6 +70,13 @@ password each one changes at `/password` on logging in (D-69). One of the patien
 account in use: she logs in at http://localhost:8080/portal/login as `DNI 27333444` / `paciente123` (D-80).
 
 ## Using it
+
+**The web applications** — the screens are moving to two single-page applications (D-97): the staff's at
+http://localhost:8080/app/, the patients' at http://localhost:8080/portal/app/. For now, the staff's has reception's
+agenda of the day — the day's appointments, of everyone or of one practitioner, who arrived, who warned, who was absent
+and what the web booked or moved — and every other entry of each role's menu opens its Thymeleaf screen, in the same
+session; the patients' has its login, with the document, and its sections lead to their screens. Both keep nothing in
+the browser, and say every refusal in Spanish.
 
 **Screens** — open http://localhost:8080 and log in. Reception gets the agenda — a day or a
 week, of one practitioner or everyone — with the day's operations as buttons (*Llegó*,
@@ -103,12 +126,17 @@ historia clínica* they ask for a copy of their whole clinical record — from 1
 child under 13 once reception proved the relation —, as a PDF to download once a practitioner authenticates it, or on
 paper to collect at reception. The emails go to Mailpit in development, at http://localhost:8025.
 
-**API** — basic authentication on every request: the staff with their username, a patient with their
-document as its type and number, such as `DNI 27333444`. Errors share one body:
+**API** — the web applications log in with a session, as the screens do, and send its CSRF token as `X-CSRF-TOKEN`
+with every write; any other client uses basic authentication on every request: the staff with their username, a
+patient with their document as its type and number, such as `DNI 27333444`. Errors share one body:
 `{timestamp, status, error, message, fields?}`.
 
 | Method | Route | What it does |
 |---|---|---|
+| `GET` | `/api/session`, `/api/portal/session` | who of the staff is logged in, or whether a patient is, and the CSRF token, before logging in too; the patients', the types of document too |
+| `POST` | `/api/session`, `/api/portal/session` | log in, as a form — `username` and `password`; `documentType`, `documentNumber` and `password` —, with the token: the same as above, with the new token, or a 401; a patient's failures count towards the lock |
+| `POST` | `/api/session/logout`, `/api/portal/session/logout` | log out, ending the whole session, the screens' too |
+| `GET` | `/api/agenda?date=&practitionerId=` | reception's agenda of a day — today without one, everyone's without a practitioner —: the practitioners to choose from, and each appointment not cancelled with its patient's and practitioner's names |
 | `POST` | `/api/patients` | register a patient, with an optional typed document; `documentSeen` verifies it at once; optionally `birthDate`, `phone` and `email`, each with its `owner`, and `insurance` |
 | `POST` | `/api/patients/unidentified` | register a patient who gives no name, under an alias such as NN-4821 |
 | `PUT` | `/api/patients/{id}` | correct a name, add or remove the document; `documentSeen` verifies the identity |
@@ -222,6 +250,11 @@ its copay, if any, is a charge as any other.
 ## How it is built
 
 ```
+frontend/                     the web applications, React with TypeScript, built by Vite (D-97)
+├── src/staff/                the staff's, for a desktop, at /app/
+├── src/patients/             the patients', phone first, at /portal/app/
+└── src/shared/               the theme, the API client, the words for a refusal, the practice's dates
+
 src/main/java/com/clinic/schedule/
 ├── appointment/              hexagonal: the bookings and their rules
 │   ├── domain/               plain Java — Appointment, BookingService, TimeSlot…
@@ -247,7 +280,7 @@ src/main/java/com/clinic/schedule/
 ├── reminder/                 hexagonal: who is reminded of their appointment, sent by email once a day
 ├── security/                 the access rules: login, roles per route, who is asking
 ├── user/                     layered alike: the users, and the role each one has
-└── shared/                   the clock; http/ holds the API's error body
+└── shared/                   the clock; http/ holds the API's error body, webapp/ serves the web applications
 ```
 
 A module reaches another only through its `api/` package, and in the layered modules each layer

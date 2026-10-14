@@ -9,15 +9,22 @@ Read these before proposing design or code:
 
 - `docs/context.md` — what the application does, who uses it, the business rules and the
   planned evolution.
-- `docs/decisions.md` — technical decisions and their reasoning (D-01 … D-96).
+- `docs/decisions.md` — technical decisions and their reasoning (D-01 … D-98).
 - `docs/build.md` — the staged plan and the current progress.
 
 ## Stack
 
 Maven · Java 21 · Spring Boot 3.5 · Spring Security · Spring Data JPA · Flyway ·
-PostgreSQL 18 (docker-compose) · Thymeleaf. The integration tests run on H2 in PostgreSQL mode.
+PostgreSQL 18 (docker-compose) · Thymeleaf, being replaced by the two web applications under `frontend/` —
+React · TypeScript · Vite · Mantine · React Router · TanStack Query, tested with Vitest and, end to end, with
+Playwright for Java (D-97). The integration tests run on H2 in PostgreSQL mode.
 
 `JAVA_HOME` must point at JDK 21: the `java` on the `PATH` may be 25. See `README.md`.
+
+Maven builds the web applications too: it installs its own Node.js into `frontend/node` and builds both into
+`target/classes/static` — the staff's at `/app/`, the patients' at `/portal/app/` while Thymeleaf keeps its paths
+(D-97). `-Dskip.npm -Dskip.installnodenpm` skips them for a change in Java alone; `npm run dev:staff` or
+`dev:patients`, in `frontend/`, serves one with Vite in front of the application on port 8080.
 
 ## Working rules
 
@@ -72,7 +79,11 @@ PostgreSQL 18 (docker-compose) · Thymeleaf. The integration tests run on H2 in 
 - **Tests (D-11, D-44):** unit tests (`*Test`, `mvnw test`) on the domain rules, with no Spring
   and no database; integration tests (`*IT`, `mvnw verify`) on the key flows, on H2; and
   `*PostgresIT` only for what PostgreSQL alone can answer, skipped without Docker. Do not add
-  per-layer tests just to raise coverage.
+  per-layer tests just to raise coverage. The web applications: Vitest (`*.test.ts(x)`, run by
+  `mvnw test`) on what the screens decide, and a few `*E2EIT` with Playwright on the key flows (D-97).
+- **The web applications (D-97).** Nothing is kept in the browser — no storage, which ESLint refuses — and
+  every refusal is said in Spanish by the screen, from the API's English. A screen not built yet is the
+  Thymeleaf one, reached by a plain link: both share the session.
 - **Security (D-34).** What a role may reach is decided by route in `SecurityConfiguration`;
   whose data a user may see is decided in the use case, through a port answered by
   `security/api/CurrentUserReader`. Asking for what one may not see is a 403, never an

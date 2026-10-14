@@ -20,7 +20,8 @@ import com.clinic.schedule.security.service.AppUserDetails;
  * password was set by an admin, so until it is changed, the admin knows it too.
  *
  * <p>On the screens, anything but the change, the login and logging out is sent to the change. On
- * the API, anything but the change is refused with a 403 that says why. It runs after the routes
+ * the API, anything but the change, and the staff's application asking who is logged in (D-97), is refused
+ * with a 403 that says why. It runs after the routes
  * were authorized, so it only narrows what a user may already reach.
  */
 public class TemporaryPasswordFilter extends OncePerRequestFilter {
@@ -59,6 +60,7 @@ public class TemporaryPasswordFilter extends OncePerRequestFilter {
         String path = request.getRequestURI().substring(request.getContextPath().length());
         return api != null
                 ? path.equals("/api/password") && "POST".equals(request.getMethod())
+                        || path.equals("/api/session") && "GET".equals(request.getMethod())
                 : SCREENS_OPEN.contains(path);
     }
 

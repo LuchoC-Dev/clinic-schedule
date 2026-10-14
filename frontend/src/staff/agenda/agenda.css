@@ -1,0 +1,48 @@
+/* Reception's agenda of the day, from the approved mock (D-98). */
+
+.agenda-day::first-letter {
+  text-transform: uppercase;
+}
+
+.agenda-table {
+  overflow-x: auto;
+}
+
+.agenda-minutes {
+  color: #6b7470;
+  font-size: 13px;
+}
+
+.agenda-past td {
+  color: #6b7470;
+}
+
+.agenda-badge {
+  display: inline-block;
+  font-size: 13px;
+  font-weight: 600;
+  padding: 4px 10px;
+  border-radius: 999px;
+  white-space: nowrap;
+}
+
+.agenda-badge-booked {
+  background: #fff;
+  color: #3a4442;
+  border: 1px solid #c9cec6;
+}
+
+.agenda-badge-late {
+  background: #fff6eb;
+  color: #8a4b00;
+}
+
+.agenda-badge-arrived {
+  background: #dcebe8;
+  color: #0a4441;
+}
+
+.agenda-badge-absent {
+  background: #fbe4da;
+  color: #8a2c0b;
+}

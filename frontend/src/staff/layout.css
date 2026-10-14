@@ -1,0 +1,75 @@
+/* The staff's layout, from the approved mock (D-97). */
+
+.staff {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+}
+
+.staff-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  flex-wrap: wrap;
+  padding: 14px 24px;
+  background: #fff;
+  border-bottom: 1px solid var(--mantine-color-default-border);
+}
+
+.staff-who {
+  padding-left: 12px;
+  border-left: 1px solid var(--mantine-color-default-border);
+}
+
+.staff-body {
+  display: flex;
+  flex-wrap: wrap;
+  flex: 1;
+}
+
+.staff-nav {
+  flex: 1 1 220px;
+  max-width: 240px;
+  padding: 20px 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  background: #fafbf9;
+  border-right: 1px solid var(--mantine-color-default-border);
+}
+
+.staff-nav a {
+  display: flex;
+  align-items: center;
+  padding: 10px 12px;
+  border-radius: 8px;
+  color: #3a4442;
+  text-decoration: none;
+  font-size: 15px;
+}
+
+.staff-nav a:hover {
+  background: #e8ebe6;
+  color: #1b2321;
+}
+
+.staff-nav a.on {
+  background: #dcebe8;
+  color: #0a4441;
+  font-weight: 600;
+}
+
+.staff-nav-end {
+  margin-top: auto;
+  padding-top: 16px;
+}
+
+.staff-main {
+  flex: 999 1 560px;
+  min-width: 0;
+  padding: 28px 32px;
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}

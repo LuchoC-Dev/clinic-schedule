@@ -1,4 +1,8 @@
 target/
+
+### The web applications: the Node.js the build installs, and the packages (D-97) ###
+frontend/node/
+frontend/node_modules/
 !.mvn/wrapper/maven-wrapper.jar
 !**/src/main/**/target/
 !**/src/test/**/target/

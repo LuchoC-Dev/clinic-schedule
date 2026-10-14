@@ -43,8 +43,18 @@ public class AppUserDetails implements UserDetails {
         return "ROLE_" + role.name();
     }
 
-    UUID practitionerId() {
+    /** The practitioner the user stands for, or null for anyone else. */
+    public UUID practitionerId() {
         return practitionerId;
+    }
+
+    public Role role() {
+        return role;
+    }
+
+    /** An admin set the password, and the user must change it before anything else (D-69). */
+    public boolean hasTemporaryPassword() {
+        return mustChangePassword;
     }
 
     @Override

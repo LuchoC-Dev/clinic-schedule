@@ -1,0 +1,25 @@
+/* What Mantine's theme does not say, from the approved mock (D-97). */
+
+.mono {
+  font-family: var(--mantine-font-family-monospace);
+}
+
+/* A table inside a white card with a 12px radius, its header in small capitals. */
+.card {
+  background: #fff;
+  border: 1px solid var(--mantine-color-default-border);
+  border-radius: var(--mantine-radius-lg);
+}
+
+.card-table th {
+  font-size: 12px;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: #5c6662;
+  font-weight: 600;
+}
+
+.card-table td {
+  font-size: 15px;
+  vertical-align: middle;
+}
