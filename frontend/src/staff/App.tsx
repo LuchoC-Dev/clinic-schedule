@@ -22,6 +22,8 @@ import { RemindersPage } from './logs/RemindersPage';
 import { GoTo } from './GoTo';
 import { MyAgendaPage } from './agenda/MyAgendaPage';
 import { MyOrdersPage } from './checks/MyOrdersPage';
+import { RecordCopiesPage } from './copies/RecordCopiesPage';
+import { RecordCopyPage } from './copies/RecordCopyPage';
 import { PendingChecksPage } from './checks/PendingChecksPage';
 import { MyQueuePage } from './queue/MyQueuePage';
 import { RecordPage } from './record/RecordPage';
@@ -66,6 +68,8 @@ export const routes: RouteObject[] = [
       { path: 'clinical-records/:patientId', element: <OnlyFor role="PRACTITIONER"><RecordPage /></OnlyFor> },
       { path: 'checks/pending', element: <OnlyFor role="PRACTITIONER"><PendingChecksPage /></OnlyFor> },
       { path: 'orders/mine', element: <OnlyFor role="PRACTITIONER"><MyOrdersPage /></OnlyFor> },
+      { path: 'record-copies', element: <OnlyFor role="PRACTITIONER"><RecordCopiesPage /></OnlyFor> },
+      { path: 'record-copies/:id', element: <OnlyFor role="PRACTITIONER"><RecordCopyPage /></OnlyFor> },
     ],
   },
   { path: '*', element: <Navigate to="/" replace /> },

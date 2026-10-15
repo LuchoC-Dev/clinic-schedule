@@ -60,6 +60,16 @@
   font-weight: 600;
 }
 
+.staff-count {
+  margin-left: auto;
+  background: #9a4a00;
+  color: #fff;
+  font-size: 12px;
+  font-weight: 700;
+  border-radius: 999px;
+  padding: 2px 8px;
+}
+
 .staff-nav-end {
   margin-top: auto;
   padding-top: 16px;

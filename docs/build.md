@@ -2203,7 +2203,7 @@ patient at once, the patients, the arrivals as they change, the family groups, t
 cancellations and the reminders. Every refusal is said in Spanish by its code, and a very large amount is confirmed a
 second time. The Thymeleaf screens stay until part 6.
 
-#### Part 3 — Practitioners `[~]`
+#### Part 3 — Practitioners `[x]`
 Delivered in three batches, each a commit of its own: the queue, the agenda and the record; the pending checks and the
 orders; the copies to authenticate.
 
@@ -2262,8 +2262,31 @@ shown, or never hidden again, the heading of the window, the record offered whil
 notice; and the menu's entries. In the server, 3: the setting either way, and its route closed. `mvnw clean verify`,
 with Docker running: the seven `*PostgresIT` ran.
 
-##### Batch C — The copies to authenticate `[ ]`
-- [ ] The copies of a record waiting, reviewed, put together again, completed and authenticated
+##### Batch C — The copies to authenticate `[x]`
+- [x] The copies of a record waiting, with the time left, and one found by its code; counted beside "Copias pedidas" in
+      the menu (D-95, D-106)
+- [x] A copy opened in the browser, completed, put together again and authenticated, or access asked for first — its PDF
+      answered `inline` (D-94, D-95, D-106)
+- [x] The menu sends to every screen of the practitioners'
+- [x] 9 Vitest tests more; the integration test of the copies says the PDF's disposition. 549 unit and 671 integration
+      tests in Java, and 173 in the applications: 1393 in total
+
+**Verified with:** every new test failing when the code it covers was broken on purpose — 38 breakages, all compiling
+and all caught in the end. In the application, 37: a person without their document or their name, who asked and one
+unknown, the delivery, the hours rounded, the minutes below one, the minutes never said, late never said, the minutes
+not counted when late, what to do with the paper; a code not found, not reviewed, put together since, authenticated
+already; a row's action, its time left, who asked; a copy found and not opened, the code not sent; the time left of one
+authenticated, the review offered without access, the paper's print, the PDF in the same tab, the review once
+authenticated, the assembly seen or the review sent as made, what an authentication says; the access's reason, its
+notice, the copy not read again once granted, what it says lost; the menu's count with none waiting, gone, or counting
+anything, and the entry's count or the screen. In the server, 1: the PDF downloaded. One was missed at first —
+authenticating without saying it was reviewed — and its test was made to catch it; two were first skipped, the text to
+break written wrong, and were run again. `mvnw clean verify`, with Docker running: the seven `*PostgresIT` ran.
+
+**Part 3 of phase 10, practitioners, is done.** Every screen of the practitioners' is in the staff's application: their
+queue beside the record of whom they called, their agenda, the clinical record read and written, the pending checks and
+access to report them, their orders, and the copies to authenticate. Each reading of a record is still recorded, and none
+is made up; nothing of it is kept once the screen is left. The Thymeleaf screens stay until part 6.
 
 #### Part 4 — Admins and the waiting room `[ ]`
 - [ ] Users; practitioners, weekly schedules, reasons and time off; queues; the read log and refusals; the cash

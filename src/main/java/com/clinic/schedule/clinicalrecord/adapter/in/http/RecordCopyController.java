@@ -85,10 +85,18 @@ class RecordCopyController {
         return response(view.find(new RecordCopyId(id)));
     }
 
-    /** The copy as a PDF, as the record stood when it was put together: a reading of the record. */
+    /**
+     * The copy as a PDF, as the record stood when it was put together: a reading of the record. Shown in the browser,
+     * to review it or print it, as the Thymeleaf screen shows it (D-106).
+     */
     @GetMapping("/api/record-copies/{id}/pdf")
     ResponseEntity<byte[]> pdf(@PathVariable UUID id) {
-        return pdf(view.document(new RecordCopyId(id)).content(), "copia-historia-clinica.pdf");
+        return ResponseEntity.ok()
+                .contentType(MediaType.APPLICATION_PDF)
+                .header(HttpHeaders.CONTENT_DISPOSITION, ContentDisposition.inline()
+                        .filename("copia-historia-clinica.pdf").build().toString())
+                .header("X-Content-Type-Options", "nosniff")
+                .body(view.document(new RecordCopyId(id)).content());
     }
 
     @PostMapping("/api/record-copies/{id}/reassembly")
@@ -123,15 +131,6 @@ class RecordCopyController {
     EnvelopeResponse handOver(@PathVariable UUID id, @RequestBody HandoverRequest request) {
         RecordCopy copy = deliver.handOver(new RecordCopyId(id), Boolean.TRUE.equals(request.documentSeen()));
         return EnvelopeResponse.of(copy, people(List.of(copy)));
-    }
-
-    static ResponseEntity<byte[]> pdf(byte[] content, String fileName) {
-        return ResponseEntity.ok()
-                .contentType(MediaType.APPLICATION_PDF)
-                .header(HttpHeaders.CONTENT_DISPOSITION, ContentDisposition.attachment().filename(fileName).build()
-                        .toString())
-                .header("X-Content-Type-Options", "nosniff")
-                .body(content);
     }
 
     private RecordCopyResponse response(ViewRecordCopyUseCase.View found) {

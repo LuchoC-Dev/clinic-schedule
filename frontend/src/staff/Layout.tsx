@@ -1,4 +1,5 @@
 import { Button, Group, Text } from '@mantine/core';
+import { useQuery } from '@tanstack/react-query';
 import { type ReactNode, useEffect, useState } from 'react';
 import { NavLink } from 'react-router';
 
@@ -6,7 +7,7 @@ import { Brand } from '../shared/Brand';
 import { nowAtThePractice } from '../shared/dates';
 import './layout.css';
 import { type MenuEntry, PASSWORD, ROLE_NAMES, menuFor } from './navigation';
-import { logOut, useUser } from './session';
+import { api, logOut, useUser } from './session';
 
 /**
  * The staff's screens, for a desktop (D-97): a white header with the practice, who is logged in, the practice's
@@ -45,13 +46,28 @@ export function Layout({ children }: { children: ReactNode }) {
 
 function MenuLink({ entry }: { entry: MenuEntry }) {
   if (entry.inApp) {
-    return <NavLink to={entry.to} className={({ isActive }) => (isActive ? 'on' : undefined)}>{entry.label}</NavLink>;
+    return (
+      <NavLink to={entry.to} className={({ isActive }) => (isActive ? 'on' : undefined)}>
+        {entry.label}
+        {entry.counts && <Count of={entry.counts} label={entry.label} />}
+      </NavLink>
+    );
   }
   return (
     <a href={entry.to} target={entry.newTab ? '_blank' : undefined} rel={entry.newTab ? 'noopener' : undefined}>
       {entry.label}
     </a>
   );
+}
+
+/**
+ * How many copies wait for a practitioner, as in the approved mock (D-106): the same list the screen reads, so
+ * authenticating one counts it out; nothing while none waits, or while it cannot be read.
+ */
+function Count({ of, label }: { of: 'record-copies'; label: string }) {
+  const waiting = useQuery({ queryKey: [of], queryFn: () => api.get<unknown[]>('/api/record-copies') });
+  const count = waiting.data?.length ?? 0;
+  return count > 0 ? <span className="staff-count" aria-label={`${count} ${label.toLowerCase()} esperando`}>{count}</span> : null;
 }
 
 /** The practice's day and time, kept current; only shown, never used for a rule. */

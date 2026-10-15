@@ -24,6 +24,8 @@ describe('the menu of each role', () => {
       { label: 'Mi cola', to: '/my-queue', inApp: true }, { label: 'Mi agenda', to: '/my-agenda', inApp: true },
       { label: 'Estudios pendientes', to: '/checks/pending', inApp: true },
       { label: 'Mis órdenes', to: '/orders/mine', inApp: true }]);
+    expect(menuFor(user('PRACTITIONER'))[4])
+      .toEqual({ label: 'Copias pedidas', to: '/record-copies', inApp: true, counts: 'record-copies' });
   });
 
   it('offers an admin the users and the logs, and no clinical screen', () => {

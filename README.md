@@ -78,7 +78,7 @@ lateness, moving and cancelling —, booking at the free times with a patient fo
 their details, consent, histories, appointments and web account, the family groups, the arrivals, shown as the
 queues change, the day's cash desk, the cancellations and the reminders; a very large amount is confirmed a second time. A practitioner
 has their queue beside the record of whom they called, with the new consultation, their agenda, a patient's clinical
-record, read and written, the checks waiting for a result and the orders they issued. Every other entry
+record, read and written, the checks waiting for a result, the orders they issued, and the copies of a record to authenticate. Every other entry
 of each role's menu opens its Thymeleaf screen, in the same session; the patients' has its login, with the document, and its sections lead to their screens. Both keep nothing in
 the browser, and say every refusal in Spanish.
 

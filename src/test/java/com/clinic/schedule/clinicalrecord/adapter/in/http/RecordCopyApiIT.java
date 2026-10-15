@@ -6,12 +6,14 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.hamcrest.Matchers.contains;
 import static org.hamcrest.Matchers.containsString;
 import static org.hamcrest.Matchers.hasSize;
+import static org.hamcrest.Matchers.startsWith;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.httpBasic;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.user;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.multipart;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.header;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
@@ -201,7 +203,9 @@ class RecordCopyApiIT {
 
         String draft = text(bytes(mockMvc.perform(get("/api/record-copies/" + copy + "/pdf").with(asArias))
                 .andExpect(status().isOk())
-                .andExpect(content().contentType(MediaType.APPLICATION_PDF))));
+                .andExpect(content().contentType(MediaType.APPLICATION_PDF))
+                // Shown in the browser, to review or print, as on the screen (D-106).
+                .andExpect(header().string("Content-Disposition", startsWith("inline")))));
         assertThat(draft).contains("Control de presion arterial.", "SIN AUTENTICAR", "Código de verificación: " + code,
                 "código " + code + " · página 1 de 1");
 

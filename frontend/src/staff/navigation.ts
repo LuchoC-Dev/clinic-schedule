@@ -24,6 +24,8 @@ export interface MenuEntry {
   to: string;
   inApp: boolean;
   newTab?: boolean;
+  /** What the entry counts beside it, while there is any: the copies waiting for a practitioner (D-106). */
+  counts?: 'record-copies';
 }
 
 export const ROLE_NAMES: Record<Role, string> = {
@@ -56,7 +58,7 @@ const MENUS: Record<Role, MenuEntry[]> = {
     inApp('Mi agenda', '/my-agenda'),
     inApp('Estudios pendientes', '/checks/pending'),
     inApp('Mis órdenes', '/orders/mine'),
-    screen('Copias pedidas', '/record-copies'),
+    { ...inApp('Copias pedidas', '/record-copies'), counts: 'record-copies' },
   ],
   ADMIN: [
     screen('Usuarios', '/users'),

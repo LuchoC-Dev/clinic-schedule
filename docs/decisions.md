@@ -4262,3 +4262,37 @@ the record saying until when; all the results on asking — and with integration
 *Rejected:* showing the reason always as required, or always as optional (the screens would say what the practice did
 not decide); the setting in `GET /api/session` (it is the record's, and the practitioners' alone); the 30 days as a
 query of the API (the window is the screen's, as D-56 decided).
+
+---
+
+## D-106 — The copies to authenticate in the staff's application
+**Date:** 2026-10-15 · **Status:** accepted
+
+v2, phase 10, part 3, batch C (D-104): `/record-copies` — "Copias pedidas" — and `/record-copies/:id`, doing what their
+Thymeleaf screens do (D-95). With them, every screen of the practitioners' is in the staff's application.
+
+**The list and the menu.** The copies waiting for a practitioner, the soonest due first, each with whose it is, who asked
+and when, how it is delivered and "Quedan 31 h" or "Vencida hace 3 h" — only who and when, no reading —; and a copy found
+by the code printed on it, to check one against the application. The menu counts the copies waiting beside "Copias
+pedidas", as the approved mock does, from the same list the screen reads, so authenticating one counts it out; nothing
+while none waits.
+
+**A copy.** What the Thymeleaf screen shows of it, and what a practitioner does with it: one who may read the record
+opens its PDF, uploads what was missing to the record as a whole and puts it together again (D-94), and authenticates it,
+saying they reviewed it is complete and naming the assembly they saw; one who may not asks for access first, with the
+reason the setting asks for (D-105), and may then review it. Once authenticated, a paper copy is printed and taken to
+reception.
+
+**The PDF is shown in the browser.** `GET /api/record-copies/{id}/pdf` now answers `inline`, as the Thymeleaf screen's
+does, so the practitioner reviews it and prints it from the browser's own viewer, opened in a tab of its own; it is still
+a reading each time it is asked for (D-96), and still `no-store`. The patients' PDF, on their own route, is still
+downloaded.
+
+**Tested** with Vitest on what the screens decide — the time left and late, who asked, the delivery, what to do once
+authenticated, each refusal; the list, its count in the menu, a copy found by its code or not; opening, putting together
+again and authenticating the assembly seen; what an authenticated copy offers; asking for access and reviewing it then —
+and with the integration test of the copies on the PDF's disposition.
+
+*Rejected:* the PDF downloaded (the Thymeleaf screen shows it to review and print it, and a download leaves a copy of the
+record on the computer); the count asked of an endpoint of its own (the list is small, and the screen reads it anyway);
+the count kept up to date by polling (it is read again when the screen or the menu is used, as everything else).
