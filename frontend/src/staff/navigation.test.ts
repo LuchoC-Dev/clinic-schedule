@@ -28,8 +28,11 @@ describe('the menu of each role', () => {
       .toEqual({ label: 'Copias pedidas', to: '/record-copies', inApp: true, counts: 'record-copies' });
   });
 
-  it('offers an admin the users and the logs, and no clinical screen', () => {
-    expect(labels('ADMIN')).toEqual(['Usuarios', 'Lecturas', 'Rechazos', 'Cancelaciones', 'Caja']);
+  it('offers an admin the users and the logs, all in this application, and no clinical screen', () => {
+    expect(menuFor(user('ADMIN'))).toEqual([
+      { label: 'Usuarios', to: '/users', inApp: true }, { label: 'Lecturas', to: '/record-readings', inApp: true },
+      { label: 'Rechazos', to: '/record-refusals', inApp: true },
+      { label: 'Cancelaciones', to: '/cancellation-log', inApp: true }, { label: 'Caja', to: '/cash-desk-log', inApp: true }]);
   });
 
   it('offers the waiting room nothing', () => {
@@ -40,7 +43,7 @@ describe('the menu of each role', () => {
 describe('where each one lands', () => {
   it('lands each role on the first entry of their menu, and the waiting room on its screen', () => {
     expect(landingFor(user('RECEPTION'))).toEqual({ label: 'Agenda', to: '/agenda', inApp: true });
-    expect(landingFor(user('ADMIN')).to).toBe('/users');
+    expect(landingFor(user('ADMIN'))).toEqual({ label: 'Usuarios', to: '/users', inApp: true });
     expect(landingFor(user('PRACTITIONER'))).toEqual({ label: 'Mi cola', to: '/my-queue', inApp: true });
     expect(landingFor(user('WAITING_ROOM')).to).toBe('/waiting-room');
   });

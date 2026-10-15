@@ -178,6 +178,38 @@ class UserApiIT {
                 .andExpect(status().isForbidden());
     }
 
+    /** The admins' screen offers only the practitioners a new user may stand for (D-68, D-107). */
+    @Test
+    void thePractitionersOfferedForANewUserAreThoseWithNoActiveUser() throws Exception {
+        UUID taken = practitioner();
+        UUID free = practitioner();
+        create(fresh("profesional"), "PRACTITIONER", taken, PASSWORD);
+
+        mockMvc.perform(get("/api/users/practitioners-without-user").with(ADMIN))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$[*].id", hasItem(free.toString())))
+                .andExpect(jsonPath("$[?(@.id == '%s')].fullName".formatted(free), hasItem("Dra. Usuaria")))
+                .andExpect(jsonPath("$[*].id", not(hasItem(taken.toString()))));
+        mockMvc.perform(get("/api/users/practitioners-without-user").with(RECEPTION)).andExpect(status().isForbidden());
+    }
+
+    /** The admins' screens name the practitioners: they read the list, and change nothing of it (D-107). */
+    @Test
+    void anAdminReadsThePractitionersListAndNothingMoreOfThem() throws Exception {
+        UUID practitioner = practitioner();
+
+        mockMvc.perform(get("/api/practitioners").with(ADMIN))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$[*].id", hasItem(practitioner.toString())));
+        mockMvc.perform(get("/api/practitioners/" + practitioner).with(ADMIN)).andExpect(status().isForbidden());
+        mockMvc.perform(post("/api/practitioners").with(ADMIN).contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {"fullName": "Dr. Admin"}
+                                """))
+                .andExpect(status().isForbidden());
+        mockMvc.perform(get("/api/practitioners").with(httpBasic("arias", "arias123"))).andExpect(status().isForbidden());
+    }
+
     /** The admin reads no clinical content, and does none of reception's work (D-68). */
     @Test
     void anAdminReachesNothingButTheUsers() throws Exception {

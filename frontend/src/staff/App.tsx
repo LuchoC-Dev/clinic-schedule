@@ -5,6 +5,9 @@ import { Navigate, Outlet, type RouteObject, RouterProvider, createBrowserRouter
 import { newQueryClient } from '../shared/queries';
 import { Theme } from '../shared/theme';
 import { AccountPage } from './account/AccountPage';
+import { CancellationLogPage, CashDeskLogPage, ReadingsPage, RefusalsPage } from './admin/LogPages';
+import { UserPage } from './admin/UserPage';
+import { UsersPage } from './admin/UsersPage';
 import { AgendaPage } from './agenda/AgendaPage';
 import { ArrivalsPage } from './arrivals/ArrivalsPage';
 import { CashDeskPage } from './cash/CashDeskPage';
@@ -70,6 +73,12 @@ export const routes: RouteObject[] = [
       { path: 'orders/mine', element: <OnlyFor role="PRACTITIONER"><MyOrdersPage /></OnlyFor> },
       { path: 'record-copies', element: <OnlyFor role="PRACTITIONER"><RecordCopiesPage /></OnlyFor> },
       { path: 'record-copies/:id', element: <OnlyFor role="PRACTITIONER"><RecordCopyPage /></OnlyFor> },
+      { path: 'users', element: <OnlyFor role="ADMIN"><UsersPage /></OnlyFor> },
+      { path: 'users/:id', element: <OnlyFor role="ADMIN"><UserPage /></OnlyFor> },
+      { path: 'record-readings', element: <OnlyFor role="ADMIN"><ReadingsPage /></OnlyFor> },
+      { path: 'record-refusals', element: <OnlyFor role="ADMIN"><RefusalsPage /></OnlyFor> },
+      { path: 'cancellation-log', element: <OnlyFor role="ADMIN"><CancellationLogPage /></OnlyFor> },
+      { path: 'cash-desk-log', element: <OnlyFor role="ADMIN"><CashDeskLogPage /></OnlyFor> },
     ],
   },
   { path: '*', element: <Navigate to="/" replace /> },

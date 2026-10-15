@@ -61,11 +61,11 @@ const MENUS: Record<Role, MenuEntry[]> = {
     { ...inApp('Copias pedidas', '/record-copies'), counts: 'record-copies' },
   ],
   ADMIN: [
-    screen('Usuarios', '/users'),
-    screen('Lecturas', '/record-readings'),
-    screen('Rechazos', '/record-refusals'),
-    screen('Cancelaciones', '/cancellation-log'),
-    screen('Caja', '/cash-desk-log'),
+    inApp('Usuarios', '/users'),
+    inApp('Lecturas', '/record-readings'),
+    inApp('Rechazos', '/record-refusals'),
+    inApp('Cancelaciones', '/cancellation-log'),
+    inApp('Caja', '/cash-desk-log'),
   ],
   WAITING_ROOM: [],
 };

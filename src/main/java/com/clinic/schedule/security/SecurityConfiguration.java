@@ -56,7 +56,8 @@ import com.clinic.schedule.user.api.Role;
  * <p>What each role may reach is decided here, by route: a practitioner reads the agenda and
  * works with clinical records, which are theirs alone (D-51); an admin administers the users and
  * reads who read which record and who was refused one, the cancellations and the day's cash desk
- * without their patients, and reaches nothing else (D-68, D-71, D-72, D-76, D-87); reception does
+ * without their patients, and the practitioners' list to name them, and reaches nothing else (D-68, D-71, D-72, D-76,
+ * D-87, D-107); reception does
  * everything else, the cash desk included, which a practitioner never reaches. Every user changes their own password, and one whose password is
  * temporary does nothing else until they do (D-69). The waiting room's user sees the waiting-room
  * screen and its stream, and nothing else (D-70). A clinical route refused to a role is said, to be
@@ -171,6 +172,8 @@ class SecurityConfiguration {
                         .requestMatchers(HttpMethod.GET, "/api/appointments").hasAnyRole(RECEPTION, PRACTITIONER)
                         // A practitioner reads their own agenda, which the use case decides (D-39, D-104).
                         .requestMatchers(HttpMethod.GET, "/api/agenda").hasAnyRole(RECEPTION, PRACTITIONER)
+                        // The admins' screens name the practitioners and filter by them; reading the list is all (D-107).
+                        .requestMatchers(HttpMethod.GET, "/api/practitioners").hasAnyRole(RECEPTION, ADMIN)
                         .requestMatchers("/api/consultations/**", "/api/checks/**", "/api/orders/**",
                                 "/api/attachments/**", "/api/clinical-records/**", "/api/my-queue/**",
                                 "/api/record-copies/**", "/api/access-grants/**").hasRole(PRACTITIONER)

@@ -4296,3 +4296,40 @@ and with the integration test of the copies on the PDF's disposition.
 *Rejected:* the PDF downloaded (the Thymeleaf screen shows it to review and print it, and a download leaves a copy of the
 record on the computer); the count asked of an endpoint of its own (the list is small, and the screen reads it anyway);
 the count kept up to date by polling (it is read again when the screen or the menu is used, as everything else).
+
+---
+
+## D-107 — The admins' screens in the staff's application
+**Date:** 2026-10-15 · **Status:** accepted
+
+v2, phase 10, part 4, batch A: every screen of the admins' moves to the staff's application, doing what the Thymeleaf
+one does, no more and no less — `/users` and `/users/:id`, `/record-readings`, `/record-refusals`, `/cancellation-log`
+and `/cash-desk-log`. The cancellations' log is not named in the scope of part 4, but it is the admins' and in their
+menu, which would otherwise keep one entry on Thymeleaf. An admin lands on the users, in the application. Each Thymeleaf
+screen stays until part 6, and the menu stops sending to it. Changing one's own password stays on Thymeleaf: it is every
+role's, and no part has it yet.
+
+**The practitioners, named for the admins.** The admins' screens show which practitioner a user stands for, and filter
+the readings and the cancellations by practitioner, as the Thymeleaf ones do from the practitioner module (D-33); the
+application cannot. `GET /api/practitioners` — the list, no more — is opened to the admins by route: it holds their
+names, reasons, week and time off, nothing of a patient's. Reading one, and every change, stay reception's.
+
+**Whom a new user may stand for, said by the API.** A practitioner has one active user at most (D-68), and the Thymeleaf
+screen offers only those with none, from the user module. `GET /api/users/practitioners-without-user` answers them, so
+the rule stays the server's; one taken meanwhile is refused anyway, `PRACTITIONER_TAKEN`.
+
+**The screens.** The users, each with their role, practitioner and state; a new one with its temporary password (D-69),
+the practitioner asked only for a practitioner's role; and a user's own screen — deactivating or reactivating, as their
+state allows, resetting their password, and what admins did to them. The logs keep their search in the address, as
+reception's cancellations do (D-103), with the days the server answered shown when none were typed, a warning when there
+are more than shown, and every row in the Thymeleaf screens' words. The cash desk's log shows reception's tiles and
+totals, the same component, and its movements without a patient or a refund's reason, which its answer never has.
+
+**Tested** with Vitest on what the screens decide — the new user's practitioner and what is sent, each refusal's words,
+the actions by a user's state, the history's words, each log's words and its search in the address, the days the wrong
+way round — and with integration tests on the practitioners a new user may stand for, and on the list opened to the
+admins and nothing more of the practitioners.
+
+*Rejected:* the practitioners' names in every answer of the admins' (three answers changed for what one list already
+says); the screen working out who has no active user (the rule of D-68 would live twice); the admins' screens left on
+Thymeleaf until part 6 (the scope moves them now).

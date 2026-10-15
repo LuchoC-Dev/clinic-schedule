@@ -2288,9 +2288,39 @@ queue beside the record of whom they called, their agenda, the clinical record r
 access to report them, their orders, and the copies to authenticate. Each reading of a record is still recorded, and none
 is made up; nothing of it is kept once the screen is left. The Thymeleaf screens stay until part 6.
 
-#### Part 4 — Admins and the waiting room `[ ]`
-- [ ] Users; practitioners, weekly schedules, reasons and time off; queues; the read log and refusals; the cash
-      desk's log; the envelopes of record copies; the waiting room's screen
+#### Part 4 — Admins and the waiting room `[~]`
+Delivered in three batches, each a commit of its own: the admins' screens; reception's set-up — the practitioners, the
+queues — and the copies to collect; the waiting room.
+
+##### Batch A — The admins' screens `[x]`
+- [x] The users: every one, a new one with its temporary password and, for a practitioner's, one with no active user;
+      each user deactivated, reactivated, their password reset, and what was done to them — `GET
+      /api/users/practitioners-without-user` (D-68, D-69, D-107)
+- [x] The readings of the clinical records and the refused attempts, searched by patient, practitioner or user and
+      days; the cancellations, without the patient; the day's cash desk, without the patients — `GET /api/practitioners`
+      opened to the admins, the list alone (D-71, D-72, D-76, D-87, D-107)
+- [x] The admins' menu sends to the application, and an admin lands on the users there
+- [x] 20 Vitest tests more and 2 integration tests more. 549 unit and 673 integration tests in Java, and 193 in the
+      applications: 1415 in total
+
+**Verified with:** every new test failing when the code it covers was broken on purpose — 48 breakages, all compiling
+and all caught. In the application, 42: a new user's practitioner sent for any role, empty or untrimmed, its role sent
+empty; a user's state, role, practitioner and history unsaid or swapped, the practitioner asked of any role or every one
+offered, the new user not opened, the actions offered by the wrong state, the reset password kept or not sent, its
+words swapped; each refusal's code, the password's length; a patient without their document, unknown or none, a
+practitioner unknown or none, a file or a copy read as the record, a file tried as the record, a route without its
+path, an email's link's cancellation said as its user's, a copy's access; a reading without its user, the search not
+read again, untrimmed, with empty fields or lost from the address, the days answered not shown, more not said, a
+refusal unsaid, a refund without its minus, a means unnamed; a log or the landing left on Thymeleaf. In the server, 6:
+the practitioners' list closed to the admins, one practitioner, their changes or the list opened to more, a free
+practitioner unnamed, and one taken offered. Every run of the breakages first runs its tests untouched, which must
+pass. `mvnw clean verify`, with Docker running: the seven `*PostgresIT` ran. A first run failed in `AgendaPage.test.tsx`,
+of part 2, untouched here — a menu's item not found within a second under the build's load —; it passed alone three
+times and in the next full run, and is left as found.
+
+- [ ] Reception's set-up — practitioners, weekly schedules, reasons and time off; queues — and the envelopes of record
+      copies
+- [ ] The waiting room's screen
 
 #### Part 5 — Patients `[ ]`
 - [ ] Every screen of the portal, phone first, the emails' addresses still working

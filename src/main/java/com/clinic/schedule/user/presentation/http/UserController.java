@@ -67,6 +67,17 @@ class UserController {
         return UserResponse.of(users.resetPassword(id, request.password()));
     }
 
+    /**
+     * The practitioners a new practitioner's user may stand for: those with no active user (D-68). The admins'
+     * screen offers these alone, and the rule stays here (D-107).
+     */
+    @GetMapping("/practitioners-without-user")
+    List<FreePractitionerResponse> practitionersWithoutUser() {
+        return users.practitionersWithoutUser().stream()
+                .map(practitioner -> new FreePractitionerResponse(practitioner.id(), practitioner.fullName()))
+                .toList();
+    }
+
     /** What admins did to the user, the most recent first. */
     @GetMapping("/{id}/changes")
     List<UserChangeResponse> changes(@PathVariable UUID id) {
