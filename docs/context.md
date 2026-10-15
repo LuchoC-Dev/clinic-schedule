@@ -953,7 +953,9 @@ for the staff — reception, practitioners, admins and the waiting room's screen
 **It closes v2**: what comes after it is built as features on v2, each on its own branch and pull request.
 
 Nothing a user can do changes. Every rule stays in the server, which keeps refusing what it refuses today;
-the applications only show it better.
+the applications only show it better. One thing is shown that was not: the waiting room's screen names, by their full
+name, whom each practitioner called and who waits, in order — the practice's decision when part 4 was designed (D-109).
+It says nothing else of them.
 
 ### How it is built
 

@@ -78,8 +78,10 @@ lateness, moving and cancelling —, booking at the free times with a patient fo
 their details, consent, histories, appointments and web account, the family groups, the arrivals, shown as the
 queues change, the day's cash desk, the cancellations and the reminders; a very large amount is confirmed a second time. A practitioner
 has their queue beside the record of whom they called, with the new consultation, their agenda, a patient's clinical
-record, read and written, the checks waiting for a result, the orders they issued, and the copies of a record to authenticate. Every other entry
-of each role's menu opens its Thymeleaf screen, in the same session; the patients' has its login, with the document, and its sections lead to their screens. Both keep nothing in
+record, read and written, the checks waiting for a result, the orders they issued, and the copies of a record to authenticate. Reception
+also sets up the practitioners — reasons, week and time off — and the queues, and hands over the copies to collect; the admins
+have the users and their logs; and the waiting room's screen, full screen, names whom each practitioner called and who
+waits, in order (D-109). Changing one's own password is still the Thymeleaf screen, in the same session; the patients' has its login, with the document, and its sections lead to their screens. Both keep nothing in
 the browser, and say every refusal in Spanish.
 
 **Screens** — open http://localhost:8080 and log in. Reception gets the agenda — a day or a
@@ -155,7 +157,7 @@ such as `PRACTITIONER_ALREADY_BOOKED` or `ALREADY_CHARGED`.
 | `GET` | `/api/patients/{id}/details-changes` | the history of a patient's details: which one changed, from what to what, when and by whom |
 | `POST` | `/api/practitioners` | register a practitioner |
 | `PUT` | `/api/practitioners/{id}` | rename |
-| `GET` | `/api/practitioners`, `/api/practitioners/{id}` | with reasons, week and time off |
+| `GET` | `/api/practitioners`, `/api/practitioners/{id}` | with reasons, week and time off; the list, the admins too |
 | `POST` | `/api/practitioners/{id}/reasons` | add a reason with its duration |
 | `PUT` | `/api/practitioners/{id}/reasons/{reasonId}` | rename it, change its duration, or whether patients book it on the web (`webBookable`) |
 | `PUT` | `/api/practitioners/{id}/weekly-schedule` | replace the week; a break is a gap between stretches |
@@ -167,7 +169,7 @@ such as `PRACTITIONER_ALREADY_BOOKED` or `ALREADY_CHARGED`.
 | `GET` | `/api/reminders?from=&to=` | what happened to each appointment's reminder, by the appointment's day: sent, failed, or not sent and why — never the address |
 | `POST` | `/api/appointments/{id}/late-arrival-notice` | the patient warned they will be late |
 | `GET` | `/api/appointments?practitionerId=&date=` | a day's agenda — a practitioner may only ask for their own |
-| `POST` | `/api/time-off` | a practitioner's absence — whole days up to `untilDate`, or part of one — cancelling the appointments it hits |
+| `POST` | `/api/time-off` | a practitioner's absence — whole days up to `untilDate`, or part of one — cancelling the appointments it hits, with their patients' names |
 | `POST`, `GET` | `/api/queues` | set up a queue — a name nobody else has, an optional room — and list them with who serves each |
 | `GET`, `PUT` | `/api/queues/{id}` | read a queue, rename it or change its room |
 | `POST` | `/api/queues/{id}/practitioners` | a practitioner starts serving the queue; one queue at most each |
@@ -184,6 +186,7 @@ such as `PRACTITIONER_ALREADY_BOOKED` or `ALREADY_CHARGED`.
 | `POST` | `/api/visits/{id}/coverage/withdrawal` | `{reason}`: withdraw a coverage marked by mistake, once its copay is given back whole; the visit is then charged privately |
 | `GET` | `/api/cash-desk-log?date=` | the same for the admins, without the patients, the refunds' reasons, the pending visits and the covered ones |
 | `POST` | `/api/queue-entries/{id}/reassign`, `/lift-reservation` | give a waiting patient to another practitioner of the queue, or to anyone |
+| `GET` | `/api/waiting-room` | every queue as the waiting room shows it: whom it called and who waits, by name alone |
 | `GET` | `/api/my-queue` | a practitioner's own queue |
 | `POST` | `/api/my-queue/call-next`, `/finish`, `/did-not-come-in` | call the next patient, finish with them, or say they did not come in |
 | `POST` | `/api/consultations` | a practitioner records the consultation of a patient who arrived today — notes, prescriptions, the checks done and the orders issued |

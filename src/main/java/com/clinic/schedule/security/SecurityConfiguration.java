@@ -180,6 +180,8 @@ class SecurityConfiguration {
                         .requestMatchers("/api/users/**", "/api/record-readings", "/api/record-refusals",
                                 "/api/cancellation-log", "/api/cash-desk-log").hasRole(ADMIN)
                         .requestMatchers(HttpMethod.POST, "/api/password").authenticated()
+                        // The waiting room's screen, as on the screens (D-70, D-109).
+                        .requestMatchers(HttpMethod.GET, "/api/waiting-room").hasAnyRole(RECEPTION, WAITING_ROOM)
                         .anyRequest().hasRole(RECEPTION))
                 .addFilterAfter(TemporaryPasswordFilter.forApi(errors), AuthorizationFilter.class)
                 .formLogin(login -> login.loginProcessingUrl("/api/session")

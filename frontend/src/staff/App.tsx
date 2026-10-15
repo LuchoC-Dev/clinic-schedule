@@ -33,6 +33,7 @@ import { RecordCopiesPage } from './copies/RecordCopiesPage';
 import { RecordCopyPage } from './copies/RecordCopyPage';
 import { PendingChecksPage } from './checks/PendingChecksPage';
 import { MyQueuePage } from './queue/MyQueuePage';
+import { WaitingRoomPage } from './room/WaitingRoomPage';
 import { RecordPage } from './record/RecordPage';
 import { type Role, type StaffUser, landingFor } from './navigation';
 import { BASE, SessionContext, SetUserContext, useUser } from './session';
@@ -41,10 +42,11 @@ function RequireUser({ children }: { children: ReactNode }) {
   return useContext(SessionContext) ? children : <Navigate to="/login" replace />;
 }
 
-/** A screen of one role: anyone else, and anyone who must change their password, goes where they land. */
-function OnlyFor({ role, children }: { role: Role; children: ReactNode }) {
+/** A screen of one role, or a few: anyone else, and anyone who must change their password, goes where they land. */
+function OnlyFor({ role, children }: { role: Role | Role[]; children: ReactNode }) {
   const user = useUser();
-  return user.role === role && !user.temporaryPassword ? children : <GoTo entry={landingFor(user)} />;
+  const allowed = Array.isArray(role) ? role.includes(user.role) : user.role === role;
+  return allowed && !user.temporaryPassword ? children : <GoTo entry={landingFor(user)} />;
 }
 
 function Landing() {
@@ -53,6 +55,11 @@ function Landing() {
 
 export const routes: RouteObject[] = [
   { path: '/login', element: <LoginPage /> },
+  // The waiting room's screen, on the wall: full screen, without the header and the menu (D-109).
+  {
+    path: '/waiting-room',
+    element: <RequireUser><OnlyFor role={['RECEPTION', 'WAITING_ROOM']}><WaitingRoomPage /></OnlyFor></RequireUser>,
+  },
   {
     element: <RequireUser><Layout><Outlet /></Layout></RequireUser>,
     children: [

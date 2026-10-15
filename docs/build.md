@@ -2288,7 +2288,7 @@ queue beside the record of whom they called, their agenda, the clinical record r
 access to report them, their orders, and the copies to authenticate. Each reading of a record is still recorded, and none
 is made up; nothing of it is kept once the screen is left. The Thymeleaf screens stay until part 6.
 
-#### Part 4 — Admins and the waiting room `[~]`
+#### Part 4 — Admins and the waiting room `[x]`
 Delivered in three batches, each a commit of its own: the admins' screens; reception's set-up — the practitioners, the
 queues — and the copies to collect; the waiting room.
 
@@ -2346,7 +2346,31 @@ item not found within a second under the build's load, two of its tests in turn 
 and its tests now wait for it up to five seconds. A full run also failed in the end-to-end test of the menu, which went
 to the practitioners' Thymeleaf screen, now in the application; it goes to the password's.
 
-- [ ] The waiting room's screen
+##### Batch C — The waiting room `[x]`
+- [x] The waiting room's screen, a route of the staff's application, full screen and without menus, as the approved
+      mock has it: a card per queue, whom it called highlighted and sent to its room, then who waits, in order, and how
+      many — each by their full name, the practice's decision —; a closed queue said so; shown again as the queues
+      change, and loaded again when the stream ends for good — `GET /api/waiting-room` (D-66, D-70, D-109)
+- [x] Reception opens it in a tab of its own, and the waiting room's user lands on it
+- [x] 7 Vitest tests more, 4 integration tests more, and 1 end-to-end test more: a practitioner calls the next patient,
+      and the wall shows them highlighted. 549 unit and 679 integration tests in Java, and 220 in the applications: 1448
+      in total
+
+**Verified with:** every new test failing when the code it covers was broken on purpose — 26 breakages, all compiling
+and all caught in the end. In the application, 18: the room unsaid, the next unsaid, the places off by one, nobody
+waiting unsaid, a closed queue showing its people, whom it called not shown or only the first, who waits in reverse; the
+room not read again on a change, loaded again on any error or never, the stream left open, whom it called not
+announced, the count not shown; the waiting room left on Thymeleaf for reception or for its user, in the same tab, or
+every link in a new one. In the server, 8: the route closed to the waiting room, opened to the practitioners or to
+anyone logged in, a closed queue answered as open, whom it called and who waits swapped either way, a name with the
+document, who waits unnamed. Three were first skipped, the text to break written wrong, and were run again. `mvnw clean
+verify`, with Docker running: the seven `*PostgresIT` ran, and the three end-to-end tests. The application was not
+started by hand: the end-to-end test drives both browsers, the wall's and the practitioner's.
+
+**Part 4 of phase 10, admins and the waiting room, is done.** Every screen of the admins' and of reception's is in the
+staff's application: the users and the logs; the practitioners, their reasons, week and time off; the queues; the
+copies to collect; and the waiting room's screen, which now names whom it calls and who waits. Only changing one's own
+password is still on Thymeleaf, for every role. The Thymeleaf screens stay until part 6.
 
 #### Part 5 — Patients `[ ]`
 - [ ] Every screen of the portal, phone first, the emails' addresses still working

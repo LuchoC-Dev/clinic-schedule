@@ -4369,3 +4369,43 @@ document seen — and with an integration test on the names of an absence's pati
 
 *Rejected:* the names in `AppointmentResponse` (D-98 said why); the time off said without names (the Thymeleaf screen
 names them, and reception calls them); every practitioner offered to a queue (one serving another is refused).
+
+---
+
+## D-109 — The waiting room's screen in the staff's application, naming whom it calls and who waits
+**Date:** 2026-10-15 · **Status:** accepted
+
+v2, phase 10, part 4, batch C (D-107): the waiting room's screen is a route of the staff's application, `/waiting-room`,
+full screen and without the header or the menu, as the scope has it; reception opens it in a tab of its own, and the
+waiting room's user lands on it. The Thymeleaf screen stays until part 6, unchanged.
+
+**It names the patients, by the practice's decision.** Until now the waiting room named nobody — each queue's state and
+how many waited and were being seen (D-66) —, and naming them was left for later. The approved mock names them, and the
+practice decided, when this part was designed, that the screen shows each patient's **full name**: whom each
+practitioner called, highlighted, "Pasá al consultorio 4" — or "Pasá" for a queue with no room —, and then who waits, in
+the order they will be called — "Sigue", "2°", "3°"… —, with how many wait. It is more than the screen showed: a name on
+a wall says to everyone in the room that the person is a patient of the practice that day. It says nothing else of
+them — not their document, not whom they wait for, not why they came —, and a patient registered under an alias is
+shown by the alias (D-60). Who waits and nobody may call, kept for a practitioner no longer serving the queue, is left
+out, as the count always left them: they are reception's to give to someone (D-66). A closed queue says so, and nobody
+in it. One card per queue, not per practitioner as the mock draws it: a queue is what has a room and an order, and a
+shared one shows each of its practitioners' called patients.
+
+**`GET /api/waiting-room`**, reception's and the waiting room's by route (D-70): every queue, its name and room, whether
+it is open, and the names of whom it called and of who waits, in order — names alone, which this answer has no place
+to go beyond. The names are asked of the patient module once for every queue (D-33).
+
+**It shows itself again as the queues change.** It listens to `/queue-events` (D-66) and reads the room again on each
+change. A stream that ends for good — the application restarted, the session gone — loads the page again, which goes to
+the login if nobody is logged in any more, as the Thymeleaf screen does (D-66, amended): the wall never
+shows what it no longer knows. The waiting room's session still never runs out (D-70).
+
+**Tested** with Vitest on what the screen decides — whom it sends in and where, the order and its words, the count, a
+closed queue, read again on a change, loaded again when the stream ends for good — and the menu's tab of its own; with an
+integration test on the answer, its names alone, and its route; and end to end on the part's key flow: a practitioner
+calls the next patient, and the wall shows them highlighted without being touched.
+
+*Rejected:* the names left out, as before (the practice decided the screen calls patients by name, as the mock shows);
+initials or a shortened name, as the mock draws them (the practice asked for the full name); a card per practitioner (a
+queue has the room and the order; a shared one would split); polling the room (the stream is there, and tells the
+moment); a number or a ticket instead of a name (the practice has none to give).

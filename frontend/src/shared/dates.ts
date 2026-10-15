@@ -72,3 +72,8 @@ export function momentAtThePractice(now: Date): string {
   const part = (type: Intl.DateTimeFormatPartTypes) => parts.find((each) => each.type === type)?.value ?? '';
   return `${part('year')}-${part('month')}-${part('day')}T${part('hour')}:${part('minute')}`;
 }
+
+/** `10:42`, now at the practice: for the waiting room's clock, never for a rule. */
+export function timeAtThePractice(now: Date): string {
+  return momentAtThePractice(now).slice(11, 16);
+}

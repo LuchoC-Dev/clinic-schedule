@@ -50,7 +50,7 @@ const MENUS: Record<Role, MenuEntry[]> = {
     inApp('Recordatorios', '/reminders'),
     inApp('Caja', '/cash-desk'),
     inApp('Copias para retirar', '/record-copy-envelopes'),
-    { ...screen('Sala de espera', '/waiting-room'), newTab: true },
+    { ...inApp('Sala de espera', '/waiting-room'), newTab: true },
   ],
   // As the approved mock has it: their queue first, where the day's work is, and where they land (D-104).
   PRACTITIONER: [
@@ -85,5 +85,5 @@ export function landingFor(user: StaffUser): MenuEntry {
   if (user.temporaryPassword) {
     return screen('Contraseña', '/password?required');
   }
-  return MENUS[user.role][0] ?? screen('Sala de espera', '/waiting-room');
+  return MENUS[user.role][0] ?? inApp('Sala de espera', '/waiting-room');
 }

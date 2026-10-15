@@ -15,7 +15,7 @@ describe('the menu of each role', () => {
     expect(labels('RECEPTION')).toEqual(['Agenda', 'Llegadas', 'Pacientes', 'Grupos familiares', 'Profesionales', 'Colas',
       'Cancelaciones', 'Recordatorios', 'Caja', 'Copias para retirar', 'Sala de espera']);
     expect(menu.find((entry) => entry.label === 'Sala de espera')?.newTab).toBe(true);
-    expect(menu.filter((entry) => !entry.inApp).map((entry) => entry.label)).toEqual(['Sala de espera']);
+    expect(menu.filter((entry) => !entry.inApp)).toEqual([]);
   });
 
   it("offers a practitioner their queue first and their agenda in this application, and nothing of reception's", () => {
@@ -46,7 +46,7 @@ describe('where each one lands', () => {
     expect(landingFor(user('RECEPTION'))).toEqual({ label: 'Agenda', to: '/agenda', inApp: true });
     expect(landingFor(user('ADMIN'))).toEqual({ label: 'Usuarios', to: '/users', inApp: true });
     expect(landingFor(user('PRACTITIONER'))).toEqual({ label: 'Mi cola', to: '/my-queue', inApp: true });
-    expect(landingFor(user('WAITING_ROOM')).to).toBe('/waiting-room');
+    expect(landingFor(user('WAITING_ROOM'))).toEqual({ label: 'Sala de espera', to: '/waiting-room', inApp: true });
   });
 
   it('lands anyone whose password is temporary on changing it first', () => {
