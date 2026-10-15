@@ -2203,9 +2203,51 @@ patient at once, the patients, the arrivals as they change, the family groups, t
 cancellations and the reminders. Every refusal is said in Spanish by its code, and a very large amount is confirmed a
 second time. The Thymeleaf screens stay until part 6.
 
-#### Part 3 — Practitioners `[ ]`
-- [ ] Their queue; the clinical record, consultations, checks, results, orders, addenda, attachments and access
-      requests; the copies of a record to authenticate
+#### Part 3 — Practitioners `[~]`
+Delivered in three batches, each a commit of its own: the queue, the agenda and the record; the pending checks and the
+orders; the copies to authenticate.
+
+##### Batch A — The queue, the agenda and the clinical record `[x]`
+- [x] Their queue beside the record of whom they called, as in the approved mock: calling the next, finishing, saying
+      they did not come in — asked first while a consultation is typed and not sent —, who waits, an emergency and one
+      without an appointment; shown again as the queues change (D-66, D-104)
+- [x] Their agenda of a day or a week, read only, today's patients leading to their record — `GET /api/agenda` opened to
+      practitioners, their own (D-39, D-104)
+- [x] The clinical record: the history, the checks, the orders, the files and the access granted; a consultation with
+      its prescriptions, checks and orders, sent once with its id; a check without one; a result in words or in a file;
+      addenda; cancelling an order; files of a consultation, a check or the record as a whole — the record says
+      `mayRecord` and who the patient is, and a refusal `NO_ACCESS` or `NOT_ARRIVED` (D-100, D-104)
+- [x] Read when it opens and after each thing written, never on its own, and dropped from memory once left (D-59, D-97,
+      D-104)
+- [x] The menu is the mock's, the queue and the agenda in the application; a practitioner lands on their queue
+- [x] 34 Vitest tests more, 2 integration tests more, and 1 end-to-end test more: seeing a patient from the queue. 549
+      unit and 669 integration tests in Java, and 155 in the applications: 1373 in total
+
+**Verified with:** every new test failing when the code it covers was broken on purpose — 76 breakages, all compiling
+and all caught in the end. In the application, 64: the upload's part, its type and its method; today at the practice;
+the age's months, its years, a month and a day; the identity, an insurance missing, its plan and member number; the
+history's order and the record's files in it; the checks of the consultations; the open orders and their order; each
+owner's files and their order; a result in its file, an order fulfilled on its check's day, a cancelled one's reason,
+who cancels an order; a file's size, a grant for a copy; a consultation's empty rows, a check half filled, an order
+chosen or a result left empty, what was consulted, what was typed; a check without a consultation and its description;
+a consultation not arrived, a refusal by its status, a result recorded already, a file's limit, a record not readable;
+the queue's actions and words, asking before losing a consultation, the queue not served, an emergency, the arrival's
+time, the record read on focus, the form offered when it may not be sent, the draft kept after sending or its id made
+anew, a result recorded before its file, a result or a cancellation without its words; the menu's order and the agenda
+in the application; the queue read again as it changes. In the server, 12: `mayRecord` either way, the patient's name,
+document and identity either way, each reason of a refused access and which only the recording refuses, and the
+agenda's route closed, opened to the admins or to its free times. Three were missed at first: reading the record again
+on focus, which its test never triggered, and was made to; and two lines that turned out to do nothing — a called
+patient of a closed queue, which the API never answers, and a flag reset that the next form resets anyway — and were
+removed. Eight were first skipped, their files saved with Windows' line endings by the script that edited them; the
+files were put back to the repository's and the breakages run again. `mvnw clean verify`, with Docker running: the
+seven `*PostgresIT` ran.
+
+##### Batch B — The pending checks and the orders `[ ]`
+- [ ] The checks waiting for a result, asking for access to report one; the orders they issued
+
+##### Batch C — The copies to authenticate `[ ]`
+- [ ] The copies of a record waiting, reviewed, put together again, completed and authenticated
 
 #### Part 4 — Admins and the waiting room `[ ]`
 - [ ] Users; practitioners, weekly schedules, reasons and time off; queues; the read log and refusals; the cash

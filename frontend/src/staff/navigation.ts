@@ -50,10 +50,11 @@ const MENUS: Record<Role, MenuEntry[]> = {
     screen('Copias para retirar', '/record-copy-envelopes'),
     { ...screen('Sala de espera', '/waiting-room'), newTab: true },
   ],
+  // As the approved mock has it: their queue first, where the day's work is, and where they land (D-104).
   PRACTITIONER: [
-    screen('Agenda', '/agenda'),
-    screen('Mi cola', '/my-queue'),
-    screen('Resultados pendientes', '/checks/pending'),
+    inApp('Mi cola', '/my-queue'),
+    inApp('Mi agenda', '/my-agenda'),
+    screen('Estudios pendientes', '/checks/pending'),
     screen('Mis órdenes', '/orders/mine'),
     screen('Copias pedidas', '/record-copies'),
   ],

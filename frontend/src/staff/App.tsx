@@ -20,6 +20,9 @@ import { LoginPage } from './LoginPage';
 import { CancellationsPage } from './logs/CancellationsPage';
 import { RemindersPage } from './logs/RemindersPage';
 import { GoTo } from './GoTo';
+import { MyAgendaPage } from './agenda/MyAgendaPage';
+import { MyQueuePage } from './queue/MyQueuePage';
+import { RecordPage } from './record/RecordPage';
 import { type Role, type StaffUser, landingFor } from './navigation';
 import { BASE, SessionContext, SetUserContext, useUser } from './session';
 
@@ -56,6 +59,9 @@ export const routes: RouteObject[] = [
       { path: 'cash-desk', element: <OnlyFor role="RECEPTION"><CashDeskPage /></OnlyFor> },
       { path: 'cancellations', element: <OnlyFor role="RECEPTION"><CancellationsPage /></OnlyFor> },
       { path: 'reminders', element: <OnlyFor role="RECEPTION"><RemindersPage /></OnlyFor> },
+      { path: 'my-queue', element: <OnlyFor role="PRACTITIONER"><MyQueuePage /></OnlyFor> },
+      { path: 'my-agenda', element: <OnlyFor role="PRACTITIONER"><MyAgendaPage /></OnlyFor> },
+      { path: 'clinical-records/:patientId', element: <OnlyFor role="PRACTITIONER"><RecordPage /></OnlyFor> },
     ],
   },
   { path: '*', element: <Navigate to="/" replace /> },

@@ -53,3 +53,12 @@ export function weekdayDay(dateTime: string): string {
 export function when(dateTime: string): string {
   return `${weekdayDay(dateTime)} ${timeOf(dateTime)}`;
 }
+
+/** Today at the practice, as `2026-03-10`: what a patient's age is counted to, never a rule. */
+export function todayAtThePractice(now: Date): string {
+  const parts = new Intl.DateTimeFormat('en-CA', {
+    year: 'numeric', month: '2-digit', day: '2-digit', timeZone: PRACTICE_TIME_ZONE,
+  }).formatToParts(now);
+  const part = (type: Intl.DateTimeFormatPartTypes) => parts.find((each) => each.type === type)?.value ?? '';
+  return `${part('year')}-${part('month')}-${part('day')}`;
+}

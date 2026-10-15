@@ -153,6 +153,40 @@ class ConsultationApiIT {
                 .andExpect(jsonPath("$.patient.email").doesNotExist());
     }
 
+    /**
+     * Who the patient is, beside the record, and whether a consultation would be accepted now: the forms are offered
+     * only then (D-104).
+     */
+    @Test
+    void theRecordSaysWhoThePatientIsAndWhetherAConsultationMayBeRecordedNow() throws Exception {
+        String dni = String.valueOf(java.util.concurrent.ThreadLocalRandom.current().nextInt(50_000_000, 99_999_999));
+        patient = UUID.fromString(json.readTree(mockMvc.perform(post("/api/patients")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {"fullName": "Rosa Historia", "documentType": "DNI", "documentNumber": "%s", "documentSeen": true}
+                                """.formatted(dni)))
+                .andExpect(status().isCreated())
+                .andReturn().getResponse().getContentAsString()).get("id").asText());
+        String appointment = book(arias, TODAY, "10:00:00");
+
+        readRecord(asArias)
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.patient.fullName").value("Rosa Historia"))
+                .andExpect(jsonPath("$.patient.document").value("DNI " + dni))
+                .andExpect(jsonPath("$.patient.identityVerified").value(true))
+                .andExpect(jsonPath("$.mayRecord").value(false));
+
+        checkIn(appointment);
+        readRecord(asArias).andExpect(jsonPath("$.mayRecord").value(true));
+
+        UUID unverified = patients.newPatient();
+        patient = unverified;
+        book(arias, TODAY, "11:00:00");
+        readRecord(asArias)
+                .andExpect(jsonPath("$.patient.document").isEmpty())
+                .andExpect(jsonPath("$.patient.identityVerified").value(false));
+    }
+
     @Test
     void theRecordCarriesThePatientsInsurance() throws Exception {
         book(arias, TODAY, "10:00:00");
@@ -192,13 +226,16 @@ class ConsultationApiIT {
         readRecord(asArias).andExpect(status().isOk()).andExpect(jsonPath("$.consultations", hasSize(0)));
         send(asArias, consultation(patient, "Todavía no llegó."))
                 .andExpect(status().isForbidden())
-                .andExpect(jsonPath("$.status").value(403));
+                .andExpect(jsonPath("$.status").value(403))
+                .andExpect(jsonPath("$.code").value("NOT_ARRIVED"));
     }
 
     @Test
     void aPatientThePractitionerIsNotSeeingIsForbidden() throws Exception {
-        readRecord(asArias).andExpect(status().isForbidden()).andExpect(jsonPath("$.status").value(403));
-        send(asArias, consultation(patient, "Sin turno.")).andExpect(status().isForbidden());
+        readRecord(asArias).andExpect(status().isForbidden()).andExpect(jsonPath("$.status").value(403))
+                .andExpect(jsonPath("$.code").value("NO_ACCESS"));
+        send(asArias, consultation(patient, "Sin turno.")).andExpect(status().isForbidden())
+                .andExpect(jsonPath("$.code").value("NO_ACCESS"));
     }
 
     @Test

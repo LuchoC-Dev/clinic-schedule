@@ -4169,3 +4169,64 @@ cancelled each and what happened to each reminder in the Thymeleaf screens' word
 
 *Rejected:* the screen working out the visit's state from its movements (the rules of D-88 and D-90 would live twice,
 and drift); a tile per means always (a means nobody used that day is noise).
+
+---
+
+## D-104 — The practitioner's queue, agenda and clinical record in the staff's application
+**Date:** 2026-10-15 · **Status:** accepted
+
+v2, phase 10, part 3, batch A: the practitioners' screens move to the staff's application, doing what the Thymeleaf
+ones do, no more and no less — their queue, their agenda and a patient's clinical record, read and written. The
+pending checks, their orders and the copies to authenticate follow in batches B and C. Each Thymeleaf screen stays
+until part 6, and the menu stops sending to it.
+
+**Screens and addresses, as the approved mock has them.** `/my-queue` is the queue on the left — whom they are seeing,
+with "Terminar" and "No entró", "Llamar al siguiente", who waits, an emergency and one without an appointment said so —
+and, on the right, the record of whom they called, with the new consultation on top: the Thymeleaf screens' queue and
+consultation view in one. It is shown again as the queues change (D-66). `/my-agenda` is their own agenda of a day or
+a week, read only, today's patients leading to their record and those who arrived to their queue.
+`/clinical-records/:patientId` is the record on its own, the same panel: who the patient is, then the tabs — the
+history, every entry the newest first; the checks, with their results, files and addenda, and one done without a
+consultation; the orders, cancelled by their author with a reason; the files, those of the record as a whole uploaded
+there; and who was granted access, when anyone was. The menu is the mock's — "Mi cola", "Mi agenda", "Estudios
+pendientes", "Mis órdenes", "Copias pedidas" —, and a practitioner lands on their queue, its first entry: it is where the
+day's work is. The screens say "estudio" for a check, as the mock does.
+
+**A consultation is written in the screen's memory.** What was consulted, and its prescriptions, checks and orders added
+as rows when needed — "+ Receta", "+ Estudio", "+ Orden" —; an empty row is dropped, and a check with a result and
+neither what was done nor the order it fulfils is refused before sending, as the Thymeleaf form does. It carries an id
+of its own, so sending it again after a lost answer records it once (D-19); the id is made from `getRandomValues`, since
+`randomUUID` is only given to pages served over HTTPS. Finishing with the patient, or saying they did not come in,
+while a consultation is typed and not sent, asks first: it would be lost.
+
+**What the API answers now (D-14).**
+- `GET /api/clinical-records/{patientId}` says `mayRecord` — the patient arrived to be seen by this practitioner
+  today —, so the screen offers the consultation and the check only when they would be accepted, as the Thymeleaf one
+  does; and the patient's `fullName`, `document` and `identityVerified`, which the header shows. Never how to reach
+  them (D-73).
+- `ClinicalRecordAccessDeniedException` says its reason, `NO_ACCESS` or `NOT_ARRIVED`, and so its `code` (D-100): a
+  consultation refused because the patient has not arrived is said as such, as the screens say it.
+- `GET /api/agenda` is a practitioner's too, by route; the use case already gives them their own and refuses
+  another's (D-39). The free times stay reception's.
+
+**Files.** `api.upload` sends one file as `multipart/form-data`, its part named `file`, with the CSRF token and no type
+of its own, which the browser sets with its boundary. A result with a file attaches the file first and then records
+the result, as the Thymeleaf screen does. A file is downloaded with a plain link to `/api/attachments/{id}`, which only
+whoever may read the record gets, answered `no-store`, and recorded as a reading (D-57, D-59).
+
+**Every reading is recorded, and no reading is made up.** The server records each time the record is read (D-59), so the
+screen reads it when it opens it and after each thing written to it — as the Thymeleaf screen reads it again after each
+form —, never again on its own: not when the window regains focus, nor when the network comes back. And nothing of it
+stays in memory once the screen is left: the query is dropped at once (`gcTime: 0`), besides what D-97 already keeps
+from the browser.
+
+**Tested** with Vitest on what the screens decide — the patient's line and age, the history's order, the checks of
+every consultation, the open orders, each owner's files, a result and an order in words, who cancels an order, a
+consultation's rows and what it refuses, the queue's actions and words, asking before losing a consultation, the record
+read once, each refusal's words — and end to end on the part's key flow: a practitioner calls the next patient of their
+queue, writes their consultation and finishes with them.
+
+*Rejected:* the consultation on a page of its own (the mock puts the queue and the record side by side, and the record
+is what the consultation is written beside); a draft kept in the browser's storage (D-97); reading the record again on
+focus (each reading is recorded, and nobody read it); `randomUUID` (it fails on a page served over plain HTTP); the
+download through the application's memory (a link already sends the session, and keeps nothing).

@@ -15,20 +15,27 @@ import com.clinic.schedule.patient.api.PatientSummary;
  * during it, the checks done without a consultation, the files attached to either — each saying
  * which it belongs to — and the access granted to the record to whoever (D-53, D-54, D-57).
  *
- * <p>{@code patient} is what a practitioner reads of the patient beside the record: their date of
- * birth and their health insurance, each null when not given — never how to reach them, which is
- * reception's alone (D-73, D-74).
+ * <p>{@code patient} is what a practitioner reads of the patient beside the record: their name, document and
+ * whether reception saw it, their date of birth and their health insurance, each null when not given — never how
+ * to reach them, which is reception's alone (D-73, D-74, D-104).
+ *
+ * <p>{@code mayRecord} says whether the user may add a consultation or a check right now — the patient arrived to
+ * be seen by them today —, so a screen offers the forms only when sending them would be accepted (D-104).
  */
-record ClinicalRecordResponse(Patient patient, List<ConsultationResponse> consultations, List<CheckResponse> checks,
-        List<AttachmentResponse> attachments, List<AccessGrantResponse> accessGrants) {
+record ClinicalRecordResponse(Patient patient, boolean mayRecord, List<ConsultationResponse> consultations,
+        List<CheckResponse> checks, List<AttachmentResponse> attachments, List<AccessGrantResponse> accessGrants) {
 
-    record Patient(LocalDate birthDate, PatientSummary.Insurance insurance) {
+    record Patient(String fullName, String document, boolean identityVerified, LocalDate birthDate,
+            PatientSummary.Insurance insurance) {
     }
 
     static ClinicalRecordResponse of(ViewClinicalRecordUseCase.ClinicalRecord record, PatientSummary patient,
             Map<UUID, String> names) {
         return new ClinicalRecordResponse(
-                new Patient(patient == null ? null : patient.birthDate(), patient == null ? null : patient.insurance()),
+                patient == null ? new Patient(null, null, false, null, null)
+                        : new Patient(patient.fullName(), patient.document(), patient.identityVerified(),
+                                patient.birthDate(), patient.insurance()),
+                record.mayRecord(),
                 record.consultations().stream()
                         .map(consultation -> ConsultationResponse.of(consultation,
                                 record.checks().stream()

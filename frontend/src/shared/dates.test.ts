@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
-import { addDays, longDay, nowAtThePractice, timeOf } from './dates';
+import { addDays, longDay, nowAtThePractice, timeOf, todayAtThePractice } from './dates';
 
 describe("the practice's days and times", () => {
   it('reads a time as the API sends it', () => {
@@ -20,5 +20,11 @@ describe("the practice's days and times", () => {
   it("tells the time at the practice, not the browser's", () => {
     // 13:42 UTC is 10:42 in Buenos Aires.
     expect(nowAtThePractice(new Date('2026-10-13T13:42:00Z'))).toBe('martes 13 de octubre · 10:42');
+  });
+
+  it("tells today at the practice, not the browser's", () => {
+    // 02:30 UTC of the 11th is still the 10th in Buenos Aires, and already the 11th in Kiritimati.
+    expect(todayAtThePractice(new Date('2026-03-11T02:30:00Z'))).toBe('2026-03-10');
+    expect(todayAtThePractice(new Date('2026-03-11T03:30:00Z'))).toBe('2026-03-11');
   });
 });

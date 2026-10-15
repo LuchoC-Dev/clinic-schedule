@@ -140,10 +140,31 @@ class AgendaApiIT {
                 .andExpect(jsonPath("$.appointments[*].id", not(hasItem(first))));
     }
 
-    /** Reception's alone for now (D-34): the practitioners' application reads it when it is built. */
+    /**
+     * Reception's, and a practitioner's own (D-39, D-104): asking for no one gives them theirs, asking for someone
+     * else is refused; the free times stay reception's. Nobody else reads it.
+     */
     @Test
-    void onlyReceptionReadsIt() throws Exception {
-        mockMvc.perform(get("/api/agenda").with(httpBasic("arias", "arias123"))).andExpect(status().isForbidden());
+    void receptionReadsAnyAgendaAndAPractitionerOnlyTheirOwn() throws Exception {
+        String arias = "11111111-1111-1111-1111-111111111111";
+        CreatedPractitioner other = practitioners.workingEveryDay();
+
+        mockMvc.perform(get("/api/agenda").with(httpBasic("arias", "arias123")))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.practitionerId").value(arias))
+                .andExpect(jsonPath("$.appointments[*].practitionerId", everyItem(is(arias))));
+        mockMvc.perform(get("/api/agenda").param("practitionerId", arias).param("week", "true")
+                        .with(httpBasic("arias", "arias123")))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.practitionerId").value(arias));
+        mockMvc.perform(get("/api/agenda").param("practitionerId", other.id().toString())
+                        .with(httpBasic("arias", "arias123")))
+                .andExpect(status().isForbidden())
+                .andExpect(jsonPath("$.code").value("AGENDA_ACCESS_DENIED"));
+        mockMvc.perform(get("/api/agenda/free-times").param("practitionerId", arias)
+                        .param("reasonId", other.consulta().toString()).param("date", DAY)
+                        .with(httpBasic("arias", "arias123")))
+                .andExpect(status().isForbidden());
         mockMvc.perform(get("/api/agenda").with(httpBasic("admin", "admin123"))).andExpect(status().isForbidden());
         mockMvc.perform(get("/api/agenda").with(httpBasic("sala", "sala123"))).andExpect(status().isForbidden());
         mockMvc.perform(get("/api/agenda").with(anonymous())).andExpect(status().isUnauthorized());

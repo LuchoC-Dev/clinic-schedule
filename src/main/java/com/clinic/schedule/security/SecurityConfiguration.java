@@ -169,6 +169,8 @@ class SecurityConfiguration {
                 .authorizeHttpRequests(routes -> routes
                         .requestMatchers(HttpMethod.GET, "/api/session").permitAll()
                         .requestMatchers(HttpMethod.GET, "/api/appointments").hasAnyRole(RECEPTION, PRACTITIONER)
+                        // A practitioner reads their own agenda, which the use case decides (D-39, D-104).
+                        .requestMatchers(HttpMethod.GET, "/api/agenda").hasAnyRole(RECEPTION, PRACTITIONER)
                         .requestMatchers("/api/consultations/**", "/api/checks/**", "/api/orders/**",
                                 "/api/attachments/**", "/api/clinical-records/**", "/api/my-queue/**",
                                 "/api/record-copies/**").hasRole(PRACTITIONER)

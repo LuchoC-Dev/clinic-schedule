@@ -44,8 +44,8 @@ import com.clinic.schedule.practitioner.api.PractitionerSummary;
  *   <li>A patient's appointments, cancelled ones included, with who cancelled each.</li>
  * </ul>
  *
- * <p>Reception's alone for now, by route (D-34): the practitioners' application reads its agenda when it is
- * built.
+ * <p>Reception's, by route (D-34), but for the agenda itself, which a practitioner reads too — their own, as the
+ * use case decides (D-39, D-104).
  */
 @RestController
 class AgendaController {

@@ -37,6 +37,22 @@ describe('the API client', () => {
     expect(write.body).toBe('{"reason":"x"}');
   });
 
+  it('uploads a file as a form with its part named file, with the token and no type of its own', async () => {
+    const fetch = answering(201, { id: 'f1' });
+    const api = createApiClient({ onSessionEnded: vi.fn(), fetch });
+    api.setCsrfToken('el-token');
+    const file = new File(['%PDF-1.4'], 'hemograma.pdf', { type: 'application/pdf' });
+
+    await expect(api.upload('/api/checks/c1/attachments', file)).resolves.toEqual({ id: 'f1' });
+
+    const [path, sent] = fetch.mock.calls[0] as unknown as [string, RequestInit];
+    expect(path).toBe('/api/checks/c1/attachments');
+    expect(sent.method).toBe('POST');
+    expect(sent.headers).toMatchObject({ 'X-CSRF-TOKEN': 'el-token' });
+    expect(sent.headers).not.toHaveProperty('Content-Type');
+    expect((sent.body as FormData).get('file')).toBe(file);
+  });
+
   it("gives a refusal back with the server's body, a 409's too, and the session goes on", async () => {
     const onSessionEnded = vi.fn();
     const api = createApiClient({ onSessionEnded, fetch: answering(409, conflict) });

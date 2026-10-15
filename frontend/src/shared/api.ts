@@ -44,6 +44,8 @@ export interface ApiClient {
   get<T>(path: string, query?: Query): Promise<T>;
   post<T>(path: string, body?: unknown): Promise<T>;
   put<T>(path: string, body?: unknown): Promise<T>;
+  /** One file, as `multipart/form-data` with a part named `file`: the browser sets its type and boundary. */
+  upload<T>(path: string, file: File): Promise<T>;
   /** A login: a form, as Spring Security's reads it, whose 401 is an answer and not a session ended. */
   logIn<T>(path: string, fields: Record<string, string>): Promise<T>;
   setCsrfToken(token: string | null): void;
@@ -95,6 +97,11 @@ export function createApiClient(options: ApiClientOptions): ApiClient {
       body === undefined ? undefined : 'application/json', true),
     put: (path, body) => send('PUT', path, body === undefined ? undefined : JSON.stringify(body),
       body === undefined ? undefined : 'application/json', true),
+    upload: (path, file) => {
+      const form = new FormData();
+      form.append('file', file);
+      return send('POST', path, form, undefined, true);
+    },
     logIn: (path, fields) => send('POST', path, new URLSearchParams(fields).toString(),
       'application/x-www-form-urlencoded', false),
     setCsrfToken: (token) => {
