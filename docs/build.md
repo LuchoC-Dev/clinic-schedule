@@ -2243,8 +2243,24 @@ removed. Eight were first skipped, their files saved with Windows' line endings 
 files were put back to the repository's and the breakages run again. `mvnw clean verify`, with Docker running: the
 seven `*PostgresIT` ran.
 
-##### Batch B — The pending checks and the orders `[ ]`
-- [ ] The checks waiting for a result, asking for access to report one; the orders they issued
+##### Batch B — The pending checks and the orders `[x]`
+- [x] The checks waiting for a result, with the record or asking for access to report one, the reason optional or not
+      as the practice's setting says — `GET /api/access-grants/settings` —; granted, the record says until when (D-54,
+      D-105)
+- [x] The orders they issued: what waits, and what was reported in the last 30 days or all of them (D-56, D-105)
+- [x] The menu sends to both
+- [x] 9 Vitest tests more and 2 integration tests more. 549 unit and 671 integration tests in Java, and 164 in the
+      applications: 1384 in total
+
+**Verified with:** every new test failing when the code it covers was broken on purpose — 32 breakages, all compiling
+and all caught. In the application, 29: a patient without their document or their name, each situation's words and
+who did or reported the check, the waiting ones' order, the window when all are asked for, its first day and its
+length, the reported ones' order, what waits; the reason said optional by default, the setting not asked for, the access
+granted's day, the reason required and a check reported unsaid, the reason's length unsaid; the record offered to all
+or to none, an empty reason sent as typed, going elsewhere or saying nothing once granted; all the results never
+shown, or never hidden again, the heading of the window, the record offered while it may not be read; the record's
+notice; and the menu's entries. In the server, 3: the setting either way, and its route closed. `mvnw clean verify`,
+with Docker running: the seven `*PostgresIT` ran.
 
 ##### Batch C — The copies to authenticate `[ ]`
 - [ ] The copies of a record waiting, reviewed, put together again, completed and authenticated

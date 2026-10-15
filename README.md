@@ -77,8 +77,8 @@ agenda — a day or its week, of everyone or one practitioner, with the arrival 
 lateness, moving and cancelling —, booking at the free times with a patient found or a new one, the patients, with
 their details, consent, histories, appointments and web account, the family groups, the arrivals, shown as the
 queues change, the day's cash desk, the cancellations and the reminders; a very large amount is confirmed a second time. A practitioner
-has their queue beside the record of whom they called, with the new consultation, their agenda, and a patient's clinical
-record, read and written. Every other entry
+has their queue beside the record of whom they called, with the new consultation, their agenda, a patient's clinical
+record, read and written, the checks waiting for a result and the orders they issued. Every other entry
 of each role's menu opens its Thymeleaf screen, in the same session; the patients' has its login, with the document, and its sections lead to their screens. Both keep nothing in
 the browser, and say every refusal in Spanish.
 

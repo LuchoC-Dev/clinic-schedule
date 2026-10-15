@@ -100,6 +100,15 @@ class AccessGrantApiIT {
         return "$[?(@.checkId == '" + check + "')]";
     }
 
+    /** Whether a reason is required, a setting, said to the practitioners' screens alone (D-105). */
+    @Test
+    void thePractitionersAreToldWhetherAReasonIsRequired() throws Exception {
+        mockMvc.perform(get("/api/access-grants/settings").with(asAnalyst))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.reasonRequired").value(true));
+        mockMvc.perform(get("/api/access-grants/settings")).andExpect(status().isForbidden());
+    }
+
     @Test
     void theAnalystFindsTheCheckAsksForAccessAndReportsIt() throws Exception {
         String check = pendingCheck();

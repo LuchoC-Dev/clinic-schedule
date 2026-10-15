@@ -4230,3 +4230,35 @@ queue, writes their consultation and finishes with them.
 is what the consultation is written beside); a draft kept in the browser's storage (D-97); reading the record again on
 focus (each reading is recorded, and nobody read it); `randomUUID` (it fails on a page served over plain HTTP); the
 download through the application's memory (a link already sends the session, and keeps nothing).
+
+---
+
+## D-105 — The pending checks and the practitioner's orders in the staff's application
+**Date:** 2026-10-15 · **Status:** accepted
+
+v2, phase 10, part 3, batch B (D-104): `/checks/pending` — "Estudios pendientes" — and `/orders/mine`, doing what their
+Thymeleaf screens do. Neither reads a record (D-59): they show the patient and the check or the order, and where it
+stands, never its content.
+
+**The pending checks.** Each says the patient, the check, when and by whom; "Ver historia" for a record the
+practitioner may read, and otherwise asking for access to report it, with its reason (D-54). Granted, the screen goes to
+the record, which says until when access was granted.
+
+**Whether a reason is required, said by the API.** It is a setting, `app.clinical-record.access-grant.reason-required`,
+which the law will decide (D-54), and the Thymeleaf screens say "Motivo" or "Motivo (opcional)" by it. The application
+cannot read the server's settings, so `GET /api/access-grants/settings` answers `{reasonRequired}`, to practitioners
+alone, by route. The screen says "Motivo" until it knows, which is the stricter; a reason left empty where one is
+required is refused by the server anyway, `REASON_REQUIRED`.
+
+**Their orders.** What waits — open, or done and waiting for its result —, the oldest first, and what was reported, the
+newest first, from the last 30 days or all of them, which is in the address; each says where it stands in the Thymeleaf
+list's words, and "Ver historia" only while they may read the record (D-56). The window is the screen's: the API
+answers every order, and the screen counts the 30 days from today at the practice.
+
+**Tested** with Vitest on what the screens decide — each order's situation, the split and its window, a patient's name,
+the reason optional or not, the access granted and each refusal; what each row offers, asking for access and going to
+the record saying until when; all the results on asking — and with integration tests on the setting, each way.
+
+*Rejected:* showing the reason always as required, or always as optional (the screens would say what the practice did
+not decide); the setting in `GET /api/session` (it is the record's, and the practitioners' alone); the 30 days as a
+query of the API (the window is the screen's, as D-56 decided).

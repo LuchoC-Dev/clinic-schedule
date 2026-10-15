@@ -20,8 +20,10 @@ describe('the menu of each role', () => {
   it("offers a practitioner their queue first and their agenda in this application, and nothing of reception's", () => {
     expect(labels('PRACTITIONER')).toEqual(['Mi cola', 'Mi agenda', 'Estudios pendientes', 'Mis órdenes',
       'Copias pedidas']);
-    expect(menuFor(user('PRACTITIONER')).slice(0, 2)).toEqual([
-      { label: 'Mi cola', to: '/my-queue', inApp: true }, { label: 'Mi agenda', to: '/my-agenda', inApp: true }]);
+    expect(menuFor(user('PRACTITIONER')).slice(0, 4)).toEqual([
+      { label: 'Mi cola', to: '/my-queue', inApp: true }, { label: 'Mi agenda', to: '/my-agenda', inApp: true },
+      { label: 'Estudios pendientes', to: '/checks/pending', inApp: true },
+      { label: 'Mis órdenes', to: '/orders/mine', inApp: true }]);
   });
 
   it('offers an admin the users and the logs, and no clinical screen', () => {

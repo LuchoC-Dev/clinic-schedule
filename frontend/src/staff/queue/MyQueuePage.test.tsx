@@ -48,7 +48,7 @@ function answering(mine: MyQueue | Error, record: ClinicalRecord = clinicalRecor
   }) as typeof api.get);
 }
 
-function show(path = '/my-queue') {
+function show(path: string | { pathname: string; state: unknown } = '/my-queue') {
   render(
     <Theme>
       <QueryClientProvider client={newQueryClient()}>
@@ -235,6 +235,12 @@ describe('the record of a patient', () => {
     expect(upload).toHaveBeenCalledWith('/api/checks/k1/attachments', pdf);
     expect(post).toHaveBeenCalledWith('/api/checks/k1/result', { text: null });
     expect(upload.mock.invocationCallOrder[0]).toBeLessThan(post.mock.invocationCallOrder[0]);
+  });
+
+  it('says until when access was granted, when that is how it was reached', async () => {
+    answering(queue(null), clinicalRecord());
+    show({ pathname: '/clinical-records/p1', state: { notice: 'Acceso autorizado hasta el 10/03/2027.' } });
+    expect(await screen.findByRole('status')).toHaveTextContent('Acceso autorizado hasta el 10/03/2027.');
   });
 
   it('reads the record once, and not again when the window regains focus', async () => {

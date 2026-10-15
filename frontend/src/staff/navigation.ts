@@ -54,8 +54,8 @@ const MENUS: Record<Role, MenuEntry[]> = {
   PRACTITIONER: [
     inApp('Mi cola', '/my-queue'),
     inApp('Mi agenda', '/my-agenda'),
-    screen('Estudios pendientes', '/checks/pending'),
-    screen('Mis órdenes', '/orders/mine'),
+    inApp('Estudios pendientes', '/checks/pending'),
+    inApp('Mis órdenes', '/orders/mine'),
     screen('Copias pedidas', '/record-copies'),
   ],
   ADMIN: [
