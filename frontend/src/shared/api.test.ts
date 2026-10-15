@@ -37,6 +37,17 @@ describe('the API client', () => {
     expect(write.body).toBe('{"reason":"x"}');
   });
 
+  it('deletes with the token and no body', async () => {
+    const fetch = answering(200, { id: 'q1' });
+    const api = createApiClient({ onSessionEnded: vi.fn(), fetch });
+    api.setCsrfToken('el-token');
+
+    await expect(api.delete('/api/queues/q1/practitioners/p1')).resolves.toEqual({ id: 'q1' });
+    const [path, sent] = fetch.mock.calls[0] as unknown as [string, RequestInit];
+    expect(path).toBe('/api/queues/q1/practitioners/p1');
+    expect(sent).toMatchObject({ method: 'DELETE', body: undefined, headers: { 'X-CSRF-TOKEN': 'el-token' } });
+  });
+
   it('uploads a file as a form with its part named file, with the token and no type of its own', async () => {
     const fetch = answering(201, { id: 'f1' });
     const api = createApiClient({ onSessionEnded: vi.fn(), fetch });

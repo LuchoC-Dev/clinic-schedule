@@ -196,16 +196,19 @@ class ReceptionAgendaE2EIT {
         assertThat(page.getByText(tomorrow)).hasCount(0);
     }
 
-    /** The menu of reception, its own agenda first; a screen not built here yet is the Thymeleaf one. */
+    /**
+     * The menu of reception, its own agenda first; a screen not built here yet is the Thymeleaf one — changing one's
+     * password, every role's, once reception's screens are all here (D-107).
+     */
     @Test
     void theMenuLeadsToTheScreensStillOnThymeleafWithTheSameSession() {
         logInAsReception();
         assertThat(page).hasURL(Pattern.compile("/app/agenda$"));
 
-        page.getByRole(AriaRole.NAVIGATION).getByText("Profesionales").click();
+        page.getByRole(AriaRole.NAVIGATION).getByText("Contraseña").click();
 
-        assertThat(page).hasURL(at("/practitioners"));
-        assertThat(page.getByRole(AriaRole.HEADING, new Page.GetByRoleOptions().setName("Profesionales"))).isVisible();
+        assertThat(page).hasURL(at("/password"));
+        assertThat(page.getByRole(AriaRole.HEADING, new Page.GetByRoleOptions().setName("Cambiar la contraseña"))).isVisible();
         assertThat(page.locator("#root")).hasCount(0);
     }
 

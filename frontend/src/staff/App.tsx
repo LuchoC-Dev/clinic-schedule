@@ -23,8 +23,12 @@ import { LoginPage } from './LoginPage';
 import { CancellationsPage } from './logs/CancellationsPage';
 import { RemindersPage } from './logs/RemindersPage';
 import { GoTo } from './GoTo';
+import { PractitionerPage } from './setup/PractitionerPage';
+import { PractitionersPage } from './setup/PractitionersPage';
+import { QueuePage, QueuesPage } from './setup/QueuePages';
 import { MyAgendaPage } from './agenda/MyAgendaPage';
 import { MyOrdersPage } from './checks/MyOrdersPage';
+import { EnvelopesPage } from './copies/EnvelopesPage';
 import { RecordCopiesPage } from './copies/RecordCopiesPage';
 import { RecordCopyPage } from './copies/RecordCopyPage';
 import { PendingChecksPage } from './checks/PendingChecksPage';
@@ -66,6 +70,11 @@ export const routes: RouteObject[] = [
       { path: 'cash-desk', element: <OnlyFor role="RECEPTION"><CashDeskPage /></OnlyFor> },
       { path: 'cancellations', element: <OnlyFor role="RECEPTION"><CancellationsPage /></OnlyFor> },
       { path: 'reminders', element: <OnlyFor role="RECEPTION"><RemindersPage /></OnlyFor> },
+      { path: 'practitioners', element: <OnlyFor role="RECEPTION"><PractitionersPage /></OnlyFor> },
+      { path: 'practitioners/:id', element: <OnlyFor role="RECEPTION"><PractitionerPage /></OnlyFor> },
+      { path: 'queues', element: <OnlyFor role="RECEPTION"><QueuesPage /></OnlyFor> },
+      { path: 'queues/:id', element: <OnlyFor role="RECEPTION"><QueuePage /></OnlyFor> },
+      { path: 'record-copy-envelopes', element: <OnlyFor role="RECEPTION"><EnvelopesPage /></OnlyFor> },
       { path: 'my-queue', element: <OnlyFor role="PRACTITIONER"><MyQueuePage /></OnlyFor> },
       { path: 'my-agenda', element: <OnlyFor role="PRACTITIONER"><MyAgendaPage /></OnlyFor> },
       { path: 'clinical-records/:patientId', element: <OnlyFor role="PRACTITIONER"><RecordPage /></OnlyFor> },

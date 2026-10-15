@@ -94,6 +94,27 @@ class TimeOffApiIT {
                 .isEqualTo(arrived);
     }
 
+    /** The screen says whom it cancelled and who arrived already, by name (D-108). */
+    @Test
+    void theAnswerNamesThePatientsOfBoth() throws Exception {
+        CreatedPractitioner arias = practitioners.workingEveryDay();
+        String arrived = book(arias, "09:00:00");
+        book(arias, "11:00:00");
+        new ArrivalFixture(mockMvc, jdbc).arrived(arrived);
+
+        JsonNode result = recordTimeOff("""
+                {"practitionerId": "%s", "date": "%s"}
+                """.formatted(arias.id(), DAY));
+
+        String cancelledPatient = result.get("cancelled").get(0).get("patientId").asText();
+        String arrivedPatient = result.get("needsManualHandling").get(0).get("patientId").asText();
+        assertThat(result.get("patients").get(cancelledPatient).asText()).startsWith("Paciente ");
+        assertThat(result.get("patients").get(arrivedPatient).asText()).startsWith("Paciente ");
+        assertThat(result.get("patients").get(cancelledPatient).asText())
+                .isNotEqualTo(result.get("patients").get(arrivedPatient).asText());
+        assertThat(result.get("patients").size()).isEqualTo(2);
+    }
+
     @Test
     void partOfADayOffOnlyCancelsWhatItTouches() throws Exception {
         CreatedPractitioner arias = practitioners.workingEveryDay();

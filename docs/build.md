@@ -2318,8 +2318,34 @@ pass. `mvnw clean verify`, with Docker running: the seven `*PostgresIT` ran. A f
 of part 2, untouched here — a menu's item not found within a second under the build's load —; it passed alone three
 times and in the next full run, and is left as found.
 
-- [ ] Reception's set-up — practitioners, weekly schedules, reasons and time off; queues — and the envelopes of record
-      copies
+##### Batch B — Reception's set-up and the copies to collect `[x]`
+- [x] The practitioners: registered; each one's name, reasons and whether they are booked on the web, their week
+      replaced whole, a row half filled refused before sending; their time off not over yet, and a new one, saying
+      whom it cancelled and who arrived already, by name — `POST /api/time-off` answers `patients` (D-28, D-46, D-82,
+      D-108)
+- [x] The queues: each with its room and who serves it; a new one; renamed, a practitioner taken out, one added among
+      those who serve none — the API client sends a `DELETE` (D-62, D-108)
+- [x] The copies to collect, handed over with the document seen (D-95, D-108)
+- [x] The menu sends to every screen of reception's but the waiting room, which batch C brings
+- [x] 20 Vitest tests more and 1 integration test more; an end-to-end test of the menu now reaches the password's screen,
+      the one left on Thymeleaf. 549 unit and 674 integration tests in Java, and 213 in the applications: 1436 in total
+
+**Verified with:** every new test failing when the code it covers was broken on purpose — 49 breakages, all compiling
+and all caught in the end. In the application, 46: the week's empty rows, its seconds, an empty row or one half filled
+sent, the refusal kept or the week not refused before sending, the week not read again once saved; the time off over
+or ending now shown, read by the browser's clock or in UTC, part of a day said as a whole one, its last day, one day said
+as a range, an empty time or day sent, today not proposed; what an absence cancelled unnamed or uncounted, who arrived
+unsaid or not shown; a reason's web booking not sent; each refusal's code, a form refused unread unsaid or any refusal
+said as one; a queue offering who serves another, adding the wrong one, an unknown practitioner, an empty room sent, a
+name untrimmed, a removal said as an addition; an envelope sent as seen, or seen by another's box, who asked, its
+document, its time; a `DELETE` sent as a `GET`; the agenda's link without its practitioner; the menu left on Thymeleaf.
+In the server, 3: an absence's patients unnamed, either list's. Two were missed at first — part of a day ending at
+midnight, and the document seen for another envelope — and their tests were made to catch them. `mvnw clean verify`,
+with Docker running: the seven `*PostgresIT` ran. Two full runs failed in `AgendaPage.test.tsx`, of part 2 — a menu's
+item not found within a second under the build's load, two of its tests in turn —; the menu opens with a transition,
+and its tests now wait for it up to five seconds. A full run also failed in the end-to-end test of the menu, which went
+to the practitioners' Thymeleaf screen, now in the application; it goes to the password's.
+
 - [ ] The waiting room's screen
 
 #### Part 5 — Patients `[ ]`

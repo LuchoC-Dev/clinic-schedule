@@ -15,6 +15,7 @@ describe('the menu of each role', () => {
     expect(labels('RECEPTION')).toEqual(['Agenda', 'Llegadas', 'Pacientes', 'Grupos familiares', 'Profesionales', 'Colas',
       'Cancelaciones', 'Recordatorios', 'Caja', 'Copias para retirar', 'Sala de espera']);
     expect(menu.find((entry) => entry.label === 'Sala de espera')?.newTab).toBe(true);
+    expect(menu.filter((entry) => !entry.inApp).map((entry) => entry.label)).toEqual(['Sala de espera']);
   });
 
   it("offers a practitioner their queue first and their agenda in this application, and nothing of reception's", () => {

@@ -4333,3 +4333,39 @@ admins and nothing more of the practitioners.
 *Rejected:* the practitioners' names in every answer of the admins' (three answers changed for what one list already
 says); the screen working out who has no active user (the rule of D-68 would live twice); the admins' screens left on
 Thymeleaf until part 6 (the scope moves them now).
+
+---
+
+## D-108 — Reception's set-up and the copies to collect in the staff's application
+**Date:** 2026-10-15 · **Status:** accepted
+
+v2, phase 10, part 4, batch B (D-107): `/practitioners` and `/practitioners/:id`, `/queues` and `/queues/:id`, and
+`/record-copy-envelopes` — "Copias para retirar" —, doing what their Thymeleaf screens do. They are reception's, by route,
+as they were: the scope of part 4 names them with the admins', and moving them changes nothing of who may do what (D-34).
+With them, every screen of reception's is in the staff's application but the waiting room, which batch C brings.
+
+**A practitioner set up.** Their name; their reasons, each saved on its own with whether it is booked on the web (D-82),
+and a new one; their week, replaced whole as the API does (D-28), a stretch per row with three empty rows below — a row
+left empty is dropped, one half filled refused before sending, as the Thymeleaf form does —, read again as the server
+keeps it once saved; and their time off: those not over yet at the practice, and a new one, whole days or part of one.
+
+**What an absence did, by name.** Recording one cancels the appointments it touches and leaves those whose patient
+arrived to reception (D-46); the Thymeleaf screen says both, with each patient's name, which the use case knows by id
+alone. `POST /api/time-off` now answers `patients`, their names by id, asked of the patient module as the screen asks
+them (D-33); the appointments stay as they were.
+
+**The queues.** Each with its room and who serves it; a new one; a queue renamed, its practitioners taken out, and one
+added among those who serve no queue — a practitioner serves one at most (D-62), and the Thymeleaf screen offers only
+those, from the list it reads; the server refuses another anyway. Taking one out is a `DELETE`, which the API client
+now sends.
+
+**The copies to collect.** Whose each is, who asked for it — the patient, or whoever of their family group asked —,
+since when it waits, and handing it over only with the document of whoever collects it seen (D-95); never what it holds.
+
+**Tested** with Vitest on what the screens decide — the week's rows and what is sent, a row half filled, the time off not
+over and how each is said, what an absence cancelled and who is left by hand, a reason saved, each refusal and a form
+refused before it was read; who a queue offers, what it sends, its refusals; whose an envelope is, who asked, the
+document seen — and with an integration test on the names of an absence's patients.
+
+*Rejected:* the names in `AppointmentResponse` (D-98 said why); the time off said without names (the Thymeleaf screen
+names them, and reception calls them); every practitioner offered to a queue (one serving another is refused).

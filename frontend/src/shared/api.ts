@@ -44,6 +44,7 @@ export interface ApiClient {
   get<T>(path: string, query?: Query): Promise<T>;
   post<T>(path: string, body?: unknown): Promise<T>;
   put<T>(path: string, body?: unknown): Promise<T>;
+  delete<T>(path: string): Promise<T>;
   /** One file, as `multipart/form-data` with a part named `file`: the browser sets its type and boundary. */
   upload<T>(path: string, file: File): Promise<T>;
   /** A login: a form, as Spring Security's reads it, whose 401 is an answer and not a session ended. */
@@ -97,6 +98,7 @@ export function createApiClient(options: ApiClientOptions): ApiClient {
       body === undefined ? undefined : 'application/json', true),
     put: (path, body) => send('PUT', path, body === undefined ? undefined : JSON.stringify(body),
       body === undefined ? undefined : 'application/json', true),
+    delete: (path) => send('DELETE', path, undefined, undefined, true),
     upload: (path, file) => {
       const form = new FormData();
       form.append('file', file);
