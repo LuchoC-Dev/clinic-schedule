@@ -28,7 +28,7 @@ the clinical record — and v2 is not finished.**
 - Nor does Node.js: the build installs its own into `frontend/node` the first time, for the web applications.
 - **Docker**, for the database.
 
-```powershell
+docker compose up -d        # PostgreSQL 18 on port 5433, with its data kept in a volume, and Mailpit for the
 docker compose up -d        # PostgreSQL 18, with its data kept in a volume, and Mailpit for the
                             # reminders' email: it keeps them at http://localhost:8025 and sends none on
 .\mvnw spring-boot:run      # the application, on http://localhost:8080

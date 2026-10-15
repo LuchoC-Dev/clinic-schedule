@@ -2,10 +2,10 @@ spring:
   application:
     name: schedule
 
-  # PostgreSQL, as started by docker-compose.yml (D-44). The integration tests replace it
+  # PostgreSQL, as started by docker-compose.yml (D-44), on 5433. The integration tests replace it
   # with H2 in PostgreSQL mode, in src/test/resources/application.properties.
   datasource:
-    url: jdbc:postgresql://localhost:5432/schedule
+    url: jdbc:postgresql://localhost:5433/schedule
     username: schedule
     password: schedule
 

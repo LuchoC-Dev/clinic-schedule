@@ -8,8 +8,10 @@ services:
       POSTGRES_DB: schedule
       POSTGRES_USER: schedule
       POSTGRES_PASSWORD: schedule
+    # On 5433, not PostgreSQL's 5432: a PostgreSQL installed on the machine itself may hold that one, and would
+    # answer the application in its place.
     ports:
-      - "5432:5432"
+      - "5433:5432"
     volumes:
       - schedule-data:/var/lib/postgresql
 
