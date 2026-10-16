@@ -2,11 +2,8 @@ package com.clinic.schedule.arrival.live;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
-import static org.hamcrest.Matchers.containsString;
-import static org.hamcrest.Matchers.not;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
-import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.request;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
@@ -48,7 +45,7 @@ class LiveQueuesIT {
     private TransactionTemplate transaction;
 
     private MvcResult listening() throws Exception {
-        return mockMvc.perform(get("/queue-events")).andExpect(request().asyncStarted()).andReturn();
+        return mockMvc.perform(get("/api/queue-events")).andExpect(request().asyncStarted()).andReturn();
     }
 
     private static String heard(MvcResult stream) throws Exception {
@@ -103,32 +100,5 @@ class LiveQueuesIT {
     @WithMockUser(roles = "PRACTITIONER")
     void aPractitionerListensToo() throws Exception {
         listening();
-    }
-
-    @Test
-    void theWaitingRoomShowsTheQueuesAndNamesNoPatient() throws Exception {
-        String name = "Sala " + UUID.randomUUID().toString().substring(0, 8);
-        String queue = json.readTree(mockMvc.perform(post("/api/queues").contentType(MediaType.APPLICATION_JSON)
-                        .content("{\"name\": \"" + name + "\", \"room\": \"7\"}"))
-                .andReturn().getResponse().getContentAsString()).get("id").asText();
-        mockMvc.perform(post("/api/queues/" + queue + "/open"));
-        UUID patient = new PatientFixture(mockMvc, json).newPatient();
-        mockMvc.perform(post("/api/queues/" + queue + "/session/patients").contentType(MediaType.APPLICATION_JSON)
-                .content("{\"patientId\": \"" + patient + "\", \"amount\": 15000}"));
-        String patientName = json.readTree(mockMvc.perform(get("/api/patients/" + patient))
-                .andReturn().getResponse().getContentAsString()).get("fullName").asText();
-
-        mockMvc.perform(get("/waiting-room"))
-                .andExpect(status().isOk())
-                .andExpect(content().string(containsString(name)))
-                .andExpect(content().string(containsString("<td>1</td>")))
-                .andExpect(content().string(containsString("id=\"live\"")))
-                .andExpect(content().string(not(containsString(patientName))));
-    }
-
-    @Test
-    @WithMockUser(roles = "PRACTITIONER")
-    void theWaitingRoomIsReceptionsForNow() throws Exception {
-        mockMvc.perform(get("/waiting-room")).andExpect(status().isForbidden());
     }
 }

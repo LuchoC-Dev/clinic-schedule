@@ -139,8 +139,8 @@ class ReceptionAgendaE2EIT {
     // --- the browser ---------------------------------------------------------------------------
 
     private void logInAsReception() {
-        page.navigate(at("/app/"));
-        assertThat(page).hasURL(Pattern.compile("/app/login$"));
+        page.navigate(at("/"));
+        assertThat(page).hasURL(Pattern.compile("/login$"));
         page.getByLabel("Usuario").fill("recepcion");
         page.getByLabel("Contraseña").fill("recepcion123");
         page.getByRole(AriaRole.BUTTON, new Page.GetByRoleOptions().setName("Ingresar")).click();
@@ -164,7 +164,7 @@ class ReceptionAgendaE2EIT {
 
         logInAsReception();
 
-        assertThat(page).hasURL(Pattern.compile("/app/agenda$"));
+        assertThat(page).hasURL(Pattern.compile("/agenda$"));
         assertThat(page.getByRole(AriaRole.HEADING, new Page.GetByRoleOptions().setName("Agenda del día"))).isVisible();
         assertThat(page.getByText("Recepción · recepcion")).isVisible();
         assertThat(page.getByText("martes 10 de marzo")).isVisible();
@@ -172,7 +172,7 @@ class ReceptionAgendaE2EIT {
         assertThat(row(elsewhere)).isVisible();
 
         page.getByText(name, new Page.GetByTextOptions().setExact(true)).click();
-        assertThat(page).hasURL(Pattern.compile("/app/agenda\\?practitionerId=" + practitioner[0] + "$"));
+        assertThat(page).hasURL(Pattern.compile("/agenda\\?practitionerId=" + practitioner[0] + "$"));
         assertThat(row(today)).containsText("09:00");
         assertThat(row(today)).containsText(name);
         assertThat(row(today)).containsText("Llegó a las");
@@ -186,28 +186,27 @@ class ReceptionAgendaE2EIT {
         assertThat(row(today)).hasCount(0);
 
         page.getByRole(AriaRole.BUTTON, new Page.GetByRoleOptions().setName("Salir")).click();
-        assertThat(page).hasURL(Pattern.compile("/app/login\\?logout$"));
+        assertThat(page).hasURL(Pattern.compile("/login\\?logout$"));
         assertThat(page.getByText("Sesión cerrada.")).isVisible();
 
         // Back, the page is asked of the server again, which knows nobody: nothing read comes back.
         page.goBack();
-        assertThat(page).hasURL(Pattern.compile("/app/login$"));
+        assertThat(page).hasURL(Pattern.compile("/login$"));
         assertThat(page.getByLabel("Usuario")).isVisible();
         assertThat(page.getByText(tomorrow)).hasCount(0);
     }
 
     /**
-     * The menu of reception, its own agenda first; changing one's password, the last screen of the staff's that was
-     * left on Thymeleaf, is the application's too (D-110).
+     * The menu of reception, its own agenda first, leads to changing one's password in the application (D-110).
      */
     @Test
     void theMenuLeadsToChangingThePasswordInTheApplication() {
         logInAsReception();
-        assertThat(page).hasURL(Pattern.compile("/app/agenda$"));
+        assertThat(page).hasURL(Pattern.compile("/agenda$"));
 
         page.getByRole(AriaRole.NAVIGATION).getByText("Contraseña").click();
 
-        assertThat(page).hasURL(at("/app/password"));
+        assertThat(page).hasURL(at("/password"));
         assertThat(page.getByRole(AriaRole.HEADING, new Page.GetByRoleOptions().setName("Cambiar la contraseña"))).isVisible();
         assertThat(page.locator("#root")).hasCount(1);
     }
@@ -226,8 +225,8 @@ class ReceptionAgendaE2EIT {
         String patient = "Rosa Nueva " + unique();
 
         logInAsReception();
-        assertThat(page).hasURL(Pattern.compile("/app/agenda$"));
-        page.navigate(at("/app/agenda?date=2026-03-12&practitionerId=" + practitioner[0]));
+        assertThat(page).hasURL(Pattern.compile("/agenda$"));
+        page.navigate(at("/agenda?date=2026-03-12&practitionerId=" + practitioner[0]));
         assertThat(row(taken)).isVisible();
         page.getByRole(AriaRole.BUTTON, new Page.GetByRoleOptions().setName("Nuevo turno")).click();
 
@@ -243,7 +242,7 @@ class ReceptionAgendaE2EIT {
         page.getByLabel("Nota (opcional)").fill("Primera vez");
         page.getByRole(AriaRole.BUTTON, new Page.GetByRoleOptions().setName("Reservar")).click();
 
-        assertThat(page).hasURL(Pattern.compile("/app/agenda\\?date=2026-03-12&practitionerId=" + practitioner[0] + "$"));
+        assertThat(page).hasURL(Pattern.compile("/agenda\\?date=2026-03-12&practitionerId=" + practitioner[0] + "$"));
         assertThat(page.getByRole(AriaRole.STATUS)).hasText("Paciente registrado y turno reservado.");
         assertThat(row(patient)).containsText("10:00");
         assertThat(row(patient)).containsText("Primera vez");
@@ -273,8 +272,8 @@ class ReceptionAgendaE2EIT {
         book(practitioner, patient, "2026-03-10T11:00:00");
 
         logInAsReception();
-        assertThat(page).hasURL(Pattern.compile("/app/agenda$"));
-        page.navigate(at("/app/agenda?practitionerId=" + practitioner[0]));
+        assertThat(page).hasURL(Pattern.compile("/agenda$"));
+        page.navigate(at("/agenda?practitionerId=" + practitioner[0]));
         row(patient).getByRole(AriaRole.BUTTON, new Locator.GetByRoleOptions().setName("Llegó")).click();
         Locator dialog = page.getByRole(AriaRole.DIALOG);
         dialog.getByLabel("Importe").fill("1500000");
@@ -286,7 +285,7 @@ class ReceptionAgendaE2EIT {
         assertThat(row(patient)).containsText("Llegó a las");
 
         page.getByRole(AriaRole.NAVIGATION).getByText("Caja", new Locator.GetByTextOptions().setExact(true)).click();
-        assertThat(page).hasURL(Pattern.compile("/app/cash-desk$"));
+        assertThat(page).hasURL(Pattern.compile("/cash-desk$"));
         Locator charge = page.getByRole(AriaRole.ROW).filter(new Locator.FilterOptions().setHasText(patient))
                 .filter(new Locator.FilterOptions().setHasText("Cobro"));
         assertThat(charge).containsText("$ 1.500.000,00");
@@ -307,8 +306,8 @@ class ReceptionAgendaE2EIT {
 
     @Test
     void aWrongPasswordIsSaidAndNothingIsShown() {
-        page.navigate(at("/app/agenda"));
-        assertThat(page).hasURL(Pattern.compile("/app/login$"));
+        page.navigate(at("/agenda"));
+        assertThat(page).hasURL(Pattern.compile("/login$"));
         page.getByLabel("Usuario").fill("recepcion");
         page.getByLabel("Contraseña").fill("no-es-la-clave");
         page.getByRole(AriaRole.BUTTON, new Page.GetByRoleOptions().setName("Ingresar")).click();

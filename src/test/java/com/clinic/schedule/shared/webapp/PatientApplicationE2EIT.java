@@ -44,9 +44,9 @@ import com.microsoft.playwright.impl.driver.Driver;
 import com.microsoft.playwright.options.AriaRole;
 
 /**
- * The patients' application from end to end, on a phone (D-97): an email's address — the link of an activation sent
- * before the application existed, `/portal/activation?token=` — opens the same path on it, where the patient chooses
- * their password and logs in with their document (D-110); and a patient logs in and books an appointment at one of
+ * The patients' application from end to end, on a phone (D-97): an email's address — the link of an activation,
+ * `/portal/activation?token=`, as emails sent before the application existed carry it too — is its own screen, where
+ * the patient chooses their password and logs in with their document (D-110, D-114); and a patient logs in and books an appointment at one of
  * the times the agenda offers (D-82, D-111). The application as Maven built it, on the tests' database and clock —
  * "today" is Tuesday 10 March 2026 —, driven in Chromium.
  */
@@ -116,13 +116,13 @@ class PatientApplicationE2EIT {
 
         page.navigate(at("/portal/activation?token=" + token));
 
-        assertThat(page).hasURL(at("/portal/app/activation?token=" + token));
+        assertThat(page).hasURL(at("/portal/activation?token=" + token));
         assertThat(page.getByRole(AriaRole.HEADING, new Page.GetByRoleOptions().setName("Activá tu cuenta"))).isVisible();
         page.getByLabel("Contraseña").fill("una-clave-del-telefono");
         page.getByLabel("Repetila").fill("una-clave-del-telefono");
         page.getByRole(AriaRole.BUTTON, new Page.GetByRoleOptions().setName("Activar")).click();
 
-        assertThat(page).hasURL(Pattern.compile("/portal/app/login\\?activated$"));
+        assertThat(page).hasURL(Pattern.compile("/portal/login\\?activated$"));
         assertThat(page.getByText("Cuenta activada: ingresá con tu documento y tu contraseña.")).isVisible();
         page.getByLabel("Número").fill(patient.dni());
         page.getByLabel("Contraseña").fill("una-clave-del-telefono");
@@ -159,24 +159,24 @@ class PatientApplicationE2EIT {
         CreatedPractitioner arias = bookedOnTheWeb();
         Patient patient = new PatientAccountFixture(mockMvc, json).withAccount();
 
-        page.navigate(at("/portal/app/"));
-        assertThat(page).hasURL(Pattern.compile("/portal/app/login$"));
+        page.navigate(at("/portal/"));
+        assertThat(page).hasURL(Pattern.compile("/portal/login$"));
         page.getByLabel("Número").fill(patient.dni());
         page.getByLabel("Contraseña").fill(PASSWORD);
         page.getByRole(AriaRole.BUTTON, new Page.GetByRoleOptions().setName("Ingresar")).click();
 
-        assertThat(page).hasURL(Pattern.compile("/portal/app/appointments$"));
+        assertThat(page).hasURL(Pattern.compile("/portal/appointments$"));
         assertThat(page.getByText("No tenés turnos próximos.")).isVisible();
         page.getByRole(AriaRole.LINK, new Page.GetByRoleOptions().setName("Sacar turno")).click();
 
-        assertThat(page).hasURL(Pattern.compile("/portal/app/booking$"));
+        assertThat(page).hasURL(Pattern.compile("/portal/booking$"));
         page.getByLabel("Profesional y motivo").selectOption(arias.consulta().toString());
         page.getByRole(AriaRole.BUTTON, new Page.GetByRoleOptions().setName("jue 12")).click();
         page.getByRole(AriaRole.BUTTON, new Page.GetByRoleOptions().setName("10:00").setExact(true)).click();
         page.getByRole(AriaRole.BUTTON, new Page.GetByRoleOptions().setName("Reservar: Jueves 12 de marzo, 10:00"))
                 .click();
 
-        assertThat(page).hasURL(Pattern.compile("/portal/app/appointments$"));
+        assertThat(page).hasURL(Pattern.compile("/portal/appointments$"));
         assertThat(page.getByText("Turno reservado: Jueves 12 de marzo, 10:00 con Dra. Arias. Te mandamos la "
                 + "confirmación por email.")).isVisible();
         assertThat(page.getByRole(AriaRole.ARTICLE)).containsText("Jueves 12 de marzo, 10:00");

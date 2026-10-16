@@ -12,7 +12,7 @@ export function useLiveQueues() {
     if (typeof EventSource === 'undefined') {
       return undefined;
     }
-    const stream = new EventSource('/queue-events');
+    const stream = new EventSource('/api/queue-events');
     stream.addEventListener('queue', (event) => {
       void queries.invalidateQueries({ queryKey: ['session', (event as MessageEvent<string>).data] });
       void queries.invalidateQueries({ queryKey: ['my-queue'] });

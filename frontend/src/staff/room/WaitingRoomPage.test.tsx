@@ -68,7 +68,7 @@ describe('the waiting room', () => {
     show();
     const romero = await screen.findByRole('region', { name: 'Dra. Romero' });
     expect(get).toHaveBeenCalledWith('/api/waiting-room');
-    expect(FakeStream.last.url).toBe('/queue-events');
+    expect(FakeStream.last.url).toBe('/api/queue-events');
     expect(within(romero).getByText('2 esperando')).toBeInTheDocument();
     expect(within(romero).queryByRole('status')).not.toBeInTheDocument();
     expect(within(screen.getByRole('region', { name: 'Guardia' })).getByText('Cerrada')).toBeInTheDocument();

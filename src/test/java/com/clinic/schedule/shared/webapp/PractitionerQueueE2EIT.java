@@ -137,12 +137,12 @@ class PractitionerQueueE2EIT {
                 """.formatted(patient, practitioner[0], practitioner[1]));
         new ArrivalFixture(mockMvc, jdbc).arrived(appointment);
 
-        page.navigate(at("/app/"));
+        page.navigate(at("/"));
         page.getByLabel("Usuario").fill(username);
         page.getByLabel("Contraseña").fill("arias123");
         page.getByRole(AriaRole.BUTTON, new Page.GetByRoleOptions().setName("Ingresar")).click();
 
-        assertThat(page).hasURL(Pattern.compile("/app/my-queue$"));
+        assertThat(page).hasURL(Pattern.compile("/my-queue$"));
         Locator queue = page.getByRole(AriaRole.REGION, new Page.GetByRoleOptions().setName("Mi cola"));
         assertThat(queue.getByText(patientName)).isVisible();
         assertThat(queue.getByText("Turno 09:00")).isVisible();

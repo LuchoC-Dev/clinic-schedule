@@ -2,13 +2,10 @@ package com.clinic.schedule.reminder.adapter.in.http;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
-import static org.hamcrest.Matchers.containsString;
-import static org.hamcrest.Matchers.not;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.user;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
-import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 import java.nio.charset.StandardCharsets;
@@ -298,13 +295,6 @@ class ReminderIT {
         assertThat(entry.get("reason").asText()).isEqualTo("NO_CONSENT");
         assertThat(entry.get("recordedAt").asText()).isEqualTo("2026-03-10T00:00:00");
         assertThat(found.toString()).doesNotContain(address);
-
-        mockMvc.perform(get("/reminders").param("from", "2026-03-13").param("to", "2026-03-13"))
-                .andExpect(status().isOk())
-                .andExpect(content().string(containsString("Rosa Lista")))
-                .andExpect(content().string(containsString("No enviado: sin consentimiento para el email")))
-                .andExpect(content().string(not(containsString(address))));
-        mockMvc.perform(get("/agenda")).andExpect(content().string(containsString("href=\"/reminders\"")));
     }
 
     @Test
@@ -317,8 +307,6 @@ class ReminderIT {
         assertThat(found.get("to").asText()).isEqualTo("2026-03-13");
         mockMvc.perform(get("/api/reminders").param("from", "2026-03-13").param("to", "2026-03-12"))
                 .andExpect(status().isBadRequest());
-        mockMvc.perform(get("/reminders").param("from", "2026-03-13").param("to", "2026-03-12"))
-                .andExpect(content().string(containsString("El primer día es posterior al último.")));
     }
 
     @Test
@@ -326,6 +314,5 @@ class ReminderIT {
         mockMvc.perform(get("/api/reminders").with(user("admin").roles("ADMIN"))).andExpect(status().isForbidden());
         mockMvc.perform(get("/api/reminders").with(user("arias").roles("PRACTITIONER")))
                 .andExpect(status().isForbidden());
-        mockMvc.perform(get("/reminders").with(user("admin").roles("ADMIN"))).andExpect(status().isForbidden());
     }
 }

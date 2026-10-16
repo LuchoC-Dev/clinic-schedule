@@ -8,16 +8,13 @@ import static org.hamcrest.Matchers.allOf;
 import static org.hamcrest.Matchers.contains;
 import static org.hamcrest.Matchers.containsString;
 import static org.hamcrest.Matchers.not;
-import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.csrf;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.httpBasic;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.user;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
-import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.flash;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
-import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.redirectedUrl;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 import java.time.LocalDateTime;
@@ -33,7 +30,6 @@ import org.springframework.context.annotation.Import;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.http.MediaType;
 import org.springframework.jdbc.core.JdbcTemplate;
-import org.springframework.mock.web.MockHttpSession;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.test.context.TestSecurityContextHolder;
@@ -148,13 +144,6 @@ class WebCancellationIT {
         String log = mockMvc.perform(get("/api/cancellation-log").with(ADMIN))
                 .andReturn().getResponse().getContentAsString();
         assertThat(log).contains("\"origin\":\"ONLINE\"").doesNotContain(atReception.get("cancelledBy").asText());
-        mockMvc.perform(get("/cancellations").with(RECEPTION))
-                .andExpect(content().string(allOf(containsString(">el paciente (web)<"),
-                        containsString(">Por la web<"))));
-        mockMvc.perform(get("/cancellation-log").with(ADMIN))
-                .andExpect(content().string(allOf(containsString("paciente (web)"), not(containsString("portal:")))));
-        mockMvc.perform(get("/agenda/patients/" + patient.id()).with(RECEPTION))
-                .andExpect(content().string(containsString("Por el paciente, en la web, el")));
     }
 
     @Test
@@ -211,11 +200,6 @@ class WebCancellationIT {
         assertThat(atReception.get("origin").asText()).isEqualTo("EMAIL_LINK");
         assertThat(atReception.get("cancelledBy").asText()).isEqualTo("email-link");
         assertThat(atReception.get("requestedBy").asText()).isEqualTo("PATIENT");
-        mockMvc.perform(get("/cancellations").with(RECEPTION))
-                .andExpect(content().string(allOf(containsString(">el link del email<"),
-                        containsString(">Con el link del email<"))));
-        mockMvc.perform(get("/agenda/patients/" + patient.id()).with(RECEPTION))
-                .andExpect(content().string(containsString("Con el link del email, el")));
     }
 
     @Test
@@ -263,33 +247,19 @@ class WebCancellationIT {
     }
 
     @Test
-    void aPatientCancelsOnTheirScreensAndTheLinkOpensTheApplication() throws Exception {
+    void theAppointmentsSayWhichMayStillBeCancelled() throws Exception {
         Patient patient = accounts.withAccount();
         String appointment = book(patient, "2026-03-16T10:00:00");
-        book(patient, "2026-03-10T20:00:00");
-        MockHttpSession session = (MockHttpSession) mockMvc.perform(post("/portal/login").with(csrf())
-                        .param("documentType", "DNI").param("documentNumber", patient.dni())
-                        .param("password", PASSWORD))
-                .andReturn().getRequest().getSession(false);
+        String soon = book(patient, "2026-03-10T20:00:00");
 
         // Only what may still be cancelled is offered (D-111).
         mockMvc.perform(get("/api/portal/appointments").with(as(patient)))
                 .andExpect(jsonPath("$.upcoming[?(@.cancellable == true)].id", contains(appointment)));
-        mockMvc.perform(post("/portal/appointments/" + appointment + "/cancel").session(session).with(csrf()))
-                .andExpect(redirectedUrl("/portal/appointments"))
-                .andExpect(flash().attribute("message", "Turno cancelado."));
-        mockMvc.perform(post("/portal/appointments/" + appointment + "/cancel").session(session).with(csrf()))
-                .andExpect(flash().attribute("error", "Ese turno ya no está reservado."));
-        String soon = json.readTree(mockMvc.perform(get("/api/portal/appointments").with(as(patient)))
-                .andReturn().getResponse().getContentAsString()).get("upcoming").get(0).get("id").asText();
-        mockMvc.perform(post("/portal/appointments/" + soon + "/cancel").session(session).with(csrf()))
-                .andExpect(flash().attribute("error", containsString("Falta menos de un día")));
-
-        String linked = book(patient, "2026-03-17T10:00:00");
-        String token = tokenOf(links.linkFor(UUID.fromString(linked), LocalDateTime.of(2026, 3, 17, 10, 0))
-                .orElseThrow());
-        // The link's page is the patients' application's now, which the old address sends on to (D-110).
-        mockMvc.perform(get("/portal/cancel").param("token", token))
-                .andExpect(redirectedUrl("/portal/app/cancel?token=" + token));
+        mockMvc.perform(post("/api/portal/appointments/" + soon + "/cancel").with(as(patient)))
+                .andExpect(status().isConflict());
+        mockMvc.perform(post("/api/portal/appointments/" + appointment + "/cancel").with(as(patient)))
+                .andExpect(status().isNoContent());
+        mockMvc.perform(post("/api/portal/appointments/" + appointment + "/cancel").with(as(patient)))
+                .andExpect(status().isConflict());
     }
 }

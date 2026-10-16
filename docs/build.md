@@ -2492,8 +2492,39 @@ two menus' tests failing within the default second —; with the change, six run
 The one breakage — the test environment taken out of `Theme` — failed them again under that load. `mvnw clean
 verify`, with Docker running: the seven `*PostgresIT` ran.
 
-##### Batch B — Thymeleaf removed, the applications at their addresses `[ ]`
-- [ ] Templates, screen controllers, the screens' security chains and the dependency removed (D-02)
+##### Batch B — Thymeleaf removed, the applications at their addresses `[x]`
+- [x] Templates, screen controllers, the screens' security chains, their login and landing, and the dependency removed,
+      with their tests; a rule a screen's test alone said is said on the API's (D-02, D-114)
+- [x] What only the screens used removed: a patient's age, the relations a form offered, whether a username is a
+      patient's, and the ceiling a charge's refusal carried for the screens to say (D-14, D-114)
+- [x] The staff's application at `/` and the patients' at `/portal/`, each built into a folder of its own; an address
+      of theirs answered with their page, never one under `/api/`; `/app/` and `/portal/app/` gone (D-97, D-114)
+- [x] The emails' addresses — `/portal/activation`, `/portal/password-reset`, `/portal/register/confirm`,
+      `/portal/cancel`, `/portal/appointments` — the patients' application's own, sent ones too; their redirects gone
+      (D-110, D-111, D-114)
+- [x] Three security chains: each API's and the applications', open to anyone; the queues' stream at
+      `GET /api/queue-events`, read there by the arrivals, the practitioner's queue and the waiting room (D-66, D-114)
+- [x] The staff's menu with the application's entries alone; a role lands with the router's redirect (D-114)
+- [x] `CLAUDE.md`, the README and the context say the applications are all the screens there are
+- [x] The screens' tests gone with them: 4 unit tests and 200 integration tests less — the screens' own, and the
+      screens' half of others —; the serving's, the emails' addresses', the waiting room's and the session's tests on the
+      new addresses, and the four end-to-end tests at them. 545 unit and 483 integration tests in Java, and 290 in the
+      applications: 1318 in total
+
+**Verified with:** every new or changed test failing when the code it covers was broken on purpose — 21 breakages, all
+compiling, each run first untouched, and all caught but two that are the same code either way. In the server, 17: an
+address under `/api/` answered as a page, the patients' addresses served from the staff's, a route of theirs not
+answered with their page, either root not forwarded, `/portal` not sent to `/portal/`, the applications closed to
+whom is not logged in; the queues' stream opened to the admins, closed to the waiting room or to the practitioners, or
+left at its old address; a temporary password let through or kept from asking who is logged in; the clinical routes
+read without `/api`, a write refused for its token recorded as a refusal; and the refusals of a charge and of a refund
+without the amount they went above. In the applications, 4: the stream read at its old address by the arrivals and the
+practitioner's queue — whose test now says the address — or by the waiting room; and, the same code either way, a
+logged-in user on the login, or one on another role's screen, sent to `/` instead of where they land, which `/` sends
+them to anyway. A first full run failed two tests of the API that still asked a Thymeleaf screen — a patient's page and
+a practitioner's reason —, which the first search had not found; they ask the API now, and a wider search found no
+other. `mvnw clean verify`, with Docker running: the seven `*PostgresIT` ran, and the four end-to-end tests, at the new
+addresses.
 
 ---
 

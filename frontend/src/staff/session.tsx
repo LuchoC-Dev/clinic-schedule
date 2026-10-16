@@ -3,7 +3,7 @@ import { type Dispatch, type SetStateAction, createContext, useContext } from 'r
 import { type ApiClient, createApiClient } from '../shared/api';
 import type { StaffUser } from './navigation';
 
-/** Where this application lives: `/app/` while the screens move over, `/` once they have (D-97). */
+/** Where this application lives: `/` (D-114). */
 export const BASE = import.meta.env.BASE_URL;
 
 /** Reloads the application at its login, so nothing read stays in memory. */
@@ -26,7 +26,7 @@ export async function loadSession(client: ApiClient = api): Promise<StaffUser | 
 }
 
 /**
- * Logs in with the screens' own login, answered in JSON; the session's id and token are new afterwards. The token
+ * Logs in with the API's session login, answered in JSON; the session's id and token are new afterwards. The token
  * is asked for again first: the one the page started with may belong to a session that is gone by now.
  */
 export async function logIn(username: string, password: string, client: ApiClient = api): Promise<StaffUser> {

@@ -17,7 +17,7 @@ adoption still low).
 
 ## D-02 — REST API as the main contract, minimal throwaway Thymeleaf views
 **Date:** 2026-09-22 · **Status:** applied on 2026-09-23 (see D-33); the single-page applications replace the views
-part by part from v2, phase 10, both living together until its last part (D-97)
+part by part from v2, phase 10, both living together until its last part (D-97), which removes them (D-114)
 
 The future user interface will be two separate single-page applications, so the stable
 contract is the REST API. The v1 Thymeleaf views exist only to see the application
@@ -4569,3 +4569,49 @@ without it, under the same load, they fail again.
 *Rejected:* raising the wait again (it hides the cause, and a slower machine finds it again); faking the timers in
 those tests (every test with a menu or a dialog has the same shape, and would need them); a test's own provider
 (every test renders the applications' `Theme`, as it should).
+
+---
+
+## D-114 — Thymeleaf removed, and the applications at their addresses
+**Date:** 2026-10-16 · **Status:** accepted
+
+v2, phase 10, part 6, batch B. Every screen is in the two applications (parts 1 to 5), so the Thymeleaf screens go, as
+D-02 said from the start: the templates, every `screen/` package — the controllers and what only they used —, the
+screens' two security chains, their login, logout and landing, and the dependency. Their tests go with them; where a
+screen's test was the only one to say a rule, the rule is now said on the API's.
+
+**Nothing is kept that only the screens used (D-14).** Searched for once they were gone: the age of a
+`PatientSummary`, the relations `PatientReader` offered a form, whether a username is a patient's
+(`PatientUsername.is`), and the ceiling or what was left that a charge's refusal carried "so the screens can say it" —
+the refusal's message says it, and the applications confirm a large amount by a threshold of their own (D-101).
+`DocumentLoginFilter`, which the patients' login uses, moves to `security/presentation/http`; the temporary password's
+filter and the clinical routes' refusals keep the API's half.
+
+**The addresses: the staff's application at `/`, the patients' at `/portal/`** (D-97). Each build's `base` says it,
+and each goes into a folder of its own, `static/staff` and `static/portal`, so neither build empties the other's.
+`WebApplicationConfiguration` serves `/portal/**` from the patients' and everything else from the staff's — the more
+specific pattern wins —, an address of their own answered with their `index.html` as before, never one under `/api/`,
+which stays the API's 404. In development Vite sends `/api` alone to the application.
+
+**The emails' addresses are the patients' application's own.** `/portal/activation`, `/portal/password-reset`,
+`/portal/register/confirm`, `/portal/cancel` and `/portal/appointments` were sent on to `/portal/app/` (D-110, D-111);
+they are now its routes, so the redirects go, and an email already sent opens its screen directly, the token in the
+address. The emails keep writing the same addresses.
+
+**`/app/` and `/portal/app/` are gone, with no redirect.** No email carries them, and the branch that had them was
+never deployed: they lived only while the screens moved over.
+
+**Security: three chains.** The patients' API, the staff's API, and, last, one for the applications: every address
+open to anyone, since what they show is asked of the API, which decides who may; Spring Security still answers them
+`no-store`. The queues' stream moves under the API, to `GET /api/queue-events`, reception's, the practitioners' and the
+waiting room's as it was; the screens that follow it — the arrivals, the practitioner's queue, the waiting room — read
+it there.
+
+**The staff's menu has the application's entries alone**: which entry was a Thymeleaf screen, and the component that
+sent there, go; a role lands with a plain redirect of the router.
+
+*Rejected:* keeping the email redirects (the addresses are the application's now, and a redirect to itself is nothing);
+redirecting `/app/` and `/portal/app/` (nothing outside the branch ever had them); both builds into `static/` with the
+patients' inside it (the staff's build, emptying its folder, would take the patients' with it); the queues' stream left
+at `/queue-events` under a chain of its own (a chain kept for one address, when the API already has the roles);
+keeping `inApp` in the menu for a screen that may come (D-14).

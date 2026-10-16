@@ -44,7 +44,7 @@ class VisitCashierAdapter implements VisitCashier {
                 case ALREADY_CHARGED, NOTHING_TO_REFUND, REFUND_TOO_HIGH, REASON_REQUIRED, REASON_TOO_LONG,
                         CHANGED_MEANWHILE, ALREADY_COVERED, NOT_COVERED, COPAY_LEFT ->
                         throw new IllegalStateException("A visit starting was refused so", e);
-            }, e.getMessage(), e.limit());
+            }, e.getMessage());
         }
     }
 

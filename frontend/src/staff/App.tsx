@@ -22,7 +22,6 @@ import { Bare, Layout } from './Layout';
 import { LoginPage } from './LoginPage';
 import { CancellationsPage } from './logs/CancellationsPage';
 import { RemindersPage } from './logs/RemindersPage';
-import { GoTo } from './GoTo';
 import { PractitionerPage } from './setup/PractitionerPage';
 import { PractitionersPage } from './setup/PractitionersPage';
 import { QueuePage, QueuesPage } from './setup/QueuePages';
@@ -47,7 +46,7 @@ function RequireUser({ children }: { children: ReactNode }) {
 function OnlyFor({ role, children }: { role: Role | Role[]; children: ReactNode }) {
   const user = useUser();
   const allowed = Array.isArray(role) ? role.includes(user.role) : user.role === role;
-  return allowed && !user.temporaryPassword ? children : <GoTo entry={landingFor(user)} />;
+  return allowed && !user.temporaryPassword ? children : <Navigate to={landingFor(user).to} replace />;
 }
 
 /**
@@ -60,7 +59,7 @@ function Password() {
 }
 
 function Landing() {
-  return <GoTo entry={landingFor(useUser())} />;
+  return <Navigate to={landingFor(useUser()).to} replace />;
 }
 
 export const routes: RouteObject[] = [

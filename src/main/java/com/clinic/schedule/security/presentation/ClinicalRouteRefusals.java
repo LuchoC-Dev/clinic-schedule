@@ -14,18 +14,18 @@ import jakarta.servlet.http.HttpServletRequest;
 import com.clinic.schedule.security.api.ClinicalRouteRefused;
 
 /**
- * Says so when a clinical route is refused to a logged-in user by their role (D-72), on the API and
- * on the screens alike. The clinical routes are those of the clinical record — records, files,
- * consultations, checks, orders —; the practitioner's queue is theirs, but holds no clinical content.
+ * Says so when a clinical route of the API is refused to a logged-in user by their role (D-72). The clinical
+ * routes are those of the clinical record — records, files, consultations, checks, orders, copies —; the
+ * practitioner's queue is theirs, but holds no clinical content.
  *
- * <p>A form without its CSRF token is refused too, but for the form, not for who sent it, so it is not
- * said. A request with nobody logged in never gets here: Spring Security sends it to log in instead.
+ * <p>A write without its CSRF token is refused too, but for the request, not for who sent it, so it is not
+ * said. A request with nobody logged in never gets here: it is answered as such first.
  */
 @Component
 public class ClinicalRouteRefusals {
 
-    private static final List<String> CLINICAL = List.of("/consultations", "/checks", "/orders", "/attachments",
-            "/clinical-records", "/record-copies");
+    private static final List<String> CLINICAL = List.of("/api/consultations", "/api/checks", "/api/orders",
+            "/api/attachments", "/api/clinical-records", "/api/record-copies");
 
     private final ApplicationEventPublisher events;
 
@@ -45,7 +45,6 @@ public class ClinicalRouteRefusals {
     }
 
     static boolean isClinical(String path) {
-        String route = path.startsWith("/api/") ? path.substring("/api".length()) : path;
-        return CLINICAL.stream().anyMatch(prefix -> route.equals(prefix) || route.startsWith(prefix + "/"));
+        return CLINICAL.stream().anyMatch(prefix -> path.equals(prefix) || path.startsWith(prefix + "/"));
     }
 }

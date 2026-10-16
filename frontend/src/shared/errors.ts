@@ -3,8 +3,7 @@ import { ApiError, NetworkError } from './api';
 /**
  * What a screen tells the person when the API says no, in Spanish (D-13). The API answers in English; each
  * screen knows its refusals and passes `refusals`, which reads the server's body — its status, `error` and
- * `message` — and says it in Spanish, as `ScreenMessages` does for the Thymeleaf screens. What it does not
- * know falls back to a sentence by status.
+ * `message` — and says it in Spanish. What it does not know falls back to a sentence by status.
  *
  * A refusal never clears what was typed: the forms keep their values, so after a 409 the person sends it again
  * as it was, or changes it (D-52).

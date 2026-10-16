@@ -123,7 +123,7 @@ class VisitTest {
         assertThatThrownBy(() -> partly.refund(pesos("10000.01"), "se fue", "recepcion", ELEVEN))
                 .isInstanceOfSatisfying(ChargeRuleViolationException.class, e -> {
                     assertThat(e.reason()).isEqualTo(Reason.REFUND_TOO_HIGH);
-                    assertThat(e.limit()).isEqualByComparingTo("10000");
+                    assertThat(e.getMessage()).contains("charge, 10000");
                 });
 
         Visit whole = partly.refund(pesos("10000"), "se fue sin ser atendido", "recepcion", ELEVEN);

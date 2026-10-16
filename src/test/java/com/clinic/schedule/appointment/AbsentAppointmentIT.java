@@ -5,7 +5,6 @@ import static org.hamcrest.Matchers.containsString;
 import static org.hamcrest.Matchers.not;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
-import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
@@ -126,14 +125,10 @@ class AbsentAppointmentIT {
     }
 
     @Test
-    void theAgendaShowsWhoDidNotComeWithNothingToDoAboutIt() throws Exception {
+    void theAgendaSaysWhoDidNotCome() throws Exception {
         String absent = bookedYesterdayEvening();
         markAbsent.handle();
 
-        mockMvc.perform(get("/agenda").param("date", "2026-03-09").param("practitionerId", arias.id().toString()))
-                .andExpect(status().isOk())
-                .andExpect(content().string(containsString("Ausente")))
-                .andExpect(content().string(not(containsString("/agenda/appointments/" + absent + "/"))));
         mockMvc.perform(get("/api/appointments").param("date", "2026-03-09").param("practitionerId", arias.id().toString()))
                 .andExpect(jsonPath("$[?(@.id == '" + absent + "')].status").value("ABSENT"));
     }

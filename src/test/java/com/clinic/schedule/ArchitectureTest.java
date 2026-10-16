@@ -56,7 +56,7 @@ class ArchitectureTest {
     @ValueSource(strings = {"patient", "practitioner", "security", "user"})
     void eachLayerIsReachedOnlyByTheOneAboveIt(String module) {
         String root = BASE + module;
-        // Optional layers: not every module has every layer — security keeps no entities, user has no screen.
+        // Optional layers: not every module has every layer — security keeps no entities.
         layeredArchitecture().consideringOnlyDependenciesInLayers()
                 .withOptionalLayers(true)
                 .layer("Presentation").definedBy(root + ".presentation..")

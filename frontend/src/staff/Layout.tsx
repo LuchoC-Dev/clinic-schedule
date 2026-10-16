@@ -45,19 +45,12 @@ export function Layout({ children }: { children: ReactNode }) {
 }
 
 function MenuLink({ entry }: { entry: MenuEntry }) {
-  if (entry.inApp) {
-    return (
-      <NavLink to={entry.to} className={({ isActive }) => (isActive ? 'on' : undefined)}
-        target={entry.newTab ? '_blank' : undefined} rel={entry.newTab ? 'noopener' : undefined}>
-        {entry.label}
-        {entry.counts && <Count of={entry.counts} label={entry.label} />}
-      </NavLink>
-    );
-  }
   return (
-    <a href={entry.to} target={entry.newTab ? '_blank' : undefined} rel={entry.newTab ? 'noopener' : undefined}>
+    <NavLink to={entry.to} className={({ isActive }) => (isActive ? 'on' : undefined)}
+      target={entry.newTab ? '_blank' : undefined} rel={entry.newTab ? 'noopener' : undefined}>
       {entry.label}
-    </a>
+      {entry.counts && <Count of={entry.counts} label={entry.label} />}
+    </NavLink>
   );
 }
 

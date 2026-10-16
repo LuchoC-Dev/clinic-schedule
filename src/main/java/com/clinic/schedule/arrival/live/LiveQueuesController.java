@@ -11,8 +11,8 @@ import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
 
 /**
  * The stream the queue screens listen to (D-66): an event named {@code queue} whose data is the id
- * of the queue that changed. For the screens, behind their login; reception and the practitioners
- * reach it, by route.
+ * of the queue that changed. Under the API since the staff's application is all there is (D-114); reception, the
+ * practitioners and the waiting room reach it, by route.
  */
 @Controller
 class LiveQueuesController {
@@ -23,7 +23,7 @@ class LiveQueuesController {
         this.live = live;
     }
 
-    @GetMapping(path = "/queue-events", produces = MediaType.TEXT_EVENT_STREAM_VALUE)
+    @GetMapping(path = "/api/queue-events", produces = MediaType.TEXT_EVENT_STREAM_VALUE)
     @ResponseBody
     SseEmitter events() {
         return live.subscribe();

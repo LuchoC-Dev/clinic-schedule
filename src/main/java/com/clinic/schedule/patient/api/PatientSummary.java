@@ -1,7 +1,6 @@
 package com.clinic.schedule.patient.api;
 
 import java.time.LocalDate;
-import java.time.Period;
 import java.util.UUID;
 
 /**
@@ -22,10 +21,5 @@ public record PatientSummary(UUID id, String fullName, String document, boolean 
 
     /** The insurer, and the member number and plan, each null when not given. */
     public record Insurance(String insurer, String memberNumber, String plan) {
-    }
-
-    /** The patient's age on that day, or null without a date of birth. */
-    public Period ageOn(LocalDate day) {
-        return birthDate == null ? null : Period.between(birthDate, day);
     }
 }

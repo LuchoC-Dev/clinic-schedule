@@ -1,15 +1,14 @@
 import { Alert, Button, Center, Paper, PasswordInput, Stack, TextInput } from '@mantine/core';
 import { type FormEvent, useContext, useState } from 'react';
-import { useSearchParams } from 'react-router';
+import { Navigate, useSearchParams } from 'react-router';
 
 import { ApiError } from '../shared/api';
 import { Brand } from '../shared/Brand';
 import { describeError } from '../shared/errors';
-import { GoTo } from './GoTo';
 import { landingFor } from './navigation';
 import { SessionContext, SetUserContext, logIn } from './session';
 
-/** What the login says of how the last session ended, as the Thymeleaf login does. */
+/** What the login says of how the last session ended. */
 const ENDED: Record<string, string> = {
   logout: 'Sesión cerrada.',
   changed: 'Contraseña cambiada: ingresá con la nueva.',
@@ -17,7 +16,7 @@ const ENDED: Record<string, string> = {
 };
 
 /**
- * The staff's login (D-97): a username and a password, sent to the screens' own login. A wrong one says so
+ * The staff's login (D-97): a username and a password, sent to the API's session login. A wrong one says so
  * and keeps the username typed.
  */
 export function LoginPage() {
@@ -30,7 +29,7 @@ export function LoginPage() {
   const [sending, setSending] = useState(false);
 
   if (user) {
-    return <GoTo entry={landingFor(user)} />;
+    return <Navigate to={landingFor(user).to} replace />;
   }
 
   async function submit(event: FormEvent) {

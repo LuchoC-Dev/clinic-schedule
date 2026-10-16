@@ -4,19 +4,13 @@ import static com.clinic.schedule.portal.PatientAccountFixture.PASSWORD;
 import static com.clinic.schedule.portal.PatientAccountFixture.RECEPTION;
 import static com.clinic.schedule.portal.PatientAccountFixture.address;
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.hamcrest.Matchers.allOf;
-import static org.hamcrest.Matchers.containsString;
 import static org.hamcrest.Matchers.hasItem;
 import static org.hamcrest.Matchers.not;
-import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.csrf;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.httpBasic;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
-import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
-import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.flash;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
-import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.redirectedUrl;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 import java.util.List;
@@ -29,7 +23,6 @@ import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMock
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.context.annotation.Import;
 import org.springframework.http.MediaType;
-import org.springframework.mock.web.MockHttpSession;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.test.context.TestSecurityContextHolder;
@@ -167,16 +160,14 @@ class WebBookingIT {
         book(accounts.withAccount(), arias.consulta(), "2026-03-12T10:00:00").andExpect(status().isConflict());
 
         CreatedPractitioner other = practitionerBookedOnTheWeb();
-        MockHttpSession session = (MockHttpSession) mockMvc.perform(post("/portal/login").with(csrf())
-                        .param("documentType", "DNI").param("documentNumber", patient.dni())
-                        .param("password", PASSWORD))
-                .andReturn().getRequest().getSession(false);
-        mockMvc.perform(post("/portal/booking").session(session).with(csrf())
-                        .param("reason", other.consulta().toString()).param("startsAt", "2026-03-12T10:00"))
-                .andExpect(flash().attribute("error", "Ya tenés otro turno a esa hora."));
-        mockMvc.perform(post("/portal/booking").session(session).with(csrf())
-                        .param("reason", other.consulta().toString()).param("startsAt", "2026-03-12T10:30"))
-                .andExpect(redirectedUrl("/portal/appointments"));
+        String withOther = "{\"practitionerId\": \"%s\", \"reasonId\": \"%s\", \"startsAt\": \"%s\"}";
+        mockMvc.perform(post("/api/portal/appointments").with(as(patient)).contentType(MediaType.APPLICATION_JSON)
+                        .content(withOther.formatted(other.id(), other.consulta(), "2026-03-12T10:00:00")))
+                .andExpect(status().isConflict())
+                .andExpect(jsonPath("$.code").value("PATIENT_BUSY"));
+        mockMvc.perform(post("/api/portal/appointments").with(as(patient)).contentType(MediaType.APPLICATION_JSON)
+                        .content(withOther.formatted(other.id(), other.consulta(), "2026-03-12T10:30:00")))
+                .andExpect(status().isCreated());
     }
 
     /** One ahead for a patient who registered on the web, until reception sees their document (D-91). */
@@ -248,73 +239,18 @@ class WebBookingIT {
     }
 
     @Test
-    void aPatientBooksOnTheirScreenAndReceptionSeesItMarked() throws Exception {
-        Patient patient = accounts.withAccount();
-        MockHttpSession session = (MockHttpSession) mockMvc.perform(post("/portal/login").with(csrf())
-                        .param("documentType", "DNI").param("documentNumber", patient.dni())
-                        .param("password", PASSWORD))
-                .andReturn().getRequest().getSession(false);
-
-        mockMvc.perform(get("/portal/booking").session(session))
-                .andExpect(status().isOk())
-                .andExpect(content().string(allOf(containsString("Dra. Arias — consulta"),
-                        not(containsString("Dra. Arias — ecografia")), containsString("hasta el 9/04/2026"),
-                        containsString(">Sacar turno<"))));
-        mockMvc.perform(get("/portal/booking").session(session).param("reason", arias.consulta().toString())
-                        .param("date", "2026-03-17"))
-                .andExpect(content().string(allOf(containsString("Dra. Arias, martes 17/03/2026"),
-                        containsString("value=\"2026-03-17T10:00\""))));
-        mockMvc.perform(get("/portal/booking").session(session).param("reason", arias.consulta().toString())
-                        .param("date", "2026-03-10"))
-                .andExpect(content().string(containsString("Ese día no se reserva por la web")));
-
-        mockMvc.perform(post("/portal/booking").session(session).with(csrf())
-                        .param("reason", arias.consulta().toString()).param("startsAt", "2026-03-17T10:00"))
-                .andExpect(redirectedUrl("/portal/appointments"))
-                .andExpect(flash().attribute("message", "Turno reservado: martes 17/03/2026 10:00 con Dra. Arias. "
-                        + "Te mandamos la confirmación por email."));
-        mockMvc.perform(post("/portal/booking").session(session).with(csrf())
-                        .param("reason", arias.consulta().toString()).param("startsAt", "2026-03-17T10:00"))
-                .andExpect(redirectedUrl("/portal/booking?reason=" + arias.consulta() + "&date=2026-03-17"))
-                .andExpect(flash().attribute("error", "Ese horario ya no está libre: elegí otro."));
-        mockMvc.perform(post("/portal/booking").session(session).with(csrf())
-                        .param("reason", arias.ecografia().toString()).param("startsAt", "2026-03-18T10:00"))
-                .andExpect(flash().attribute("error", containsString("no se reserva por la web")));
-
-        mockMvc.perform(post("/api/patient-accounts/" + accounts.accountOf(patient) + "/email-change").with(RECEPTION)
-                        .contentType(MediaType.APPLICATION_JSON).content("{\"email\": \"falla-" + address() + "\"}"))
+    void receptionOpensAReasonToTheWebAndClosesIt() throws Exception {
+        mockMvc.perform(put("/api/practitioners/" + arias.id() + "/reasons/" + arias.ecografia()).with(RECEPTION)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"name\": \"ecografia\", \"durationMinutes\": 45, \"webBookable\": true}"))
                 .andExpect(status().isOk());
-        mockMvc.perform(post("/portal/booking").session(session).with(csrf())
-                        .param("reason", arias.consulta().toString()).param("startsAt", "2026-03-18T10:00"))
-                .andExpect(flash().attribute("message", containsString(
-                        "No pudimos mandarte la confirmación por email, pero el turno quedó reservado.")));
-        book(patient, arias.consulta(), "2026-03-19T10:00:00").andExpect(status().isCreated());
-        mockMvc.perform(post("/portal/booking").session(session).with(csrf())
-                        .param("reason", arias.consulta().toString()).param("startsAt", "2026-03-20T10:00"))
-                .andExpect(flash().attribute("error", containsString("Ya tenés 3 turnos por delante")));
-
-        mockMvc.perform(get("/agenda").with(RECEPTION).param("practitionerId", arias.id().toString())
-                        .param("date", "2026-03-17"))
-                .andExpect(content().string(containsString("· Web")));
-        mockMvc.perform(get("/agenda/patients/" + patient.id()).with(RECEPTION))
-                .andExpect(content().string(containsString("· Web")));
-    }
-
-    @Test
-    void receptionOpensAReasonToTheWebOnThePractitionersScreen() throws Exception {
-        mockMvc.perform(post("/practitioners/" + arias.id() + "/reasons/" + arias.ecografia()).with(RECEPTION)
-                        .with(csrf()).param("name", "ecografia").param("durationMinutes", "45")
-                        .param("webBookable", "true"))
-                .andExpect(flash().attribute("message", "Razón guardada."));
-        mockMvc.perform(get("/practitioners/" + arias.id()).with(RECEPTION))
-                .andExpect(result -> assertThat(result.getResponse().getContentAsString())
-                        .containsPattern("name=\"webBookable\" value=\"true\"\\s+checked=\"checked\""));
         mockMvc.perform(get("/api/practitioners/" + arias.id()).with(RECEPTION))
                 .andExpect(jsonPath("$.reasons[?(@.name == 'ecografia')].webBookable").value(hasItem(true)));
 
-        mockMvc.perform(post("/practitioners/" + arias.id() + "/reasons/" + arias.ecografia()).with(RECEPTION)
-                        .with(csrf()).param("name", "ecografia").param("durationMinutes", "45"))
-                .andExpect(flash().attribute("message", "Razón guardada."));
+        mockMvc.perform(put("/api/practitioners/" + arias.id() + "/reasons/" + arias.ecografia()).with(RECEPTION)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"name\": \"ecografia\", \"durationMinutes\": 45}"))
+                .andExpect(status().isOk());
         mockMvc.perform(get("/api/practitioners/" + arias.id()).with(RECEPTION))
                 .andExpect(jsonPath("$.reasons[?(@.name == 'ecografia')].webBookable").value(hasItem(false)));
 

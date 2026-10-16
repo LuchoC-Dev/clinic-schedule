@@ -947,7 +947,7 @@ moving an appointment to another practitioner or reason; reception uploading or 
 
 ### What changes
 
-Until now every screen has been a Thymeleaf page, kept thin and meant to be thrown away (D-02). This
+Before it every screen was a Thymeleaf page, kept thin and meant to be thrown away (D-02). This
 phase replaces them with the **two single-page applications** the REST API was kept for since v1: one
 for the staff — reception, practitioners, admins and the waiting room's screen — and one for patients.
 **It closes v2**: what comes after it is built as features on v2, each on its own branch and pull request.
@@ -962,7 +962,7 @@ It says nothing else of them.
 - **React with TypeScript**, built with Vite, and a **component library** for tables, forms and dialogs.
 - **In this repository**, under `frontend/`, and **served by Spring from the same origin**: the Maven build
   compiles them, and the result is one artifact, as today. No CORS.
-- **The login is a session with a cookie**, protected against CSRF, as the screens' is today: the
+- **The login is a session with a cookie**, protected against CSRF, as the Thymeleaf screens' was: the
   password is never kept in the browser, a deactivated account loses its session at once (D-79), and the
   patients' failed logins are still counted (D-86). Basic authentication on the API stops being how a
   browser logs in.

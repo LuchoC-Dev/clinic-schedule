@@ -252,6 +252,5 @@ class FamilyGroupIT {
         mockMvc.perform(get("/api/family-groups").with(PRACTITIONER)).andExpect(status().isForbidden());
         mockMvc.perform(get("/api/family-groups").with(user("admin").roles("ADMIN")))
                 .andExpect(status().isForbidden());
-        mockMvc.perform(get("/family-groups").with(PRACTITIONER)).andExpect(status().isForbidden());
     }
 }

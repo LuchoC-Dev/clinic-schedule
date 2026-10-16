@@ -15,7 +15,6 @@ import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.access.intercept.AuthorizationFilter;
-import org.springframework.security.web.authentication.AuthenticationSuccessHandler;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
 import org.springframework.security.web.context.DelegatingSecurityContextRepository;
 import org.springframework.security.web.context.HttpSessionSecurityContextRepository;
@@ -27,31 +26,27 @@ import org.springframework.security.web.util.matcher.RequestMatcher;
 import com.clinic.schedule.portal.api.PatientLoginWriter;
 import com.clinic.schedule.security.presentation.TemporaryPasswordFilter;
 import com.clinic.schedule.security.presentation.http.ApiSecurityErrorHandler;
+import com.clinic.schedule.security.presentation.http.DocumentLoginFilter;
 import com.clinic.schedule.security.presentation.http.SessionHandlers;
-import com.clinic.schedule.security.presentation.screen.DocumentLoginFilter;
-import com.clinic.schedule.security.presentation.screen.ScreenAccessDeniedHandler;
-import com.clinic.schedule.security.service.AppUserDetails;
 import com.clinic.schedule.security.service.AppUserDetailsService;
 import com.clinic.schedule.security.service.PatientAccountDetailsService;
 import com.clinic.schedule.security.service.PatientAuthenticationProvider;
 import com.clinic.schedule.user.api.Role;
 
 /**
- * Two filter chains, one per kind of client (D-02, D-34):
+ * Three filter chains (D-34, D-114):
  *
  * <ul>
- *   <li>{@code /api/**}: the contract of the single-page applications, which log in with the screens' session,
- *       answered in JSON, and send its CSRF token with every write (D-97); any other client authenticates every
- *       request with Basic authentication, with no session and no token.</li>
- *   <li>everything else: a login form, a session, and CSRF protection for the screens, and the applications'
- *       own files, open to anyone, since what they show is asked of the API.</li>
+ *   <li>{@code /api/portal/**}: the patients' API, which their application logs in to with their document, with a
+ *       session, answered in JSON, and sends its CSRF token with every write (D-80, D-97);</li>
+ *   <li>{@code /api/**}: the staff's API, logged in to the same way by the staff's application with a username;</li>
+ *   <li>everything else: the two applications' files and their addresses — the staff's at {@code /}, the
+ *       patients' at {@code /portal/} —, open to anyone, since what they show is asked of the API.</li>
  * </ul>
  *
- * <p>The patients have the same two of their own, ahead of the staff's, under {@code /api/portal/**} and
- * {@code /portal/**} (D-80): they log in with their document, on a login of their own, and reach nothing of
- * the staff's, as the staff reach nothing of theirs. Each chain names whom it looks up, since there are two
- * kinds of people to log in. A patient's session keeps its login under a key of its own, so one browser
- * logged in on both sides keeps both.
+ * <p>The patients reach nothing of the staff's, as the staff reach nothing of theirs (D-80). Each API chain names
+ * whom it looks up, since there are two kinds of people to log in. A patient's session keeps its login under a key
+ * of its own, so one browser logged in on both sides keeps both.
  *
  * <p>What each role may reach is decided here, by route: a practitioner reads the agenda and
  * works with clinical records, which are theirs alone (D-51); an admin administers the users and
@@ -59,8 +54,8 @@ import com.clinic.schedule.user.api.Role;
  * without their patients, and the practitioners' list to name them, and reaches nothing else (D-68, D-71, D-72, D-76,
  * D-87, D-107); reception does
  * everything else, the cash desk included, which a practitioner never reaches. Every user changes their own password, and one whose password is
- * temporary does nothing else until they do (D-69). The waiting room's user sees the waiting-room
- * screen and its stream, and nothing else (D-70). A clinical route refused to a role is said, to be
+ * temporary does nothing else until they do (D-69). The waiting room's user reads the waiting room and
+ * the queues' stream, and nothing else (D-70, D-109). A clinical route refused to a role is said, to be
  * recorded (D-72).
  * <em>Whose</em> agenda or record a practitioner reads is not a route question, so it is
  * decided by the use case, which asks the security module who is asking (D-04, D-49).
@@ -73,7 +68,7 @@ class SecurityConfiguration {
     private static final String PRACTITIONER = Role.PRACTITIONER.name();
     private static final String ADMIN = Role.ADMIN.name();
     private static final String WAITING_ROOM = Role.WAITING_ROOM.name();
-    /** Where a session keeps the staff's login: Spring Security's own key, which the screens use too. */
+    /** Where a session keeps the staff's login: Spring Security's own key. */
     private static final String STAFF_LOGIN = HttpSessionSecurityContextRepository.SPRING_SECURITY_CONTEXT_KEY;
     /** Where a session keeps a patient's login, apart from the staff's, so one browser keeps both (D-80). */
     private static final String PORTAL_LOGIN = "PORTAL_SECURITY_CONTEXT";
@@ -85,10 +80,12 @@ class SecurityConfiguration {
      * with nobody logged in (D-83), as asking for a new password and choosing it (D-86), and registering on the web
      * and confirming it (D-91): the link is what says whose. Patients log in through {@link PatientAuthenticationProvider}, which counts their failed logins.
      *
-     * <p>The patients' application logs in here, with a session, at {@code /api/portal/session} (D-97): the
-     * login of the screens, answered in JSON, its session kept under the screens' key and registered in their
-     * registry, so either side's login is the other's and a deactivated account loses it at once (D-79, D-80).
-     * Basic authentication still answers any other client, on every request and with no session.
+     * <p>The patients' application logs in here, with a session, at {@code /api/portal/session} (D-97): a form
+     * login answered in JSON, the document joined by {@link DocumentLoginFilter}, its session registered in the
+     * patients' registry, so a deactivated account loses it at once (D-79). A registry of their own, apart from the
+     * staff's: a registry keeps one login for each session, and a browser where someone of the staff logged in
+     * after the patient would otherwise hide the patient's. Basic authentication still answers any other client, on
+     * every request and with no session.
      */
     @Bean
     @Order(1)
@@ -122,46 +119,13 @@ class SecurityConfiguration {
     }
 
     /**
-     * The login form asks for the document as a type and a number, which {@link DocumentLoginFilter} joins.
-     * Registered sessions, as the staff's, so a deactivated account loses its own at once (D-79) — in a
-     * registry of their own: a registry keeps one login for each session, and a browser where someone of the
-     * staff logged in after the patient would otherwise hide the patient's.
+     * The staff's application logs in here, with a session, at {@code /api/session} (D-97): a form login answered
+     * in JSON, every session registered, with no limit to how many a user has, so a deactivated user loses theirs
+     * at once (D-68). Basic authentication still answers any other client, on every request and with no session
+     * (D-34).
      */
     @Bean
     @Order(2)
-    SecurityFilterChain portalScreenChain(HttpSecurity http,
-            @Qualifier("patientSessionRegistry") SessionRegistry sessions, ScreenAccessDeniedHandler denied,
-            PatientAccountDetailsService patients, PasswordEncoder passwordEncoder, PatientLoginWriter attempts)
-            throws Exception {
-        return http
-                .securityMatcher("/portal/**")
-                .authenticationProvider(new PatientAuthenticationProvider(patients, passwordEncoder, attempts))
-                .securityContext(context -> context.securityContextRepository(sessionKeptUnder(PORTAL_LOGIN)))
-                .authorizeHttpRequests(routes -> routes
-                        .requestMatchers("/portal/app", "/portal/app/**").permitAll()
-                        // The emails' addresses, sent on to the patients' application (D-110, D-111).
-                        .requestMatchers("/portal/login", "/portal/activation", "/portal/cancel",
-                                "/portal/appointments", "/portal/password-recovery", "/portal/password-reset", "/portal/register",
-                                "/portal/register/sent", "/portal/register/confirm").permitAll()
-                        .anyRequest().hasRole(PATIENT))
-                .addFilterBefore(new DocumentLoginFilter("/portal/login"), UsernamePasswordAuthenticationFilter.class)
-                .formLogin(login -> login.loginPage("/portal/login").defaultSuccessUrl("/portal/appointments", true)
-                        .permitAll())
-                .sessionManagement(session -> session.maximumSessions(-1).sessionRegistry(sessions)
-                        .expiredUrl("/portal/login?expired"))
-                .logout(logout -> logout.logoutUrl("/portal/logout").logoutSuccessUrl("/portal/login?logout"))
-                .exceptionHandling(handling -> handling.accessDeniedHandler(denied))
-                .build();
-    }
-
-    /**
-     * The staff's application logs in here, with a session, at {@code /api/session} (D-97): the login of the
-     * screens, answered in JSON, its session the screens' own and registered in their registry, so either
-     * side's login is the other's and a deactivated user loses it at once (D-68). Basic authentication still
-     * answers any other client, on every request and with no session (D-34).
-     */
-    @Bean
-    @Order(3)
     SecurityFilterChain apiChain(HttpSecurity http, ApiSecurityErrorHandler errors, SessionHandlers handlers,
             @Qualifier("sessionRegistry") SessionRegistry sessions, AppUserDetailsService users) throws Exception {
         return http
@@ -182,10 +146,13 @@ class SecurityConfiguration {
                         .requestMatchers("/api/users/**", "/api/record-readings", "/api/record-refusals",
                                 "/api/cancellation-log", "/api/cash-desk-log").hasRole(ADMIN)
                         .requestMatchers(HttpMethod.POST, "/api/password").authenticated()
-                        // The waiting room's screen, as on the screens (D-70, D-109).
+                        // The waiting room's screen (D-70, D-109).
                         .requestMatchers(HttpMethod.GET, "/api/waiting-room").hasAnyRole(RECEPTION, WAITING_ROOM)
+                        // The queues' stream, which the arrivals, the practitioner's queue and the waiting room follow (D-66).
+                        .requestMatchers(HttpMethod.GET, "/api/queue-events")
+                                .hasAnyRole(RECEPTION, PRACTITIONER, WAITING_ROOM)
                         .anyRequest().hasRole(RECEPTION))
-                .addFilterAfter(TemporaryPasswordFilter.forApi(errors), AuthorizationFilter.class)
+                .addFilterAfter(new TemporaryPasswordFilter(errors), AuthorizationFilter.class)
                 .formLogin(login -> login.loginProcessingUrl("/api/session")
                         .successHandler(handlers.staffLoggedIn()).failureHandler(handlers.staffLoginFailed()))
                 .sessionManagement(session -> session.maximumSessions(-1).sessionRegistry(sessions)
@@ -196,54 +163,16 @@ class SecurityConfiguration {
                 .build();
     }
 
-    @Bean
-    @Order(4)
-    SecurityFilterChain screenChain(HttpSecurity http, @Qualifier("sessionRegistry") SessionRegistry sessions,
-            ScreenAccessDeniedHandler denied, AppUserDetailsService users) throws Exception {
-        return http
-                .userDetailsService(users)
-                .authorizeHttpRequests(routes -> routes
-                        .requestMatchers("/login", "/error", "/app", "/app/**").permitAll()
-                        .requestMatchers(HttpMethod.GET, "/queue-events").hasAnyRole(RECEPTION, PRACTITIONER, WAITING_ROOM)
-                        .requestMatchers(HttpMethod.GET, "/waiting-room").hasAnyRole(RECEPTION, WAITING_ROOM)
-                        .requestMatchers(HttpMethod.GET, "/", "/agenda").hasAnyRole(RECEPTION, PRACTITIONER)
-                        .requestMatchers("/consultations/**", "/checks/**", "/orders/**", "/attachments/**",
-                                "/clinical-records/**", "/my-queue/**", "/record-copies/**").hasRole(PRACTITIONER)
-                        .requestMatchers("/users/**", "/record-readings", "/record-refusals", "/cancellation-log",
-                                "/cash-desk-log").hasRole(ADMIN)
-                        .requestMatchers("/password").authenticated()
-                        .anyRequest().hasRole(RECEPTION))
-                .addFilterAfter(TemporaryPasswordFilter.forScreens(), AuthorizationFilter.class)
-                .formLogin(login -> login.loginPage("/login").successHandler(landing()).permitAll())
-                // Every session is registered, with no limit to how many a user has, so the sessions
-                // of a deactivated user can be ended at once (D-68).
-                .sessionManagement(session -> session.maximumSessions(-1).sessionRegistry(sessions)
-                        .expiredUrl("/login?expired"))
-                .logout(logout -> logout.logoutSuccessUrl("/login?logout"))
-                .exceptionHandling(handling -> handling.accessDeniedHandler(denied))
-                .build();
-    }
-
     /**
-     * Each role lands on its own screen: the admin on the users, the waiting room on its screen,
-     * everyone else on the agenda. A user whose password is temporary lands on changing it.
-     *
-     * <p>The waiting room's session does not run out while nobody touches it: nobody does, it is a
-     * screen on the wall, and an open stream is not activity for the session (D-70).
+     * The two applications: their files and every address of theirs, open to anyone, since what they show is asked
+     * of the API, which decides who may (D-97, D-114). Spring Security still answers them with {@code no-store}.
      */
-    private static AuthenticationSuccessHandler landing() {
-        String admin = "ROLE_" + ADMIN; // the prefix hasRole adds
-        String waitingRoom = "ROLE_" + WAITING_ROOM;
-        return (request, response, authentication) -> {
-            var authorities = authentication.getAuthorities().stream().map(a -> a.getAuthority()).toList();
-            if (authorities.contains(waitingRoom)) {
-                request.getSession().setMaxInactiveInterval(-1); // never, for the servlet container
-            }
-            String screen = authorities.contains(AppUserDetails.TEMPORARY_PASSWORD) ? "/password?required"
-                    : authorities.contains(admin) ? "/users"
-                    : authorities.contains(waitingRoom) ? "/waiting-room" : "/agenda";
-            response.sendRedirect(request.getContextPath() + screen);
-        };
+    @Bean
+    @Order(3)
+    SecurityFilterChain applicationsChain(HttpSecurity http) throws Exception {
+        return http
+                .authorizeHttpRequests(routes -> routes.anyRequest().permitAll())
+                .build();
     }
 
     /**

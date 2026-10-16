@@ -10,35 +10,36 @@ import org.springframework.web.servlet.config.annotation.WebMvcConfigurer;
 import org.springframework.web.servlet.resource.PathResourceResolver;
 
 /**
- * Serves the two single-page applications Maven builds into {@code static/} (D-97): the staff's under
- * {@code /app/} and the patients' under {@code /portal/app/}, while the Thymeleaf screens keep their paths (D-02).
+ * Serves the two single-page applications Maven builds into {@code static/} (D-97, D-114): the staff's at {@code /},
+ * the patients' at {@code /portal/}.
  *
- * <p>An address of the application's own — {@code /app/agenda}, typed, reloaded or opened from a link — is
- * answered with its {@code index.html}, and the application's router shows it. A file that is not there, one
- * with an extension, is still a 404.
+ * <p>An address of the application's own — {@code /agenda}, or {@code /portal/activation?token=…} from an email —,
+ * typed, reloaded or opened from a link, is answered with its {@code index.html}, and the application's router shows
+ * it. A file that is not there, one with an extension, is still a 404, and so is anything under {@code /api/} that no
+ * controller answers: the API's addresses are never a page.
  */
 @Configuration
 class WebApplicationConfiguration implements WebMvcConfigurer {
 
-    private static final String[] APPLICATIONS = {"/app", "/portal/app"};
-
     @Override
     public void addResourceHandlers(ResourceHandlerRegistry registry) {
-        for (String application : APPLICATIONS) {
-            registry.addResourceHandler(application + "/**")
-                    .addResourceLocations("classpath:/static" + application + "/")
-                    .resourceChain(true)
-                    .addResolver(new ApplicationRouteResolver());
-        }
+        // The more specific pattern wins, so the patients' addresses never reach the staff's application.
+        registry.addResourceHandler("/portal/**")
+                .addResourceLocations("classpath:/static/portal/")
+                .resourceChain(true)
+                .addResolver(new ApplicationRouteResolver());
+        registry.addResourceHandler("/**")
+                .addResourceLocations("classpath:/static/staff/")
+                .resourceChain(true)
+                .addResolver(new ApplicationRouteResolver());
     }
 
     @Override
     public void addViewControllers(ViewControllerRegistry registry) {
-        for (String application : APPLICATIONS) {
-            registry.addRedirectViewController(application, application + "/");
-            // The resources' handler answers nothing for its own root: the page is asked for by name.
-            registry.addViewController(application + "/").setViewName("forward:" + application + "/index.html");
-        }
+        registry.addRedirectViewController("/portal", "/portal/");
+        // The resources' handler answers nothing for its own root: the page is asked for by name.
+        registry.addViewController("/").setViewName("forward:/index.html");
+        registry.addViewController("/portal/").setViewName("forward:/portal/index.html");
     }
 
     /** The file asked for when it is there; otherwise, for a route of the application, its index. */
@@ -51,7 +52,8 @@ class WebApplicationConfiguration implements WebMvcConfigurer {
                 return file;
             }
             String last = resourcePath.substring(resourcePath.lastIndexOf('/') + 1);
-            return last.contains(".") ? null : super.getResource("index.html", location);
+            return last.contains(".") || resourcePath.startsWith("api/") ? null
+                    : super.getResource("index.html", location);
         }
     }
 }

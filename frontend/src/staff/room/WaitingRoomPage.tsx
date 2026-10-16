@@ -87,7 +87,7 @@ function useRoomStream(reload: () => void) {
     if (typeof EventSource === 'undefined') {
       return undefined;
     }
-    const stream = new EventSource('/queue-events');
+    const stream = new EventSource('/api/queue-events');
     stream.addEventListener('queue', () => {
       void queries.invalidateQueries({ queryKey: ['waiting-room'] });
     });

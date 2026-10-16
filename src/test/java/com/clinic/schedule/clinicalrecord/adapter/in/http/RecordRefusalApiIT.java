@@ -144,13 +144,12 @@ class RecordRefusalApiIT {
         mockMvc.perform(get("/api/clinical-records/" + patient).with(reception))
                 .andExpect(status().isForbidden())
                 .andExpect(jsonPath("$.status").value(403));
-        mockMvc.perform(get("/clinical-records/" + patient).with(reception)).andExpect(status().isForbidden());
 
         List<Map<String, Object>> refusals = jdbc.queryForList(
                 "select attempt, route, practitioner_id from record_refusal where refused_by = 'recepcion' and patient_id = ?",
                 patient);
-        assertThat(refusals).extracting(refusal -> refusal.get("route")).containsExactlyInAnyOrder(
-                "GET /api/clinical-records/" + patient, "GET /clinical-records/" + patient);
+        assertThat(refusals).extracting(refusal -> refusal.get("route")).containsExactly(
+                "GET /api/clinical-records/" + patient);
         assertThat(refusals).extracting(refusal -> refusal.get("attempt")).containsOnly("ROUTE");
         assertThat(refusals).extracting(refusal -> refusal.get("practitioner_id")).containsOnly((Object) null);
     }
@@ -165,13 +164,16 @@ class RecordRefusalApiIT {
                 before)).hasSize(1).first().extracting(row -> row.get("patient_id")).isNull();
     }
 
-    /** Only the clinical routes, only who is logged in, and not a form refused for its missing token. */
+    /** Only the clinical routes, only who is logged in, and not a browser's write refused for its missing token. */
     @Test
     void whatIsNotAClinicalRouteRefusedToSomeoneIsNotRecorded() throws Exception {
         String queue = "/api/my-queue";
         mockMvc.perform(get(queue).with(user(userDetails.loadUserByUsername("recepcion")))).andExpect(status().isForbidden());
         mockMvc.perform(get("/api/clinical-records/" + patient).with(anonymous())).andExpect(status().isUnauthorized());
-        mockMvc.perform(post("/consultations").with(asAnalyst).param("patientId", patient.toString()))
+        mockMvc.perform(post("/api/consultations").with(asAnalyst).with(request -> {
+                    request.setRequestedSessionId("a-browser-s-session"); // a session's cookie, which asks for the token
+                    return request;
+                }).contentType(MediaType.APPLICATION_JSON).content("{\"patientId\": \"" + patient + "\"}"))
                 .andExpect(status().isForbidden());
 
         assertThat(jdbc.queryForObject("select count(*) from record_refusal where route like ?", Integer.class,

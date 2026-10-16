@@ -10,7 +10,6 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.header;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
-import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.redirectedUrl;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 import java.time.LocalDateTime;
@@ -238,11 +237,10 @@ class ApplicationSessionIT {
                 .andReturn().getRequest().getSession(false)).isNull();
     }
 
-    /** One session for both while the screens move over: logging in on one is logging in on the other. */
     @Test
-    void theApplicationsSessionIsTheScreensOneAndLoggingOutEndsBoth() throws Exception {
+    void loggingOutNeedsTheTokenAndEndsTheSession() throws Exception {
         Browser browser = staff("recepcion", "recepcion123");
-        mockMvc.perform(get("/agenda").with(browser)).andExpect(status().isOk());
+        mockMvc.perform(get("/api/agenda").with(browser)).andExpect(status().isOk());
 
         mockMvc.perform(post("/api/session/logout").with(browser)).andExpect(status().isForbidden());
         mockMvc.perform(post("/api/session/logout").with(browser).header(CSRF, browser.token()))
@@ -285,7 +283,7 @@ class ApplicationSessionIT {
         mockMvc.perform(get("/api/agenda").with(browser)).andExpect(status().isForbidden());
     }
 
-    /** The screen on the wall is never touched, as on the screens (D-70). */
+    /** The screen on the wall is never touched (D-70). */
     @Test
     void theWaitingRoomsSessionDoesNotRunOut() throws Exception {
         Browser browser = staff("sala", "sala123");
@@ -310,7 +308,6 @@ class ApplicationSessionIT {
         mockMvc.perform(get("/api/portal/appointments").with(browser))
                 .andExpect(status().isOk())
                 .andExpect(header().string("Cache-Control", containsString("no-store")));
-        mockMvc.perform(get("/portal/booking").with(browser)).andExpect(status().isOk());
         mockMvc.perform(get("/api/session").with(browser)).andExpect(jsonPath("$.user").doesNotExist());
         mockMvc.perform(get("/api/agenda").with(browser)).andExpect(status().isUnauthorized());
     }
@@ -356,7 +353,7 @@ class ApplicationSessionIT {
                 .andExpect(status().isNoContent());
 
         assertThat(browser.session().isInvalid()).isTrue();
-        mockMvc.perform(get("/portal/booking").session(new MockHttpSession()))
-                .andExpect(redirectedUrl("http://localhost/portal/login"));
+        mockMvc.perform(get("/api/portal/appointments").session(new MockHttpSession()))
+                .andExpect(status().isUnauthorized());
     }
 }

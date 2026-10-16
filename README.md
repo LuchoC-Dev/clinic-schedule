@@ -44,13 +44,12 @@ leaves them as they were built last. To work on one of them, with the applicatio
 
 ```powershell
 cd frontend
-npm run dev:staff           # the staff's application, at http://localhost:5173/app/
-npm run dev:patients        # the patients', at http://localhost:5174/portal/app/
+npm run dev:staff           # the staff's application, at http://localhost:5173/
+npm run dev:patients        # the patients', at http://localhost:5174/portal/
 npm test                    # their tests
 ```
 
-Vite serves the application and sends everything else — the API, the Thymeleaf screens — to port 8080, so the
-session is one.
+Vite serves the application and sends the API to port 8080, so the session is the application's.
 
 Flyway creates the schema on the first start, and the data stays between restarts;
 `docker compose down -v` wipes it. It starts with development data: two practitioners with their
@@ -71,25 +70,10 @@ account in use: she logs in at http://localhost:8080/portal/login as `DNI 273334
 
 ## Using it
 
-**The web applications** — the screens are moving to two single-page applications (D-97): the staff's at
-http://localhost:8080/app/, the patients' at http://localhost:8080/portal/app/. For now, the staff's has reception's
-agenda — a day or its week, of everyone or one practitioner, with the arrival charged as it comes in, a warning of
-lateness, moving and cancelling —, booking at the free times with a patient found or a new one, the patients, with
-their details, consent, histories, appointments and web account, the family groups, the arrivals, shown as the
-queues change, the day's cash desk, the cancellations and the reminders; a very large amount is confirmed a second time. A practitioner
-has their queue beside the record of whom they called, with the new consultation, their agenda, a patient's clinical
-record, read and written, the checks waiting for a result, the orders they issued, and the copies of a record to authenticate. Reception
-also sets up the practitioners — reasons, week and time off — and the queues, and hands over the copies to collect; the admins
-have the users and their logs; and the waiting room's screen, full screen, names whom each practitioner called and who
-waits, in order (D-109); every role changes its own password there too. The patients' has its login, with the document,
-activating the account, a new password, registering and cancelling from an email's link — the emails' addresses under
-`/portal/` open it (D-110) —, the patient's appointments and their family's, booking and moving them (D-111), the family
-groups, their data and reminders, and the copies of their record (D-112), all made for a phone. Both keep nothing in the browser, and say
-every refusal in Spanish.
-
-**Screens** — open http://localhost:8080 and log in. Reception gets the agenda — a day or a
-week, of one practitioner or everyone — with the day's operations as buttons (*Llegó*,
-*Avisó demora*, *Mover*, *Cancelar*), a booking screen that suggests the free times and registers
+**The staff's application** — open http://localhost:8080 and log in; it is made for a desktop, and two single-page
+applications are all the screens there are (D-97, D-114). Reception gets the agenda — a day or a
+week, of one practitioner or everyone — with the day's operations (*Llegó*,
+*Avisó demora*, *Mover*, *Cancelar*), the arrival charged as it comes in, a very large amount confirmed a second time, a booking screen that suggests the free times and registers
 and books a new patient at once, with their phone and email, the cancellations — who cancelled,
 when, how and who asked —, what happened to each reminder, and whom to call, a patients
 screen — where a patient who gives no name is registered under an alias, and each patient's
@@ -102,20 +86,23 @@ their health insurance, with its token and copay, an emergency's left pending �
 its charges and refunds — some or all of a charge given back, by its means, saying why, and a visit given
 back whole charged again —, their totals by means and by who recorded them, with what should be in the
 drawer, the emergencies still to charge or cover, and the visits covered that day, where a coverage marked
-by mistake is withdrawn, and the
-waiting-room screen, which names nobody. The queue screens show each change as
-it happens. A practitioner gets their own agenda,
-read-only, with today's patients linked to their clinical record and *Empezar consulta* once
-they arrived: a form beside the record, sent once and never changed, and completed afterwards
-with addenda. Under *Mi cola* they call the next patient of their queue and start their consultation. Under *Resultados pendientes* they find the checks waiting for a result, and ask
+by mistake is withdrawn, and the waiting room's screen, full screen, opened in a tab of its own, which names whom each
+practitioner called and who waits, in order (D-109). The queue screens show each change as
+it happens. A practitioner lands on *Mi cola*, their queue beside the record of whom they called: they call the next
+patient and write the *Nueva consulta*, sent once and never changed, and completed afterwards with addenda. Under
+*Mi agenda* they read their own agenda, today's patients linked to their clinical record. Under *Estudios pendientes*
+they find the checks waiting for a result, and ask
 for access to a record to report one; under *Mis órdenes*, they follow up the orders they issued. On the record, under
 *Archivos de la historia*, they upload what is not in the application — a record kept on paper, a report never
 uploaded. Under *Copias pedidas* they find the copies of records the patients asked for, with the time left of the 48
 hours: they review one, upload what was missing and put it together again, and authenticate it — or ask for access to
 the record first —, and check a copy against the application by its code. Reception hands the copies on paper over,
-sealed, under *Copias para retirar*. The screens are in Spanish, for the staff.
+sealed, under *Copias para retirar*. The admins have the users and the logs: who read which record and who was
+refused one, the cancellations and the day's cash desk. Every role changes its own password under *Contraseña*. The
+screens are in Spanish, for the staff, keep nothing in the browser, and say every refusal in Spanish.
 
-**The patients' screens** — at http://localhost:8080/portal/login, apart from the staff's. A patient whom
+**The patients' application** — at http://localhost:8080/portal/, apart from the staff's, made for a phone; the
+addresses the emails carry, sent ones too, are its own (D-110, D-114). A patient whom
 reception opened a web account for — from *Cuenta web* on the patient's screen, for a verified patient of
 13 or older — gets a link by email to activate it and choose a password; an adult of 18 or older registers
 themselves from "Registrate" on the login, with their children under 13 if they want, and confirms it from a link to
@@ -135,7 +122,7 @@ historia clínica* they ask for a copy of their whole clinical record — from 1
 child under 13 once reception proved the relation —, as a PDF to download once a practitioner authenticates it, or on
 paper to collect at reception. The emails go to Mailpit in development, at http://localhost:8025.
 
-**API** — the web applications log in with a session, as the screens do, and send its CSRF token as `X-CSRF-TOKEN`
+**API** — the web applications log in with a session and send its CSRF token as `X-CSRF-TOKEN`
 with every write; any other client uses basic authentication on every request: the staff with their username, a
 patient with their document as its type and number, such as `DNI 27333444`. Errors share one body:
 `{timestamp, status, error, message, code?, fields?}`, `code` naming a refusal for a screen to say it in its words,
@@ -265,8 +252,8 @@ its copay, if any, is a charge as any other.
 
 ```
 frontend/                     the web applications, React with TypeScript, built by Vite (D-97)
-├── src/staff/                the staff's, for a desktop, at /app/
-├── src/patients/             the patients', phone first, at /portal/app/
+├── src/staff/                the staff's, for a desktop, at /
+├── src/patients/             the patients', phone first, at /portal/
 └── src/shared/               the theme, the API client, the words for a refusal, the practice's dates
 
 src/main/java/com/clinic/schedule/
@@ -280,14 +267,13 @@ src/main/java/com/clinic/schedule/
 │   └── adapter/
 │       ├── in/               driving: whoever calls the use cases
 │       │   ├── http/         the REST API
-│       │   ├── screen/       the Thymeleaf screens
 │       │   └── scheduling/   the job that cancels overdue appointments
 │       └── out/              driven: the ports' implementations
 │           ├── persistence/  JPA
 │           └── external/     the other modules, through their api/
 ├── cashdesk/                 hexagonal: each visit's charges and refunds, and the day's cash desk
 ├── clinicalrecord/           hexagonal too: consultations, checks, orders, attachments, and who may read a record
-├── patient/                  layered: presentation/ (http, screen), service/, entity/,
+├── patient/                  layered: presentation/ (http), service/, entity/,
 │                             persistence/ — and api/, its only door for other modules
 ├── portal/                   hexagonal: the patients' side — their web accounts and what they read with them
 ├── practitioner/             layered alike, with the week's rules in plain classes

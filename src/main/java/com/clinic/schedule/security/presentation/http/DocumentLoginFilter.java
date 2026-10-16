@@ -1,4 +1,4 @@
-package com.clinic.schedule.security.presentation.screen;
+package com.clinic.schedule.security.presentation.http;
 
 import java.io.IOException;
 
@@ -11,10 +11,9 @@ import jakarta.servlet.http.HttpServletRequestWrapper;
 import jakarta.servlet.http.HttpServletResponse;
 
 /**
- * The patients' login form asks for the document as a type, chosen from a list, and a number (D-80). Spring
+ * The patients' login sends the document as a type, chosen from a list, and a number (D-80, D-97). Spring
  * Security's form login reads a single username, so this joins the two the way the patient module reads a
- * document — "DNI 30111222" — before the login reads it, on the login's own request alone. Without
- * JavaScript, no screen could join them any other way.
+ * document — "DNI 30111222" — before the login reads it, on the login's own request alone.
  */
 public class DocumentLoginFilter extends OncePerRequestFilter {
 

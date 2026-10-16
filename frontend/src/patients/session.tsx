@@ -2,7 +2,7 @@ import { type Dispatch, type SetStateAction, createContext } from 'react';
 
 import { type ApiClient, createApiClient } from '../shared/api';
 
-/** Where this application lives: `/portal/app/` while the screens move over, `/portal/` once they have (D-97). */
+/** Where this application lives: `/portal/` (D-114). */
 export const BASE = import.meta.env.BASE_URL;
 
 /** Reloads the application at its login, so nothing read stays in memory. */

@@ -28,7 +28,7 @@ import com.fasterxml.jackson.databind.exc.MismatchedInputException;
  * duplicated in the first two modules and moved here with the third, once it was clear every
  * module wanted the same shape.
  *
- * <p>It answers the REST controllers only; the screens have their own error page. It goes
+ * <p>It answers the REST controllers only. It goes
  * first, because the modules' advices would otherwise take a malformed id for one of their
  * own refusals through its cause.
  */

@@ -137,9 +137,9 @@ class WaitingRoomE2EIT {
 
         try (BrowserContext wallBrowser = browser.newContext(); BrowserContext practitionerBrowser = browser.newContext()) {
             Page wall = wallBrowser.newPage();
-            wall.navigate(at("/app/"));
+            wall.navigate(at("/"));
             logIn(wall, "sala", "sala123");
-            assertThat(wall).hasURL(Pattern.compile("/app/waiting-room$"));
+            assertThat(wall).hasURL(Pattern.compile("/waiting-room$"));
             Locator card = wall.getByRole(AriaRole.REGION, new Page.GetByRoleOptions().setName(queueName));
             Locator waiting = card.getByRole(AriaRole.LIST);
             assertThat(waiting.getByRole(AriaRole.LISTITEM)).hasText(new String[] {first + "Sigue", second + "2°"});
@@ -147,9 +147,9 @@ class WaitingRoomE2EIT {
             assertThat(wall.getByRole(AriaRole.NAVIGATION)).hasCount(0);
 
             Page desk = practitionerBrowser.newPage();
-            desk.navigate(at("/app/"));
+            desk.navigate(at("/"));
             logIn(desk, username, "arias123");
-            assertThat(desk).hasURL(Pattern.compile("/app/my-queue$"));
+            assertThat(desk).hasURL(Pattern.compile("/my-queue$"));
             desk.getByRole(AriaRole.BUTTON, new Page.GetByRoleOptions().setName("Llamar al siguiente")).click();
             assertThat(desk.getByText("Atendiendo")).isVisible();
 

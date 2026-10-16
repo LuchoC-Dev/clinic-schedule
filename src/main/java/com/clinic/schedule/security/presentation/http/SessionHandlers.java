@@ -25,7 +25,7 @@ import jakarta.servlet.http.HttpServletResponse;
 /**
  * The single-page applications' session, answered in JSON (D-97): logging in, failing to, logging out, and a
  * session ended by a deactivation or a new password (D-68, D-79, D-86). Spring Security's form login does the
- * rest — a new session id, a new CSRF token, the session registered — as it does for the screens.
+ * rest — a new session id, a new CSRF token, the session registered.
  *
  * <p>A login answers what {@code GET /api/session} would, with the CSRF token the login just renewed. A failed
  * one says the same whatever failed: for a patient, saying that the account is locked would tell that the
@@ -42,7 +42,7 @@ public class SessionHandlers {
         this.patients = patients;
     }
 
-    /** The waiting room's session does not run out while nobody touches it, as on the screens (D-70). */
+    /** The waiting room's session does not run out while nobody touches it: nobody does, it is on the wall (D-70). */
     public AuthenticationSuccessHandler staffLoggedIn() {
         return (request, response, authentication) -> {
             if (authentication.getPrincipal() instanceof AppUserDetails user && user.role() == Role.WAITING_ROOM) {
@@ -67,7 +67,7 @@ public class SessionHandlers {
                 "Unauthenticated", "Wrong document or password, or the account is locked for a while"));
     }
 
-    /** Logging out ends the whole session, as on the screens (D-80). */
+    /** Logging out ends the whole session, the other side's login in it included (D-80). */
     public LogoutSuccessHandler loggedOut() {
         return (request, response, authentication) -> response.setStatus(HttpStatus.NO_CONTENT.value());
     }

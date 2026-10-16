@@ -4,7 +4,6 @@ import static com.clinic.schedule.portal.PatientAccountFixture.PASSWORD;
 import static com.clinic.schedule.portal.PatientAccountFixture.RECEPTION;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.hamcrest.Matchers.contains;
-import static org.hamcrest.Matchers.containsString;
 import static org.hamcrest.Matchers.hasSize;
 import static org.hamcrest.Matchers.startsWith;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.httpBasic;
@@ -347,9 +346,6 @@ class RecordCopyApiIT {
                 .andExpect(jsonPath("$.readings[?(@.copy == true)].readBy").value("recepcion"))
                 .andExpect(jsonPath("$.readings[?(@.copy == true)].access").value("COPY_REQUEST"))
                 .andExpect(jsonPath("$.readings[?(@.copy == true)].practitioner").value(contains((Object) null)));
-        mockMvc.perform(get("/record-readings").with(admin).param("patient", patient.dni()))
-                .andExpect(content().string(containsString("Copia de la historia")))
-                .andExpect(content().string(containsString("Copia pedida por el paciente")));
     }
 
     @Test

@@ -24,9 +24,9 @@ function RequirePatient({ children }: { children: ReactNode }) {
 }
 
 /**
- * The patients' addresses are the Thymeleaf screens' own, without `/portal`, so the emails' links open the same
- * paths once this application is at `/portal/` (D-97, D-110). Activating, a new password, registering and cancelling
- * from a link need nobody logged in.
+ * The patients' addresses, under `/portal/`, are those the emails carry, sent ones included — `/portal/activation`,
+ * `/portal/password-reset`, `/portal/register/confirm`, `/portal/cancel`, `/portal/appointments` — (D-110, D-114).
+ * Activating, a new password, registering and cancelling from a link need nobody logged in.
  */
 export const routes: RouteObject[] = [
   {
@@ -45,7 +45,7 @@ export const routes: RouteObject[] = [
   {
     element: <RequirePatient><Layout><Outlet /></Layout></RequirePatient>,
     children: [
-      // A patient lands on their appointments, as on the Thymeleaf login (D-80).
+      // A patient lands on their appointments (D-80).
       { index: true, element: <Navigate to="/appointments" replace /> },
       { path: '/appointments', element: <AppointmentsPage /> },
       { path: '/appointments/:id/move', element: <MovePage /> },

@@ -107,10 +107,10 @@ describe('my queue', () => {
 
   /** Shown again as the queues change, from the server's stream (D-66). */
   it('is read again when the server says a queue changed', async () => {
-    const streams: { listeners: Record<string, (event: MessageEvent<string>) => void> }[] = [];
+    const streams: { url: string; listeners: Record<string, (event: MessageEvent<string>) => void> }[] = [];
     vi.stubGlobal('EventSource', class {
       listeners: Record<string, (event: MessageEvent<string>) => void> = {};
-      constructor() { streams.push(this); }
+      constructor(public url: string) { streams.push(this); }
       addEventListener(type: string, listener: (event: MessageEvent<string>) => void) { this.listeners[type] = listener; }
       close() {}
     });
@@ -118,6 +118,7 @@ describe('my queue', () => {
       answering(queue(null, []));
       show();
       await screen.findByText('Nadie espera.');
+      expect(streams[0].url).toBe('/api/queue-events');
       answering(queue(null, [entry({ state: 'WAITING', patient: 'Camila Molina' })]));
       streams[0].listeners.queue(new MessageEvent('queue', { data: 'q1' }));
       expect(await screen.findByText(/Camila Molina/)).toBeVisible();

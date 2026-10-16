@@ -177,7 +177,7 @@ class AgendaApiIT {
 
     // --- D-100 ------------------------------------------------------------------------------
 
-    /** The week around the day, Monday to Sunday, as the Thymeleaf agenda's. */
+    /** The week around the day, Monday to Sunday. */
     @Test
     void aWeekIsTheDaysWeekFromMondayToSunday() throws Exception {
         CreatedPractitioner practitioner = practitioners.workingEveryDay();

@@ -87,7 +87,7 @@ class RecordCopyController {
 
     /**
      * The copy as a PDF, as the record stood when it was put together: a reading of the record. Shown in the browser,
-     * to review it or print it, as the Thymeleaf screen shows it (D-106).
+     * to review it or print it (D-106).
      */
     @GetMapping("/api/record-copies/{id}/pdf")
     ResponseEntity<byte[]> pdf(@PathVariable UUID id) {

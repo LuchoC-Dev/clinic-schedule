@@ -7,7 +7,7 @@ import com.clinic.schedule.clinicalrecord.domain.AccessGrantPolicy;
 
 /**
  * How access to a record is asked for, for practitioners only (D-54, D-105): whether the practice requires a reason,
- * a setting the law will decide, so the screens say "Motivo" or "Motivo (opcional)" as the Thymeleaf ones do. Asking
+ * a setting the law will decide, so the screens say "Motivo" or "Motivo (opcional)". Asking
  * itself is a check's or a copy's, on their own routes.
  */
 @RestController

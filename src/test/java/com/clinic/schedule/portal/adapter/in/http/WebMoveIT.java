@@ -3,19 +3,13 @@ package com.clinic.schedule.portal.adapter.in.http;
 import static com.clinic.schedule.portal.PatientAccountFixture.PASSWORD;
 import static com.clinic.schedule.portal.PatientAccountFixture.RECEPTION;
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.hamcrest.Matchers.allOf;
-import static org.hamcrest.Matchers.containsString;
 import static org.hamcrest.Matchers.hasItem;
 import static org.hamcrest.Matchers.not;
-import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.csrf;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.httpBasic;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
-import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
-import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.flash;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
-import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.redirectedUrl;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 import java.time.LocalDateTime;
@@ -31,7 +25,6 @@ import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.context.annotation.Import;
 import org.springframework.http.MediaType;
 import org.springframework.jdbc.core.JdbcTemplate;
-import org.springframework.mock.web.MockHttpSession;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.test.context.TestSecurityContextHolder;
@@ -136,12 +129,6 @@ class WebMoveIT {
                 .reduce((first, last) -> last).orElseThrow();
     }
 
-    private MockHttpSession login(Patient patient) throws Exception {
-        return (MockHttpSession) mockMvc.perform(post("/portal/login").with(csrf())
-                        .param("documentType", "DNI").param("documentNumber", patient.dni())
-                        .param("password", PASSWORD))
-                .andReturn().getRequest().getSession(false);
-    }
 
     private static String tokenOf(String link) {
         return link.substring(link.indexOf("token=") + "token=".length());
@@ -176,11 +163,6 @@ class WebMoveIT {
                 .andExpect(jsonPath("$[0].durationMinutes").value(30))
                 .andExpect(jsonPath("$[0].bookedVia").value("RECEPTION"))
                 .andExpect(jsonPath("$[0].movedOnWeb").value(true));
-        mockMvc.perform(get("/agenda").with(RECEPTION).param("practitionerId", arias.id().toString())
-                        .param("date", "2026-03-13"))
-                .andExpect(content().string(allOf(containsString("· Movido por la web"), not(containsString("· Web<")))));
-        mockMvc.perform(get("/agenda/patients/" + patient.id()).with(RECEPTION))
-                .andExpect(content().string(containsString("· Movido por la web")));
         assertThat(jdbc.queryForObject("select count(*) from appointment where id = ? and status = 'BOOKED' "
                 + "and cancelled_at is null", Integer.class, UUID.fromString(appointment))).isEqualTo(1);
         assertThat(mockMvc.perform(get("/api/cancellations").with(RECEPTION)).andReturn().getResponse()
@@ -236,10 +218,8 @@ class WebMoveIT {
         String appointment = book(patient, "2026-03-12T10:00:00");
         book(patient, practitioner(), "2026-03-13T09:00:00");
 
-        move(patient, appointment, "2026-03-13T09:15:00").andExpect(status().isConflict());
-        mockMvc.perform(post("/portal/appointments/" + appointment + "/move").session(login(patient)).with(csrf())
-                        .param("startsAt", "2026-03-13T09:15"))
-                .andExpect(flash().attribute("error", "Ya hay otro turno del paciente a esa hora: elegí otra."));
+        move(patient, appointment, "2026-03-13T09:15:00").andExpect(status().isConflict())
+                .andExpect(jsonPath("$.code").value("PATIENT_BUSY"));
         move(patient, appointment, "2026-03-13T09:30:00").andExpect(status().isOk());
     }
 
@@ -336,7 +316,7 @@ class WebMoveIT {
     }
 
     /**
-     * The patients' application offers moving only what the rules allow, as the Thymeleaf screen did, and starts from
+     * The patients' application offers moving only what the rules allow, and starts from
      * the appointment as it stands (D-111).
      */
     @Test
@@ -370,46 +350,5 @@ class WebMoveIT {
                 .andExpect(jsonPath("$.upcoming[1].state").value("CANCELLED"))
                 .andExpect(jsonPath("$.upcoming[1].movable").value(false))
                 .andExpect(jsonPath("$.upcoming[1].cancellable").value(false));
-    }
-
-    @Test
-    void aPatientMovesOnTheirScreens() throws Exception {
-        Patient patient = accounts.withAccount();
-        String appointment = book(patient, "2026-03-16T10:00:00");
-        String soon = book(patient, "2026-03-10T20:00:00");
-        book(accounts.withAccount(), "2026-03-17T11:00:00");
-        String someoneElses = book(accounts.withAccount(), "2026-03-17T12:00:00");
-        MockHttpSession session = login(patient);
-
-        mockMvc.perform(get("/portal/appointments/" + appointment + "/move").session(session))
-                .andExpect(status().isOk())
-                .andExpect(content().string(allOf(containsString("lunes 16/03/2026 10:00"),
-                        containsString("Dra. Arias"), containsString("consulta"), containsString("Nuevo día"),
-                        not(containsString("No quedan horarios")))));
-        mockMvc.perform(get("/portal/appointments/" + appointment + "/move").session(session)
-                        .param("date", "2026-03-17"))
-                .andExpect(content().string(allOf(containsString("Dra. Arias, martes 17/03/2026"),
-                        containsString("value=\"2026-03-17T10:30\""),
-                        not(containsString("value=\"2026-03-17T11:00\"")))));
-        mockMvc.perform(get("/portal/appointments/" + soon + "/move").session(session))
-                .andExpect(content().string(containsString("Este turno ya no se puede cambiar por la web")));
-
-        mockMvc.perform(post("/portal/appointments/" + appointment + "/move").session(session).with(csrf())
-                        .param("startsAt", "2026-03-17T11:00"))
-                .andExpect(redirectedUrl("/portal/appointments/" + appointment + "/move?date=2026-03-17"))
-                .andExpect(flash().attribute("error", "Ese horario ya no está libre: elegí otro."));
-        mockMvc.perform(post("/portal/appointments/" + appointment + "/move").session(session).with(csrf())
-                        .param("startsAt", "2026-03-17T10:30"))
-                .andExpect(redirectedUrl("/portal/appointments"))
-                .andExpect(flash().attribute("message", "Turno cambiado: martes 17/03/2026 10:30 con Dra. Arias. "
-                        + "Te mandamos la confirmación por email."));
-        mockMvc.perform(post("/portal/appointments/" + soon + "/move").session(session).with(csrf())
-                        .param("startsAt", "2026-03-18T10:30"))
-                .andExpect(flash().attribute("error", containsString("Falta menos de un día")));
-        mockMvc.perform(get("/portal/appointments/" + someoneElses + "/move").session(session))
-                .andExpect(status().isForbidden());
-        mockMvc.perform(post("/portal/appointments/" + someoneElses + "/move").session(session).with(csrf())
-                        .param("startsAt", "2026-03-18T10:30"))
-                .andExpect(status().isForbidden());
     }
 }

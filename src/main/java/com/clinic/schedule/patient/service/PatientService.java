@@ -394,11 +394,6 @@ public class PatientService implements PatientReader, PatientWriter {
         return Arrays.stream(DocumentType.values()).map(DocumentType::name).toList();
     }
 
-    @Override
-    public List<String> relations() {
-        return Arrays.stream(Relation.values()).map(Relation::name).toList();
-    }
-
     private static List<PatientSummary> summaries(List<Patient> found) {
         return found.stream()
                 .map(patient -> new PatientSummary(patient.getId(), patient.getFullName(), label(patient.getDocument()),

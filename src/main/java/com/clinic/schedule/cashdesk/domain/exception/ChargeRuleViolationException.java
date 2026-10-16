@@ -43,36 +43,25 @@ public class ChargeRuleViolationException extends RuntimeException {
     }
 
     private final Reason reason;
-    private final BigDecimal limit;
 
     public ChargeRuleViolationException(Reason reason, String message) {
-        this(reason, message, null);
-    }
-
-    private ChargeRuleViolationException(Reason reason, String message, BigDecimal limit) {
         super(message);
         this.reason = reason;
-        this.limit = limit;
     }
 
-    /** An amount above the ceiling, which the refusal carries so the screens can say it. */
+    /** An amount above the ceiling, which the refusal says. */
     public static ChargeRuleViolationException tooHigh(BigDecimal ceiling) {
         return new ChargeRuleViolationException(Reason.AMOUNT_TOO_HIGH,
-                "The amount may not be above " + ceiling.toPlainString(), ceiling);
+                "The amount may not be above " + ceiling.toPlainString());
     }
 
-    /** A refund above what is left of the charge, which the refusal carries so the screens can say it. */
+    /** A refund above what is left of the charge, which the refusal says. */
     public static ChargeRuleViolationException refundTooHigh(BigDecimal left) {
         return new ChargeRuleViolationException(Reason.REFUND_TOO_HIGH,
-                "A refund may not be above what is left of the charge, " + left.toPlainString(), left);
+                "A refund may not be above what is left of the charge, " + left.toPlainString());
     }
 
     public Reason reason() {
         return reason;
-    }
-
-    /** The ceiling, or what was left of the charge, that the amount went above; null for any other reason. */
-    public BigDecimal limit() {
-        return limit;
     }
 }

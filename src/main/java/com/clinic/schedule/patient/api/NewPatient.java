@@ -5,7 +5,7 @@ package com.clinic.schedule.patient.api;
  * know this module's types (D-24). Everything but the name is optional: blank or null is not given.
  *
  * <p>The phone and the email each say whose they are (D-73): with no owner they are the patient's own;
- * otherwise the owner is a name and a relation, one of {@link PatientReader#relations()}.
+ * otherwise the owner is a name and a relation, such as "MOTHER".
  *
  * @param documentType one of {@link PatientReader#documentTypes()}, or blank together with the number
  */
