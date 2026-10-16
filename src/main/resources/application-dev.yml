@@ -1,0 +1,9 @@
+# The dev profile: the application with its development data (D-117), run with
+# .\mvnw spring-boot:run -Dspring-boot.run.profiles=dev. Without it, nobody can log in until a user is made.
+spring:
+  flyway:
+    # db/seed is development data - users with known passwords, practitioners, patients (D-34).
+    locations: classpath:db/migration,classpath:db/vendor/{vendor},classpath:db/seed
+    # The seed is numbered from 100, so a database that already has it sees every later schema
+    # migration as out of order; this lets them apply (D-67).
+    out-of-order: true

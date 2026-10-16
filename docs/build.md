@@ -2562,6 +2562,10 @@ left for later is listed below; what comes after v2 is added to it as features o
 
 These are not oversights: they are decided and waiting for their moment.
 
+After v2:
+
+- Making the first admin of a real deployment, which starts without the development data and so with no user (D-117).
+
 From v2, phase 10:
 
 - What the mock drew and no screen did before: the patient's greeting, an appointment marked as moved in Mis turnos,

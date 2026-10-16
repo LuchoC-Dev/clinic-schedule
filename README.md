@@ -34,19 +34,22 @@ Node.js into `frontend/node`.
 ```powershell
 $env:JAVA_HOME = "C:\Program Files\Eclipse Adoptium\jdk-21.0.12.101-hotspot"   # if it is not set already
 docker compose up -d        # PostgreSQL on port 5433, and Mailpit for the emails at http://localhost:8025
-.\mvnw spring-boot:run      # the application, on http://localhost:8080
+.\mvnw spring-boot:run "-Dspring-boot.run.profiles=dev"   # the application with its demo data, on :8080
 ```
 
 The staff's application is at http://localhost:8080 and the patients' at http://localhost:8080/portal/. The data stays
-between restarts; `docker compose down -v` wipes it.
+between restarts; `docker compose down -v` wipes it. Without the `dev` profile the application starts with no demo data
+and no users (D-117).
 
 `application.yml` holds the development settings. A real deployment overrides them with environment variables, as
 Spring Boot reads any setting from one — `SPRING_DATASOURCE_URL`, `SPRING_DATASOURCE_USERNAME` and
 `SPRING_DATASOURCE_PASSWORD` for the database, `SPRING_MAIL_HOST`, `SPRING_MAIL_PORT`, `SPRING_MAIL_USERNAME` and
-`SPRING_MAIL_PASSWORD` for the email, and `APP_PORTAL_BASEURL` for the address the patients' emails link to (`app.portal.base-url`: dots become underscores, dashes are dropped); the
-rest are in [`docs/api.md`](docs/api.md).
+`SPRING_MAIL_PASSWORD` for the email, and `APP_PORTAL_BASEURL` for the address the patients' emails link to
+(`app.portal.base-url`: dots become underscores, dashes are dropped); the rest are in [`docs/api.md`](docs/api.md).
 
-### Development users
+### Demo accounts
+
+With the `dev` profile the application starts with two practitioners, three patients and these users, all made up:
 
 | User        | Password       | Role |
 |-------------|----------------|------|
@@ -56,8 +59,8 @@ rest are in [`docs/api.md`](docs/api.md).
 | `admin`     | `admin123`     | Admin |
 | `sala`      | `sala123`      | The waiting room's screen |
 
-A patient, Laura Medina, logs in to the portal with `DNI 27333444` / `paciente123`. The development data lives in
-`src/main/resources/db/seed`, which a real deployment leaves out (D-34).
+A patient, Laura Medina, logs in to the portal with `DNI 27333444` / `paciente123`. The data is in
+`src/main/resources/db/seed`, loaded by the `dev` profile and the tests alone.
 
 ### Tests and the frontend
 
