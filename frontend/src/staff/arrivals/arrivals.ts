@@ -62,7 +62,7 @@ export function timesCalledText(times: number): string | null {
 
 /**
  * The appointments a patient found may come in with today (D-64): theirs, of today, with a practitioner who serves
- * the queue, not cancelled nor absent — as the Thymeleaf screen offers them. Each is said by its time.
+ * the queue, not cancelled nor absent — as the Thymeleaf screen offered them. Each is said by its time.
  */
 export function appointmentsToday(patientId: string, today: Agenda | undefined, queue: Queue)
   : { appointment: AgendaAppointment; label: string }[] {

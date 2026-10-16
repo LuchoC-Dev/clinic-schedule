@@ -48,7 +48,7 @@ export interface Agenda {
 export type Tone = 'booked' | 'late' | 'arrived' | 'absent' | 'cancelled';
 
 /**
- * As the Thymeleaf agenda says it: absent is final (D-61); then whether the patient arrived, into their
+ * As the Thymeleaf agenda said it: absent is final (D-61); then whether the patient arrived, into their
  * practitioner's queue (D-65); then whether they warned they would be late (D-31).
  */
 export function stateOf(appointment: AgendaAppointment): { label: string; tone: Tone } {

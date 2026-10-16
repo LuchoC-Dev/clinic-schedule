@@ -16,7 +16,7 @@ export interface MyQueue {
 }
 
 /**
- * As the Thymeleaf screen offers it: with a patient called, finishing with them or saying they did not come in;
+ * As the Thymeleaf screen offered it: with a patient called, finishing with them or saying they did not come in;
  * otherwise calling the next, while somebody waits. A closed queue offers nothing.
  */
 export function queueActions(mine: MyQueue) {

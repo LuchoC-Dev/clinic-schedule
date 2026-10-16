@@ -2034,7 +2034,7 @@ code to check it, and a practitioner who may read the record checks it, uploads 
 within 48 hours. It is downloaded as a PDF, or collected on paper at reception, which never reads it; each handover is
 one more reading of the record. What it left for later is listed below.
 
-### Phase 10 — The web applications `[~]`
+### Phase 10 — The web applications `[x]`
 
 Scope in `docs/context.md`, section "v2, phase 10 — the web applications". The last phase of v2. Delivered
 in parts; each one is usable on its own, and Thymeleaf kept working until the last, which removed it. The technical design of
@@ -2546,14 +2546,26 @@ user set for a whole class answers whatever session a request brings; they log i
 
 **Part 6 of phase 10, Thymeleaf removed, is done.** The two applications are all the screens there are, at `/` and
 `/portal/`; the addresses the emails carry, sent ones too, are the patients' application's own; the session's login is
-the only way into the API; and the agenda's tests no longer wait for Mantine's transitions. Closing phase 10 — and the
-ids in the applications' addresses — is left for its own step.
+the only way into the API; and the agenda's tests no longer wait for Mantine's transitions.
+
+**Phase 10 of v2, the web applications, is closed, and with it v2.** Every screen is one of two single-page
+applications the application serves itself — the staff's at `/`, for a desktop, with the waiting room's screen as one
+of its routes, and the patients' at `/portal/`, for a phone first —, built by Maven and tested with Vitest and, on
+their key flows, end to end. They log in with a session and its CSRF token, keep nothing in the browser, and say every
+refusal in Spanish from the API's code. The emails' addresses, sent ones too, open the patients' application.
+Thymeleaf and Basic authentication are gone. The ids in the applications' addresses stay as they are (D-116). What it
+left for later is listed below; what comes after v2 is added to it as features of their own.
 
 ---
 
 ## Explicitly postponed
 
 These are not oversights: they are decided and waiting for their moment.
+
+From v2, phase 10:
+
+- What the mock drew and no screen did before: the patient's greeting, an appointment marked as moved in Mis turnos,
+  and who signed a copy shown in the portal.
 
 From v2, phase 9:
 

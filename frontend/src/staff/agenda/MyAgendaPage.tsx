@@ -9,7 +9,7 @@ import { type Agenda, type AgendaAppointment, daysOf, patientName, stateOf, summ
 import './agenda.css';
 
 /**
- * A practitioner's own agenda (D-39, D-104): a day or its week, read only, as the Thymeleaf agenda shows it to them.
+ * A practitioner's own agenda (D-39, D-104): a day or its week, read only, as the Thymeleaf agenda showed it to them.
  * Today's patients lead to their record, which they may read even before the patient arrives (D-49); those who
  * arrived are in their queue, where the consultation starts (D-65). The day and the view are in the address.
  */

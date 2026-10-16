@@ -10,7 +10,7 @@ export function mismatch(password: string, repeated: string): string | null {
   return password === repeated ? null : 'Las dos contraseñas no coinciden.';
 }
 
-/** The patient's new passwords, as the Thymeleaf screen of changing it says it. */
+/** The patient's new passwords, as the Thymeleaf screen of changing it said it. */
 export function newMismatch(password: string, repeated: string): string | null {
   return password === repeated ? null : 'Las dos contraseñas nuevas no coinciden.';
 }

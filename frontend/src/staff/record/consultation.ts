@@ -5,7 +5,7 @@ import type { Refusals } from '../../shared/errors';
 /**
  * A consultation being written (D-47, D-51, D-55): kept in the screen's memory alone until it is sent, once, whole —
  * nothing of it goes to the browser's storage (D-97). Its rows are added as they are needed; an empty row is dropped,
- * and a row half filled is refused rather than guessed, as the Thymeleaf form does.
+ * and a row half filled is refused rather than guessed, as the Thymeleaf form did.
  */
 export interface Draft {
   /** Sent with it, so a retry after a lost answer records it once (D-19). */

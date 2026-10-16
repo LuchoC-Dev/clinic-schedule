@@ -2,7 +2,7 @@ import { byCode } from '../shared/refusals';
 
 /**
  * Reception's words (D-13): the names the screens give the API's values, and each refusal said by its code
- * (D-100), as the Thymeleaf screens say them.
+ * (D-100), as the Thymeleaf screens said them.
  */
 
 export const DOCUMENT_TYPES = ['DNI', 'LC', 'LE', 'CI', 'PASSPORT'] as const;

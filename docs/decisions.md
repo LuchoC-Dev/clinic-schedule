@@ -4641,3 +4641,22 @@ write its token.
 
 *Rejected:* keeping Basic for other clients (there are none, and one would come with its own decision); keeping it for
 the tests alone (production code for the tests); an API key or tokens for a future client (D-14).
+
+## D-116 — The ids in the applications' addresses stay as they are
+**Date:** 2026-10-16 · **Status:** accepted
+
+v2, phase 10, closing: the applications' addresses carry the ids of what they show — the agenda's
+`?practitionerId=`, a patient's `/patients/{id}`, a record's `/clinical-records/{patientId}`, an appointment's
+`/appointments/{id}/move` in the portal, and the like. Whether they should be hidden was left for the phase's end.
+
+**They stay.** An id is a random UUID (V1): it cannot be guessed or walked through, and says nothing of the person — no
+name, no document, no age. Holding one opens nothing: the route decides what a role may reach and the use case whose
+data a user may see (D-34), and asking for what one may not see is a 403, never an empty answer (D-50); a record read
+through its address is read and logged like any other (D-51). An address with an id is what lets a screen be linked,
+reloaded and gone back to. No screen's address carries a patient's personal data, and none may: a search by name or
+document stays in the screen, never in its address.
+
+*Rejected:* a hash of the id (it becomes another id, with nothing more kept secret, and a table to translate it both
+ways); the id kept out of the address, in the screen's memory alone (the address no longer says what is shown — a
+reload, a link or going back loses it — for an id that already opens nothing); ids of their own for the addresses
+(the same as the hash, with a migration).

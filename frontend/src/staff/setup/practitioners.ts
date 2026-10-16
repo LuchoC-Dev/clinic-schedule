@@ -50,7 +50,7 @@ export const DAYS: { value: Day; label: string }[] = [
   { value: 'SUNDAY', label: 'Domingo' },
 ];
 
-/** Empty rows offered below the week's stretches, to add new ones, as the Thymeleaf screen does. */
+/** Empty rows offered below the week's stretches, to add new ones, as the Thymeleaf screen did. */
 export const EMPTY_ROWS = 3;
 
 /** The week as rows to edit: each stretch, with its times as `09:00`, and a few empty ones. */

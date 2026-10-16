@@ -2,7 +2,7 @@ import { when } from '../../shared/dates';
 
 /**
  * What a practitioner's screens decide over a clinical record (D-104): the record as the API answers it (D-51, D-53,
- * D-55, D-57, D-94), put together as the Thymeleaf record shows it — every entry the newest first, each check with
+ * D-55, D-57, D-94), put together as the Thymeleaf record showed it — every entry the newest first, each check with
  * where it stands, each order with how it ended —, and who the patient is beside it. The rules stay in the server.
  */
 
@@ -197,7 +197,7 @@ export function resultOf(check: Check): { pending: boolean; text: string; by: st
   };
 }
 
-/** Where an order stands, as the Thymeleaf record says it: open, fulfilled on the day its check was done, or cancelled. */
+/** Where an order stands, as the Thymeleaf record said it: open, fulfilled on the day its check was done, or cancelled. */
 export function orderState(order: Order, checks: Check[]): string {
   if (order.status === 'CANCELLED') {
     return `Anulada: ${order.cancellationReason ?? ''}`;

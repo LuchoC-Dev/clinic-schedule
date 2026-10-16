@@ -13,7 +13,7 @@ import { SessionContext, SetSessionContext, logIn } from './session';
 export const LOGIN_FAILED = 'No pudimos ingresarte: revisá el documento y la contraseña. Después de 5 intentos '
   + 'fallidos la cuenta se bloquea 15 minutos; si no la recordás, recuperala.';
 
-/** What the login says of how the patient got here, as the Thymeleaf login does. */
+/** What the login says of how the patient got here, as the Thymeleaf login did. */
 const ENDED: Record<string, string> = {
   logout: 'Sesión cerrada.',
   expired: 'Tu sesión se cerró: tu cuenta fue desactivada o cambió su contraseña.',

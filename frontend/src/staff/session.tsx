@@ -37,7 +37,7 @@ export async function logIn(username: string, password: string, client: ApiClien
 }
 
 /**
- * Ends the whole session, the Thymeleaf screens' too, and reloads at the login, which says why: logged out, or the
+ * Ends the whole session and reloads at the login, which says why: logged out, or the
  * password changed.
  */
 export async function logOut(client: ApiClient = api, why: 'logout' | 'changed' = 'logout') {

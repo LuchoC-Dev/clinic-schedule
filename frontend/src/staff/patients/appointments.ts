@@ -3,7 +3,7 @@ import type { Cancellation } from '../agenda/agenda';
 import { REQUESTER } from '../words';
 
 /**
- * Who cancelled an appointment, when, how and who asked (D-76, D-83), as the Thymeleaf screens say it: the
+ * Who cancelled an appointment, when, how and who asked (D-76, D-83), as the Thymeleaf screens said it: the
  * practitioner's absence, the patient on the web, the email's link, or reception by hand.
  */
 export function cancellationText(cancellation: Cancellation | null): string {

@@ -81,8 +81,8 @@ v2 is built in phases, each one scoped here before it starts and closed on its o
 the clinical record, is closed, and so are the second, the arrival queue, and the third, users
 and security, the fourth, the patient's extra data, the fifth, reminders and the cancellation log,
 and the sixth, web booking for patients, the seventh, the cash desk, the eighth, registering
-from the web, and the ninth, moving an appointment and a copy of the clinical record. The tenth, the web
-applications, is the last one of v2, and is in progress. Its scope is written here before any code.
+from the web, the ninth, moving an appointment and a copy of the clinical record, and the tenth, the web
+applications, the last one: v2 is finished. What comes after it is added as features of their own.
 
 ## v2, phase 1 — the clinical record (closed)
 
@@ -943,7 +943,7 @@ Not in this phase: a partial copy, or a single result on the web; reading the re
 signature (Ley 25.506, art. 3) on the PDF; a copy asked for on the web by a spouse, a partner or an heir;
 moving an appointment to another practitioner or reason; reception uploading or reading clinical files.
 
-## v2, phase 10 — the web applications (the last phase of v2)
+## v2, phase 10 — the web applications (the last phase of v2, closed)
 
 ### What changes
 
@@ -1018,7 +1018,7 @@ phase; what is left here comes after it, as features on v2.
 5. **Web booking, further on**: registering from the web is v2, phase 8, above — closed; moving an
    appointment and a copy of the clinical record are v2, phase 9, above — closed.
 6. **Future user interface**: two separate single-page applications, one for
-   reception/practitioners and one for patients — v2, phase 10, above, in progress. This is why the
+   reception/practitioners and one for patients — v2, phase 10, above — closed. This is why the
    REST API is the main contract from v1 onwards. The cash desk's screens there ask reception to confirm an amount a
    second time when it is very large, before sending it: the server only refuses what goes above
    its ceiling (D-87), so an amount with one zero too many that stays below it goes through.

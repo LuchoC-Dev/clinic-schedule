@@ -8,10 +8,11 @@ agenda, and records what happened in each consultation in the patients' clinical
 It was built in stages, adding nothing before the stage that used it. The functional scope is
 in [`docs/context.md`](docs/context.md), every technical decision and its reasoning in
 [`docs/decisions.md`](docs/decisions.md), and the progress in [`docs/build.md`](docs/build.md).
-**Version 1 is complete. Version 2 is built in phases; nine are closed — the clinical record, the
-arrival queue, users and security, the patient's extra data, reminders with the cancellation log, web
-booking for patients, the cash desk, registering from the web, and moving an appointment with a copy of
-the clinical record — and v2 is not finished.**
+**Version 1 is complete, and so is version 2, built in ten phases — the clinical record, the arrival
+queue, users and security, the patient's extra data, reminders with the cancellation log, web booking for
+patients, the cash desk, registering from the web, moving an appointment with a copy of the clinical
+record, and the two web applications that replaced the server-rendered screens.** What comes next is added
+to v2 as features of their own.
 
 ## Running it
 
@@ -28,8 +29,8 @@ the clinical record — and v2 is not finished.**
 - Nor does Node.js: the build installs its own into `frontend/node` the first time, for the web applications.
 - **Docker**, for the database.
 
+```powershell
 docker compose up -d        # PostgreSQL 18 on port 5433, with its data kept in a volume, and Mailpit for the
-docker compose up -d        # PostgreSQL 18, with its data kept in a volume, and Mailpit for the
                             # reminders' email: it keeps them at http://localhost:8025 and sends none on
 .\mvnw spring-boot:run      # the application, on http://localhost:8080
 .\mvnw test                 # unit tests: nothing needed, no database
