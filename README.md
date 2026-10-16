@@ -40,6 +40,12 @@ docker compose up -d        # PostgreSQL on port 5433, and Mailpit for the email
 The staff's application is at http://localhost:8080 and the patients' at http://localhost:8080/portal/. The data stays
 between restarts; `docker compose down -v` wipes it.
 
+`application.yml` holds the development settings. A real deployment overrides them with environment variables, as
+Spring Boot reads any setting from one — `SPRING_DATASOURCE_URL`, `SPRING_DATASOURCE_USERNAME` and
+`SPRING_DATASOURCE_PASSWORD` for the database, `SPRING_MAIL_HOST`, `SPRING_MAIL_PORT`, `SPRING_MAIL_USERNAME` and
+`SPRING_MAIL_PASSWORD` for the email, and `APP_PORTAL_BASE_URL` for the address the patients' emails link to; the
+rest are in [`docs/api.md`](docs/api.md).
+
 ### Development users
 
 | User        | Password       | Role |
