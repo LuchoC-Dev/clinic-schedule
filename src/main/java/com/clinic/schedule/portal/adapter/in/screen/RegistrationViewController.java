@@ -18,7 +18,6 @@ import com.clinic.schedule.patient.api.PatientReader;
 import com.clinic.schedule.portal.application.exception.ChildRequestsExceededException;
 import com.clinic.schedule.portal.application.exception.FamilyGroupNotFoundException;
 import com.clinic.schedule.portal.application.exception.InvalidRegistrationException;
-import com.clinic.schedule.portal.application.exception.InvalidRegistrationLinkException;
 import com.clinic.schedule.portal.application.usecase.RegisterChildUseCase;
 import com.clinic.schedule.portal.application.usecase.RegisterOnWebUseCase;
 import com.clinic.schedule.portal.domain.FamilyMember;
@@ -30,8 +29,8 @@ import com.clinic.schedule.shared.PasswordPolicy;
 /**
  * The screens of registering on the web (D-91), in Spanish, since patients read them (D-13): with nobody logged
  * in, the form — the adult, and up to {@value #CHILD_SLOTS} children under 13 (D-92) —, the page that says an email
- * went out — the same whether a document was known or not —, and the page of the email's link, whose button
- * confirms it; opening the link confirms nothing by itself, since mail readers open links on their own. Logged in,
+ * went out — the same whether a document was known or not —; the email's link opens the patients' application,
+ * whose button confirms it (D-110). Logged in,
  * the adult registers a child from *Mi familia*. Thin and throwaway, as every screen (D-02).
  */
 @Controller
@@ -165,29 +164,10 @@ class RegistrationViewController {
         return "portal-register-sent";
     }
 
+    /** The address of the registration's email, sent on to the patients' application (D-110). */
     @GetMapping("/portal/register/confirm")
-    String confirmation(@RequestParam(required = false) String token, Model model) {
-        model.addAttribute("token", token);
-        model.addAttribute("usable", registration.isUsable(token));
-        return "portal-register-confirm";
-    }
-
-    /** The children it could not register are named on the login, for the adult to go to reception with them. */
-    @PostMapping("/portal/register/confirm")
-    String confirm(@RequestParam String token, Model model, RedirectAttributes redirect) {
-        model.addAttribute("token", token);
-        try {
-            RegisterOnWebUseCase.Confirmation confirmed = registration.confirm(token);
-            if (confirmed.outcome() == RegisterOnWebUseCase.Outcome.REGISTERED) {
-                redirect.addFlashAttribute("notRegistered", confirmed.notRegistered());
-                return "redirect:/portal/login?registered";
-            }
-            model.addAttribute("usable", false);
-            model.addAttribute("known", true);
-        } catch (InvalidRegistrationLinkException e) {
-            model.addAttribute("usable", false);
-        }
-        return "portal-register-confirm";
+    String confirmation(@RequestParam(required = false) String token) {
+        return PortalViewController.toApplication("/register/confirm", token);
     }
 
     /**

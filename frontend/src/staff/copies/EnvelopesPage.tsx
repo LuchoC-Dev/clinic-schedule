@@ -4,8 +4,8 @@ import { useState } from 'react';
 
 import { shortDay, timeOf } from '../../shared/dates';
 import { byCode } from '../../shared/refusals';
-import { Said } from '../components/Said';
-import { useAction } from '../components/useAction';
+import { Said } from '../../shared/Said';
+import { useAction } from '../../shared/useAction';
 import { api } from '../session';
 
 /** A copy on paper as reception sees it (D-95): whose, who asked for it, since when it waits — never what it holds. */

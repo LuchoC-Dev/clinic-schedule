@@ -189,35 +189,6 @@ class PortalScreenIT {
     }
 
     @Test
-    void thePatientActivatesTheirAccountOnTheScreen() throws Exception {
-        Patient patient = accounts.adult();
-        String address = address();
-        accounts.open(patient, address);
-        String token = lastTokenTo(address);
-
-        mockMvc.perform(get("/portal/activation").param("token", "otro"))
-                .andExpect(status().isOk())
-                .andExpect(content().string(containsString("Este link ya no sirve")));
-        mockMvc.perform(get("/portal/activation").param("token", token))
-                .andExpect(content().string(allOf(containsString("Elegí tu contraseña"),
-                        not(containsString("Este link ya no sirve")))));
-        mockMvc.perform(post("/portal/activation").with(csrf()).param("token", token)
-                        .param("password", PASSWORD).param("repeatedPassword", "otra-clave-larga"))
-                .andExpect(content().string(containsString("no coinciden")));
-        mockMvc.perform(post("/portal/activation").with(csrf()).param("token", token)
-                        .param("password", "corta").param("repeatedPassword", "corta"))
-                .andExpect(content().string(containsString("de 10 a 72 caracteres")));
-        mockMvc.perform(post("/portal/activation").with(csrf()).param("token", token)
-                        .param("password", PASSWORD).param("repeatedPassword", PASSWORD))
-                .andExpect(redirectedUrl("/portal/login?activated"));
-        mockMvc.perform(post("/portal/activation").with(csrf()).param("token", token)
-                        .param("password", PASSWORD).param("repeatedPassword", PASSWORD))
-                .andExpect(content().string(containsString("Este link ya no sirve")));
-
-        logIn(patient, PASSWORD);
-    }
-
-    @Test
     void aPatientLogsInWithTheirDocumentAndReadsTheirAppointments() throws Exception {
         CreatedPractitioner arias = practitioner();
         Patient patient = accounts.withAccount();

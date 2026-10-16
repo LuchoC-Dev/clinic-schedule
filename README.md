@@ -81,8 +81,10 @@ has their queue beside the record of whom they called, with the new consultation
 record, read and written, the checks waiting for a result, the orders they issued, and the copies of a record to authenticate. Reception
 also sets up the practitioners — reasons, week and time off — and the queues, and hands over the copies to collect; the admins
 have the users and their logs; and the waiting room's screen, full screen, names whom each practitioner called and who
-waits, in order (D-109). Changing one's own password is still the Thymeleaf screen, in the same session; the patients' has its login, with the document, and its sections lead to their screens. Both keep nothing in
-the browser, and say every refusal in Spanish.
+waits, in order (D-109); every role changes its own password there too. The patients' has its login, with the document,
+activating the account, a new password, registering and cancelling from an email's link — the emails' addresses under
+`/portal/` open it (D-110) —, and its sections lead to their Thymeleaf screens. Both keep nothing in the browser, and say
+every refusal in Spanish.
 
 **Screens** — open http://localhost:8080 and log in. Reception gets the agenda — a day or a
 week, of one practitioner or everyone — with the day's operations as buttons (*Llegó*,

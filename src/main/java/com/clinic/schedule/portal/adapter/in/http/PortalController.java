@@ -18,6 +18,9 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
+import com.clinic.schedule.portal.application.exception.InvalidActivationLinkException;
+import com.clinic.schedule.portal.application.exception.InvalidRegistrationLinkException;
+import com.clinic.schedule.portal.application.exception.InvalidResetLinkException;
 import com.clinic.schedule.portal.application.usecase.ActivateAccountUseCase;
 import com.clinic.schedule.portal.application.usecase.BookOnWebUseCase;
 import com.clinic.schedule.portal.application.usecase.CancelLinkUseCase;
@@ -101,6 +104,18 @@ class PortalController {
         return ResponseEntity.noContent().build();
     }
 
+    /**
+     * Whether the email's link still activates an account, so the screen says it does not before asking for a
+     * password (D-110): 204, or the 400 activating with it would answer.
+     */
+    @GetMapping("/api/portal/activation/{token}")
+    ResponseEntity<Void> activationLink(@PathVariable String token) {
+        if (!activate.isUsable(token)) {
+            throw new InvalidActivationLinkException();
+        }
+        return ResponseEntity.noContent().build();
+    }
+
     @GetMapping("/api/portal/appointments")
     OwnAppointmentsResponse appointments() {
         Map<UUID, String> names = practitioners.findAll().stream()
@@ -181,6 +196,15 @@ class PortalController {
         return ResponseEntity.noContent().build();
     }
 
+    /** Whether the email's link still resets the password: 204, or the 400 resetting with it would answer (D-110). */
+    @GetMapping("/api/portal/password-reset/{token}")
+    ResponseEntity<Void> resetLink(@PathVariable String token) {
+        if (!recovery.isUsable(token)) {
+            throw new InvalidResetLinkException();
+        }
+        return ResponseEntity.noContent().build();
+    }
+
     /** With the token of the email's link, and the new password. */
     @PostMapping("/api/portal/password-reset")
     ResponseEntity<Void> resetPassword(@RequestBody PasswordRequests.Reset request) {
@@ -208,6 +232,15 @@ class PortalController {
                     "Service unavailable", "The email could not go out; nothing was kept"));
         }
         return ResponseEntity.accepted().build();
+    }
+
+    /** Whether the email's link still confirms a registration: 204, or the 400 confirming it would answer (D-110). */
+    @GetMapping("/api/portal/registrations/confirmation/{token}")
+    ResponseEntity<Void> registrationLink(@PathVariable String token) {
+        if (!registration.isUsable(token)) {
+            throw new InvalidRegistrationLinkException();
+        }
+        return ResponseEntity.noContent().build();
     }
 
     /**

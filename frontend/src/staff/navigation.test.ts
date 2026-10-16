@@ -51,7 +51,7 @@ describe('where each one lands', () => {
 
   it('lands anyone whose password is temporary on changing it first', () => {
     for (const role of ['RECEPTION', 'PRACTITIONER', 'ADMIN', 'WAITING_ROOM'] as Role[]) {
-      expect(landingFor(user(role, true))).toEqual({ label: 'Contraseña', to: '/password?required', inApp: false });
+      expect(landingFor(user(role, true))).toEqual({ label: 'Contraseña', to: '/password', inApp: true });
     }
   });
 });

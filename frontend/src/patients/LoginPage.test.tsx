@@ -66,7 +66,7 @@ describe("the patients' login", () => {
   it('offers recovering the password and registering, on their screens', () => {
     show();
     expect(screen.getByRole('link', { name: '¿Olvidaste tu contraseña?' }))
-      .toHaveAttribute('href', '/portal/password-recovery');
-    expect(screen.getByRole('link', { name: 'Registrate' })).toHaveAttribute('href', '/portal/register');
+      .toHaveAttribute('href', '/password-recovery');
+    expect(screen.getByRole('link', { name: 'Registrate' })).toHaveAttribute('href', '/register');
   });
 });

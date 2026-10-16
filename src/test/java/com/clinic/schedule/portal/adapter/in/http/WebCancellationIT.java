@@ -262,7 +262,7 @@ class WebCancellationIT {
     }
 
     @Test
-    void aPatientCancelsOnTheirScreensAndFromTheLinksPage() throws Exception {
+    void aPatientCancelsOnTheirScreensAndTheLinkOpensTheApplication() throws Exception {
         Patient patient = accounts.withAccount();
         String appointment = book(patient, "2026-03-16T10:00:00");
         book(patient, "2026-03-10T20:00:00");
@@ -288,16 +288,8 @@ class WebCancellationIT {
         String linked = book(patient, "2026-03-17T10:00:00");
         String token = tokenOf(links.linkFor(UUID.fromString(linked), LocalDateTime.of(2026, 3, 17, 10, 0))
                 .orElseThrow());
+        // The link's page is the patients' application's now, which the old address sends on to (D-110).
         mockMvc.perform(get("/portal/cancel").param("token", token))
-                .andExpect(status().isOk())
-                .andExpect(content().string(allOf(containsString("martes 17/03/2026 10:00"),
-                        containsString("Dra. Arias"), not(containsString("Ana Pérez")))));
-        mockMvc.perform(post("/portal/cancel").with(csrf()).param("token", token))
-                .andExpect(redirectedUrl("/portal/cancel/done"));
-        mockMvc.perform(get("/portal/cancel/done")).andExpect(content().string(containsString("Turno cancelado.")));
-        mockMvc.perform(get("/portal/cancel").param("token", token))
-                .andExpect(content().string(containsString("Este link ya no sirve")));
-        mockMvc.perform(post("/portal/cancel").with(csrf()).param("token", token))
-                .andExpect(flash().attribute("error", containsString("Este link ya no sirve")));
+                .andExpect(redirectedUrl("/portal/app/cancel?token=" + token));
     }
 }

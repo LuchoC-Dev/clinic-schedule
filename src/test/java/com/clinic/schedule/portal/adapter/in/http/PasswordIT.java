@@ -7,6 +7,7 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.httpBasic;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 import java.time.LocalDateTime;
@@ -155,6 +156,8 @@ class PasswordIT {
         ask(patient).andExpect(status().isNoContent());
         assertThat(resetsTo(address)).hasSize(1);
         String token = sent.get(0).token();
+        // Asked by the patients' application before its form, with nobody logged in (D-110).
+        mockMvc.perform(get("/api/portal/password-reset/" + token)).andExpect(status().isNoContent());
 
         send("/api/portal/password-reset", "{\"token\": \"" + token + "\", \"password\": \"corta\"}")
                 .andExpect(status().isBadRequest());
@@ -162,6 +165,8 @@ class PasswordIT {
                 .andExpect(status().isNoContent());
         logIn(patient, NEW_PASSWORD).andExpect(status().isOk());
         logIn(patient, PASSWORD).andExpect(status().isUnauthorized());
+        mockMvc.perform(get("/api/portal/password-reset/" + token)).andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.code").value("INVALID_RESET_LINK"));
         send("/api/portal/password-reset", "{\"token\": \"" + token + "\", \"password\": \"una-tercera-clave\"}")
                 .andExpect(status().isBadRequest());
         assertThat(history(patient)).contains("LOCKED", "RECOVERY_SENT", "PASSWORD_RESET");
@@ -185,10 +190,13 @@ class PasswordIT {
         ask(patient);
         String second = resetsTo(address).get(1).token();
 
+        mockMvc.perform(get("/api/portal/password-reset/" + first)).andExpect(status().isBadRequest());
+        mockMvc.perform(get("/api/portal/password-reset/" + second)).andExpect(status().isNoContent());
         send("/api/portal/password-reset", "{\"token\": \"" + first + "\", \"password\": \"" + NEW_PASSWORD + "\"}")
                 .andExpect(status().isBadRequest());
         jdbc.update("update patient_account_password_reset set expires_at = ? where account_id = ?",
                 LocalDateTime.of(2026, 3, 10, 0, 0), UUID.fromString(account));
+        mockMvc.perform(get("/api/portal/password-reset/" + second)).andExpect(status().isBadRequest());
         send("/api/portal/password-reset", "{\"token\": \"" + second + "\", \"password\": \"" + NEW_PASSWORD + "\"}")
                 .andExpect(status().isBadRequest());
         send("/api/portal/password-reset", "{\"password\": \"" + NEW_PASSWORD + "\"}")

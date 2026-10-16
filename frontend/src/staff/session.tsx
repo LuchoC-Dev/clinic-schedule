@@ -7,7 +7,7 @@ import type { StaffUser } from './navigation';
 export const BASE = import.meta.env.BASE_URL;
 
 /** Reloads the application at its login, so nothing read stays in memory. */
-export function leaveFor(login: 'logout' | 'expired') {
+export function leaveFor(login: 'logout' | 'expired' | 'changed') {
   window.location.replace(`${BASE}login?${login}`);
 }
 
@@ -36,12 +36,15 @@ export async function logIn(username: string, password: string, client: ApiClien
   return session.user as StaffUser;
 }
 
-/** Ends the whole session, the Thymeleaf screens' too, and reloads at the login. */
-export async function logOut(client: ApiClient = api) {
+/**
+ * Ends the whole session, the Thymeleaf screens' too, and reloads at the login, which says why: logged out, or the
+ * password changed.
+ */
+export async function logOut(client: ApiClient = api, why: 'logout' | 'changed' = 'logout') {
   try {
     await client.post('/api/session/logout');
   } finally {
-    leaveFor('logout');
+    leaveFor(why);
   }
 }
 

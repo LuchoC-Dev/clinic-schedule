@@ -4,8 +4,8 @@ import { type FormEvent, useState } from 'react';
 import type { Refusals } from '../../shared/errors';
 import { AmountField, LargeAmountWarning, useConfirmedAmount } from './AmountField';
 import { type Coverage, CoverageFields, coverageOf, MeansSelect } from './fields';
-import { Said } from './Said';
-import { useAction } from './useAction';
+import { Said } from '../../shared/Said';
+import { useAction } from '../../shared/useAction';
 
 /** What a visit is charged as it comes in (D-87, D-89, D-90): an amount, its means, and its coverage, if any. */
 export interface Charge {

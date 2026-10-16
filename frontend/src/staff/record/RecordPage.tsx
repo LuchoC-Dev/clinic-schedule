@@ -1,7 +1,7 @@
 import { Anchor, Stack } from '@mantine/core';
 import { Link, useLocation, useParams } from 'react-router';
 
-import { Said } from '../components/Said';
+import { Said } from '../../shared/Said';
 import { RecordPanel } from './RecordPanel';
 
 /**

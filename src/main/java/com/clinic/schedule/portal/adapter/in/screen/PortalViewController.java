@@ -3,7 +3,6 @@ package com.clinic.schedule.portal.adapter.in.screen;
 import com.clinic.schedule.portal.application.usecase.RecoverPasswordUseCase;
 import com.clinic.schedule.portal.application.usecase.ChangeOwnPasswordUseCase;
 import com.clinic.schedule.portal.application.exception.OwnPasswordRefusedException;
-import com.clinic.schedule.portal.application.exception.InvalidResetLinkException;
 import com.clinic.schedule.portal.domain.exception.FamilyRefusedException;
 import com.clinic.schedule.portal.domain.AgeBand;
 import com.clinic.schedule.portal.domain.AccountHolder;
@@ -20,6 +19,7 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
+import java.util.Optional;
 import java.util.UUID;
 import java.util.stream.Collectors;
 
@@ -34,14 +34,12 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.server.ResponseStatusException;
 import org.springframework.web.servlet.mvc.support.RedirectAttributes;
+import org.springframework.web.util.UriComponentsBuilder;
 
 import com.clinic.schedule.patient.api.PatientReader;
-import com.clinic.schedule.portal.application.exception.InvalidActivationLinkException;
 import com.clinic.schedule.portal.application.exception.NotYourAppointmentException;
 import com.clinic.schedule.portal.application.exception.OwnDataRefusedException;
-import com.clinic.schedule.portal.application.usecase.ActivateAccountUseCase;
 import com.clinic.schedule.portal.application.usecase.BookOnWebUseCase;
-import com.clinic.schedule.portal.application.usecase.CancelLinkUseCase;
 import com.clinic.schedule.portal.application.usecase.CancelOwnAppointmentUseCase;
 import com.clinic.schedule.portal.application.usecase.ChangeOwnConsentUseCase;
 import com.clinic.schedule.portal.application.usecase.ChangeOwnContactUseCase;
@@ -51,7 +49,6 @@ import com.clinic.schedule.portal.application.usecase.ViewOwnDataUseCase;
 import com.clinic.schedule.portal.application.usecase.ViewWebBookingUseCase;
 import com.clinic.schedule.portal.domain.Appointment;
 import com.clinic.schedule.portal.domain.BookableReason;
-import com.clinic.schedule.portal.domain.BookedAppointment;
 import com.clinic.schedule.portal.domain.OwnAppointments;
 import com.clinic.schedule.portal.domain.OwnContact;
 import com.clinic.schedule.portal.domain.OwnData;
@@ -65,12 +62,12 @@ import com.clinic.schedule.practitioner.api.PractitionerSummary;
 
 /**
  * The patients' screens (D-80), in Spanish, since patients read them (D-13): logging in with their document,
- * activating their account from the email's link, their appointments, their data, which they change
- * themselves (D-81), booking an appointment (D-82), moving one to another time (D-93) and cancelling one, from
- * their account or from an email's link with nobody logged in (D-83), and their family: the appointments of the
- * members they act for, booked, moved and cancelled as their own, and the groups they are in (D-85); and their
- * password, changed or recovered by email (D-86). Thin and throwaway, as every screen (D-02): the patients'
- * single-page application will replace them.
+ * their appointments, their data, which they change themselves (D-81), booking an appointment (D-82), moving one
+ * to another time (D-93) and cancelling one (D-83), and their family: the appointments of the members they act
+ * for, booked, moved and cancelled as their own, and the groups they are in (D-85); and their password, changed
+ * or asked for by email (D-86). Thin and throwaway, as every screen (D-02): the patients' single-page application
+ * replaces them, part by part. The addresses the emails carry — activating an account, choosing a new password,
+ * cancelling from a link — already send on to it (D-110).
  */
 @Controller
 class PortalViewController {
@@ -81,7 +78,6 @@ class PortalViewController {
     private static final DateTimeFormatter DAY_NAME =
             DateTimeFormatter.ofPattern("EEEE d/MM/yyyy", Locale.forLanguageTag("es-AR"));
 
-    private final ActivateAccountUseCase activate;
     private final ListOwnAppointmentsUseCase appointments;
     private final ViewOwnDataUseCase data;
     private final ChangeOwnContactUseCase contact;
@@ -90,7 +86,6 @@ class PortalViewController {
     private final BookOnWebUseCase book;
     private final CancelOwnAppointmentUseCase cancel;
     private final MoveOwnAppointmentUseCase move;
-    private final CancelLinkUseCase cancelLinks;
     private final ViewFamilyUseCase family;
     private final ManageOwnFamilyUseCase ownFamily;
     private final RecoverPasswordUseCase recovery;
@@ -100,15 +95,14 @@ class PortalViewController {
     private final Clock clock;
     private final int cancelHoursBefore;
 
-    PortalViewController(ActivateAccountUseCase activate, ListOwnAppointmentsUseCase appointments,
+    PortalViewController(ListOwnAppointmentsUseCase appointments,
             ViewOwnDataUseCase data, ChangeOwnContactUseCase contact, ChangeOwnConsentUseCase consent,
             ViewWebBookingUseCase booking, BookOnWebUseCase book, CancelOwnAppointmentUseCase cancel,
-            MoveOwnAppointmentUseCase move, CancelLinkUseCase cancelLinks, ViewFamilyUseCase family,
+            MoveOwnAppointmentUseCase move, ViewFamilyUseCase family,
             ManageOwnFamilyUseCase ownFamily,
             RecoverPasswordUseCase recovery, ChangeOwnPasswordUseCase ownPassword, PatientReader patients,
             PractitionerReader practitioners, Clock clock,
             @Value("${app.portal.cancel-hours-before}") int cancelHoursBefore) {
-        this.activate = activate;
         this.appointments = appointments;
         this.data = data;
         this.contact = contact;
@@ -117,7 +111,6 @@ class PortalViewController {
         this.book = book;
         this.cancel = cancel;
         this.move = move;
-        this.cancelLinks = cancelLinks;
         this.family = family;
         this.ownFamily = ownFamily;
         this.recovery = recovery;
@@ -139,33 +132,13 @@ class PortalViewController {
         return "redirect:/portal/appointments";
     }
 
+    /**
+     * The address of the activation's email, which emails already sent carry: the patients' application has the
+     * screen now (D-110).
+     */
     @GetMapping("/portal/activation")
-    String activation(@RequestParam(required = false) String token, Model model) {
-        model.addAttribute("token", token);
-        model.addAttribute("usable", activate.isUsable(token));
-        return "portal-activation";
-    }
-
-    /** The password is asked twice, so a typo does not lock the patient out of an account just opened. */
-    @PostMapping("/portal/activation")
-    String activate(@RequestParam String token, @RequestParam String password, @RequestParam String repeatedPassword,
-            Model model) {
-        model.addAttribute("token", token);
-        model.addAttribute("usable", true);
-        if (!password.equals(repeatedPassword)) {
-            model.addAttribute("error", "Las dos contraseñas no coinciden.");
-            return "portal-activation";
-        }
-        try {
-            activate.handle(token, password);
-            return "redirect:/portal/login?activated";
-        } catch (InvalidActivationLinkException e) {
-            model.addAttribute("usable", false);
-            return "portal-activation";
-        } catch (IllegalArgumentException e) {
-            model.addAttribute("error", "La contraseña tiene de 10 a 72 caracteres.");
-            return "portal-activation";
-        }
+    String activation(@RequestParam(required = false) String token) {
+        return toApplication("/activation", token);
     }
 
     /** Asking for the link to choose a new password, with the document (D-86). */
@@ -185,33 +158,10 @@ class PortalViewController {
         return "redirect:/portal/password-recovery";
     }
 
+    /** The address of the recovery's email, sent on to the patients' application (D-110). */
     @GetMapping("/portal/password-reset")
-    String passwordReset(@RequestParam(required = false) String token, Model model) {
-        model.addAttribute("token", token);
-        model.addAttribute("usable", recovery.isUsable(token));
-        return "portal-password-reset";
-    }
-
-    /** The password is asked twice, as on activating the account. */
-    @PostMapping("/portal/password-reset")
-    String resetPassword(@RequestParam String token, @RequestParam String password,
-            @RequestParam String repeatedPassword, Model model) {
-        model.addAttribute("token", token);
-        model.addAttribute("usable", true);
-        if (!password.equals(repeatedPassword)) {
-            model.addAttribute("error", "Las dos contraseñas no coinciden.");
-            return "portal-password-reset";
-        }
-        try {
-            recovery.reset(token, password);
-            return "redirect:/portal/login?reset";
-        } catch (InvalidResetLinkException e) {
-            model.addAttribute("usable", false);
-            return "portal-password-reset";
-        } catch (IllegalArgumentException e) {
-            model.addAttribute("error", "La contraseña tiene de 10 a 72 caracteres.");
-            return "portal-password-reset";
-        }
+    String passwordReset(@RequestParam(required = false) String token) {
+        return toApplication("/password-reset", token);
     }
 
     @GetMapping("/portal/password")
@@ -354,42 +304,23 @@ class PortalViewController {
         };
     }
 
-    /** The page of an email's link, with nobody logged in: when and with whom, and a button (D-83). */
+    /** The address of the reminders' and the confirmations' links, sent on to the patients' application (D-110). */
     @GetMapping("/portal/cancel")
-    String cancelLink(@RequestParam(required = false) String token, Model model) {
-        model.addAttribute("token", token);
-        try {
-            BookedAppointment appointment = cancelLinks.read(token);
-            model.addAttribute("when", WHEN.format(appointment.startsAt()));
-            model.addAttribute("practitioner", practitionerName(appointment));
-        } catch (WebCancellationRefusedException e) {
-            model.addAttribute("error", cancellationRefusal(e));
-        }
-        return "portal-cancel";
+    String cancelLink(@RequestParam(required = false) String token) {
+        return toApplication("/cancel", token);
     }
 
-    @PostMapping("/portal/cancel")
-    String cancelByLink(@RequestParam String token, RedirectAttributes redirect) {
-        try {
-            cancelLinks.cancel(token);
-            return "redirect:/portal/cancel/done";
-        } catch (WebCancellationRefusedException e) {
-            redirect.addFlashAttribute("error", cancellationRefusal(e));
-            return "redirect:/portal/cancel/done";
-        }
-    }
-
-    @GetMapping("/portal/cancel/done")
-    String cancelled() {
-        return "portal-cancelled";
-    }
-
-    private String practitionerName(BookedAppointment appointment) {
-        return practitioners.findAll().stream()
-                .filter(practitioner -> practitioner.id().equals(appointment.practitionerId()))
-                .map(PractitionerSummary::fullName)
-                .findFirst()
-                .orElse("");
+    /**
+     * Where an email's address goes now: the same path on the patients' application, with the link's token, so an
+     * email already sent keeps working (D-110). Once the application is at {@code /portal/} (D-97), the address is
+     * its own.
+     */
+    static String toApplication(String path, String token) {
+        return "redirect:" + UriComponentsBuilder.fromPath("/portal/app" + path)
+                .queryParamIfPresent("token", Optional.ofNullable(token))
+                .encode()
+                .build()
+                .toUriString();
     }
 
     /** What the patient reads when an appointment cannot be cancelled on the web. */

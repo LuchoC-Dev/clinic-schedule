@@ -36,7 +36,6 @@ export const ROLE_NAMES: Record<Role, string> = {
 };
 
 const inApp = (label: string, to: string): MenuEntry => ({ label, to, inApp: true });
-const screen = (label: string, to: string): MenuEntry => ({ label, to, inApp: false });
 
 const MENUS: Record<Role, MenuEntry[]> = {
   RECEPTION: [
@@ -70,8 +69,8 @@ const MENUS: Record<Role, MenuEntry[]> = {
   WAITING_ROOM: [],
 };
 
-/** Every role changes its own password, on the Thymeleaf screen until it moves here. */
-export const PASSWORD = screen('Contraseña', '/password');
+/** Every role changes its own password (D-69, D-110). */
+export const PASSWORD = inApp('Contraseña', '/password');
 
 export function menuFor(user: StaffUser): MenuEntry[] {
   return MENUS[user.role];
@@ -83,7 +82,7 @@ export function menuFor(user: StaffUser): MenuEntry[] {
  */
 export function landingFor(user: StaffUser): MenuEntry {
   if (user.temporaryPassword) {
-    return screen('Contraseña', '/password?required');
+    return PASSWORD;
   }
   return MENUS[user.role][0] ?? inApp('Sala de espera', '/waiting-room');
 }

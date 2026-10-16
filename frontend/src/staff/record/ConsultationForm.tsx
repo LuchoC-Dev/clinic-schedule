@@ -2,8 +2,8 @@ import { Button, Group, Stack, Text, Textarea } from '@mantine/core';
 import { type ReactNode, useEffect, useState } from 'react';
 
 import { newId } from '../../shared/ids';
-import { Said } from '../components/Said';
-import { useAction } from '../components/useAction';
+import { Said } from '../../shared/Said';
+import { useAction } from '../../shared/useAction';
 import { api } from '../session';
 import {
   CHECK_REFUSALS, CONSULTATION_REFUSALS, type CheckRequest, type CheckRow, type ConsultationRequest, type Draft, EMPTY_CHECK, checkRequest,

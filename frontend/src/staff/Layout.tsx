@@ -80,3 +80,17 @@ function PracticeClock() {
   }, []);
   return <Text component="span" fz={14}>{nowAtThePractice(now)}</Text>;
 }
+
+/** The header alone, with "Salir", for whom may reach nothing but changing a temporary password (D-69). */
+export function Bare({ children }: { children: ReactNode }) {
+  const [leaving, setLeaving] = useState(false);
+  return (
+    <div className="staff">
+      <header className="staff-header">
+        <Brand />
+        <Button variant="default" loading={leaving} onClick={() => { setLeaving(true); void logOut(); }}>Salir</Button>
+      </header>
+      <main className="staff-main">{children}</main>
+    </div>
+  );
+}

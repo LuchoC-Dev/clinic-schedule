@@ -5,8 +5,8 @@ import { useNavigate } from 'react-router';
 
 import { shortDay, timeOf } from '../../shared/dates';
 import { describeError } from '../../shared/errors';
-import { Said } from '../components/Said';
-import { useAction } from '../components/useAction';
+import { Said } from '../../shared/Said';
+import { useAction } from '../../shared/useAction';
 import { api } from '../session';
 import { CODE_REFUSALS, type RecordCopy, askedBy, deliveryOf, personOf, timeLeft } from './copies';
 

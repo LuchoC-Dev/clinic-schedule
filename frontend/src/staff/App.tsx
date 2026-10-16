@@ -18,7 +18,7 @@ import { MovePage } from './booking/MovePage';
 import { PatientAppointmentsPage } from './patients/PatientAppointmentsPage';
 import { PatientPage } from './patients/PatientPage';
 import { PatientsPage } from './patients/PatientsPage';
-import { Layout } from './Layout';
+import { Bare, Layout } from './Layout';
 import { LoginPage } from './LoginPage';
 import { CancellationsPage } from './logs/CancellationsPage';
 import { RemindersPage } from './logs/RemindersPage';
@@ -32,6 +32,7 @@ import { EnvelopesPage } from './copies/EnvelopesPage';
 import { RecordCopiesPage } from './copies/RecordCopiesPage';
 import { RecordCopyPage } from './copies/RecordCopyPage';
 import { PendingChecksPage } from './checks/PendingChecksPage';
+import { PasswordPage } from './password/PasswordPage';
 import { MyQueuePage } from './queue/MyQueuePage';
 import { WaitingRoomPage } from './room/WaitingRoomPage';
 import { RecordPage } from './record/RecordPage';
@@ -49,6 +50,15 @@ function OnlyFor({ role, children }: { role: Role | Role[]; children: ReactNode 
   return allowed && !user.temporaryPassword ? children : <GoTo entry={landingFor(user)} />;
 }
 
+/**
+ * Changing one's own password, every role's: in the layout, or alone while the password is temporary, since nothing
+ * else may be reached until it is changed (D-69).
+ */
+function Password() {
+  const user = useUser();
+  return user.temporaryPassword ? <Bare><PasswordPage /></Bare> : <Layout><PasswordPage /></Layout>;
+}
+
 function Landing() {
   return <GoTo entry={landingFor(useUser())} />;
 }
@@ -60,6 +70,7 @@ export const routes: RouteObject[] = [
     path: '/waiting-room',
     element: <RequireUser><OnlyFor role={['RECEPTION', 'WAITING_ROOM']}><WaitingRoomPage /></OnlyFor></RequireUser>,
   },
+  { path: '/password', element: <RequireUser><Password /></RequireUser> },
   {
     element: <RequireUser><Layout><Outlet /></Layout></RequireUser>,
     children: [

@@ -5,8 +5,8 @@ import { useNavigate } from 'react-router';
 
 import { when } from '../../shared/dates';
 import { describeError } from '../../shared/errors';
-import { Said } from '../components/Said';
-import { useAction } from '../components/useAction';
+import { Said } from '../../shared/Said';
+import { useAction } from '../../shared/useAction';
 import { CHECK_ACCESS_REFUSALS, grantedUntil, useReasonLabel } from '../record/access';
 import { nameOf } from '../record/record';
 import '../record/record.css';

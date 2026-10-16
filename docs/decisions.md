@@ -4409,3 +4409,58 @@ calls the next patient, and the wall shows them highlighted without being touche
 initials or a shortened name, as the mock draws them (the practice asked for the full name); a card per practitioner (a
 queue has the room and the order; a shared one would split); polling the room (the stream is there, and tells the
 moment); a number or a ticket instead of a name (the practice has none to give).
+
+---
+
+## D-110 — The patients' account in their application, and the emails' addresses sent on to it
+**Date:** 2026-10-15 · **Status:** accepted
+
+v2, phase 10, part 5, batch A: the screens of the patients' account move to their application, doing what the Thymeleaf
+ones do, no more and no less — activating it, asking for and choosing a new password, registering and confirming it,
+cancelling from an email's link, and changing one's own password; and the staff's "Contraseña", the only screen of the
+staff's left on Thymeleaf, moves to theirs, so part 6 can remove it. The patients' appointments, booking, family,
+profile and copies follow in batches B and C.
+
+**The same addresses, without `/portal`.** `/activation`, `/password-recovery`, `/password-reset`, `/register`,
+`/register/sent`, `/register/confirm`, `/cancel` and `/password` on the patients' application are the Thymeleaf
+screens' paths, so once it is at `/portal/` (D-97) every address is where it always was.
+
+**The emails' addresses send on to the application.** An email already sent cannot change, and the Thymeleaf screens
+it opens were replaced. So `GET /portal/activation`, `/portal/password-reset`, `/portal/register/confirm` and
+`/portal/cancel` answer a redirect to the same path on the patients' application, with the link's token as it came,
+open to anyone as they were; their forms, their pages and their templates go now, since nothing reaches them any more,
+and the Thymeleaf login no longer says what those pages said. The emails keep writing the same addresses, which part 6
+makes the application's own and the redirects go. The rest of the patients' Thymeleaf screens stay until part 6,
+reached by their address alone.
+
+**A link says first whether it still works.** The Thymeleaf screens did not show the form of a link that had expired,
+been used or replaced. `GET /api/portal/activation/{token}`, `/api/portal/password-reset/{token}` and
+`/api/portal/registrations/confirmation/{token}`, open to anyone, answer 204, or the 400 that using the link would
+answer, with its code; the screen says the link is no use and offers no form. A link spent meanwhile is said the same
+when it is sent. Opening the registration's page confirms nothing still: its button does (D-91). The cancel link already
+had its reading (D-83).
+
+**Each screen as the Thymeleaf one.** A password typed twice, checked before it is sent; each refusal by its code
+(D-100) in the Thymeleaf words — a registration's malformed values said by what the form missed, as the screen did,
+since the API says only that they are; the login saying an account activated, a password chosen, a registration
+confirmed and the children it could not register, read from the router's state, never from the browser's storage
+(D-97). The recovery says the same whatever the document (D-86). The cancel link shows the day, the time and the
+practitioner, nothing of the patient (D-83).
+
+**The staff's password.** `/password` on the staff's application, every role's, in the layout; whose password is
+temporary lands there and sees it without the menu, with "Salir", and reaches nothing else (D-69). Once changed, the
+session ends and the login says "Contraseña cambiada", as the Thymeleaf screen did: the session holds the old state of
+the password. `POST /api/password` was already there.
+
+**Shared.** `useAction` and `Said` move to `shared/`, since the patients' screens send and say things as reception's do.
+
+**Tested** with Vitest on what the screens decide — a password typed twice and its length, what a registration sends
+and what its malformed values say, each refusal's words, a link without its token or no use, the login's words —, with
+integration tests on each link's reading and on the emails' addresses, and end to end on a phone: an activation's
+address opens the patients' application, where the patient chooses their password and logs in.
+
+*Rejected:* changing the emails' addresses to `/portal/app/` (emails already sent would still need the old ones, and
+part 6 moves the application back to them); keeping the Thymeleaf pages behind the emails' addresses until part 6 (a
+patient with an email would land on the old screens); showing the form of every link and saying it is no use only once
+sent (more than the Thymeleaf screens did: the patient would type a password for nothing); the staff's password left on
+Thymeleaf until part 6 (part 6 would have a screen to build before removing Thymeleaf).

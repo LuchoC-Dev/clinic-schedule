@@ -23,6 +23,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.context.annotation.Import;
+import org.springframework.http.MediaType;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.ResultActions;
@@ -75,6 +76,11 @@ class RegistrationScreenIT {
                 .andReturn().getResponse().getContentAsString()).get(0).get("id").asText();
     }
 
+    private ResultActions confirm(String token) throws Exception {
+        return mockMvc.perform(post("/api/portal/registrations/confirmation").contentType(MediaType.APPLICATION_JSON)
+                .content("{\"token\": \"%s\"}".formatted(token)));
+    }
+
     @Test
     void anAdultRegistersFromTheLoginConfirmsWithTheButtonAndLogsIn() throws Exception {
         mockMvc.perform(get("/portal/login"))
@@ -93,25 +99,16 @@ class RegistrationScreenIT {
         mockMvc.perform(get("/portal/register/sent").flashAttr("email", email))
                 .andExpect(content().string(containsString("Te mandamos un email a <strong>" + email + "</strong>.")));
 
-        // Opening the link, as a mail reader may on its own, confirms nothing.
+        // The link opens the patients' application, whose button confirms it through the API (D-110).
         String token = lastRegistrationTokenTo(email);
         mockMvc.perform(get("/portal/register/confirm").param("token", token))
-                .andExpect(status().isOk())
-                .andExpect(content().string(allOf(containsString(">Confirmar registro<"),
-                        containsString("value=\"" + token + "\""))));
+                .andExpect(redirectedUrl("/portal/app/register/confirm?token=" + token));
         assertThat(jdbc.queryForObject("select count(*) from web_registration where email = ?", Integer.class,
                 email)).isOne();
-
-        mockMvc.perform(post("/portal/register/confirm").with(csrf()).param("token", token))
-                .andExpect(redirectedUrl("/portal/login?registered"));
-        mockMvc.perform(get("/portal/login").param("registered", ""))
-                .andExpect(content().string(containsString("Registro confirmado")));
+        confirm(token).andExpect(status().isOk());
         mockMvc.perform(post("/portal/login").with(csrf()).param("documentType", "DNI").param("documentNumber", dni)
                         .param("password", PASSWORD))
                 .andExpect(redirectedUrl("/portal/appointments"));
-        mockMvc.perform(get("/portal/register/confirm").param("token", token))
-                .andExpect(content().string(allOf(containsString("Este link ya no sirve"),
-                        not(containsString(">Confirmar registro<")))));
 
         String patientId = patientIdOf(dni);
         mockMvc.perform(get("/patients/" + patientId).with(RECEPTION))
@@ -139,12 +136,8 @@ class RegistrationScreenIT {
         String second = address();
         register(dni, first).andExpect(redirectedUrl("/portal/register/sent"));
         register(dni, second).andExpect(redirectedUrl("/portal/register/sent"));
-        mockMvc.perform(post("/portal/register/confirm").with(csrf()).param("token", lastRegistrationTokenTo(second)))
-                .andExpect(redirectedUrl("/portal/login?registered"));
-        mockMvc.perform(post("/portal/register/confirm").with(csrf()).param("token", lastRegistrationTokenTo(first)))
-                .andExpect(status().isOk())
-                .andExpect(content().string(allOf(containsString("Acercate a recepción con tu documento"),
-                        not(containsString("Este link ya no sirve")), not(containsString(">Confirmar registro<")))));
+        confirm(lastRegistrationTokenTo(second)).andExpect(status().isOk());
+        confirm(lastRegistrationTokenTo(first)).andExpect(status().isConflict());
     }
 
     @Test

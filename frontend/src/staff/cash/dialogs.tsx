@@ -4,8 +4,8 @@ import { type FormEvent, useState } from 'react';
 import { pesos } from '../../shared/money';
 import { AmountField, LargeAmountWarning, useConfirmedAmount } from '../components/AmountField';
 import { MeansSelect } from '../components/fields';
-import { Said } from '../components/Said';
-import { useAction } from '../components/useAction';
+import { Said } from '../../shared/Said';
+import { useAction } from '../../shared/useAction';
 import { api } from '../session';
 import { CASH_REFUSALS } from '../words';
 

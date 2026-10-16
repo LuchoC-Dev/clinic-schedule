@@ -21,6 +21,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.context.annotation.Import;
+import org.springframework.http.MediaType;
 import org.springframework.mock.web.MockHttpSession;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.ResultActions;
@@ -105,26 +106,12 @@ class PasswordScreenIT {
                 .andExpect(flash().attribute("message", startsWith("Si ese documento")));
         String token = KeptAccountMail.RESETS.get(KeptAccountMail.RESETS.size() - 1).token();
 
-        mockMvc.perform(get("/portal/password-reset").param("token", "no-sirve"))
-                .andExpect(content().string(allOf(containsString("Este link ya no sirve"),
-                        not(containsString("name=\"repeatedPassword\"")))));
+        // The email's link opens the patients' application, which chooses it through the API (D-110).
         mockMvc.perform(get("/portal/password-reset").param("token", token))
-                .andExpect(content().string(allOf(containsString("name=\"repeatedPassword\""),
-                        not(containsString("Este link ya no sirve")))));
-        mockMvc.perform(post("/portal/password-reset").with(csrf()).param("token", token)
-                        .param("password", NEW_PASSWORD).param("repeatedPassword", "otra-distinta-larga"))
-                .andExpect(content().string(containsString("Las dos contraseñas no coinciden.")));
-        mockMvc.perform(post("/portal/password-reset").with(csrf()).param("token", token)
-                        .param("password", "corta").param("repeatedPassword", "corta"))
-                .andExpect(content().string(containsString("La contraseña tiene de 10 a 72 caracteres.")));
-        mockMvc.perform(post("/portal/password-reset").with(csrf()).param("token", token)
-                        .param("password", NEW_PASSWORD).param("repeatedPassword", NEW_PASSWORD))
-                .andExpect(redirectedUrl("/portal/login?reset"));
-        mockMvc.perform(post("/portal/password-reset").with(csrf()).param("token", token)
-                        .param("password", NEW_PASSWORD).param("repeatedPassword", NEW_PASSWORD))
-                .andExpect(content().string(containsString("Este link ya no sirve")));
-        mockMvc.perform(get("/portal/login").param("reset", ""))
-                .andExpect(content().string(containsString("Tu contraseña quedó cambiada: ingresá con la nueva.")));
+                .andExpect(redirectedUrl("/portal/app/password-reset?token=" + token));
+        mockMvc.perform(post("/api/portal/password-reset").contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"token\": \"%s\", \"password\": \"%s\"}".formatted(token, NEW_PASSWORD)))
+                .andExpect(status().isNoContent());
         logIn(patient, NEW_PASSWORD).andExpect(redirectedUrl("/portal/appointments"));
         // Whoever was logged in with the old password is sent out.
         mockMvc.perform(get("/portal/appointments").session(before))

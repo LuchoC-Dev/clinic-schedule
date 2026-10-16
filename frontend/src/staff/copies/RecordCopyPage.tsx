@@ -5,8 +5,8 @@ import { Link, useParams } from 'react-router';
 
 import { shortDay, timeOf } from '../../shared/dates';
 import { describeError } from '../../shared/errors';
-import { Said } from '../components/Said';
-import { useAction } from '../components/useAction';
+import { Said } from '../../shared/Said';
+import { useAction } from '../../shared/useAction';
 import { grantedUntil, useReasonLabel } from '../record/access';
 import { AttachButton } from '../record/parts';
 import { nameOf } from '../record/record';

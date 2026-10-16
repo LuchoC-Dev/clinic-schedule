@@ -104,7 +104,8 @@ class SecurityConfiguration {
                         .requestMatchers(HttpMethod.POST, "/api/portal/activation", "/api/portal/password-recovery",
                                 "/api/portal/password-reset", "/api/portal/registrations",
                                 "/api/portal/registrations/confirmation").permitAll()
-                        .requestMatchers(HttpMethod.GET, "/api/portal/session").permitAll()
+                        .requestMatchers(HttpMethod.GET, "/api/portal/session", "/api/portal/activation/*",
+                                "/api/portal/password-reset/*", "/api/portal/registrations/confirmation/*").permitAll()
                         .requestMatchers("/api/portal/cancel-links/**").permitAll()
                         .anyRequest().hasRole(PATIENT))
                 .addFilterBefore(new DocumentLoginFilter("/api/portal/session"),
@@ -138,7 +139,8 @@ class SecurityConfiguration {
                 .securityContext(context -> context.securityContextRepository(sessionKeptUnder(PORTAL_LOGIN)))
                 .authorizeHttpRequests(routes -> routes
                         .requestMatchers("/portal/app", "/portal/app/**").permitAll()
-                        .requestMatchers("/portal/login", "/portal/activation", "/portal/cancel", "/portal/cancel/done",
+                        // The emails' addresses, sent on to the patients' application (D-110).
+                        .requestMatchers("/portal/login", "/portal/activation", "/portal/cancel",
                                 "/portal/password-recovery", "/portal/password-reset", "/portal/register",
                                 "/portal/register/sent", "/portal/register/confirm").permitAll()
                         .anyRequest().hasRole(PATIENT))

@@ -3,8 +3,8 @@ import { useState } from 'react';
 
 import { when } from '../../shared/dates';
 import { newId } from '../../shared/ids';
-import { Said } from '../components/Said';
-import { useAction } from '../components/useAction';
+import { Said } from '../../shared/Said';
+import { useAction } from '../../shared/useAction';
 import { api } from '../session';
 import { ADDENDUM_REFUSALS, CANCEL_ORDER_REFUSALS, FILE_REFUSALS, RESULT_REFUSALS } from './consultation';
 import {

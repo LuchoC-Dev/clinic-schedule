@@ -7,8 +7,8 @@ import { Link, useLocation, useParams } from 'react-router';
 
 import { momentAtThePractice, todayAtThePractice } from '../../shared/dates';
 import { describeError } from '../../shared/errors';
-import { Said } from '../components/Said';
-import { useAction } from '../components/useAction';
+import { Said } from '../../shared/Said';
+import { useAction } from '../../shared/useAction';
 import { api } from '../session';
 import {
   DAYS, describeAbsence, NAME_REFUSALS, type PractitionerSetup, REASON_REFUSALS, TIME_OFF_REFUSALS, type TimeOffResult,

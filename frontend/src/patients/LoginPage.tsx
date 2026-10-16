@@ -1,8 +1,9 @@
 import { Alert, Anchor, Button, NativeSelect, PasswordInput, Stack, Text, TextInput, Title } from '@mantine/core';
 import { type FormEvent, useContext, useState } from 'react';
-import { Navigate, useSearchParams } from 'react-router';
+import { Link, Navigate, useLocation, useSearchParams } from 'react-router';
 
 import { describeError } from '../shared/errors';
+import { notRegisteredSaid } from './register/register';
 import { SessionContext, SetSessionContext, logIn } from './session';
 
 /**
@@ -12,9 +13,13 @@ import { SessionContext, SetSessionContext, logIn } from './session';
 export const LOGIN_FAILED = 'No pudimos ingresarte: revisá el documento y la contraseña. Después de 5 intentos '
   + 'fallidos la cuenta se bloquea 15 minutos; si no la recordás, recuperala.';
 
+/** What the login says of how the patient got here, as the Thymeleaf login does. */
 const ENDED: Record<string, string> = {
   logout: 'Sesión cerrada.',
   expired: 'Tu sesión se cerró: tu cuenta fue desactivada o cambió su contraseña.',
+  activated: 'Cuenta activada: ingresá con tu documento y tu contraseña.',
+  reset: 'Tu contraseña quedó cambiada: ingresá con la nueva.',
+  registered: 'Registro confirmado: ingresá con tu documento y tu contraseña.',
 };
 
 /**
@@ -25,6 +30,8 @@ export function LoginPage() {
   const session = useContext(SessionContext);
   const setSession = useContext(SetSessionContext);
   const [params] = useSearchParams();
+  const notRegistered = notRegisteredSaid(
+    (useLocation().state as { notRegistered?: string[] } | null)?.notRegistered ?? []);
   const [documentType, setDocumentType] = useState(session.documentTypes[0] ?? 'DNI');
   const [documentNumber, setDocumentNumber] = useState('');
   const [password, setPassword] = useState('');
@@ -51,24 +58,24 @@ export function LoginPage() {
 
   const ended = ENDED[[...params.keys()].find((key) => key in ENDED) ?? ''];
   return (
-    <main className="patients-main">
-      <form onSubmit={submit}>
-        <Stack gap={16}>
-          <Title order={1} fz={26}>Ingresá</Title>
-          <Text c="dimmed">Tus turnos, con tu documento y tu contraseña.</Text>
-          {ended && !error && <Alert color="petrol">{ended}</Alert>}
-          {error && <Alert color="red" role="alert">{error}</Alert>}
-          <NativeSelect label="Tipo de documento" data={session.documentTypes} value={documentType}
-            onChange={(event) => setDocumentType(event.currentTarget.value)} size="md" />
-          <TextInput label="Número" autoComplete="username" required maxLength={20} value={documentNumber}
-            onChange={(event) => setDocumentNumber(event.currentTarget.value)} size="md" inputMode="text" />
-          <PasswordInput label="Contraseña" autoComplete="current-password" required value={password}
-            onChange={(event) => setPassword(event.currentTarget.value)} size="md" />
-          <Button type="submit" size="md" loading={sending}>Ingresar</Button>
-          <Anchor href="/portal/password-recovery">¿Olvidaste tu contraseña?</Anchor>
-          <Text fz={15}>¿No tenés cuenta? <Anchor href="/portal/register">Registrate</Anchor>, o pedila en recepción.</Text>
-        </Stack>
-      </form>
-    </main>
+    <form onSubmit={submit}>
+      <Stack gap={16}>
+        <Title order={1} fz={26}>Ingresá</Title>
+        <Text c="dimmed">Tus turnos, con tu documento y tu contraseña.</Text>
+        {ended && !error && <Alert color="petrol">{ended}</Alert>}
+        {notRegistered && <Alert color="red">{notRegistered}</Alert>}
+        {error && <Alert color="red" role="alert">{error}</Alert>}
+        <NativeSelect label="Tipo de documento" data={session.documentTypes} value={documentType}
+          onChange={(event) => setDocumentType(event.currentTarget.value)} size="md" />
+        <TextInput label="Número" autoComplete="username" required maxLength={20} value={documentNumber}
+          onChange={(event) => setDocumentNumber(event.currentTarget.value)} size="md" inputMode="text" />
+        <PasswordInput label="Contraseña" autoComplete="current-password" required value={password}
+          onChange={(event) => setPassword(event.currentTarget.value)} size="md" />
+        <Button type="submit" size="md" loading={sending}>Ingresar</Button>
+        <Anchor component={Link} to="/password-recovery">¿Olvidaste tu contraseña?</Anchor>
+        <Text fz={15}>¿No tenés cuenta? <Anchor component={Link} to="/register">Registrate</Anchor>, o pedila en
+          recepción.</Text>
+      </Stack>
+    </form>
   );
 }

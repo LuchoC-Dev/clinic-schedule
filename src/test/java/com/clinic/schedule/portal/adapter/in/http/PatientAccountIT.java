@@ -31,6 +31,7 @@ import org.springframework.http.MediaType;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.security.test.context.support.WithMockUser;
 import org.springframework.test.web.servlet.MockMvc;
+import org.springframework.test.web.servlet.ResultActions;
 import org.springframework.test.web.servlet.request.RequestPostProcessor;
 
 import com.clinic.schedule.appointment.PractitionerFixture;
@@ -95,6 +96,14 @@ class PatientAccountIT {
                 .andExpect(status().is(status));
     }
 
+    /** Whether the link still activates, as the patients' application asks before its form (D-110). */
+    private void linkChecked(String token, int status) throws Exception {
+        ResultActions answer = mockMvc.perform(get("/api/portal/activation/" + token)).andExpect(status().is(status));
+        if (status == 400) {
+            answer.andExpect(jsonPath("$.code").value("INVALID_ACTIVATION_LINK"));
+        }
+    }
+
     private JsonNode changes(String accountId) throws Exception {
         return read(mockMvc.perform(get("/api/patient-accounts/" + accountId + "/changes").with(RECEPTION))
                 .andExpect(status().isOk())
@@ -143,9 +152,12 @@ class PatientAccountIT {
         String address = address();
         String accountId = accounts.open(patient, address).get("id").asText();
         String token = lastTokenTo(address);
+        linkChecked(token, 204);
+        linkChecked("otro", 400);
 
         jdbc.update("update patient_account_activation set expires_at = cast('2026-03-10 00:00:00' as timestamp) "
                 + "where account_id = ?", UUID.fromString(accountId));
+        linkChecked(token, 400);
         activation(token, PASSWORD, 400);
 
         mockMvc.perform(post("/api/patient-accounts/" + accountId + "/activation-resend").with(RECEPTION))
@@ -157,6 +169,7 @@ class PatientAccountIT {
         activation(again, PASSWORD, 204);
         assertThat(jdbc.queryForObject("select count(*) from patient_account_activation where account_id = ?",
                 Integer.class, UUID.fromString(accountId))).isZero();
+        linkChecked(again, 400);
         activation(again, PASSWORD, 400);
         mockMvc.perform(post("/api/patient-accounts/" + accountId + "/activation-resend").with(RECEPTION))
                 .andExpect(status().isConflict());

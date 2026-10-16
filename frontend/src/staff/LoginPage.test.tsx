@@ -74,4 +74,9 @@ describe("the staff's login", () => {
     show(vi.fn(), '/login?expired');
     expect(screen.getByText(/Tu sesión se cerró/)).toBeInTheDocument();
   });
+
+  it('says the password was changed, to log in with the new one', () => {
+    show(vi.fn(), '/login?changed');
+    expect(screen.getByText('Contraseña cambiada: ingresá con la nueva.')).toBeInTheDocument();
+  });
 });

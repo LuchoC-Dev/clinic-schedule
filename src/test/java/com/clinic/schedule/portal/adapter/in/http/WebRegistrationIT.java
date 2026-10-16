@@ -125,7 +125,13 @@ class WebRegistrationIT {
         assertThat(jdbc.queryForObject("select token_hash from web_registration where email = ?", String.class,
                 email)).hasSize(64).isNotEqualTo(sent.token());
 
+        // The patients' application asks whether the link confirms, with nobody logged in, before its button (D-110).
+        mockMvc.perform(get("/api/portal/registrations/confirmation/" + sent.token())).andExpect(status().isNoContent());
+        assertThat(waiting(email)).isOne();
         confirm(sent.token()).andExpect(status().isOk()).andExpect(jsonPath("$.notRegistered").isEmpty());
+        mockMvc.perform(get("/api/portal/registrations/confirmation/" + sent.token()))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.code").value("INVALID_REGISTRATION_LINK"));
 
         logIn(dni).andExpect(status().isOk());
         JsonNode patient = patientsOf(dni).get(0);

@@ -12,6 +12,7 @@ import { SessionContext, SetUserContext, logIn } from './session';
 /** What the login says of how the last session ended, as the Thymeleaf login does. */
 const ENDED: Record<string, string> = {
   logout: 'Sesión cerrada.',
+  changed: 'Contraseña cambiada: ingresá con la nueva.',
   expired: 'Tu sesión se cerró: volvé a ingresar. Si tu usuario fue desactivado, no vas a poder.',
 };
 

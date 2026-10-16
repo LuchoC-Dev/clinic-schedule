@@ -1,10 +1,10 @@
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { useState } from 'react';
 
-import { describeError, type Refusals } from '../../shared/errors';
+import { describeError, type Refusals } from './errors';
 
 /**
- * One thing reception does — book, cancel, charge —, sent once: while it goes, the button waits; what it says
+ * One thing someone does — book, cancel, charge —, sent once: while it goes, the button waits; what it says
  * afterwards is the screen's notice, or its refusal in Spanish (D-100); and what it changed is read again. A refusal
  * leaves the form as it was typed, so it is sent again as it is or changed (D-52).
  */
@@ -32,6 +32,8 @@ export function useAction<Input, Output>(send: (input: Input) => Promise<Output>
     run: (input: Input) => mutation.mutate(input),
     pending: mutation.isPending,
     error: mutation.isError ? describeError(mutation.error, options.refusals) : null,
+    /** The refusal itself, for a screen whose state it changes. */
+    failure: mutation.isError ? mutation.error : null,
     notice,
     reset: () => {
       mutation.reset();

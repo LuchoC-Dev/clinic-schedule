@@ -3,8 +3,8 @@ import { useQuery } from '@tanstack/react-query';
 import { type FormEvent, useState } from 'react';
 import { Link, useNavigate, useSearchParams } from 'react-router';
 
-import { Said } from '../components/Said';
-import { useAction } from '../components/useAction';
+import { Said } from '../../shared/Said';
+import { useAction } from '../../shared/useAction';
 import { api } from '../session';
 import type { Patient } from '../types';
 import type { FamilyGroup } from './family';

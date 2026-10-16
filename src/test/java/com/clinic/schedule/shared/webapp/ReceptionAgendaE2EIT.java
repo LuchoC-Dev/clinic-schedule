@@ -197,19 +197,19 @@ class ReceptionAgendaE2EIT {
     }
 
     /**
-     * The menu of reception, its own agenda first; a screen not built here yet is the Thymeleaf one — changing one's
-     * password, every role's, once reception's screens are all here (D-107).
+     * The menu of reception, its own agenda first; changing one's password, the last screen of the staff's that was
+     * left on Thymeleaf, is the application's too (D-110).
      */
     @Test
-    void theMenuLeadsToTheScreensStillOnThymeleafWithTheSameSession() {
+    void theMenuLeadsToChangingThePasswordInTheApplication() {
         logInAsReception();
         assertThat(page).hasURL(Pattern.compile("/app/agenda$"));
 
         page.getByRole(AriaRole.NAVIGATION).getByText("Contraseña").click();
 
-        assertThat(page).hasURL(at("/password"));
+        assertThat(page).hasURL(at("/app/password"));
         assertThat(page.getByRole(AriaRole.HEADING, new Page.GetByRoleOptions().setName("Cambiar la contraseña"))).isVisible();
-        assertThat(page.locator("#root")).hasCount(0);
+        assertThat(page.locator("#root")).hasCount(1);
     }
 
     /**

@@ -4,8 +4,8 @@ import { Link, useNavigate, useSearchParams } from 'react-router';
 
 import { type DocumentInput, DocumentFields } from '../components/fields';
 import { SearchBox, usePatientSearch } from '../components/PatientSearch';
-import { Said } from '../components/Said';
-import { useAction } from '../components/useAction';
+import { Said } from '../../shared/Said';
+import { useAction } from '../../shared/useAction';
 import { api } from '../session';
 import { documentOf, type Patient } from '../types';
 import { IDENTITY, PATIENT_REFUSALS } from '../words';

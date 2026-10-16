@@ -5,8 +5,8 @@ import { Link, useLocation, useNavigate, useSearchParams } from 'react-router';
 
 import { addDays, longDay, timeOf } from '../../shared/dates';
 import { describeError } from '../../shared/errors';
-import { Said } from '../components/Said';
-import { useAction } from '../components/useAction';
+import { Said } from '../../shared/Said';
+import { useAction } from '../../shared/useAction';
 import { api } from '../session';
 import { AGENDA_REFUSALS } from '../words';
 import { type Agenda, type AgendaAppointment, type Tone, actionsFor, daysOf, patientName, stateOf, summaryOf } from './agenda';

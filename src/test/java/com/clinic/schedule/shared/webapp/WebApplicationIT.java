@@ -68,7 +68,22 @@ class WebApplicationIT {
                 .andExpect(content().string(not(containsString("<div id=\"root\">"))));
         mockMvc.perform(get("/portal/login")).andExpect(status().isOk())
                 .andExpect(content().string(not(containsString("<div id=\"root\">"))));
-        mockMvc.perform(get("/portal/activation").param("token", "x")).andExpect(status().isOk())
+        mockMvc.perform(get("/portal/register")).andExpect(status().isOk())
                 .andExpect(content().string(not(containsString("<div id=\"root\">"))));
+    }
+
+    /**
+     * The addresses the emails carry — already sent ones too — open the same path on the patients' application, with
+     * their token and nobody logged in (D-110).
+     */
+    @Test
+    void theEmailsAddressesOpenThePatientsApplication() throws Exception {
+        for (String path : new String[] {"/activation", "/password-reset", "/register/confirm", "/cancel"}) {
+            mockMvc.perform(get("/portal" + path).param("token", "Ab-9_x"))
+                    .andExpect(redirectedUrl("/portal/app" + path + "?token=Ab-9_x"));
+        }
+        mockMvc.perform(get("/portal/cancel").param("token", "a b&c"))
+                .andExpect(redirectedUrl("/portal/app/cancel?token=a%20b%26c"));
+        mockMvc.perform(get("/portal/activation")).andExpect(redirectedUrl("/portal/app/activation"));
     }
 }

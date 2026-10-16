@@ -7,7 +7,7 @@ import { timeOf } from '../../shared/dates';
 import { describeError } from '../../shared/errors';
 import { pesos } from '../../shared/money';
 import { ChargeDialog } from '../components/ChargeDialog';
-import { Said } from '../components/Said';
+import { Said } from '../../shared/Said';
 import { api } from '../session';
 import { CASH_REFUSALS, MEANS } from '../words';
 import { type CashDay, cashPatient, coveredInsurance, movementKind, signedAmount, tiles } from './cash';

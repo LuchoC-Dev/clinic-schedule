@@ -15,6 +15,7 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.flash;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.redirectedUrl;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 import java.util.List;
@@ -110,14 +111,11 @@ class RegistrationChildrenScreenIT {
                                 {"fullName": "Luz Pérez", "documentType": "DNI", "documentNumber": "%s",
                                  "documentSeen": true}""".formatted(luz)))
                 .andExpect(status().isCreated());
-        mockMvc.perform(post("/portal/register/confirm").with(csrf()).param("token", lastRegistrationTokenTo(email)))
-                .andExpect(redirectedUrl("/portal/login?registered"))
-                .andExpect(flash().attribute("notRegistered", List.of("Luz Pérez")));
-        mockMvc.perform(get("/portal/login").param("registered", "").flashAttr("notRegistered", List.of("Luz Pérez")))
-                .andExpect(content().string(allOf(containsString("No pudimos registrar a"),
-                        containsString("Luz Pérez"))));
-        mockMvc.perform(get("/portal/login").param("registered", ""))
-                .andExpect(content().string(not(containsString("No pudimos registrar a"))));
+        // Confirmed in the patients' application, through the API (D-110).
+        mockMvc.perform(post("/api/portal/registrations/confirmation").contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"token\": \"%s\"}".formatted(lastRegistrationTokenTo(email))))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.notRegistered[0]").value("Luz Pérez"));
 
         MockHttpSession session = logIn(adult);
         mockMvc.perform(get("/portal/family").session(session))

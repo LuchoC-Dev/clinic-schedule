@@ -2372,8 +2372,45 @@ staff's application: the users and the logs; the practitioners, their reasons, w
 copies to collect; and the waiting room's screen, which now names whom it calls and who waits. Only changing one's own
 password is still on Thymeleaf, for every role. The Thymeleaf screens stay until part 6.
 
-#### Part 5 — Patients `[ ]`
-- [ ] Every screen of the portal, phone first, the emails' addresses still working
+#### Part 5 — Patients `[~]`
+Delivered in three batches, each a commit of its own: the account; the appointments; the family, the profile and the
+copies of the record.
+
+##### Batch A — The account `[x]`
+- [x] Activating the account, asking for a new password and choosing it, registering with up to three children and
+      confirming it, cancelling from an email's link, and changing one's own password, in the patients' application,
+      at the Thymeleaf screens' paths without `/portal` (D-79, D-83, D-86, D-91, D-92, D-110)
+- [x] The emails' addresses — `/portal/activation`, `/portal/password-reset`, `/portal/register/confirm`,
+      `/portal/cancel` — send on to the same path of the application with their token, and the Thymeleaf pages behind
+      them are gone (D-110)
+- [x] A link says first whether it still works — `GET /api/portal/activation/{token}`,
+      `/api/portal/password-reset/{token}` and `/api/portal/registrations/confirmation/{token}` (D-110)
+- [x] The staff's "Contraseña", every role's, in the staff's application; a temporary password sees it alone, and the
+      login says it was changed (D-69, D-110)
+- [x] `useAction` and `Said` shared by both applications
+- [x] 32 Vitest tests more, 1 integration test more and 1 end-to-end test more: an activation's address opens the
+      patients' application on a phone; the end-to-end test of the menu now reaches the password in the application.
+      549 unit and 680 integration tests in Java, and 252 in the applications: 1481 in total
+
+**Verified with:** every new test failing when the code it covers was broken on purpose — 68 breakages, all compiling
+and all caught in the end but one, which changes nothing. In the application, 52: a password's two typings never
+compared, in either screen, its length by characters or one short, a refusal's words; a registration's empty phone or
+child's date sent as typed, a child's block counted by all its fields or every block sent, each malformed value unsaid,
+a mail server down unsaid, the malformed code unread, the children not registered always said; the appointment's day
+uncapitalized; a link asked without its token, a refused one or one without its token taken as usable, a password's
+length taken for a link spent or a link spent never said, the activation asked elsewhere, the recovery's link, the login
+not told it was activated or reset; the form sent with a typo, the recovery's type of document dropped or its answer
+unsaid, the password's fields kept after it changed; the link's practitioner, its refusal and its cancellation unsaid, its
+button offered again; a document known said as a link spent, the children not registered lost, the email's page not
+reached; the login's words of an activation, a registration and the children not registered, its recovery's link; the
+staff's repetition never compared, each refusal's words, the login not told it changed, the temporary password unsaid,
+the password's screen on Thymeleaf or not where a temporary password lands. In the server, 16: each link always or never
+usable, its code, each reading closed to whom is not logged in; each address sent to Thymeleaf's path or elsewhere, its
+token dropped, said as "null" or not encoded, and the redirect closed. One was missed at first — the registration sent
+with its passwords typed differently — and its test was made to catch it; one is the same code either way — the staff's
+new password sent as its repetition, which is sent only when both are the same. The machine's session ended while the
+server's breakages ran; every file was checked against what the batch expects, nothing was left planted, and all
+sixteen had finished. `mvnw clean verify`, with Docker running: the seven `*PostgresIT` ran.
 
 #### Part 6 — Thymeleaf removed `[ ]`
 - [ ] Templates, screen controllers, the screens' security chains and the dependency removed (D-02)
