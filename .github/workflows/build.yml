@@ -1,0 +1,42 @@
+# Every push to master and every pull request builds the application and runs all its tests: the unit tests, the
+# web applications' Vitest tests, the integration tests on H2, the PostgreSQL ones on the runner's Docker, and the
+# end-to-end ones in Chromium.
+name: Build
+
+on:
+  push:
+    branches: [master]
+  pull_request:
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 21
+          cache: maven
+
+      - name: Cache the Node.js and the packages the build installs
+        uses: actions/cache@v4
+        with:
+          path: |
+            frontend/node
+            ~/.npm
+          key: frontend-${{ runner.os }}-${{ hashFiles('frontend/package-lock.json', 'pom.xml') }}
+
+      - name: Cache the end-to-end tests' browser
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/ms-playwright
+          key: playwright-${{ runner.os }}-${{ hashFiles('pom.xml') }}
+
+      - name: Install the libraries Chromium needs
+        run: npx --yes playwright install-deps chromium
+
+      - name: Build and test
+        run: ./mvnw --batch-mode --no-transfer-progress clean verify
