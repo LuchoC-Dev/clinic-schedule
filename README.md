@@ -43,7 +43,7 @@ between restarts; `docker compose down -v` wipes it.
 `application.yml` holds the development settings. A real deployment overrides them with environment variables, as
 Spring Boot reads any setting from one — `SPRING_DATASOURCE_URL`, `SPRING_DATASOURCE_USERNAME` and
 `SPRING_DATASOURCE_PASSWORD` for the database, `SPRING_MAIL_HOST`, `SPRING_MAIL_PORT`, `SPRING_MAIL_USERNAME` and
-`SPRING_MAIL_PASSWORD` for the email, and `APP_PORTAL_BASE_URL` for the address the patients' emails link to; the
+`SPRING_MAIL_PASSWORD` for the email, and `APP_PORTAL_BASEURL` for the address the patients' emails link to (`app.portal.base-url`: dots become underscores, dashes are dropped); the
 rest are in [`docs/api.md`](docs/api.md).
 
 ### Development users
