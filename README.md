@@ -101,3 +101,7 @@ A module reaches another only through its `api/` package, which `ArchitectureTes
 - [`docs/decisions.md`](docs/decisions.md) — every technical decision and its reasoning.
 - [`docs/build.md`](docs/build.md) — the stages and phases as they were built, and what was left for later.
 - [`docs/api.md`](docs/api.md) — the REST API: logging in, every route, and the settings.
+
+## License
+
+[MIT](LICENSE).
