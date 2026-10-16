@@ -286,7 +286,14 @@ class WebMoveIT {
         assertThat(confirmation.member()).isEqualTo("Tomás Díaz");
         assertThat(confirmation.moved()).isTrue();
         mockMvc.perform(get("/api/portal/appointments").with(as(mother)))
-                .andExpect(jsonPath("$.family[0].upcoming[0].startsAt").value("2026-03-13T10:00:00"));
+                .andExpect(jsonPath("$.family[0].upcoming[0].startsAt").value("2026-03-13T10:00:00"))
+                .andExpect(jsonPath("$.family[0].upcoming[0].movable").value(true));
+        mockMvc.perform(get("/api/portal/appointments/" + childs).with(as(mother)))
+                .andExpect(jsonPath("$.member").value("Tomás Díaz"));
+        mockMvc.perform(get("/api/portal/appointments/" + someoneElses).with(as(mother)))
+                .andExpect(status().isForbidden());
+        mockMvc.perform(get("/api/portal/appointments/" + teens).with(as(mother)))
+                .andExpect(status().isForbidden());
 
         move(mother, teens, "2026-03-13T11:00:00").andExpect(status().isForbidden());
         move(mother, someoneElses, "2026-03-13T12:00:00").andExpect(status().isForbidden());
@@ -328,6 +335,43 @@ class WebMoveIT {
         assertThat(reminded.get(1).get("starts_at").toString()).startsWith("2026-03-13 09:00");
     }
 
+    /**
+     * The patients' application offers moving only what the rules allow, as the Thymeleaf screen did, and starts from
+     * the appointment as it stands (D-111).
+     */
+    @Test
+    void theAppointmentsSayWhichMayBeMovedAndOneIsReadAsMovingStartsFrom() throws Exception {
+        Patient patient = accounts.withAccount();
+        String appointment = book(patient, "2026-03-16T10:00:00");
+        String soon = book(patient, "2026-03-10T20:00:00");
+
+        mockMvc.perform(get("/api/portal/appointments").with(as(patient)))
+                .andExpect(jsonPath("$.upcoming[0].id").value(soon))
+                .andExpect(jsonPath("$.upcoming[0].movable").value(false))
+                .andExpect(jsonPath("$.upcoming[0].cancellable").value(false))
+                .andExpect(jsonPath("$.upcoming[1].id").value(appointment))
+                .andExpect(jsonPath("$.upcoming[1].movable").value(true))
+                .andExpect(jsonPath("$.upcoming[1].cancellable").value(true));
+        mockMvc.perform(get("/api/portal/appointments/" + appointment).with(as(patient)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.id").value(appointment))
+                .andExpect(jsonPath("$.member").doesNotExist())
+                .andExpect(jsonPath("$.startsAt").value("2026-03-16T10:00:00"))
+                .andExpect(jsonPath("$.practitioner.fullName").value("Dra. Arias"))
+                .andExpect(jsonPath("$.reason").value("consulta"))
+                .andExpect(jsonPath("$.movable").value(true))
+                .andExpect(jsonPath("$.firstDay").value("2026-03-11"))
+                .andExpect(jsonPath("$.lastDay").value("2026-04-09"));
+        mockMvc.perform(get("/api/portal/appointments/" + soon).with(as(patient)))
+                .andExpect(jsonPath("$.movable").value(false));
+        mockMvc.perform(post("/api/portal/appointments/" + appointment + "/cancel").with(as(patient)))
+                .andExpect(status().isNoContent());
+        mockMvc.perform(get("/api/portal/appointments").with(as(patient)))
+                .andExpect(jsonPath("$.upcoming[1].state").value("CANCELLED"))
+                .andExpect(jsonPath("$.upcoming[1].movable").value(false))
+                .andExpect(jsonPath("$.upcoming[1].cancellable").value(false));
+    }
+
     @Test
     void aPatientMovesOnTheirScreens() throws Exception {
         Patient patient = accounts.withAccount();
@@ -336,12 +380,6 @@ class WebMoveIT {
         book(accounts.withAccount(), "2026-03-17T11:00:00");
         String someoneElses = book(accounts.withAccount(), "2026-03-17T12:00:00");
         MockHttpSession session = login(patient);
-
-        String page = mockMvc.perform(get("/portal/appointments").session(session))
-                .andReturn().getResponse().getContentAsString();
-        assertThat(page).contains("/portal/appointments/" + appointment + "/move")
-                .doesNotContain("/portal/appointments/" + soon + "/move");
-        assertThat(page.split(">Cambiar horario<", -1)).hasSize(2);
 
         mockMvc.perform(get("/portal/appointments/" + appointment + "/move").session(session))
                 .andExpect(status().isOk())

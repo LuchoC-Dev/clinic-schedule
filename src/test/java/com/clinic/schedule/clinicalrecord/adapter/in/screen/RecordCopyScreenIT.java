@@ -252,7 +252,7 @@ class RecordCopyScreenIT {
     void theHeadersLeadToTheCopies() throws Exception {
         Patient patient = accounts.withAccount();
 
-        mockMvc.perform(get("/portal/appointments").session(logIn(patient)))
+        mockMvc.perform(get("/portal/booking").session(logIn(patient)))
                 .andExpect(content().string(containsString("Mi historia clínica")));
         mockMvc.perform(get("/record-copies").with(asArias))
                 .andExpect(content().string(containsString("href=\"/record-copies\"")));

@@ -2412,6 +2412,37 @@ new password sent as its repetition, which is sent only when both are the same. 
 server's breakages ran; every file was checked against what the batch expects, nothing was left planted, and all
 sixteen had finished. `mvnw clean verify`, with Docker running: the seven `*PostgresIT` ran.
 
+##### Batch B — The appointments `[x]`
+- [x] *Mis turnos*, as the approved mock has it for a phone: a card for each appointment ahead, the patient's own and
+      those of the members they act for, with "Cambiar horario" and "Cancelar" while they may be, and those of the last
+      year, each state in the Thymeleaf words (D-80, D-83, D-85, D-111)
+- [x] Each appointment says whether it is `cancellable` and `movable` (D-111)
+- [x] *Sacar turno*, for whom, the practitioner and reason, a day among buttons and a time chosen and then confirmed
+      (D-82, D-85, D-111)
+- [x] *Cambiar horario*, from the appointment as it stands — `GET /api/portal/appointments/{id}` —, as the approved mock
+      has it, saying once moved that the old email's link no longer works (D-93, D-111)
+- [x] `/portal/appointments`, which the booking's email points at and the Thymeleaf login lands on, sends on to the
+      application, and its Thymeleaf page is gone; a patient lands on their appointments, and "Turnos" is the
+      application's (D-111)
+- [x] 16 Vitest tests more, 1 integration test more and 1 end-to-end test more: a patient logs in on a phone and books an
+      appointment. 549 unit and 682 integration tests in Java, and 268 in the applications: 1499 in total
+
+**Verified with:** every new test failing when the code it covers was broken on purpose — 55 breakages, all compiling
+and all caught in the end. In the application, 44: each state's words, the patient's own said as anyone's, the last day
+dropped, a day's number padded or its weekday wrong, the last day's date, the member and the failed email unsaid once
+booked or moved, a refusal not naming the member or a busy member unnamed, a refusal's words; the first unlabelled,
+moving or cancelling offered always, the appointments not read again or the cancellation unsaid, a member's card
+unnamed or their past said as the patient's, nothing ahead unsaid, the booking's notice lost; whom asked always, the
+patient's own booked as a member's or "(vos)" unsaid, another practitioner's times, a booking without its time, what was
+booked unsaid, a member's refusal unnamed, nothing on the web unsaid, the day or the patient lost from the address;
+the member and the old link unsaid once moved, an appointment that may not be moved offered, the time sent without its
+seconds, the move's refusal unread, the day lost; the day chosen not pressed, an empty day unsaid. In the server, 11:
+each appointment cancellable or movable always or never, the hours before ignored, the appointment to move without its
+member, its practitioner or whether it may be moved, its days swapped; *Mis turnos* sent elsewhere or closed. Three were
+missed at first — moving offered without cancelling, "Para" asked of a patient alone, and a weekday read in the
+browser's zone, which the tests' zone could not tell — and their tests were made to catch them, the weekday now the one
+the shared dates already give. `mvnw clean verify`, with Docker running: the seven `*PostgresIT` ran.
+
 #### Part 6 — Thymeleaf removed `[ ]`
 - [ ] Templates, screen controllers, the screens' security chains and the dependency removed (D-02)
 

@@ -12,6 +12,7 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.flash;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.redirectedUrl;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
@@ -140,16 +141,18 @@ class FamilyPortalScreenIT {
         bookAtReception(privateTeen, "2026-03-12T11:00:00");
         MockHttpSession session = logIn(father);
 
-        mockMvc.perform(get("/portal/appointments").session(session))
-                .andExpect(content().string(allOf(containsString(">Turnos de Ema Luna<"),
-                        containsString("jueves 12/03/2026 09:00"), containsString(">No asistió<"),
-                        containsString("/portal/appointments/" + booked + "/cancel"),
-                        not(containsString("Ciro Luna")), containsString("href=\"/portal/family\""))));
+        // Mis turnos is the patients' application's (D-111): what it reads, through the same session.
+        mockMvc.perform(get("/api/portal/appointments").session(session))
+                .andExpect(jsonPath("$.family.length()").value(1))
+                .andExpect(jsonPath("$.family[0].fullName").value("Ema Luna"))
+                .andExpect(jsonPath("$.family[0].upcoming[0].id").value(booked))
+                .andExpect(jsonPath("$.family[0].upcoming[0].cancellable").value(true))
+                .andExpect(jsonPath("$.family[0].past[0].state").value("ABSENT"));
         mockMvc.perform(post("/portal/appointments/" + booked + "/cancel").session(session).with(csrf()))
                 .andExpect(flash().attribute("message", "Turno cancelado."));
-        mockMvc.perform(get("/portal/appointments").session(session))
-                .andExpect(content().string(allOf(containsString(">Cancelado a pedido del paciente<"),
-                        not(containsString(">Cancelado a tu pedido<")))));
+        mockMvc.perform(get("/api/portal/appointments").session(session))
+                .andExpect(jsonPath("$.family[0].upcoming[0].state").value("CANCELLED"))
+                .andExpect(jsonPath("$.family[0].upcoming[0].cancellationRequestedBy").value("PATIENT"));
 
         mockMvc.perform(get("/portal/booking").session(session))
                 .andExpect(content().string(allOf(containsString(">Diego Luna (vos)<"), containsString(">Ema Luna<"),
@@ -181,9 +184,8 @@ class FamilyPortalScreenIT {
         addChild(group, accounts.patient("Noa Gil", true, "2021-01-01"), father);
         bookAtReception(child, "2026-03-16T10:00:00");
         MockHttpSession session = logIn(father);
-        mockMvc.perform(get("/portal/appointments").session(session))
-                .andExpect(content().string(allOf(containsString(">Turnos de Noa Gil<"),
-                        containsString(">No tiene turnos próximos ni del último año.<"))));
+        mockMvc.perform(get("/api/portal/appointments").session(session))
+                .andExpect(jsonPath("$.family[?(@.fullName == 'Noa Gil')].upcoming.length()").value(0));
 
         // Another practitioner's appointment at the same time keeps her busy.
         TestSecurityContextHolder.setAuthentication(UsernamePasswordAuthenticationToken.authenticated("recepcion",

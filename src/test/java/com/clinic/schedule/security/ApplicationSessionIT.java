@@ -310,7 +310,7 @@ class ApplicationSessionIT {
         mockMvc.perform(get("/api/portal/appointments").with(browser))
                 .andExpect(status().isOk())
                 .andExpect(header().string("Cache-Control", containsString("no-store")));
-        mockMvc.perform(get("/portal/appointments").with(browser)).andExpect(status().isOk());
+        mockMvc.perform(get("/portal/booking").with(browser)).andExpect(status().isOk());
         mockMvc.perform(get("/api/session").with(browser)).andExpect(jsonPath("$.user").doesNotExist());
         mockMvc.perform(get("/api/agenda").with(browser)).andExpect(status().isUnauthorized());
     }
@@ -356,7 +356,7 @@ class ApplicationSessionIT {
                 .andExpect(status().isNoContent());
 
         assertThat(browser.session().isInvalid()).isTrue();
-        mockMvc.perform(get("/portal/appointments").session(new MockHttpSession()))
+        mockMvc.perform(get("/portal/booking").session(new MockHttpSession()))
                 .andExpect(redirectedUrl("http://localhost/portal/login"));
     }
 }

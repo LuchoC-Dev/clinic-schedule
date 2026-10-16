@@ -1,7 +1,6 @@
-import { Anchor, Stack, Text, Title } from '@mantine/core';
 import { QueryClientProvider } from '@tanstack/react-query';
 import { type ReactNode, useContext, useMemo, useState } from 'react';
-import { Link, Navigate, Outlet, type RouteObject, RouterProvider, createBrowserRouter } from 'react-router';
+import { Navigate, Outlet, type RouteObject, RouterProvider, createBrowserRouter } from 'react-router';
 
 import { Brand } from '../shared/Brand';
 import { newQueryClient } from '../shared/queries';
@@ -9,25 +8,16 @@ import { Theme } from '../shared/theme';
 import { ActivationPage, PasswordResetPage } from './account/LinkPages';
 import { PasswordPage, PasswordRecoveryPage } from './account/PasswordPages';
 import { CancelLinkPage } from './cancel/CancelLinkPage';
-import { Layout, TABS } from './Layout';
+import { AppointmentsPage } from './appointments/AppointmentsPage';
+import { BookingPage } from './appointments/BookingPage';
+import { MovePage } from './appointments/MovePage';
+import { Layout } from './Layout';
 import { LoginPage } from './LoginPage';
 import { RegisterConfirmPage, RegisterPage, RegisterSentPage } from './register/RegisterPages';
 import { BASE, type PatientSession, SessionContext, SetSessionContext } from './session';
 
 function RequirePatient({ children }: { children: ReactNode }) {
   return useContext(SessionContext).loggedIn ? children : <Navigate to="/login" replace />;
-}
-
-/** Where a patient lands until their screens move here, in part 5: their sections. */
-function Home() {
-  return (
-    <Stack gap={12}>
-      <Title order={1} fz={26}>Hola</Title>
-      <Text>Elegí qué querés ver:</Text>
-      {TABS.map((tab) => <Anchor key={tab.to} href={tab.to} fz={18}>{tab.label}</Anchor>)}
-      <Anchor component={Link} to="/password" fz={18}>Contraseña</Anchor>
-    </Stack>
-  );
 }
 
 /**
@@ -52,7 +42,11 @@ export const routes: RouteObject[] = [
   {
     element: <RequirePatient><Layout><Outlet /></Layout></RequirePatient>,
     children: [
-      { index: true, element: <Home /> },
+      // A patient lands on their appointments, as on the Thymeleaf login (D-80).
+      { index: true, element: <Navigate to="/appointments" replace /> },
+      { path: '/appointments', element: <AppointmentsPage /> },
+      { path: '/appointments/:id/move', element: <MovePage /> },
+      { path: '/booking', element: <BookingPage /> },
       { path: '/password', element: <PasswordPage /> },
     ],
   },

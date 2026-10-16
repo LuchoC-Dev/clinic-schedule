@@ -1,12 +1,15 @@
 package com.clinic.schedule.portal.adapter.in.http;
 
 import java.net.URI;
+import java.time.Clock;
 import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 import java.util.stream.Collectors;
 
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -37,6 +40,7 @@ import com.clinic.schedule.portal.application.usecase.RegisterOnWebUseCase;
 import com.clinic.schedule.portal.application.usecase.ViewFamilyUseCase;
 import com.clinic.schedule.portal.application.usecase.ViewOwnDataUseCase;
 import com.clinic.schedule.portal.application.usecase.ViewWebBookingUseCase;
+import com.clinic.schedule.portal.domain.Appointment;
 import com.clinic.schedule.portal.domain.BookedAppointment;
 import com.clinic.schedule.practitioner.api.PractitionerReader;
 import com.clinic.schedule.practitioner.api.PractitionerSummary;
@@ -70,6 +74,8 @@ class PortalController {
     private final RegisterOnWebUseCase registration;
     private final RegisterChildUseCase child;
     private final PractitionerReader practitioners;
+    private final Clock clock;
+    private final int cancelHoursBefore;
 
     PortalController(ActivateAccountUseCase activate, ListOwnAppointmentsUseCase appointments, ViewOwnDataUseCase data,
             ChangeOwnContactUseCase contact, ChangeOwnConsentUseCase consent, ViewWebBookingUseCase booking,
@@ -77,7 +83,8 @@ class PortalController {
             CancelLinkUseCase cancelLinks, ViewFamilyUseCase family, ManageOwnFamilyUseCase ownFamily,
             RecoverPasswordUseCase recovery,
             ChangeOwnPasswordUseCase ownPassword, RegisterOnWebUseCase registration, RegisterChildUseCase child,
-            PractitionerReader practitioners) {
+            PractitionerReader practitioners, Clock clock,
+            @Value("${app.portal.cancel-hours-before}") int cancelHoursBefore) {
         this.activate = activate;
         this.appointments = appointments;
         this.data = data;
@@ -95,6 +102,8 @@ class PortalController {
         this.registration = registration;
         this.child = child;
         this.practitioners = practitioners;
+        this.clock = clock;
+        this.cancelHoursBefore = cancelHoursBefore;
     }
 
     /** With the token of the email's link, and the password the patient chooses. */
@@ -120,7 +129,22 @@ class PortalController {
     OwnAppointmentsResponse appointments() {
         Map<UUID, String> names = practitioners.findAll().stream()
                 .collect(Collectors.toMap(PractitionerSummary::id, PractitionerSummary::fullName));
-        return OwnAppointmentsResponse.of(appointments.handle(), appointments.family(), names);
+        return OwnAppointmentsResponse.of(appointments.handle(), appointments.family(), names,
+                LocalDateTime.now(clock), cancelHoursBefore);
+    }
+
+    /**
+     * One of their appointments, or a member's, as moving it starts from (D-93, D-111): as it stands, whose it is,
+     * whether it may still be moved and the days it may be moved to.
+     */
+    @GetMapping("/api/portal/appointments/{id}")
+    MoveTargetResponse appointment(@PathVariable UUID id) {
+        MoveOwnAppointmentUseCase.Target target = move.find(id);
+        Appointment appointment = target.appointment();
+        return new MoveTargetResponse(appointment.id(), target.member(), appointment.startsAt(),
+                new OwnAppointmentsResponse.Practitioner(appointment.practitionerId(),
+                        practitionerName(appointment.practitionerId())),
+                appointment.reason(), target.movable(), target.firstDay(), target.lastDay());
     }
 
     /** The reasons booked on the web, by practitioner, the days the web books (D-82), and for whom (D-85). */
@@ -179,11 +203,15 @@ class PortalController {
     }
 
     private LinkedAppointmentResponse linked(BookedAppointment appointment) {
-        return new LinkedAppointmentResponse(appointment.startsAt(), practitioners.findAll().stream()
-                .filter(practitioner -> practitioner.id().equals(appointment.practitionerId()))
+        return new LinkedAppointmentResponse(appointment.startsAt(), practitionerName(appointment.practitionerId()));
+    }
+
+    private String practitionerName(UUID practitionerId) {
+        return practitioners.findAll().stream()
+                .filter(practitioner -> practitioner.id().equals(practitionerId))
                 .map(PractitionerSummary::fullName)
                 .findFirst()
-                .orElse(null));
+                .orElse(null);
     }
 
     /**

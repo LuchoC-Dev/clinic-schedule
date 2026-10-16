@@ -4464,3 +4464,48 @@ part 6 moves the application back to them); keeping the Thymeleaf pages behind t
 patient with an email would land on the old screens); showing the form of every link and saying it is no use only once
 sent (more than the Thymeleaf screens did: the patient would type a password for nothing); the staff's password left on
 Thymeleaf until part 6 (part 6 would have a screen to build before removing Thymeleaf).
+
+---
+
+## D-111 — The patients' appointments, booking and moving in their application
+**Date:** 2026-10-16 · **Status:** accepted
+
+v2, phase 10, part 5, batch B (D-110): *Mis turnos*, *Sacar turno* and *Cambiar horario* move to the patients'
+application, doing what the Thymeleaf screens do — the patient's own appointments and those of the members they act
+for, cancelling and moving them, and booking for themselves or for a member (D-80, D-82, D-83, D-85, D-93). A patient
+lands on their appointments, and "Turnos" in the bar is the application's.
+
+**Screens and addresses, as the approved mock has them, for a phone.** `/appointments`: a card for each appointment
+ahead — the first "Próximo", a member's with their name —, the day and time, the practitioner and the reason, and
+"Cambiar horario" and "Cancelar"; then those of the last year, with their state in the Thymeleaf screen's words, the
+patient's own said to them ("No asististe", "Cancelado a tu pedido") and a member's of them. `/booking`: "Para" when
+there is someone else to book for, the practitioner and reason, a day and a time. `/appointments/:id/move`: the
+appointment as it stands, a day and a time, and, once moved, "Turno cambiado" with the new time and that the old
+email's link no longer works. Days are buttons in a row that scrolls, from tomorrow to the last the web books; a time
+is chosen and then confirmed, as the mock does, where the Thymeleaf screens booked at the first touch. The choices of
+booking and moving are in the address, as on the Thymeleaf screens. What booking says once done is said on *Mis
+turnos*, as the Thymeleaf flash did.
+
+**What may be done, said by the API.** The Thymeleaf screen asked `WebCancellationPolicy` and `WebMovePolicy` whether
+each appointment may still be cancelled and moved; the application cannot. Each appointment of
+`GET /api/portal/appointments` says `cancellable` and `movable`, so the rules stay the server's, as D-103 did for the
+cash desk.
+
+**Moving starts from the appointment.** `GET /api/portal/appointments/{id}` answers it as moving starts from — when,
+the practitioner, the reason, whom it is for, whether it may still be moved, and the days it may be moved to —, from
+`MoveOwnAppointmentUseCase.find`, which the Thymeleaf screen used; someone else's is a 403 (D-50).
+
+***Mis turnos* is the application's.** The booking's email points at `/portal/appointments` (D-96), and the Thymeleaf
+login lands there: it answers a redirect to the application, open to anyone as the emails' other addresses (D-110),
+and its Thymeleaf page is gone. Booking and moving on Thymeleaf stay until part 6, reached by their address alone.
+
+**Tested** with Vitest on what the screens decide — each state's words, the days offered, a member named in a
+refusal, what is said once booked or moved, what each appointment offers, whom a booking is for, the times of the day
+chosen —, with integration tests on what may be done and on the appointment to move, and end to end on a phone: a
+patient logs in and books an appointment.
+
+*Rejected:* the screen working out whether an appointment may be cancelled or moved (the rules would live twice); a
+date field for the day (the mock has the days as buttons, for a thumb); booking at the first touch of a time (the
+mock confirms it first, and a phone is touched by mistake); the moved appointment's mark on *Mis turnos* (the
+Thymeleaf screen does not show it, and the user chose not to add it); an endpoint of the days that have free times (one
+request per day; a day with none says so).

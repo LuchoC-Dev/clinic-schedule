@@ -23,7 +23,6 @@ import java.util.Optional;
 import java.util.UUID;
 import java.util.stream.Collectors;
 
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Controller;
@@ -49,11 +48,8 @@ import com.clinic.schedule.portal.application.usecase.ViewOwnDataUseCase;
 import com.clinic.schedule.portal.application.usecase.ViewWebBookingUseCase;
 import com.clinic.schedule.portal.domain.Appointment;
 import com.clinic.schedule.portal.domain.BookableReason;
-import com.clinic.schedule.portal.domain.OwnAppointments;
 import com.clinic.schedule.portal.domain.OwnContact;
 import com.clinic.schedule.portal.domain.OwnData;
-import com.clinic.schedule.portal.domain.WebCancellationPolicy;
-import com.clinic.schedule.portal.domain.WebMovePolicy;
 import com.clinic.schedule.portal.domain.exception.WebBookingRefusedException;
 import com.clinic.schedule.portal.domain.exception.WebCancellationRefusedException;
 import com.clinic.schedule.portal.domain.exception.WebMoveRefusedException;
@@ -67,7 +63,7 @@ import com.clinic.schedule.practitioner.api.PractitionerSummary;
  * for, booked, moved and cancelled as their own, and the groups they are in (D-85); and their password, changed
  * or asked for by email (D-86). Thin and throwaway, as every screen (D-02): the patients' single-page application
  * replaces them, part by part. The addresses the emails carry — activating an account, choosing a new password,
- * cancelling from a link — already send on to it (D-110).
+ * cancelling from a link, *Mis turnos* — already send on to it (D-110, D-111).
  */
 @Controller
 class PortalViewController {
@@ -93,7 +89,6 @@ class PortalViewController {
     private final PatientReader patients;
     private final PractitionerReader practitioners;
     private final Clock clock;
-    private final int cancelHoursBefore;
 
     PortalViewController(ListOwnAppointmentsUseCase appointments,
             ViewOwnDataUseCase data, ChangeOwnContactUseCase contact, ChangeOwnConsentUseCase consent,
@@ -101,8 +96,7 @@ class PortalViewController {
             MoveOwnAppointmentUseCase move, ViewFamilyUseCase family,
             ManageOwnFamilyUseCase ownFamily,
             RecoverPasswordUseCase recovery, ChangeOwnPasswordUseCase ownPassword, PatientReader patients,
-            PractitionerReader practitioners, Clock clock,
-            @Value("${app.portal.cancel-hours-before}") int cancelHoursBefore) {
+            PractitionerReader practitioners, Clock clock) {
         this.appointments = appointments;
         this.data = data;
         this.contact = contact;
@@ -118,7 +112,6 @@ class PortalViewController {
         this.patients = patients;
         this.practitioners = practitioners;
         this.clock = clock;
-        this.cancelHoursBefore = cancelHoursBefore;
     }
 
     @GetMapping("/portal/login")
@@ -190,33 +183,13 @@ class PortalViewController {
         return "redirect:/portal/password";
     }
 
+    /**
+     * *Mis turnos*, which the booking's email points at and the login lands on, is the patients' application's now
+     * (D-111).
+     */
     @GetMapping("/portal/appointments")
-    String appointments(Model model) {
-        OwnAppointments own = appointments.handle();
-        Map<UUID, String> names = practitioners.findAll().stream()
-                .collect(Collectors.toMap(PractitionerSummary::id, PractitionerSummary::fullName));
-        LocalDateTime now = LocalDateTime.now(clock);
-        model.addAttribute("upcoming", upcoming(own, names, now, true));
-        model.addAttribute("past", own.past().stream()
-                .map(appointment -> Row.of(appointment, names, false, false, true))
-                .toList());
-        model.addAttribute("family", appointments.family().stream()
-                .map(member -> new MemberRows(member.member().fullName(),
-                        upcoming(member.appointments(), names, now, false),
-                        member.appointments().past().stream()
-                                .map(appointment -> Row.of(appointment, names, false, false, false))
-                                .toList()))
-                .toList());
-        return "portal-appointments";
-    }
-
-    private List<Row> upcoming(OwnAppointments appointments, Map<UUID, String> names, LocalDateTime now,
-            boolean own) {
-        return appointments.upcoming().stream()
-                .map(appointment -> Row.of(appointment, names,
-                        WebCancellationPolicy.canCancel(appointment, now, cancelHoursBefore),
-                        WebMovePolicy.canMove(appointment, now, cancelHoursBefore), own))
-                .toList();
+    String appointments() {
+        return toApplication("/appointments", null);
     }
 
     @PostMapping("/portal/appointments/{id}/cancel")
@@ -542,38 +515,6 @@ class PortalViewController {
         choices.put("true", "Sí, lo autorizo yo");
         choices.put("false", "No");
         return choices;
-    }
-
-    /**
-     * One of the patient's appointments, or of a member's they act for (D-85), in Spanish. Never the note nor who
-     * cancelled it. {@code cancellable} offers cancelling it, while it is booked and there is time to (D-83), and
-     * {@code movable} moving it to another time (D-93).
-     */
-    record Row(UUID id, String when, String practitioner, String reason, String state, boolean cancellable,
-            boolean movable) {
-
-        static Row of(Appointment appointment, Map<UUID, String> names, boolean cancellable, boolean movable,
-                boolean own) {
-            return new Row(appointment.id(), WHEN.format(appointment.startsAt()),
-                    names.getOrDefault(appointment.practitionerId(), ""), appointment.reason(),
-                    state(appointment, own), cancellable, movable);
-        }
-
-        private static String state(Appointment appointment, boolean own) {
-            return switch (appointment.state()) {
-                case BOOKED -> "Reservado";
-                case ABSENT -> own ? "No asististe" : "No asistió";
-                case CANCELLED -> appointment.cancellationRequestedBy() == null ? "Cancelado"
-                        : switch (appointment.cancellationRequestedBy()) {
-                            case PATIENT -> own ? "Cancelado a tu pedido" : "Cancelado a pedido del paciente";
-                            case PRACTICE -> "Cancelado por el consultorio";
-                        };
-            };
-        }
-    }
-
-    /** A member of the patient's family and their appointments. */
-    record MemberRows(String name, List<Row> upcoming, List<Row> past) {
     }
 
     /** A group of the patient's, in Spanish: each member, how old, whether they share, and which is the patient. */

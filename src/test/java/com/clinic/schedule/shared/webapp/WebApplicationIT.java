@@ -85,5 +85,7 @@ class WebApplicationIT {
         mockMvc.perform(get("/portal/cancel").param("token", "a b&c"))
                 .andExpect(redirectedUrl("/portal/app/cancel?token=a%20b%26c"));
         mockMvc.perform(get("/portal/activation")).andExpect(redirectedUrl("/portal/app/activation"));
+        // Mis turnos, which the booking's email points at, has no token (D-111).
+        mockMvc.perform(get("/portal/appointments")).andExpect(redirectedUrl("/portal/app/appointments"));
     }
 }

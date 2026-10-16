@@ -6,6 +6,7 @@ import static com.clinic.schedule.portal.PatientAccountFixture.address;
 import static com.clinic.schedule.portal.PatientAccountFixture.lastTokenTo;
 import static org.hamcrest.Matchers.allOf;
 import static org.hamcrest.Matchers.containsString;
+import static org.hamcrest.Matchers.hasItems;
 import static org.hamcrest.Matchers.not;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestBuilders.formLogin;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.csrf;
@@ -13,6 +14,7 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.flash;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.redirectedUrl;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
@@ -216,20 +218,21 @@ class PortalScreenIT {
         MockHttpSession session = logIn(patient, PASSWORD);
 
         mockMvc.perform(get("/portal").session(session)).andExpect(redirectedUrl("/portal/appointments"));
+        // Mis turnos is the patients' application's (D-111), which reads them through the same session.
         mockMvc.perform(get("/portal/appointments").session(session))
+                .andExpect(redirectedUrl("/portal/app/appointments"));
+        mockMvc.perform(get("/api/portal/appointments").session(session))
                 .andExpect(status().isOk())
-                .andExpect(content().string(allOf(containsString("Mis turnos"),
-                        containsString("jueves 12/03/2026 10:00"),
-                        containsString("Dra. Arias"), containsString("consulta"), containsString("Reservado"),
-                        containsString("Cancelado por el consultorio"), containsString("Cancelado a tu pedido"),
-                        containsString(">Cancelado<"), containsString("No asististe"),
-                        containsString("lunes 2/03/2026 10:00"), not(containsString("No tuviste turnos")),
-                        not(containsString("Nota de recepcion")), not(containsString(">Agenda<")))));
+                .andExpect(jsonPath("$.upcoming[0].startsAt").value("2026-03-12T10:00:00"))
+                .andExpect(jsonPath("$.upcoming[0].practitioner.fullName").value("Dra. Arias"))
+                .andExpect(jsonPath("$.upcoming[*].cancellationRequestedBy", hasItems("PRACTICE", "PATIENT")))
+                .andExpect(jsonPath("$.past[0].state").value("ABSENT"))
+                .andExpect(content().string(not(containsString("Nota de recepcion"))));
     }
 
     @Test
     void theStaffAndThePatientsAreNobodyOnEachOthersScreens() throws Exception {
-        mockMvc.perform(get("/portal/appointments")).andExpect(redirectedUrl("http://localhost/portal/login"));
+        mockMvc.perform(get("/portal/booking")).andExpect(redirectedUrl("http://localhost/portal/login"));
 
         MockHttpSession patient = logIn(accounts.withAccount(), PASSWORD);
         mockMvc.perform(get("/agenda").session(patient)).andExpect(redirectedUrl("http://localhost/login"));
@@ -237,7 +240,7 @@ class PortalScreenIT {
         MockHttpSession staff = (MockHttpSession) mockMvc.perform(formLogin("/login").user("recepcion")
                         .password("recepcion123"))
                 .andReturn().getRequest().getSession(false);
-        mockMvc.perform(get("/portal/appointments").session(staff))
+        mockMvc.perform(get("/portal/booking").session(staff))
                 .andExpect(redirectedUrl("http://localhost/portal/login"));
     }
 
@@ -248,8 +251,8 @@ class PortalScreenIT {
                         not(containsString("href=\"/portal/")), not(containsString("/portal/logout")))));
 
         MockHttpSession patient = logIn(accounts.withAccount(), PASSWORD);
-        mockMvc.perform(get("/portal/appointments").session(patient))
-                .andExpect(content().string(allOf(containsString("href=\"/portal/booking\""),
+        mockMvc.perform(get("/portal/booking").session(patient))
+                .andExpect(content().string(allOf(containsString("href=\"/portal/family\""),
                         not(containsString("href=\"/patients\"")), not(containsString("action=\"/logout\"")))));
     }
 
@@ -258,11 +261,11 @@ class PortalScreenIT {
     void aDeactivatedAccountIsSentOutOfTheSessionItHadOpen() throws Exception {
         Patient patient = accounts.withAccount();
         MockHttpSession session = logIn(patient, PASSWORD);
-        mockMvc.perform(get("/portal/appointments").session(session)).andExpect(status().isOk());
+        mockMvc.perform(get("/portal/booking").session(session)).andExpect(status().isOk());
 
         mockMvc.perform(post("/api/patient-accounts/" + accounts.accountOf(patient) + "/deactivate").with(RECEPTION));
 
-        mockMvc.perform(get("/portal/appointments").session(session))
+        mockMvc.perform(get("/portal/booking").session(session))
                 .andExpect(redirectedUrl("/portal/login?expired"));
     }
 

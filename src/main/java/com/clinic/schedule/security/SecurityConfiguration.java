@@ -139,9 +139,9 @@ class SecurityConfiguration {
                 .securityContext(context -> context.securityContextRepository(sessionKeptUnder(PORTAL_LOGIN)))
                 .authorizeHttpRequests(routes -> routes
                         .requestMatchers("/portal/app", "/portal/app/**").permitAll()
-                        // The emails' addresses, sent on to the patients' application (D-110).
+                        // The emails' addresses, sent on to the patients' application (D-110, D-111).
                         .requestMatchers("/portal/login", "/portal/activation", "/portal/cancel",
-                                "/portal/password-recovery", "/portal/password-reset", "/portal/register",
+                                "/portal/appointments", "/portal/password-recovery", "/portal/password-reset", "/portal/register",
                                 "/portal/register/sent", "/portal/register/confirm").permitAll()
                         .anyRequest().hasRole(PATIENT))
                 .addFilterBefore(new DocumentLoginFilter("/portal/login"), UsernamePasswordAuthenticationFilter.class)

@@ -52,3 +52,8 @@
 .patients-tabs a:hover {
   color: #0a4441;
 }
+
+.patients-tabs a.on {
+  color: #0f5f5b;
+  font-weight: 700;
+}

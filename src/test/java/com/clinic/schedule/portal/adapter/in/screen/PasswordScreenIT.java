@@ -148,7 +148,7 @@ class PasswordScreenIT {
                         .param("newPassword", NEW_PASSWORD).param("repeatedPassword", NEW_PASSWORD))
                 .andExpect(flash().attribute("message", "Tu contraseña quedó cambiada."));
         // The session goes on.
-        mockMvc.perform(get("/portal/appointments").session(session)).andExpect(status().isOk());
+        mockMvc.perform(get("/portal/booking").session(session)).andExpect(status().isOk());
         logIn(patient, NEW_PASSWORD).andExpect(redirectedUrl("/portal/appointments"));
         mockMvc.perform(get(accountScreen(patient)).with(RECEPTION))
                 .andExpect(content().string(containsString(">Contraseña cambiada<")));

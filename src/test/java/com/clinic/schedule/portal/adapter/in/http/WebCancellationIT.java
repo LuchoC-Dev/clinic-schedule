@@ -5,6 +5,7 @@ import static com.clinic.schedule.portal.PatientAccountFixture.RECEPTION;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.hamcrest.Matchers.allOf;
+import static org.hamcrest.Matchers.contains;
 import static org.hamcrest.Matchers.containsString;
 import static org.hamcrest.Matchers.not;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.csrf;
@@ -271,10 +272,9 @@ class WebCancellationIT {
                         .param("password", PASSWORD))
                 .andReturn().getRequest().getSession(false);
 
-        String page = mockMvc.perform(get("/portal/appointments").session(session))
-                .andReturn().getResponse().getContentAsString();
-        assertThat(page).contains("/portal/appointments/" + appointment + "/cancel");
-        assertThat(page.split("class=\"danger\">Cancelar<", -1)).hasSize(2);
+        // Only what may still be cancelled is offered (D-111).
+        mockMvc.perform(get("/api/portal/appointments").with(as(patient)))
+                .andExpect(jsonPath("$.upcoming[?(@.cancellable == true)].id", contains(appointment)));
         mockMvc.perform(post("/portal/appointments/" + appointment + "/cancel").session(session).with(csrf()))
                 .andExpect(redirectedUrl("/portal/appointments"))
                 .andExpect(flash().attribute("message", "Turno cancelado."));
