@@ -4509,3 +4509,42 @@ date field for the day (the mock has the days as buttons, for a thumb); booking 
 mock confirms it first, and a phone is touched by mistake); the moved appointment's mark on *Mis turnos* (the
 Thymeleaf screen does not show it, and the user chose not to add it); an endpoint of the days that have free times (one
 request per day; a day with none says so).
+
+---
+
+## D-112 — The patients' family, profile and copies of the record in their application
+**Date:** 2026-10-16 · **Status:** accepted
+
+v2, phase 10, part 5, batch C (D-110): *Mi familia*, *Mis datos* and *Mi historia clínica* move to the patients'
+application, doing what the Thymeleaf screens do (D-81, D-85, D-92, D-95). With them every section of the bar —
+Turnos, Familia, Historia, Perfil — is the application's, and every screen of the portal is there; the Thymeleaf ones
+stay until part 6, reached by their address alone.
+
+**Screens and addresses.** `/family`: each group with its members — their name, the patient as "(vos)", how old as the
+group counts it, whether it sees their appointments —, the patient's own choice to share or stop, leaving it, and,
+for an adult, registering a child under 13, in their first group unless they choose another or a new one. `/profile`:
+who they are, which reception changes; their contact and insurance, sent as typed with reception's rules; and each
+channel's reminders, the consent that stands offered first, so saving untouched never agrees; once saved, both forms
+start from what the server keeps; "Cambiar tu contraseña" leads to `/password`. `/record-copies`, as the approved mock
+has it: each copy asked for — whose, when, how it is delivered and where it stands, never who authenticated it nor
+its code, which the patients' answer does not carry —, its PDF downloaded with a plain link to the API, answered
+`attachment` and `no-store`, as it was; and a new one asked for, of whom and how.
+
+**What the API answers now (D-14).**
+- `GET /api/portal/profile` says `ageBand`, how old the family groups' rules count the patient today, null without a
+  date of birth: the Thymeleaf screen offered registering a child to an adult alone, even one in no group, and the
+  application cannot count it without repeating the rule of D-84.
+- Each copy of `GET /api/portal/record-copies` says `own`: the Thymeleaf screen said "Tu historia" or "Historia de …"
+  by whether it was the patient's, which the list already knew, and the patient is not always the first of whom they
+  may ask for.
+
+**Nothing of the record kept.** The list of copies holds nothing of the record, and is dropped once the screen is left
+(`gcTime: 0`); the PDF is the browser's download, as on the Thymeleaf screen; logging out reloads the page (D-97).
+
+**Tested** with Vitest on what the screens decide — each member's words, sharing either way, the child's form and its
+group, the contact sent as typed, the consent offered and sent, each copy's words and which is downloaded, a copy asked
+for without its delivery, each refusal —, and with integration tests on the age band and on whose each copy is.
+
+*Rejected:* the age band worked out by the screen from the date of birth (the rule of D-84 would live twice); "Firmada
+por" and the copy's code, as the mock draws them (the patients' answer has neither, on purpose, D-95); "Te avisamos por
+email cuando esté", as the mock says it (no such email is sent).

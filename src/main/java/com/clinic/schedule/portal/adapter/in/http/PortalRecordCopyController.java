@@ -63,7 +63,7 @@ class PortalRecordCopyController {
         AccountHolder patient = entry.patient();
         return new Copy(copy.id(), new Person(copy.patientId(), patient == null ? null : patient.fullName()),
                 copy.requestedAt(), copy.delivery(), copy.state(), copy.deadline(), copy.authenticatedAt(),
-                copy.handedOverAt());
+                copy.handedOverAt(), entry.own());
     }
 
     record Request(UUID patientId, RecordCopyRequest.Delivery delivery) {
@@ -72,10 +72,13 @@ class PortalRecordCopyController {
     record Person(UUID id, String fullName) {
     }
 
-    /** A request as the patient follows it: nothing of the record, nor who authenticated it. */
+    /**
+     * A request as the patient follows it: nothing of the record, nor who authenticated it; {@code own} when it is of
+     * the patient's own record (D-112).
+     */
     record Copy(UUID id, Person patient, LocalDateTime requestedAt, RecordCopyRequest.Delivery delivery,
             RecordCopyRequest.State state, LocalDateTime deadline, LocalDateTime authenticatedAt,
-            LocalDateTime handedOverAt) {
+            LocalDateTime handedOverAt, boolean own) {
     }
 
     record RecordCopiesResponse(List<Person> askableFor, List<Copy> copies) {

@@ -86,6 +86,8 @@ class OwnDataIT {
                 .andExpect(jsonPath("$.fullName").value("Ana Pérez"))
                 .andExpect(jsonPath("$.document").value("DNI " + patient.dni()))
                 .andExpect(jsonPath("$.birthDate").value("1990-05-14"))
+                // Whether Mi familia offers registering a child, as the group's rules count the age (D-112).
+                .andExpect(jsonPath("$.ageBand").value("ADULT"))
                 .andExpect(jsonPath("$.phone").isEmpty())
                 .andExpect(jsonPath("$.insurance").isEmpty());
 
@@ -117,6 +119,16 @@ class OwnDataIT {
                 .andExpect(jsonPath("$.email").isEmpty())
                 .andExpect(jsonPath("$.insurance").isEmpty())
                 .andExpect(jsonPath("$.birthDate").value("1990-05-14"));
+    }
+
+    @Test
+    void anAdolescentsDataSaysTheyAreOne() throws Exception {
+        Patient teen = accounts.withAccount("Lola Díaz", "2012-03-11");
+        mockMvc.perform(get("/api/portal/profile").with(as(teen)))
+                .andExpect(jsonPath("$.ageBand").value("ADOLESCENT"));
+        Patient birthday = accounts.withAccount("Tomás Díaz", "2008-03-10");
+        mockMvc.perform(get("/api/portal/profile").with(as(birthday)))
+                .andExpect(jsonPath("$.ageBand").value("ADULT"));
     }
 
     @Test

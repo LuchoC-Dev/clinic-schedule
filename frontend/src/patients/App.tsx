@@ -8,11 +8,14 @@ import { Theme } from '../shared/theme';
 import { ActivationPage, PasswordResetPage } from './account/LinkPages';
 import { PasswordPage, PasswordRecoveryPage } from './account/PasswordPages';
 import { CancelLinkPage } from './cancel/CancelLinkPage';
+import { RecordCopiesPage } from './copies/RecordCopiesPage';
+import { FamilyPage } from './family/FamilyPage';
 import { AppointmentsPage } from './appointments/AppointmentsPage';
 import { BookingPage } from './appointments/BookingPage';
 import { MovePage } from './appointments/MovePage';
 import { Layout } from './Layout';
 import { LoginPage } from './LoginPage';
+import { ProfilePage } from './profile/ProfilePage';
 import { RegisterConfirmPage, RegisterPage, RegisterSentPage } from './register/RegisterPages';
 import { BASE, type PatientSession, SessionContext, SetSessionContext } from './session';
 
@@ -47,6 +50,9 @@ export const routes: RouteObject[] = [
       { path: '/appointments', element: <AppointmentsPage /> },
       { path: '/appointments/:id/move', element: <MovePage /> },
       { path: '/booking', element: <BookingPage /> },
+      { path: '/family', element: <FamilyPage /> },
+      { path: '/record-copies', element: <RecordCopiesPage /> },
+      { path: '/profile', element: <ProfilePage /> },
       { path: '/password', element: <PasswordPage /> },
     ],
   },

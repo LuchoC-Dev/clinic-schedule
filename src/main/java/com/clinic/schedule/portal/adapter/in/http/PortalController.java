@@ -327,20 +327,20 @@ class PortalController {
     /** The patient's own data (D-81). */
     @GetMapping("/api/portal/profile")
     ProfileResponse profile() {
-        return ProfileResponse.of(data.handle());
+        return ProfileResponse.of(data.handle(), LocalDate.now(clock));
     }
 
     /** Their contact and health insurance as they are to be: one left out is cleared. */
     @PutMapping("/api/portal/profile/details")
     ProfileResponse changeDetails(@RequestBody ProfileRequest request) {
         contact.handle(request.toContact());
-        return ProfileResponse.of(data.handle());
+        return ProfileResponse.of(data.handle(), LocalDate.now(clock));
     }
 
     /** Whether they agree to be reminded on each channel; one left out is left as it is. */
     @PutMapping("/api/portal/profile/contact-consent")
     ProfileResponse changeConsent(@RequestBody ConsentRequest request) {
         consent.handle(request.phone(), request.email());
-        return ProfileResponse.of(data.handle());
+        return ProfileResponse.of(data.handle(), LocalDate.now(clock));
     }
 }

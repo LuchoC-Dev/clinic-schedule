@@ -2372,7 +2372,7 @@ staff's application: the users and the logs; the practitioners, their reasons, w
 copies to collect; and the waiting room's screen, which now names whom it calls and who waits. Only changing one's own
 password is still on Thymeleaf, for every role. The Thymeleaf screens stay until part 6.
 
-#### Part 5 — Patients `[~]`
+#### Part 5 — Patients `[x]`
 Delivered in three batches, each a commit of its own: the account; the appointments; the family, the profile and the
 copies of the record.
 
@@ -2442,6 +2442,41 @@ member, its practitioner or whether it may be moved, its days swapped; *Mis turn
 missed at first — moving offered without cancelling, "Para" asked of a patient alone, and a weekday read in the
 browser's zone, which the tests' zone could not tell — and their tests were made to catch them, the weekday now the one
 the shared dates already give. `mvnw clean verify`, with Docker running: the seven `*PostgresIT` ran.
+
+##### Batch C — The family, the profile and the copies of the record `[x]`
+- [x] *Mi familia*: each group's members by name, age band and whether they share, sharing or not and leaving, and an
+      adult registering a child under 13, in their first group unless they choose (D-85, D-92, D-112)
+- [x] *Mis datos*: who the patient is, their contact and insurance sent as typed, each channel's reminders with the
+      consent that stands first, both forms read again from what the server keeps; and the password from there (D-81,
+      D-112)
+- [x] *Mi historia clínica*, as the approved mock has it: each copy asked for, its PDF downloaded with a plain link,
+      and a new one of whom and how (D-95, D-96, D-112)
+- [x] The profile says the patient's `ageBand`, and each copy whether it is `own` (D-112)
+- [x] Every section of the bar is the application's
+- [x] 22 Vitest tests more and 1 integration test more. 549 unit and 683 integration tests in Java, and 290 in the
+      applications: 1522 in total
+
+**Verified with:** every new test failing when the code it covers was broken on purpose — 45 breakages, all compiling
+and all caught in the end. In the application, 41: the patient not said "(vos)", the age bands swapped, a child's
+sharing by choice, whose sharing read from another member, each refusal of registering a child unsaid, its name
+untrimmed; sharing sent as it was or said backwards, leaving's refusal unsaid, the child's form offered to anyone, a new
+group chosen by default or sent empty, the form kept once sent, no group unsaid; the owner's name lost, an owner sent
+always or only by relation, the owner's consent not first, "Sí" first when nobody agreed, a kept consent sent as "No",
+the date of birth padded; the contact's refusal unsaid, the reminders unsaid, the forms not read again from what was
+kept, no channel unsaid, the password's link elsewhere; a copy's whose, delivery, deadline and handing over unsaid, one
+to collect downloaded; a copy asked for without its delivery, of the first always, "De quién" asked always, its refusal
+unread, its PDF elsewhere, a copy offered to who may ask for none; the family on Thymeleaf. In the server, 4: the age
+band never or of another day, whose a copy is always or never. Three were missed at first — a channel not there sent,
+which its choice already leaves out, and the line was removed; and the forms not read again from what was kept, either
+of them — and their tests were made to catch them. `mvnw clean verify`, with Docker running: the seven `*PostgresIT`
+ran. A first full run failed in `AgendaPage.test.tsx`, of part 2, untouched here — a menu's item not found under the
+build's load, as part 4 saw —; it passed alone three times and in the next full run, and is left as found.
+
+**Part 5 of phase 10, patients, is done.** Every screen of the portal is in the patients' application, made for a phone:
+the account — activating it, a new password, registering, cancelling from an email's link, changing the password —, the
+appointments with booking and moving, the family, the profile and the copies of the record. The addresses the emails
+carry open it, those already sent included, and the Thymeleaf pages behind them are gone; the rest stay until part 6.
+The staff's password is in the staff's application, so no screen of the staff's is left on Thymeleaf.
 
 #### Part 6 — Thymeleaf removed `[ ]`
 - [ ] Templates, screen controllers, the screens' security chains and the dependency removed (D-02)

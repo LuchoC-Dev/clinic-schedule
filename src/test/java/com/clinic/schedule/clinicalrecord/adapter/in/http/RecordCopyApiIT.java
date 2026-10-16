@@ -184,7 +184,8 @@ class RecordCopyApiIT {
         mockMvc.perform(get("/api/portal/record-copies").with(as(patient)))
                 .andExpect(jsonPath("$.askableFor[0].id").value(patient.id()))
                 .andExpect(jsonPath("$.copies", hasSize(1)))
-                .andExpect(jsonPath("$.copies[0].deadline").value("2026-03-12T00:00:00"));
+                .andExpect(jsonPath("$.copies[0].deadline").value("2026-03-12T00:00:00"))
+                .andExpect(jsonPath("$.copies[0].own").value(true));
         mockMvc.perform(get("/api/portal/record-copies/" + copy + "/pdf").with(as(patient)))
                 .andExpect(status().isConflict());
 
@@ -378,6 +379,13 @@ class RecordCopyApiIT {
                 .andExpect(jsonPath("$.askableFor", hasSize(2)))
                 .andExpect(jsonPath("$.askableFor[1].id").value(child.id()));
         String childsCopy = ask(mother, child.id(), "PDF");
+        // The patients' application says whose each is: the mother's own, or her child's (D-112).
+        String own = ask(mother, null, "PAPER");
+        mockMvc.perform(get("/api/portal/record-copies").with(as(mother)))
+                .andExpect(jsonPath("$.copies[?(@.id == '%s')].own".formatted(childsCopy)).value(false))
+                .andExpect(jsonPath("$.copies[?(@.id == '%s')].patient.fullName".formatted(childsCopy))
+                        .value("Sofía Díaz"))
+                .andExpect(jsonPath("$.copies[?(@.id == '%s')].own".formatted(own)).value(true));
 
         send(as(mother), "/api/portal/record-copies", "{\"patientId\": \"" + unproved + "\", \"delivery\": \"PDF\"}")
                 .andExpect(status().isForbidden());
