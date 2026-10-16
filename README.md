@@ -122,9 +122,10 @@ historia clínica* they ask for a copy of their whole clinical record — from 1
 child under 13 once reception proved the relation —, as a PDF to download once a practitioner authenticates it, or on
 paper to collect at reception. The emails go to Mailpit in development, at http://localhost:8025.
 
-**API** — the web applications log in with a session and send its CSRF token as `X-CSRF-TOKEN`
-with every write; any other client uses basic authentication on every request: the staff with their username, a
-patient with their document as its type and number, such as `DNI 27333444`. Errors share one body:
+**API** — it is logged in to with a session and nothing else (D-115): the staff at `POST /api/session` with their
+username and password, a patient at `POST /api/portal/session` with their document's type and number and their
+password, each after asking `GET /api/session` or `GET /api/portal/session` for the CSRF token, sent as
+`X-CSRF-TOKEN` with every write and with the login. Errors share one body:
 `{timestamp, status, error, message, code?, fields?}`, `code` naming a refusal for a screen to say it in its words,
 such as `PRACTITIONER_ALREADY_BOOKED` or `ALREADY_CHARGED`.
 

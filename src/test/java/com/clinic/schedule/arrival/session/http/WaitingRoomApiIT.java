@@ -1,7 +1,7 @@
 package com.clinic.schedule.arrival.session.http;
 
+import static com.clinic.schedule.Logins.staffUser;
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.httpBasic;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
@@ -36,7 +36,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 @WithMockUser(username = "recepcion", roles = "RECEPTION")
 class WaitingRoomApiIT {
 
-    private static final RequestPostProcessor SALA = httpBasic("sala", "sala123");
+    private static final RequestPostProcessor SALA = staffUser("sala");
 
     @Autowired
     private MockMvc mockMvc;
@@ -133,6 +133,6 @@ class WaitingRoomApiIT {
     @Test
     void nobodyElseReachesIt() throws Exception {
         mockMvc.perform(get("/api/waiting-room").with(asArias)).andExpect(status().isForbidden());
-        mockMvc.perform(get("/api/waiting-room").with(httpBasic("admin", "admin123"))).andExpect(status().isForbidden());
+        mockMvc.perform(get("/api/waiting-room").with(staffUser("admin"))).andExpect(status().isForbidden());
     }
 }

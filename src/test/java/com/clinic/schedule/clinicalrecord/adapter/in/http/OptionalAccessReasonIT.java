@@ -1,6 +1,6 @@
 package com.clinic.schedule.clinicalrecord.adapter.in.http;
 
-import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.httpBasic;
+import static com.clinic.schedule.Logins.staffUser;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
@@ -24,7 +24,7 @@ class OptionalAccessReasonIT {
 
     @Test
     void thePractitionersAreToldTheReasonIsOptional() throws Exception {
-        mockMvc.perform(get("/api/access-grants/settings").with(httpBasic("arias", "arias123")))
+        mockMvc.perform(get("/api/access-grants/settings").with(staffUser("arias")))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.reasonRequired").value(false));
     }

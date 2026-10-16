@@ -1,5 +1,6 @@
 package com.clinic.schedule.portal.adapter.in.http;
 
+import static com.clinic.schedule.Logins.patientUser;
 import static com.clinic.schedule.portal.PatientAccountFixture.PASSWORD;
 import static com.clinic.schedule.portal.PatientAccountFixture.RECEPTION;
 import static com.clinic.schedule.portal.PatientAccountFixture.address;
@@ -8,7 +9,6 @@ import static com.clinic.schedule.portal.PatientAccountFixture.lastRegistrationT
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.hamcrest.Matchers.hasItem;
 import static org.hamcrest.Matchers.not;
-import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.httpBasic;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
@@ -124,7 +124,7 @@ class WebRegistrationChildrenIT {
     }
 
     private static RequestPostProcessor as(String dni) {
-        return httpBasic("DNI " + dni, PASSWORD);
+        return patientUser("DNI " + dni);
     }
 
     private int waitingChildren() {
@@ -344,14 +344,14 @@ class WebRegistrationChildrenIT {
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("{\"patientId\": \"%s\", \"shares\": true}".formatted(partner.id())))
                 .andExpect(status().isOk());
-        mockMvc.perform(get("/api/portal/booking/options").with(httpBasic("DNI " + partner.dni(), PASSWORD)))
+        mockMvc.perform(get("/api/portal/booking/options").with(patientUser("DNI " + partner.dni())))
                 .andExpect(jsonPath("$.patients[*].id").value(not(hasItem(tomasId))));
 
         String proof = "/api/family-groups/" + groupId + "/members/" + tomasId + "/relation-proof";
         mockMvc.perform(post(proof).with(RECEPTION).contentType(MediaType.APPLICATION_JSON)
                 .content("{\"proofSeen\": false}")).andExpect(status().isConflict());
         mockMvc.perform(post(proof).with(as(adult)).contentType(MediaType.APPLICATION_JSON)
-                .content("{\"proofSeen\": true}")).andExpect(status().isUnauthorized());
+                .content("{\"proofSeen\": true}")).andExpect(status().isForbidden());
         JsonNode proved = read(mockMvc.perform(post(proof).with(RECEPTION).contentType(MediaType.APPLICATION_JSON)
                 .content("{\"proofSeen\": true}")).andExpect(status().isOk()));
         assertThat(memberOf(proved, tomasId).get("relationProved").asBoolean()).isTrue();
@@ -368,7 +368,7 @@ class WebRegistrationChildrenIT {
                 .orElseThrow();
         assertThat(provedEntry.get("patientId").asText()).isEqualTo(tomasId);
         assertThat(provedEntry.get("by").asText()).isEqualTo("recepcion");
-        mockMvc.perform(get("/api/portal/booking/options").with(httpBasic("DNI " + partner.dni(), PASSWORD)))
+        mockMvc.perform(get("/api/portal/booking/options").with(patientUser("DNI " + partner.dni())))
                 .andExpect(jsonPath("$.patients[*].id").value(hasItem(tomasId)))
                 .andExpect(jsonPath("$.patients[*].id").value(not(hasItem(sofiaId))));
 

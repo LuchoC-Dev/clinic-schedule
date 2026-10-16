@@ -1,9 +1,8 @@
 package com.clinic.schedule.portal.adapter.in.http;
 
-import static com.clinic.schedule.portal.PatientAccountFixture.PASSWORD;
+import static com.clinic.schedule.Logins.patientUser;
 import static com.clinic.schedule.portal.PatientAccountFixture.RECEPTION;
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.httpBasic;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
@@ -54,7 +53,7 @@ class OwnDataIT {
     }
 
     private static RequestPostProcessor as(Patient patient) {
-        return httpBasic("DNI " + patient.dni(), PASSWORD);
+        return patientUser("DNI " + patient.dni());
     }
 
     private void changeDetails(Patient patient, String body) throws Exception {
@@ -175,7 +174,7 @@ class OwnDataIT {
         Patient patient = accounts.withAccount();
 
         mockMvc.perform(get("/api/portal/profile").with(RECEPTION)).andExpect(status().isForbidden());
-        mockMvc.perform(get("/api/patients/" + patient.id()).with(as(patient))).andExpect(status().isUnauthorized());
+        mockMvc.perform(get("/api/patients/" + patient.id()).with(as(patient))).andExpect(status().isForbidden());
         mockMvc.perform(get("/api/portal/profile")).andExpect(status().isUnauthorized());
     }
 }

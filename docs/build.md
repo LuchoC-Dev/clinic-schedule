@@ -2037,7 +2037,7 @@ one more reading of the record. What it left for later is listed below.
 ### Phase 10 — The web applications `[~]`
 
 Scope in `docs/context.md`, section "v2, phase 10 — the web applications". The last phase of v2. Delivered
-in parts; each one is usable on its own, and Thymeleaf keeps working until the last. The technical design of
+in parts; each one is usable on its own, and Thymeleaf kept working until the last, which removed it. The technical design of
 each part is agreed before it is coded.
 
 #### Part 1 — The foundation `[x]`
@@ -2478,7 +2478,7 @@ appointments with booking and moving, the family, the profile and the copies of 
 carry open it, those already sent included, and the Thymeleaf pages behind them are gone; the rest stay until part 6.
 The staff's password is in the staff's application, so no screen of the staff's is left on Thymeleaf.
 
-#### Part 6 — Thymeleaf removed `[~]`
+#### Part 6 — Thymeleaf removed `[x]`
 Delivered in three batches, each a commit of its own: the unstable test; Thymeleaf removed and the applications at
 their addresses; Basic authentication removed.
 
@@ -2525,6 +2525,29 @@ them to anyway. A first full run failed two tests of the API that still asked a 
 a practitioner's reason —, which the first search had not found; they ask the API now, and a wider search found no
 other. `mvnw clean verify`, with Docker running: the seven `*PostgresIT` ran, and the four end-to-end tests, at the new
 addresses.
+
+##### Batch C — Basic authentication removed `[x]`
+- [x] Neither API takes Basic authentication: the session's login is the only way in, each side's login kept in its
+      session alone, and the CSRF token asked of every write with a session's cookie, whatever else it carries (D-115)
+- [x] The tests are someone as the application loads them, or log in for real where the login decides — `Logins`;
+      a patient on the staff's routes, or the staff on the patients', is now refused by role, and each side's session
+      apart from the other's is said by the session's tests (D-115)
+- [x] The README says how the API is logged in to
+- [x] 1 integration test more: Basic authentication opens nothing, and credentials of its own do not spare a write its
+      token. 545 unit and 484 integration tests in Java, and 290 in the applications: 1319 in total
+
+**Verified with:** every new or changed test failing when the code it covers was broken on purpose — 6 breakages, all
+compiling, each run first untouched, and all caught: Basic authentication back on the staff's API or on the patients',
+a write with an `Authorization` header spared its token, a temporary password not said, a patient's failed login not
+counted or a good one not recorded — the last three through tests that log in for real now. A first run failed eight
+tests that had logged in with Basic authentication: an account that may not log in cannot be loaded either, and a test
+user set for a whole class answers whatever session a request brings; they log in for real, or say the refusal by role.
+`mvnw clean verify`, with Docker running: the seven `*PostgresIT` ran, and the four end-to-end tests.
+
+**Part 6 of phase 10, Thymeleaf removed, is done.** The two applications are all the screens there are, at `/` and
+`/portal/`; the addresses the emails carry, sent ones too, are the patients' application's own; the session's login is
+the only way into the API; and the agenda's tests no longer wait for Mantine's transitions. Closing phase 10 — and the
+ids in the applications' addresses — is left for its own step.
 
 ---
 

@@ -6,7 +6,6 @@ import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.core.annotation.Order;
-import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpMethod;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.core.session.SessionRegistry;
@@ -16,9 +15,7 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.access.intercept.AuthorizationFilter;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
-import org.springframework.security.web.context.DelegatingSecurityContextRepository;
 import org.springframework.security.web.context.HttpSessionSecurityContextRepository;
-import org.springframework.security.web.context.RequestAttributeSecurityContextRepository;
 import org.springframework.security.web.context.SecurityContextRepository;
 import org.springframework.security.web.session.HttpSessionEventPublisher;
 import org.springframework.security.web.util.matcher.RequestMatcher;
@@ -84,8 +81,8 @@ class SecurityConfiguration {
      * login answered in JSON, the document joined by {@link DocumentLoginFilter}, its session registered in the
      * patients' registry, so a deactivated account loses it at once (D-79). A registry of their own, apart from the
      * staff's: a registry keeps one login for each session, and a browser where someone of the staff logged in
-     * after the patient would otherwise hide the patient's. Basic authentication still answers any other client, on
-     * every request and with no session.
+     * after the patient would otherwise hide the patient's. It is the only way in: there is no Basic authentication
+     * (D-115).
      */
     @Bean
     @Order(1)
@@ -113,7 +110,6 @@ class SecurityConfiguration {
                         .expiredSessionStrategy(handlers.sessionEnded()))
                 .logout(logout -> logout.logoutUrl("/api/portal/session/logout")
                         .logoutSuccessHandler(handlers.loggedOut()))
-                .httpBasic(basic -> basic.authenticationEntryPoint(errors))
                 .exceptionHandling(handling -> handling.authenticationEntryPoint(errors).accessDeniedHandler(errors))
                 .build();
     }
@@ -121,8 +117,7 @@ class SecurityConfiguration {
     /**
      * The staff's application logs in here, with a session, at {@code /api/session} (D-97): a form login answered
      * in JSON, every session registered, with no limit to how many a user has, so a deactivated user loses theirs
-     * at once (D-68). Basic authentication still answers any other client, on every request and with no session
-     * (D-34).
+     * at once (D-68). It is the only way in: there is no Basic authentication (D-115).
      */
     @Bean
     @Order(2)
@@ -158,7 +153,6 @@ class SecurityConfiguration {
                 .sessionManagement(session -> session.maximumSessions(-1).sessionRegistry(sessions)
                         .expiredSessionStrategy(handlers.sessionEnded()))
                 .logout(logout -> logout.logoutUrl("/api/session/logout").logoutSuccessHandler(handlers.loggedOut()))
-                .httpBasic(basic -> basic.authenticationEntryPoint(errors))
                 .exceptionHandling(handling -> handling.authenticationEntryPoint(errors).accessDeniedHandler(errors))
                 .build();
     }
@@ -175,28 +169,21 @@ class SecurityConfiguration {
                 .build();
     }
 
-    /**
-     * A login kept in the session under its key, for every request after it; or, for a request with Basic
-     * authentication, for that request alone, so it opens no session (D-97).
-     */
+    /** A login kept in the session under its key, for every request after it (D-97). */
     private static SecurityContextRepository sessionKeptUnder(String key) {
         HttpSessionSecurityContextRepository session = new HttpSessionSecurityContextRepository();
         session.setSpringSecurityContextKey(key);
-        return new DelegatingSecurityContextRepository(new RequestAttributeSecurityContextRepository(), session);
+        return session;
     }
 
     /**
      * The API asks a CSRF token of a browser's writes (D-97): those that come with a session's cookie, which is
      * how the applications are logged in, and their login itself, so no other site logs a browser in as someone else.
-     * A write with an {@code Authorization} header is not asked: it cannot come from another site's page, since no
-     * browser adds the header there by itself — the API never asks for Basic credentials (D-34) — and a page cannot
-     * add it to a request to another origin without CORS, which the application does not allow. Nor is a write
-     * with neither a session's cookie nor credentials: it is nobody's, and refused as such where a login is
-     * needed.
+     * A write without a session's cookie is not asked: it is nobody's, and refused as such where a login is needed
+     * (D-115).
      */
     private static RequestMatcher browserWrites(String login) {
         return request -> !SAFE_METHODS.contains(request.getMethod())
-                && request.getHeader(HttpHeaders.AUTHORIZATION) == null
                 && (request.getRequestedSessionId() != null
                         || login.equals(request.getRequestURI().substring(request.getContextPath().length())));
     }

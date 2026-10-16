@@ -994,7 +994,8 @@ It says nothing else of them.
 5. **Patients**: every screen of the portal — logging in, activating, registering, a new password, booking,
    moving and cancelling, the family group, the profile, and the copies of the record.
 6. **Thymeleaf removed**: the templates, the screen controllers, the screens' security chains and the
-   dependency go, as D-02 said from the start; what is left of Basic authentication is decided then.
+   dependency go, as D-02 said from the start; and Basic authentication with them: the session's login is
+   the only way in (D-115).
 
 Not in this phase: anything a user could not do before; a mobile application; offline use; notifications
 pushed from the server; other languages than Spanish.

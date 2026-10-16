@@ -1,5 +1,6 @@
 package com.clinic.schedule.portal.adapter.in.http;
 
+import static com.clinic.schedule.Logins.patientLogIn;
 import static com.clinic.schedule.portal.PatientAccountFixture.PASSWORD;
 import static com.clinic.schedule.portal.PatientAccountFixture.RECEPTION;
 import static com.clinic.schedule.portal.PatientAccountFixture.address;
@@ -8,7 +9,6 @@ import static com.clinic.schedule.portal.PatientAccountFixture.lastRegistrationT
 import static com.clinic.schedule.portal.PatientAccountFixture.registration;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
-import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.httpBasic;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
@@ -79,7 +79,7 @@ class WebRegistrationIT {
     }
 
     private ResultActions logIn(String dni) throws Exception {
-        return mockMvc.perform(get("/api/portal/appointments").with(httpBasic("DNI " + dni, PASSWORD)));
+        return patientLogIn(mockMvc, "DNI " + dni, PASSWORD);
     }
 
     /** The patients of that document, as reception's search finds them. */

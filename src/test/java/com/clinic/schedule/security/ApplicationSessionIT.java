@@ -1,11 +1,12 @@
 package com.clinic.schedule.security;
 
+import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.httpBasic;
+import static com.clinic.schedule.Logins.staffUser;
 import static com.clinic.schedule.portal.PatientAccountFixture.PASSWORD;
 import static com.clinic.schedule.portal.PatientAccountFixture.RECEPTION;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.hamcrest.Matchers.containsString;
 import static org.hamcrest.Matchers.hasItem;
-import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.httpBasic;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.header;
@@ -115,7 +116,7 @@ class ApplicationSessionIT {
     /** A new user of the role, with a password of their own already, or still the admin's when temporary. */
     private String userId(String username, String password, boolean temporary) throws Exception {
         String chosen = temporary ? password : "temporal-" + password;
-        String id = json.readTree(mockMvc.perform(post("/api/users").with(httpBasic("admin", ADMIN_PASSWORD))
+        String id = json.readTree(mockMvc.perform(post("/api/users").with(staffUser("admin"))
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("""
                                 {"username": "%s", "role": "RECEPTION", "practitionerId": null, "password": "%s"}
@@ -123,7 +124,8 @@ class ApplicationSessionIT {
                 .andExpect(status().isCreated())
                 .andReturn().getResponse().getContentAsString()).get("id").asText();
         if (!temporary) {
-            mockMvc.perform(post("/api/password").with(httpBasic(username, chosen))
+            Browser browser = staff(username, chosen);
+            mockMvc.perform(post("/api/password").with(browser).header(CSRF, browser.token())
                             .contentType(MediaType.APPLICATION_JSON)
                             .content("""
                                     {"currentPassword": "%s", "newPassword": "%s"}
@@ -180,9 +182,9 @@ class ApplicationSessionIT {
         mockMvc.perform(get("/api/agenda").with(browser)).andExpect(status().isUnauthorized());
     }
 
-    /** A write over the session needs the token; one with its own credentials cannot come from another site. */
+    /** A write over the session needs the token. */
     @Test
-    void aWriteOverTheSessionNeedsTheTokenAndOneWithBasicAuthenticationDoesNot() throws Exception {
+    void aWriteOverTheSessionNeedsTheToken() throws Exception {
         Browser browser = staff("recepcion", "recepcion123");
 
         mockMvc.perform(post("/api/appointments").with(browser)
@@ -195,14 +197,7 @@ class ApplicationSessionIT {
         mockMvc.perform(post("/api/appointments").with(browser).header(CSRF, browser.token())
                         .contentType(MediaType.APPLICATION_JSON).content("{}"))
                 .andExpect(status().isBadRequest());
-        mockMvc.perform(post("/api/appointments").with(httpBasic("recepcion", "recepcion123"))
-                        .contentType(MediaType.APPLICATION_JSON).content("{}"))
-                .andExpect(status().isBadRequest());
-        // Even when the browser's cookie goes with it.
-        mockMvc.perform(post("/api/appointments").with(browser).with(httpBasic("recepcion", "recepcion123"))
-                        .contentType(MediaType.APPLICATION_JSON).content("{}"))
-                .andExpect(status().isBadRequest());
-        // With neither, it is nobody's.
+        // With neither a session nor a token, it is nobody's.
         mockMvc.perform(post("/api/appointments").contentType(MediaType.APPLICATION_JSON).content("{}"))
                 .andExpect(status().isUnauthorized());
     }
@@ -230,11 +225,25 @@ class ApplicationSessionIT {
                 .andExpect(status().isForbidden());
     }
 
+    /** The session's login is the only way in: Basic authentication is nobody's, staff or patient (D-115). */
     @Test
-    void basicAuthenticationOpensNoSession() throws Exception {
-        assertThat(mockMvc.perform(get("/api/patients").with(httpBasic("recepcion", "recepcion123")))
-                .andExpect(status().isOk())
-                .andReturn().getRequest().getSession(false)).isNull();
+    void basicAuthenticationIsNoWayIn() throws Exception {
+        Patient patient = accounts.withAccount();
+        mockMvc.perform(get("/api/patients").with(httpBasic("recepcion", "recepcion123")))
+                .andExpect(status().isUnauthorized())
+                .andExpect(header().doesNotExist("WWW-Authenticate"));
+        mockMvc.perform(get("/api/portal/appointments").with(httpBasic("DNI " + patient.dni(), PASSWORD)))
+                .andExpect(status().isUnauthorized());
+    }
+
+    /** Credentials of their own do not spare a browser's write its token, as Basic authentication once did. */
+    @Test
+    void aWriteWithItsOwnCredentialsStillNeedsTheToken() throws Exception {
+        Browser browser = staff("recepcion", "recepcion123");
+
+        mockMvc.perform(post("/api/appointments").with(browser).with(httpBasic("recepcion", "recepcion123"))
+                        .contentType(MediaType.APPLICATION_JSON).content("{}"))
+                .andExpect(status().isForbidden());
     }
 
     @Test
@@ -259,7 +268,7 @@ class ApplicationSessionIT {
         Browser browser = staff(username, "la-clave-propia");
         mockMvc.perform(get("/api/agenda").with(browser)).andExpect(status().isOk());
 
-        mockMvc.perform(post("/api/users/" + id + "/deactivate").with(httpBasic("admin", ADMIN_PASSWORD)))
+        mockMvc.perform(post("/api/users/" + id + "/deactivate").with(staffUser("admin")))
                 .andExpect(status().isOk());
 
         mockMvc.perform(get("/api/agenda").with(browser))
@@ -310,6 +319,9 @@ class ApplicationSessionIT {
                 .andExpect(header().string("Cache-Control", containsString("no-store")));
         mockMvc.perform(get("/api/session").with(browser)).andExpect(jsonPath("$.user").doesNotExist());
         mockMvc.perform(get("/api/agenda").with(browser)).andExpect(status().isUnauthorized());
+        // Nor does the staff's session reach the patients' (D-80).
+        mockMvc.perform(get("/api/portal/appointments").with(staff("recepcion", "recepcion123")))
+                .andExpect(status().isUnauthorized());
     }
 
     /** Every failure says the same, and counts towards the lock, whatever the way in (D-86). */

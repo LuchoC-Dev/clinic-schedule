@@ -1,8 +1,10 @@
 package com.clinic.schedule.user.presentation.http;
 
+import static com.clinic.schedule.Logins.staffLogIn;
+import static com.clinic.schedule.Logins.staff;
+import static com.clinic.schedule.Logins.staffUser;
 import static org.hamcrest.Matchers.containsString;
 import static org.hamcrest.Matchers.hasItem;
-import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.httpBasic;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
@@ -41,14 +43,14 @@ class PasswordApiIT {
     void aTemporaryPasswordOpensNothingButChangingIt() throws Exception {
         String username = created();
 
-        mockMvc.perform(get("/api/patients").with(httpBasic(username, TEMPORARY)))
+        mockMvc.perform(get("/api/patients").with(staff(mockMvc, username, TEMPORARY)))
                 .andExpect(status().isForbidden())
                 .andExpect(jsonPath("$.message", containsString("password must be changed")));
 
         change(username, TEMPORARY, OWN).andExpect(status().isNoContent());
 
-        mockMvc.perform(get("/api/patients").with(httpBasic(username, OWN))).andExpect(status().isOk());
-        mockMvc.perform(get("/api/patients").with(httpBasic(username, TEMPORARY))).andExpect(status().isUnauthorized());
+        mockMvc.perform(get("/api/patients").with(staff(mockMvc, username, OWN))).andExpect(status().isOk());
+        staffLogIn(mockMvc, username, TEMPORARY).andExpect(status().isUnauthorized());
     }
 
     @Test
@@ -56,7 +58,7 @@ class PasswordApiIT {
         String username = created();
         change(username, TEMPORARY, OWN);
 
-        mockMvc.perform(get("/api/users/" + idOf(username) + "/changes").with(httpBasic("admin", "admin123")))
+        mockMvc.perform(get("/api/users/" + idOf(username) + "/changes").with(staffUser("admin")))
                 .andExpect(jsonPath("$[?(@.action == 'PASSWORD_CHANGED')].changedBy", hasItem(username)));
     }
 
@@ -80,12 +82,12 @@ class PasswordApiIT {
     /** The users of the development data, and those from before, have no temporary password. */
     @Test
     void aSeededUserIsNotHeldBack() throws Exception {
-        mockMvc.perform(get("/api/patients").with(httpBasic("recepcion", "recepcion123"))).andExpect(status().isOk());
+        mockMvc.perform(get("/api/patients").with(staffUser("recepcion"))).andExpect(status().isOk());
     }
 
     private String created() throws Exception {
         String username = "clave-" + UUID.randomUUID().toString().substring(0, 8);
-        mockMvc.perform(post("/api/users").with(httpBasic("admin", "admin123")).contentType(MediaType.APPLICATION_JSON)
+        mockMvc.perform(post("/api/users").with(staffUser("admin")).contentType(MediaType.APPLICATION_JSON)
                         .content("""
                                 {"username": "%s", "role": "RECEPTION", "password": "%s"}
                                 """.formatted(username, TEMPORARY)))
@@ -98,7 +100,7 @@ class PasswordApiIT {
     }
 
     private ResultActions change(String username, String loggedInWith, String current, String next) throws Exception {
-        return mockMvc.perform(post("/api/password").with(httpBasic(username, loggedInWith))
+        return mockMvc.perform(post("/api/password").with(staff(mockMvc, username, loggedInWith))
                 .contentType(MediaType.APPLICATION_JSON)
                 .content("""
                         {"currentPassword": "%s", "newPassword": "%s"}
@@ -106,7 +108,7 @@ class PasswordApiIT {
     }
 
     private String idOf(String username) throws Exception {
-        for (var user : json.readTree(mockMvc.perform(get("/api/users").with(httpBasic("admin", "admin123")))
+        for (var user : json.readTree(mockMvc.perform(get("/api/users").with(staffUser("admin")))
                 .andReturn().getResponse().getContentAsString())) {
             if (user.get("username").asText().equals(username)) {
                 return user.get("id").asText();

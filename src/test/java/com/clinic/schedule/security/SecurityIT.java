@@ -1,11 +1,12 @@
 package com.clinic.schedule.security;
 
+import static com.clinic.schedule.Logins.staffLogIn;
+import static com.clinic.schedule.Logins.staffUser;
 import static org.hamcrest.Matchers.empty;
 import static org.hamcrest.Matchers.everyItem;
 import static org.hamcrest.Matchers.is;
 import static org.hamcrest.Matchers.not;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestBuilders.formLogin;
-import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.httpBasic;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.header;
@@ -64,26 +65,25 @@ class SecurityIT {
 
     @Test
     void theApiAnswers401WithAWrongPassword() throws Exception {
-        mockMvc.perform(get("/api/patients").with(httpBasic("recepcion", "wrong")))
-                .andExpect(status().isUnauthorized());
+        staffLogIn(mockMvc, "recepcion", "wrong").andExpect(status().isUnauthorized());
     }
 
     @Test
     void receptionMayUseTheWholeApi() throws Exception {
-        mockMvc.perform(get("/api/patients").with(httpBasic("recepcion", "recepcion123")))
+        mockMvc.perform(get("/api/patients").with(staffUser("recepcion")))
                 .andExpect(status().isOk());
     }
 
     @Test
     void aPractitionerMayNotReadPatients() throws Exception {
-        mockMvc.perform(get("/api/patients").with(httpBasic("arias", "arias123")))
+        mockMvc.perform(get("/api/patients").with(staffUser("arias")))
                 .andExpect(status().isForbidden())
                 .andExpect(jsonPath("$.status").value(403));
     }
 
     @Test
     void aPractitionerMayNotBook() throws Exception {
-        mockMvc.perform(post("/api/appointments").with(httpBasic("arias", "arias123"))
+        mockMvc.perform(post("/api/appointments").with(staffUser("arias"))
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("""
                                 {"patientId": "%s", "practitionerId": "%s", "reasonId": "%s", "startsAt": "%sT09:00:00"}
@@ -98,21 +98,21 @@ class SecurityIT {
 
         // Other tests book on this day too, so what is checked is whose the appointments are.
         // Reception gets whom it asks for.
-        mockMvc.perform(get("/api/appointments").with(httpBasic("recepcion", "recepcion123"))
+        mockMvc.perform(get("/api/appointments").with(staffUser("recepcion"))
                         .param("practitionerId", BENITEZ).param("date", DAY))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$[*].practitionerId", not(empty())))
                 .andExpect(jsonPath("$[*].practitionerId", everyItem(is(BENITEZ))));
 
         // Arias gets her own.
-        mockMvc.perform(get("/api/appointments").with(httpBasic("arias", "arias123"))
+        mockMvc.perform(get("/api/appointments").with(staffUser("arias"))
                         .param("practitionerId", ARIAS).param("date", DAY))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$[*].practitionerId", not(empty())))
                 .andExpect(jsonPath("$[*].practitionerId", everyItem(is(ARIAS))));
 
         // Asking for Benítez's is refused, not answered with hers (D-39).
-        mockMvc.perform(get("/api/appointments").with(httpBasic("arias", "arias123"))
+        mockMvc.perform(get("/api/appointments").with(staffUser("arias"))
                         .param("practitionerId", BENITEZ).param("date", DAY))
                 .andExpect(status().isForbidden())
                 .andExpect(jsonPath("$.status").value(403));
@@ -120,15 +120,15 @@ class SecurityIT {
 
     @Test
     void aPractitionerMayNotRecordTimeOffNorConfigurePractitioners() throws Exception {
-        mockMvc.perform(post("/api/time-off").with(httpBasic("arias", "arias123"))
+        mockMvc.perform(post("/api/time-off").with(staffUser("arias"))
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("""
                                 {"practitionerId": "%s", "date": "%s"}
                                 """.formatted(ARIAS, DAY)))
                 .andExpect(status().isForbidden());
-        mockMvc.perform(get("/api/practitioners").with(httpBasic("arias", "arias123")))
+        mockMvc.perform(get("/api/practitioners").with(staffUser("arias")))
                 .andExpect(status().isForbidden());
-        mockMvc.perform(post("/api/practitioners/" + ARIAS + "/reasons").with(httpBasic("arias", "arias123"))
+        mockMvc.perform(post("/api/practitioners/" + ARIAS + "/reasons").with(staffUser("arias"))
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("""
                                 {"name": "propia", "durationMinutes": 30}
@@ -143,14 +143,13 @@ class SecurityIT {
                         + "values (?, ?, ?, 'RECEPTION', null, false)",
                 UUID.randomUUID(), username, passwords.encode("clave123"));
 
-        mockMvc.perform(get("/api/patients").with(httpBasic(username, "clave123")))
-                .andExpect(status().isUnauthorized());
+        staffLogIn(mockMvc, username, "clave123").andExpect(status().isUnauthorized());
         mockMvc.perform(formLogin("/api/session").user(username).password("clave123"))
                 .andExpect(status().isUnauthorized());
     }
 
     private void book(String patient, String practitioner, String reason, String time) throws Exception {
-        mockMvc.perform(post("/api/appointments").with(httpBasic("recepcion", "recepcion123"))
+        mockMvc.perform(post("/api/appointments").with(staffUser("recepcion"))
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("""
                                 {"patientId": "%s", "practitionerId": "%s", "reasonId": "%s", "startsAt": "%sT%s"}

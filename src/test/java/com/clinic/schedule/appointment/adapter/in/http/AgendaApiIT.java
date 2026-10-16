@@ -1,5 +1,6 @@
 package com.clinic.schedule.appointment.adapter.in.http;
 
+import static com.clinic.schedule.Logins.staffUser;
 import static org.hamcrest.Matchers.contains;
 import static org.hamcrest.Matchers.everyItem;
 import static org.hamcrest.Matchers.hasItem;
@@ -7,7 +8,6 @@ import static org.hamcrest.Matchers.hasItems;
 import static org.hamcrest.Matchers.is;
 import static org.hamcrest.Matchers.not;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.anonymous;
-import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.httpBasic;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
@@ -149,24 +149,24 @@ class AgendaApiIT {
         String arias = "11111111-1111-1111-1111-111111111111";
         CreatedPractitioner other = practitioners.workingEveryDay();
 
-        mockMvc.perform(get("/api/agenda").with(httpBasic("arias", "arias123")))
+        mockMvc.perform(get("/api/agenda").with(staffUser("arias")))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.practitionerId").value(arias))
                 .andExpect(jsonPath("$.appointments[*].practitionerId", everyItem(is(arias))));
         mockMvc.perform(get("/api/agenda").param("practitionerId", arias).param("week", "true")
-                        .with(httpBasic("arias", "arias123")))
+                        .with(staffUser("arias")))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.practitionerId").value(arias));
         mockMvc.perform(get("/api/agenda").param("practitionerId", other.id().toString())
-                        .with(httpBasic("arias", "arias123")))
+                        .with(staffUser("arias")))
                 .andExpect(status().isForbidden())
                 .andExpect(jsonPath("$.code").value("AGENDA_ACCESS_DENIED"));
         mockMvc.perform(get("/api/agenda/free-times").param("practitionerId", arias)
                         .param("reasonId", other.consulta().toString()).param("date", DAY)
-                        .with(httpBasic("arias", "arias123")))
+                        .with(staffUser("arias")))
                 .andExpect(status().isForbidden());
-        mockMvc.perform(get("/api/agenda").with(httpBasic("admin", "admin123"))).andExpect(status().isForbidden());
-        mockMvc.perform(get("/api/agenda").with(httpBasic("sala", "sala123"))).andExpect(status().isForbidden());
+        mockMvc.perform(get("/api/agenda").with(staffUser("admin"))).andExpect(status().isForbidden());
+        mockMvc.perform(get("/api/agenda").with(staffUser("sala"))).andExpect(status().isForbidden());
         mockMvc.perform(get("/api/agenda").with(anonymous())).andExpect(status().isUnauthorized());
     }
 
@@ -297,7 +297,7 @@ class AgendaApiIT {
                 .andExpect(jsonPath("$[?(@.id == '%s')].cancellation.by".formatted(cancelled)).value(contains("recepcion")))
                 .andExpect(jsonPath("$[?(@.id == '%s')].cancellation.note".formatted(cancelled)).value(contains("Viaja")))
                 .andExpect(jsonPath("$[*].practitioner", everyItem(is(nameOf(practitioner)))));
-        mockMvc.perform(get("/api/patients/" + patient + "/appointments").with(httpBasic("arias", "arias123")))
+        mockMvc.perform(get("/api/patients/" + patient + "/appointments").with(staffUser("arias")))
                 .andExpect(status().isForbidden());
     }
 

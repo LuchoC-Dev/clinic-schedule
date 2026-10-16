@@ -1,10 +1,13 @@
 package com.clinic.schedule.portal.adapter.in.http;
 
+import static com.clinic.schedule.Logins.patientLogIn;
+import static com.clinic.schedule.Logins.patientUser;
+import static com.clinic.schedule.Logins.staffLogIn;
+import static com.clinic.schedule.Logins.staffUser;
 import static com.clinic.schedule.portal.PatientAccountFixture.PASSWORD;
 import static com.clinic.schedule.portal.PatientAccountFixture.RECEPTION;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
-import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.httpBasic;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
@@ -63,7 +66,7 @@ class PasswordIT {
     }
 
     private ResultActions logIn(Patient patient, String password) throws Exception {
-        return mockMvc.perform(get("/api/portal/appointments").with(httpBasic("DNI " + patient.dni(), password)));
+        return patientLogIn(mockMvc, "DNI " + patient.dni(), password);
     }
 
     private ResultActions send(String path, String body) throws Exception {
@@ -132,10 +135,9 @@ class PasswordIT {
         Patient noAccount = accounts.adult();
         for (int i = 0; i < 6; i++) {
             logIn(noAccount, "no-es-la-clave").andExpect(status().isUnauthorized());
-            mockMvc.perform(get("/api/patients").with(httpBasic("recepcion", "no-es-la-clave")))
-                    .andExpect(status().isUnauthorized());
+            staffLogIn(mockMvc, "recepcion", "no-es-la-clave").andExpect(status().isUnauthorized());
         }
-        mockMvc.perform(get("/api/patients").with(httpBasic("recepcion", "recepcion123")).param("query", "x"))
+        mockMvc.perform(get("/api/patients").with(staffUser("recepcion")).param("query", "x"))
                 .andExpect(status().isOk());
     }
 
@@ -276,20 +278,20 @@ class PasswordIT {
         Patient patient = accounts.withAccount();
         String basic = "DNI " + patient.dni();
 
-        mockMvc.perform(post("/api/portal/password").with(httpBasic(basic, PASSWORD))
+        mockMvc.perform(post("/api/portal/password").with(patientUser(basic))
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("{\"currentPassword\": \"no-es-la-clave\", \"newPassword\": \"" + NEW_PASSWORD
                                 + "\"}"))
                 .andExpect(status().isBadRequest());
-        mockMvc.perform(post("/api/portal/password").with(httpBasic(basic, PASSWORD))
+        mockMvc.perform(post("/api/portal/password").with(patientUser(basic))
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("{\"currentPassword\": \"" + PASSWORD + "\", \"newPassword\": \"" + PASSWORD + "\"}"))
                 .andExpect(status().isBadRequest());
-        mockMvc.perform(post("/api/portal/password").with(httpBasic(basic, PASSWORD))
+        mockMvc.perform(post("/api/portal/password").with(patientUser(basic))
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("{\"currentPassword\": \"" + PASSWORD + "\", \"newPassword\": \"corta\"}"))
                 .andExpect(status().isBadRequest());
-        mockMvc.perform(post("/api/portal/password").with(httpBasic(basic, PASSWORD))
+        mockMvc.perform(post("/api/portal/password").with(patientUser(basic))
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("{\"currentPassword\": \"" + PASSWORD + "\", \"newPassword\": \""
                                 + NEW_PASSWORD + "\"}"))

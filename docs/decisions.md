@@ -900,7 +900,7 @@ and they are available through the API; a screen can be added when it is asked f
 ## D-34 — Security
 **Date:** 2026-09-23 · **Status:** accepted; a practitioner asking for another agenda is refused since D-39;
 the users moved to their own module in D-43; `/api/**` also takes the single-page applications' session, with a CSRF
-token, since D-97
+token, since D-97; the screens' chain and Basic authentication removed by D-114 and D-115
 
 Applies D-04, the design that was built in stage 1 and removed until there was something to
 protect.
@@ -3891,7 +3891,8 @@ a reading table of its own for copies (the admins would search two places); the 
 ---
 
 ## D-97 — The web applications: one package under `frontend/`, built by Maven, served by Spring, logged in with the screens' session
-**Date:** 2026-10-13 · **Status:** accepted
+**Date:** 2026-10-13 · **Status:** accepted; the applications at `/` and `/portal/` since D-114; Basic authentication
+removed by D-115
 
 v2, phase 10, part 1. The Thymeleaf screens were always meant to be replaced by two single-page applications over
 the REST API (D-02): one for the staff, one for patients. This is their foundation; the screens move over part by
@@ -4615,3 +4616,28 @@ redirecting `/app/` and `/portal/app/` (nothing outside the branch ever had them
 patients' inside it (the staff's build, emptying its folder, would take the patients' with it); the queues' stream left
 at `/queue-events` under a chain of its own (a chain kept for one address, when the API already has the roles);
 keeping `inApp` in the menu for a screen that may come (D-14).
+
+---
+
+## D-115 — Basic authentication removed: the session's login is the only way in
+**Date:** 2026-10-16 · **Status:** accepted
+
+v2, phase 10, part 6, batch C. D-97 kept Basic authentication on the API "for other clients and the tests", and left
+what remained of it for this part. No other client exists: the two applications log in with a session, and only the
+tests sent a password with each request. A way in kept for the tests is the scaffolding D-14 refuses, and it was not
+harmless: a second door that takes a password on every request — a staff user's with no lock after failures (D-86
+left that for later) —, and the reason the CSRF check spared a write with an `Authorization` header.
+
+**It goes.** Neither API chain takes Basic authentication: a request that brings it is nobody's, a 401 with no
+`WWW-Authenticate` and no session. Each chain keeps its login in the session alone, under its key. The CSRF check asks
+the token of every write with a session's cookie, and of the logins, whatever else the request carries.
+
+**The tests are someone the way the application knows them.** `Logins`, in the tests: a staff user or a patient as
+their `UserDetailsService` loads them — their role, their practitioner, their account —, for what a route or a use case
+decides of them; or a real login with a password, for what the login decides — a wrong or temporary password, a
+deactivated user, a locked account, each side's session apart from the other's. An integration test says Basic
+authentication, the staff's or a patient's, opens nothing, and that credentials of its own do not spare a browser's
+write its token.
+
+*Rejected:* keeping Basic for other clients (there are none, and one would come with its own decision); keeping it for
+the tests alone (production code for the tests); an API key or tokens for a future client (D-14).

@@ -1,12 +1,11 @@
 package com.clinic.schedule.clinicalrecord.adapter.in.http;
 
-import static com.clinic.schedule.portal.PatientAccountFixture.PASSWORD;
+import static com.clinic.schedule.Logins.patientUser;
 import static com.clinic.schedule.portal.PatientAccountFixture.RECEPTION;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.hamcrest.Matchers.contains;
 import static org.hamcrest.Matchers.hasSize;
 import static org.hamcrest.Matchers.startsWith;
-import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.httpBasic;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.user;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.multipart;
@@ -115,7 +114,7 @@ class RecordCopyApiIT {
     }
 
     private static RequestPostProcessor as(Patient patient) {
-        return httpBasic("DNI " + patient.dni(), PASSWORD);
+        return patientUser("DNI " + patient.dni());
     }
 
     private ResultActions send(RequestPostProcessor who, String path, String body) throws Exception {
@@ -437,7 +436,7 @@ class RecordCopyApiIT {
         mockMvc.perform(get("/api/record-copy-envelopes").with(asArias)).andExpect(status().isForbidden());
         send(asArias, "/api/record-copy-envelopes/" + copy + "/handover", "{\"documentSeen\": true}")
                 .andExpect(status().isForbidden());
-        mockMvc.perform(get("/api/record-copies").with(as(patient))).andExpect(status().isUnauthorized());
+        mockMvc.perform(get("/api/record-copies").with(as(patient))).andExpect(status().isForbidden());
         mockMvc.perform(get("/api/record-copies/" + UUID.randomUUID()).with(asArias)).andExpect(status().isNotFound());
     }
 }

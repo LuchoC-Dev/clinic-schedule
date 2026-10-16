@@ -1,5 +1,8 @@
 package com.clinic.schedule.portal.adapter.in.http;
 
+import static com.clinic.schedule.Logins.staffUser;
+import static com.clinic.schedule.Logins.patientLogIn;
+import static com.clinic.schedule.Logins.patientUser;
 import static com.clinic.schedule.portal.PatientAccountFixture.PASSWORD;
 import static com.clinic.schedule.portal.PatientAccountFixture.RECEPTION;
 import static com.clinic.schedule.portal.PatientAccountFixture.address;
@@ -8,7 +11,6 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.hamcrest.Matchers.containsString;
 import static org.hamcrest.Matchers.not;
-import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.httpBasic;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.user;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
@@ -76,7 +78,7 @@ class PatientAccountIT {
     }
 
     private static RequestPostProcessor as(Patient patient) {
-        return httpBasic("DNI " + patient.dni(), PASSWORD);
+        return patientUser("DNI " + patient.dni());
     }
 
     private String book(Patient patient, String startsAt) throws Exception {
@@ -131,9 +133,9 @@ class PatientAccountIT {
         assertThat(sent.fullName()).isEqualTo("Ana Pérez");
         assertThat(sent.expiresAt()).isEqualTo("2026-03-13T00:00:00");
 
-        mockMvc.perform(get("/api/portal/appointments").with(as(patient))).andExpect(status().isUnauthorized());
+        patientLogIn(mockMvc, "DNI " + patient.dni(), PASSWORD).andExpect(status().isUnauthorized());
         accounts.activate(sent.token());
-        mockMvc.perform(get("/api/portal/appointments").with(as(patient))).andExpect(status().isOk());
+        patientLogIn(mockMvc, "DNI " + patient.dni(), PASSWORD).andExpect(status().isOk());
 
         mockMvc.perform(get("/api/patient-accounts").with(RECEPTION).param("patientId", patient.id()))
                 .andExpect(status().isOk())
@@ -286,14 +288,14 @@ class PatientAccountIT {
         mockMvc.perform(post("/api/patient-accounts/" + accountId + "/deactivate").with(RECEPTION))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.status").value("INACTIVE"));
-        mockMvc.perform(get("/api/portal/appointments").with(as(patient))).andExpect(status().isUnauthorized());
+        patientLogIn(mockMvc, "DNI " + patient.dni(), PASSWORD).andExpect(status().isUnauthorized());
         mockMvc.perform(post("/api/patient-accounts/" + accountId + "/deactivate").with(RECEPTION))
                 .andExpect(status().isConflict());
 
         mockMvc.perform(post("/api/patient-accounts/" + accountId + "/reactivate").with(RECEPTION))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.status").value("ACTIVE"));
-        mockMvc.perform(get("/api/portal/appointments").with(as(patient))).andExpect(status().isOk());
+        patientLogIn(mockMvc, "DNI " + patient.dni(), PASSWORD).andExpect(status().isOk());
         mockMvc.perform(post("/api/patient-accounts/" + accountId + "/reactivate").with(RECEPTION))
                 .andExpect(status().isConflict());
         assertThat(changes(accountId).findValuesAsText("by")).contains("recepcion");
@@ -380,25 +382,20 @@ class PatientAccountIT {
     void patientsAndStaffReachNothingOfEachOthers() throws Exception {
         Patient patient = accounts.withAccount();
 
-        mockMvc.perform(get("/api/patients").with(as(patient))).andExpect(status().isUnauthorized());
-        mockMvc.perform(get("/api/appointments").with(as(patient))).andExpect(status().isUnauthorized());
+        // Each side's sessions are apart, which ApplicationSessionIT says; and neither role reaches the other's routes.
+        mockMvc.perform(get("/api/patients").with(as(patient))).andExpect(status().isForbidden());
+        mockMvc.perform(get("/api/appointments").with(as(patient))).andExpect(status().isForbidden());
+        mockMvc.perform(get("/api/portal/appointments").with(staffUser("admin"))).andExpect(status().isForbidden());
         mockMvc.perform(get("/api/portal/appointments").with(RECEPTION)).andExpect(status().isForbidden());
-        // Not recepcion, which the mock user already is: a login under the same name would not be tried again.
-        mockMvc.perform(get("/api/portal/appointments").with(httpBasic("admin", "admin123")))
-                .andExpect(status().isUnauthorized());
         mockMvc.perform(get("/api/patient-accounts").param("patientId", patient.id())
                         .with(user("arias").roles("PRACTITIONER")))
                 .andExpect(status().isForbidden());
         mockMvc.perform(get("/api/patient-accounts").param("patientId", patient.id())
                         .with(user("admin").roles("ADMIN")))
                 .andExpect(status().isForbidden());
-        mockMvc.perform(get("/api/portal/appointments").with(httpBasic(patient.id(), PASSWORD)))
-                .andExpect(status().isUnauthorized());
-        mockMvc.perform(get("/api/portal/appointments").with(httpBasic("DNI " + patient.dni(), "otra-clave-larga")))
-                .andExpect(status().isUnauthorized());
-        mockMvc.perform(get("/api/portal/appointments")
-                        .with(httpBasic("DNI " + patient.dni().substring(0, 2) + "." + patient.dni().substring(2),
-                                PASSWORD)))
+        patientLogIn(mockMvc, patient.id(), PASSWORD).andExpect(status().isUnauthorized());
+        patientLogIn(mockMvc, "DNI " + patient.dni(), "otra-clave-larga").andExpect(status().isUnauthorized());
+        patientLogIn(mockMvc, "DNI " + patient.dni().substring(0, 2) + "." + patient.dni().substring(2), PASSWORD)
                 .andExpect(status().isOk());
     }
 }

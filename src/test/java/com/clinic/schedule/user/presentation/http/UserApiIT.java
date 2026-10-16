@@ -1,8 +1,10 @@
 package com.clinic.schedule.user.presentation.http;
 
+import static com.clinic.schedule.Logins.staffLogIn;
+import static com.clinic.schedule.Logins.staff;
+import static com.clinic.schedule.Logins.staffUser;
 import static org.hamcrest.Matchers.hasItem;
 import static org.hamcrest.Matchers.not;
-import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.httpBasic;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.header;
@@ -32,8 +34,8 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 @AutoConfigureMockMvc
 class UserApiIT {
 
-    private static final RequestPostProcessor ADMIN = httpBasic("admin", "admin123");
-    private static final RequestPostProcessor RECEPTION = httpBasic("recepcion", "recepcion123");
+    private static final RequestPostProcessor ADMIN = staffUser("admin");
+    private static final RequestPostProcessor RECEPTION = staffUser("recepcion");
     private static final String PASSWORD = "una-clave-larga";
 
     @Autowired
@@ -48,7 +50,7 @@ class UserApiIT {
 
         JsonNode created = create(username, "RECEPTION", null, PASSWORD);
 
-        mockMvc.perform(get("/api/patients").with(httpBasic(username, PASSWORD))).andExpect(status().isOk());
+        mockMvc.perform(get("/api/patients").with(staff(mockMvc, username, PASSWORD))).andExpect(status().isOk());
         mockMvc.perform(get("/api/users/" + created.get("id").asText() + "/changes").with(ADMIN))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$[?(@.action == 'CREATED')].changedBy", hasItem("admin")));
@@ -73,10 +75,10 @@ class UserApiIT {
         String username = fresh("profesional");
         create(username, "PRACTITIONER", practitioner, PASSWORD);
 
-        mockMvc.perform(get("/api/appointments").with(httpBasic(username, PASSWORD))
+        mockMvc.perform(get("/api/appointments").with(staff(mockMvc, username, PASSWORD))
                         .param("practitionerId", practitioner.toString()).param("date", "2026-03-16"))
                 .andExpect(status().isOk());
-        mockMvc.perform(get("/api/patients").with(httpBasic(username, PASSWORD)))
+        mockMvc.perform(get("/api/patients").with(staff(mockMvc, username, PASSWORD)))
                 .andExpect(status().isForbidden());
     }
 
@@ -122,12 +124,12 @@ class UserApiIT {
         String id = create(username, "RECEPTION", null, PASSWORD).get("id").asText();
 
         deactivate(id).andExpect(status().isOk()).andExpect(jsonPath("$.active").value(false));
-        mockMvc.perform(get("/api/patients").with(httpBasic(username, PASSWORD))).andExpect(status().isUnauthorized());
+        staffLogIn(mockMvc, username, PASSWORD).andExpect(status().isUnauthorized());
         deactivate(id).andExpect(status().isConflict());
 
         mockMvc.perform(post("/api/users/" + id + "/reactivate").with(ADMIN))
                 .andExpect(status().isOk()).andExpect(jsonPath("$.active").value(true));
-        mockMvc.perform(get("/api/patients").with(httpBasic(username, PASSWORD))).andExpect(status().isOk());
+        mockMvc.perform(get("/api/patients").with(staff(mockMvc, username, PASSWORD))).andExpect(status().isOk());
         mockMvc.perform(get("/api/users/" + id + "/changes").with(ADMIN))
                 .andExpect(jsonPath("$[*].action", hasItem("DEACTIVATED")))
                 .andExpect(jsonPath("$[*].action", hasItem("REACTIVATED")));
@@ -138,7 +140,7 @@ class UserApiIT {
         String username = fresh("admin");
         String id = create(username, "ADMIN", null, PASSWORD).get("id").asText();
 
-        mockMvc.perform(post("/api/users/" + id + "/deactivate").with(httpBasic(username, PASSWORD)))
+        mockMvc.perform(post("/api/users/" + id + "/deactivate").with(staff(mockMvc, username, PASSWORD)))
                 .andExpect(status().isConflict());
     }
 
@@ -153,11 +155,11 @@ class UserApiIT {
                                 """))
                 .andExpect(status().isOk());
 
-        mockMvc.perform(get("/api/patients").with(httpBasic(username, PASSWORD))).andExpect(status().isUnauthorized());
+        staffLogIn(mockMvc, username, PASSWORD).andExpect(status().isUnauthorized());
         // The new one is temporary, as the first was: the user changes it before anything else.
-        mockMvc.perform(get("/api/patients").with(httpBasic(username, "otra-clave-larga"))).andExpect(status().isForbidden());
+        mockMvc.perform(get("/api/patients").with(staff(mockMvc, username, "otra-clave-larga"))).andExpect(status().isForbidden());
         changeOwnPassword(username, "otra-clave-larga", "clave-propia-nueva");
-        mockMvc.perform(get("/api/patients").with(httpBasic(username, "clave-propia-nueva"))).andExpect(status().isOk());
+        mockMvc.perform(get("/api/patients").with(staff(mockMvc, username, "clave-propia-nueva"))).andExpect(status().isOk());
         // The tests' clock stands still, so the history is checked for the entry, not for its place.
         mockMvc.perform(get("/api/users/" + id + "/changes").with(ADMIN))
                 .andExpect(jsonPath("$[*].action", hasItem("PASSWORD_RESET")));
@@ -172,7 +174,7 @@ class UserApiIT {
     @Test
     void onlyAnAdminAdministersUsers() throws Exception {
         mockMvc.perform(get("/api/users").with(RECEPTION)).andExpect(status().isForbidden());
-        mockMvc.perform(get("/api/users").with(httpBasic("arias", "arias123"))).andExpect(status().isForbidden());
+        mockMvc.perform(get("/api/users").with(staffUser("arias"))).andExpect(status().isForbidden());
         mockMvc.perform(post("/api/users").with(RECEPTION).contentType(MediaType.APPLICATION_JSON)
                         .content(body(fresh("recepcion"), "ADMIN", null, PASSWORD)))
                 .andExpect(status().isForbidden());
@@ -207,7 +209,7 @@ class UserApiIT {
                                 {"fullName": "Dr. Admin"}
                                 """))
                 .andExpect(status().isForbidden());
-        mockMvc.perform(get("/api/practitioners").with(httpBasic("arias", "arias123"))).andExpect(status().isForbidden());
+        mockMvc.perform(get("/api/practitioners").with(staffUser("arias"))).andExpect(status().isForbidden());
     }
 
     /** The admin reads no clinical content, and does none of reception's work (D-68). */
@@ -235,7 +237,7 @@ class UserApiIT {
     }
 
     private void changeOwnPassword(String username, String current, String next) throws Exception {
-        mockMvc.perform(post("/api/password").with(httpBasic(username, current)).contentType(MediaType.APPLICATION_JSON)
+        mockMvc.perform(post("/api/password").with(staff(mockMvc, username, current)).contentType(MediaType.APPLICATION_JSON)
                         .content("""
                                 {"currentPassword": "%s", "newPassword": "%s"}
                                 """.formatted(current, next)))
