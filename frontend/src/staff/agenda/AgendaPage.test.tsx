@@ -55,9 +55,6 @@ function show(address = '/agenda') {
   );
 }
 
-/** A menu opens with a transition, which under a full build's load takes longer than the default second. */
-const OPENING = { timeout: 5000 };
-
 const rowOf = (name: string) => screen.getByText(name).closest('tr') as HTMLElement;
 
 describe("reception's agenda", () => {
@@ -171,7 +168,7 @@ describe("reception's agenda", () => {
     await screen.findByText('Juan Gómez');
 
     await userEvent.click(within(rowOf('Juan Gómez')).getByRole('button', { name: 'Más acciones de Juan Gómez' }));
-    await userEvent.click(await screen.findByRole('menuitem', { name: 'Avisó demora' }, OPENING));
+    await userEvent.click(await screen.findByRole('menuitem', { name: 'Avisó demora' }));
 
     expect(post).toHaveBeenCalledWith('/api/appointments/a2/late-arrival-notice');
     expect(await screen.findByRole('status')).toHaveTextContent('Anotado: se lo espera hasta el final del día.');
@@ -186,7 +183,7 @@ describe("reception's agenda", () => {
     await screen.findByText('Juan Gómez');
 
     await userEvent.click(within(rowOf('Juan Gómez')).getByRole('button', { name: 'Más acciones de Juan Gómez' }));
-    await userEvent.click(await screen.findByRole('menuitem', { name: 'Cancelar' }, OPENING));
+    await userEvent.click(await screen.findByRole('menuitem', { name: 'Cancelar' }));
     const dialog = await screen.findByRole('dialog');
     expect(within(dialog).getByRole('button', { name: 'Cancelar turno' })).toBeDisabled();
     await userEvent.selectOptions(within(dialog).getByLabelText(/Lo pidió/), 'PATIENT');

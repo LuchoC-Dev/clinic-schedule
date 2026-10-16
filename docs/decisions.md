@@ -4548,3 +4548,24 @@ for without its delivery, each refusal —, and with integration tests on the ag
 *Rejected:* the age band worked out by the screen from the date of birth (the rule of D-84 would live twice); "Firmada
 por" and the copy's code, as the mock draws them (the patients' answer has neither, on purpose, D-95); "Te avisamos por
 email cuando esté", as the mock says it (no such email is sent).
+
+---
+
+## D-113 — The applications' tests in Mantine's test environment
+**Date:** 2026-10-16 · **Status:** accepted
+
+v2, phase 10, part 6. A test of reception's agenda failed now and then under a full build's load: a menu's item not
+found within a second (part 2), and its wait had already been raised to five. The cause is Mantine's, not the
+screen's. A menu, like any of its popovers and dialogs, mounts what it opens through a transition — two animation
+frames and then a timer —, and decides whether to show it from where floating-ui places it, which jsdom, laying
+nothing out, answers late or as hidden. Under load those frames and timers come after the test has stopped looking.
+
+**Under Vitest, `Theme` gives Mantine its test environment**, `env="test"`: no transitions, no portals, nothing hidden
+by its place, so what opens is there at once. It is chosen by `import.meta.env.MODE`, which Vite replaces when it
+builds, so the applications never take it. The longer wait is gone: the agenda's tests wait as any other.
+Reproduced first under load — the menu's two tests failing with the default wait —, and not again with the change;
+without it, under the same load, they fail again.
+
+*Rejected:* raising the wait again (it hides the cause, and a slower machine finds it again); faking the timers in
+those tests (every test with a menu or a dialog has the same shape, and would need them); a test's own provider
+(every test renders the applications' `Theme`, as it should).

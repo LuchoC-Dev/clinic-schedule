@@ -2478,7 +2478,21 @@ appointments with booking and moving, the family, the profile and the copies of 
 carry open it, those already sent included, and the Thymeleaf pages behind them are gone; the rest stay until part 6.
 The staff's password is in the staff's application, so no screen of the staff's is left on Thymeleaf.
 
-#### Part 6 — Thymeleaf removed `[ ]`
+#### Part 6 — Thymeleaf removed `[~]`
+Delivered in three batches, each a commit of its own: the unstable test; Thymeleaf removed and the applications at
+their addresses; Basic authentication removed.
+
+##### Batch A — The unstable test `[x]`
+- [x] The agenda's menu found at once, whatever the load: the applications' tests run in Mantine's test environment,
+      with no transitions, portals or placing to wait for, and the agenda's longer wait is gone (D-113)
+- [x] No test more. 549 unit and 683 integration tests in Java, and 290 in the applications: 1522 in total
+
+**Verified with:** the failure reproduced first — the agenda's tests run four times beside three full Vitest runs, its
+two menus' tests failing within the default second —; with the change, six runs under the same load, all passing.
+The one breakage — the test environment taken out of `Theme` — failed them again under that load. `mvnw clean
+verify`, with Docker running: the seven `*PostgresIT` ran.
+
+##### Batch B — Thymeleaf removed, the applications at their addresses `[ ]`
 - [ ] Templates, screen controllers, the screens' security chains and the dependency removed (D-02)
 
 ---

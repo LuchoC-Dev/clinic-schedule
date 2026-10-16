@@ -64,10 +64,18 @@ const noStorage: MantineColorSchemeManager = {
   clear: () => {},
 };
 
+/**
+ * Under Vitest, Mantine's test environment: no transitions, no portals, and no hiding a dropdown by where it is
+ * placed. A menu or a dialog otherwise appears only after two animation frames and a timer, and jsdom, which lays
+ * nothing out, may take its trigger for hidden; under a full build's load both come late, and a test looking for
+ * what opened gave up first (D-113). Vite replaces the mode when it builds, so the applications never take it.
+ */
+const ENV = import.meta.env.MODE === 'test' ? 'test' : 'default';
+
 export function Theme({ children }: { children: ReactNode }) {
   return (
     <MantineProvider theme={theme} cssVariablesResolver={resolver} colorSchemeManager={noStorage}
-      forceColorScheme="light">
+      forceColorScheme="light" env={ENV}>
       {children}
     </MantineProvider>
   );
