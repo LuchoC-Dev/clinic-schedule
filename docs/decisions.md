@@ -4660,3 +4660,22 @@ document stays in the screen, never in its address.
 ways); the id kept out of the address, in the screen's memory alone (the address no longer says what is shown — a
 reload, a link or going back loses it — for an id that already opens nothing); ids of their own for the addresses
 (the same as the hash, with a migration).
+
+## D-117 — The development data is the dev profile's alone
+**Date:** 2026-10-16 · **Status:** accepted · **Amends:** D-34, D-67
+
+Until now `db/seed` — users with known passwords, practitioners, patients — was in `application.yml`'s Flyway
+locations, and a real deployment had to drop it (D-34), with `out-of-order` (D-67). One that forgot started with
+`admin` / `admin123`, a password anyone reading the repository knows.
+
+**Without a profile, there is no development data.** `application.yml` lists only `db/migration` and
+`db/vendor/{vendor}`; `application-dev.yml`, the `dev` profile, adds `db/seed` and `out-of-order`, and the README runs
+the application with it. The tests' `application.properties` lists the seed as the profile does, since their users,
+practitioners and patients are the seed's. A database the seed was applied to opens without the profile too: its
+migrations from `V100` on are ahead of every schema one, which Flyway leaves alone.
+
+The application without the profile starts with nobody to log in as: making the first admin of a real deployment is
+left for a feature of its own.
+
+*Rejected:* keeping the seed in the default and documenting its removal (a deployment is safe only if someone reads
+it); a profile that leaves the seed out (the same default, inverted: forgetting it is the unsafe case again).

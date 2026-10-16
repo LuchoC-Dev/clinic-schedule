@@ -22,8 +22,11 @@ bin/
 .DS_Store
 Thumbs.db
 
-### Logs y datos locales ###
+### Logs and local data ###
 *.log
 *.db
 *.mv.db
 *.trace.db
+
+### Local tools ###
+.github/modernize/
