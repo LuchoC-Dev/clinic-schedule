@@ -1,5 +1,7 @@
 # Clinic appointment schedule
 
+[![Build](https://github.com/LuchoC-Dev/clinic-schedule/actions/workflows/build.yml/badge.svg)](https://github.com/LuchoC-Dev/clinic-schedule/actions/workflows/build.yml)
+
 An internal appointment schedule for a small medical practice — three or four practitioners and one reception desk —
 with a web portal for its patients. It was built in stages, adding nothing before the stage that used it. **Version 1
 and version 2 are complete**; what comes next is added to v2 as features of their own.
